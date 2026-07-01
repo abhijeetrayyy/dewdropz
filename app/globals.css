@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --paper:       #F6F3EA;
+  --forest:      #27481F;
+  --forest-mid:  #3C6A33;
+  --altitude:    #142536;
+  --sage:        #7BA46F;
+  --clay:        #B8826B;
+  --ink:         #0C100D;
+  --text:        #15150F;
+  --mid:         #52504A;
+  --light:       #94917F;
+  --rule:        #DDD7C6;
+
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+@theme inline {
+  --color-paper:      var(--paper);
+  --color-forest:     var(--forest);
+  --color-forest-mid: var(--forest-mid);
+  --color-altitude:   var(--altitude);
+  --color-sage:       var(--sage);
+  --color-clay:       var(--clay);
+  --color-ink:        var(--ink);
+  --color-text:       var(--text);
+  --color-mid:        var(--mid);
+  --color-light:      var(--light);
+  --color-rule:       var(--rule);
+
+  --font-display: var(--font-display), Georgia, serif;
+  --font-body:    var(--font-body), system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--text);
+  }
+}
