@@ -4,9 +4,31 @@ import { NextResponse, type NextRequest } from 'next/server'
 const protectedRoutes = ['/account', '/orders', '/checkout']
 const adminRoutes = ['/admin']
 const authRoutes = ['/auth/login', '/auth/signup', '/auth/reset-password']
+
+function isSupabaseConfigured() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return false
+  if (url.includes('placeholder')) return false
+  return true
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
   const { pathname } = request.nextUrl
+
+  if (!isSupabaseConfigured()) {
+    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+    const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
+
+    if (isProtectedRoute || isAdminRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+
+    return supabaseResponse
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
