@@ -32,8 +32,12 @@ export default function Preloader() {
 
     const paths = pathRefs.current.filter(Boolean) as SVGPathElement[]
     paths.forEach((p) => {
-      const length = p.getTotalLength()
-      gsap.set(p, { strokeDasharray: length, strokeDashoffset: length })
+      try {
+        const length = p.getTotalLength()
+        gsap.set(p, { strokeDasharray: length, strokeDashoffset: length })
+      } catch {
+        // path not yet measured, skip animation
+      }
     })
 
     // Subtly pulse logo glow during load (soft and glowing, not harsh)
@@ -47,17 +51,28 @@ export default function Preloader() {
       })
     }
 
+    const hidePreloader = () => {
+      document.body.style.overflow = ''
+      finishIntro()
+      setVisible(false)
+    }
+
+    // Safety timeout: if gsap fails silently, show the page anyway after 5s
+    const safetyTimer = setTimeout(hidePreloader, 5000)
+
     const counter = { value: 0 }
     const tl = gsap.timeline({
       onComplete: () => {
-        document.body.style.overflow = ''
-        setVisible(false)
+        clearTimeout(safetyTimer)
+        hidePreloader()
       },
     })
     tlRef.current = tl
 
     // Animate drawing paths of the brand mark
-    tl.to(paths, { strokeDashoffset: 0, duration: 1.2, ease: 'power2.inOut', stagger: 0.18 }, 0)
+    if (paths.length > 0) {
+      tl.to(paths, { strokeDashoffset: 0, duration: 1.2, ease: 'power2.inOut', stagger: 0.18 }, 0)
+    }
     
     // Animate percentage count smoothly
     tl.to(
@@ -83,7 +98,7 @@ export default function Preloader() {
     )
     
     tl.add(() => finishIntro(), 1.7)
-    
+
     // Custom liquid shrinking wipeout using CSS clip-path ellipse (slower and softer easing)
     tl.to(
       panelRef.current,
@@ -97,6 +112,7 @@ export default function Preloader() {
     )
 
     return () => {
+      clearTimeout(safetyTimer)
       tl.kill()
       document.body.style.overflow = ''
     }
