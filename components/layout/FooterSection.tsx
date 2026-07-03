@@ -1,4 +1,45 @@
-const NAV_LINKS = ['Collections', 'About', 'Journal', 'Contact', 'Privacy']
+'use client'
+
+import Link from 'next/link'
+import { motion } from 'motion/react'
+import { useMagneticHover } from '@/hooks/useMagneticHover'
+import { SITE } from '@/lib/constants'
+
+const NAV_LINKS = [
+  { label: 'Collections', href: '/collections' },
+  { label: 'Treks', href: '/treks' },
+  { label: 'About', href: '/about' },
+  { label: 'Journal', href: '/journal' },
+  { label: 'Contact', href: '/contact' },
+  { label: 'Sustainability', href: '/sustainability' },
+  { label: 'Privacy', href: '/privacy' },
+]
+
+function SocialLink({
+  href,
+  label,
+  children,
+}: {
+  href: string
+  label: string
+  children: React.ReactNode
+}) {
+  const magnetic = useMagneticHover(0.45, 10)
+  return (
+    <motion.a
+      ref={magnetic.ref as React.RefObject<HTMLAnchorElement>}
+      onMouseMove={magnetic.onMouseMove}
+      onMouseLeave={magnetic.onMouseLeave}
+      style={{ x: magnetic.x, y: magnetic.y }}
+      data-cursor="view"
+      href={href}
+      aria-label={label}
+      className="hover:text-white transition-colors"
+    >
+      {children}
+    </motion.a>
+  )
+}
 
 export default function FooterSection() {
   return (
@@ -8,26 +49,26 @@ export default function FooterSection() {
           <div className="font-display text-white text-xl">DEWDROPZ</div>
           <div className="font-display italic text-sage text-sm mt-1">— Feel Alive</div>
           <div className="flex items-center gap-4 mt-6">
-            <a href="#" aria-label="Instagram" className="hover:text-white transition-colors">
+            <SocialLink href={SITE.instagram} label="Instagram">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="5" />
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
               </svg>
-            </a>
-            <a href="#" aria-label="WhatsApp" className="hover:text-white transition-colors">
+            </SocialLink>
+            <SocialLink href={SITE.whatsapp} label="WhatsApp">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M20 12a8 8 0 1 1-3.6-6.7L20 4l-1.2 3.6A8 8 0 0 1 20 12z" />
               </svg>
-            </a>
+            </SocialLink>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 font-body text-sm">
           {NAV_LINKS.map((link) => (
-            <a key={link} href="#" className="hover:text-white transition-colors py-1">
-              {link}
-            </a>
+            <Link key={link.label} href={link.href} className="hover:text-white transition-colors py-1">
+              {link.label}
+            </Link>
           ))}
         </div>
 

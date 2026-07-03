@@ -1,15 +1,31 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ScrollTrigger } from '@/lib/gsap'
+import { useCart } from '@/providers/CartProvider'
 
-const NAV_LINKS = ['Collections', 'About', 'Journal', 'Contact']
+const NAV_LINKS = [
+  { label: 'Collections', href: '/collections' },
+  { label: 'Treks', href: '/treks' },
+  { label: 'About', href: '/about' },
+  { label: 'Journal', href: '/journal' },
+  { label: 'Contact', href: '/contact' },
+]
 
 export default function NavBar() {
   const navRef = useRef<HTMLElement>(null)
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const { count } = useCart()
+  const pathname = usePathname()
+  // Only the homepage opens on a full-bleed dark hero video, so only there can the
+  // nav start transparent with light text. Every other page's first section can be
+  // light (PageHeader's paper variant), so the solid bar is always on to stay legible.
+  const isHome = pathname === '/'
+  const solid = scrolled || !isHome
 
   useEffect(() => {
     const trigger = ScrollTrigger.create({
@@ -31,36 +47,45 @@ export default function NavBar() {
     <header
       ref={navRef}
       className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 transition-all duration-500 ease-[var(--ease-out)] ${
-        scrolled ? 'h-14 backdrop-blur-md bg-ink/80' : 'h-[72px] bg-transparent'
+        solid ? 'h-14 backdrop-blur-md bg-ink/80' : 'h-[72px] bg-transparent'
       }`}
     >
-      <span className="font-display text-base tracking-widest text-paper">DEWDROPZ</span>
+      <Link href="/" className="font-display text-base tracking-widest text-paper">
+        DEWDROPZ
+      </Link>
 
-      <nav className="hidden md:flex items-center gap-10">
+      <nav className="hidden lg:flex items-center gap-8">
         {NAV_LINKS.map((link) => (
-          <a
-            key={link}
-            href="#"
-            className="font-body text-xs tracking-[0.12em] uppercase text-paper/80 hover:text-paper transition-colors duration-300"
+          <Link
+            key={link.label}
+            href={link.href}
+            className="group relative font-body text-xs tracking-[0.12em] uppercase text-paper/80 hover:text-paper transition-colors duration-300"
           >
-            {link}
-          </a>
+            {link.label}
+            <span className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-sage transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-x-100" />
+          </Link>
         ))}
       </nav>
 
       <div className="flex items-center gap-6">
-        <button aria-label="Cart" className="flex items-center gap-2 text-paper/80 hover:text-paper transition-colors duration-300">
+        <Link
+          href="/cart"
+          aria-label="Cart"
+          data-cursor="view"
+          data-cursor-text="Cart"
+          className="flex items-center gap-2 text-paper/80 hover:text-paper transition-colors duration-300"
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M4 20L9 6h6l5 14H4z" strokeLinejoin="round" />
             <path d="M9 6a3 3 0 0 1 6 0" strokeLinecap="round" />
           </svg>
-          <span className="font-body text-xs">0</span>
-        </button>
+          <span className="font-body text-xs">{count}</span>
+        </Link>
 
         <button
           aria-label="Menu"
           onClick={() => setMenuOpen((v) => !v)}
-          className="md:hidden flex flex-col gap-1.5 w-6 text-paper"
+          className="lg:hidden flex flex-col gap-1.5 w-6 text-paper"
         >
           <span className="block h-px w-full bg-current" />
           <span className="block h-px w-full bg-current" />
@@ -85,19 +110,19 @@ export default function NavBar() {
             </button>
             {NAV_LINKS.map((link, i) => (
               <motion.div
-                key={link}
+                key={link.label}
                 initial={{ y: 40, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 40, opacity: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
-                <a
-                  href="#"
+                <Link
+                  href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className="font-display text-3xl text-paper"
                 >
-                  {link}
-                </a>
+                  {link.label}
+                </Link>
               </motion.div>
             ))}
           </motion.div>

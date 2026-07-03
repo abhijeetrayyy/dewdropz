@@ -1,6 +1,12 @@
 import type { Metadata } from 'next'
 import { Fraunces, Inter } from 'next/font/google'
 import LenisProvider from '@/providers/LenisProvider'
+import { IntroProvider } from '@/providers/IntroProvider'
+import { CartProvider } from '@/providers/CartProvider'
+import Preloader from '@/components/Preloader'
+import CustomCursor from '@/components/CustomCursor'
+import Grain from '@/components/Grain'
+import TrekTrailPath from '@/components/TrekTrailPath'
 import './globals.css'
 
 const fraunces = Fraunces({
@@ -29,7 +35,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
       <body className="bg-paper text-text antialiased">
-        <LenisProvider>{children}</LenisProvider>
+        <CartProvider>
+          <IntroProvider>
+            <Preloader />
+            <CustomCursor />
+            <Grain />
+            <TrekTrailPath />
+            <LenisProvider>{children}</LenisProvider>
+          </IntroProvider>
+        </CartProvider>
       </body>
     </html>
   )

@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import { useMagneticHover } from '@/hooks/useMagneticHover'
 
 export default function NewsletterBar() {
   const [submitted, setSubmitted] = useState(false)
+  const submitBtn = useMagneticHover(0.4, 10)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,12 +38,18 @@ export default function NewsletterBar() {
                   placeholder="Your email"
                   className="border-b border-rule bg-transparent font-body text-sm py-3 flex-1 focus:outline-none focus:border-forest"
                 />
-                <button
+                <motion.button
+                  ref={submitBtn.ref as React.RefObject<HTMLButtonElement>}
+                  onMouseMove={submitBtn.onMouseMove}
+                  onMouseLeave={submitBtn.onMouseLeave}
+                  style={{ x: submitBtn.x, y: submitBtn.y }}
+                  data-cursor="view"
+                  data-cursor-text="Join"
                   type="submit"
                   className="bg-forest text-paper font-body text-xs tracking-[0.1em] uppercase px-6 py-3 mt-4 md:mt-0 md:ml-4"
                 >
                   Subscribe
-                </button>
+                </motion.button>
               </motion.form>
             ) : (
               <motion.div

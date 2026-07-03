@@ -43,4 +43,36 @@
     background-color: var(--paper);
     color: var(--text);
   }
+
+  ::selection {
+    background-color: var(--forest);
+    color: var(--paper);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--paper);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--forest);
+    border-radius: 999px;
+    border: 2px solid var(--paper);
+  }
+
+  html {
+    scrollbar-color: var(--forest) var(--paper);
+    scrollbar-width: thin;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    html.has-custom-cursor,
+    html.has-custom-cursor * {
+      cursor: none !important;
+    }
+  }
 }
+

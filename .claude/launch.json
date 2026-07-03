@@ -4,14 +4,14 @@
     {
       "name": "dewdropz-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "runtimeArgs": ["run", "dev", "--", "--port", "3010"],
+      "port": 3010
     },
     {
       "name": "dewdropz-prod",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start"],
-      "port": 3000
+      "runtimeArgs": ["run", "start", "--", "--port", "3010"],
+      "port": 3010
     }
   ]
 }
