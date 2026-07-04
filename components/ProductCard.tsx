@@ -1,9 +1,11 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
+import { BLUR_DATA_URL } from '@/lib/constants'
 import type { PRODUCTS } from '@/lib/constants'
 
 export default function ProductCard({ product }: { product: (typeof PRODUCTS)[number] }) {
@@ -63,7 +65,17 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
           style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 800 }}
           className="product-image aspect-[3/4] rounded-sm overflow-hidden relative"
         >
-          <div className="h-full w-full" style={{ background: product.gradient }} />
+          <div className="h-full w-full relative" style={{ background: product.gradient }}>
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 640px) 50vw, 25vw"
+              placeholder="blur"
+              blurDataURL={BLUR_DATA_URL}
+              className="object-cover"
+            />
+          </div>
 
           <div
             className="absolute inset-0 pointer-events-none mix-blend-color-dodge transition-opacity duration-300 z-10"

@@ -2,9 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
 import { BLUR_DATA_URL, TRAIL_MAP_AERIAL_IMAGE, TRAIL_MAP_POINTS } from '@/lib/constants'
+
+// Ties the interactive map to actual merchandising: above 4,000m the exposure calls
+// for the alpine collection, everything below it sits comfortably in forest/mist range.
+function collectionForAltitude(altitude: string) {
+  const meters = parseInt(altitude.replace(/[^0-9]/g, ''), 10)
+  return meters > 4000 ? 'silent-altitude' : 'mist-and-morning'
+}
 
 // Route line coordinates mirror TRAIL_MAP_POINTS order so the dashed path
 // threads through each pin in sequence, west to east across the range.
@@ -192,10 +200,13 @@ export default function TrailMap() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute bottom-4 left-4 md:bottom-6 md:left-6 bg-ink/60 backdrop-blur-sm rounded-md px-4 py-3 max-w-[220px] border border-white/10"
+              className="absolute bottom-4 left-4 md:bottom-6 md:left-6 bg-ink/60 backdrop-blur-sm rounded-md px-4 py-3 max-w-[240px] border border-white/10"
             >
               <h3 className="font-display text-lg text-paper leading-tight">{point.name}</h3>
-              <div className="mt-2 flex gap-6">
+              <p className="mt-1.5 font-display italic text-sage/80 text-[13px] leading-snug">
+                {point.story}
+              </p>
+              <div className="mt-3 flex gap-6">
                 <div>
                   <div className="font-body text-[9px] tracking-[0.12em] text-sage uppercase">Altitude</div>
                   <div className="font-body text-sm text-paper tabular-nums">{point.altitude}</div>
@@ -205,6 +216,14 @@ export default function TrailMap() {
                   <div className="font-body text-sm text-paper">{point.difficulty}</div>
                 </div>
               </div>
+              <Link
+                href={`/collections/${collectionForAltitude(point.altitude)}`}
+                data-cursor="view"
+                data-cursor-text="Shop"
+                className="mt-3 inline-flex items-center gap-1.5 font-body text-[10px] tracking-[0.1em] text-sage uppercase hover:text-paper transition-colors duration-300"
+              >
+                Gear up for this trail →
+              </Link>
             </motion.div>
           </AnimatePresence>
 

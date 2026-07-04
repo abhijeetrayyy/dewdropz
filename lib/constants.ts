@@ -9,6 +9,8 @@ export const ADVENTURE_IMAGE_1 = 'https://images.unsplash.com/photo-150155508865
 export const ADVENTURE_IMAGE_2 = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b'
 // Aerial shot of Ama Dablam en route to Everest Base Camp — used as the trail map backdrop.
 export const TRAIL_MAP_AERIAL_IMAGE = 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606'
+// Volcanic peak above a cloud sea at dawn — backdrop for the stats band.
+export const STATS_BG_IMAGE = 'https://images.unsplash.com/photo-1761566333643-bf7d2c94f0ed'
 
 export const COLLECTIONS = [
   {
@@ -72,8 +74,6 @@ export const COLLECTIONS = [
     ],
   },
 ]
-
-export const MANIFESTO_TAGS = ['Early Risers', 'Fog Chasers', 'Quiet Finishers', 'Slow Travelers']
 
 export const STATS = [
   { value: 12000, suffix: '+', label: 'Trekkers geared up', plain: false },
@@ -139,6 +139,7 @@ export const PRODUCTS = [
     desc: 'Cotton trekking t-shirt',
     price: 1800,
     gradient: 'linear-gradient(135deg, #4A5D52, #9AAE9C)',
+    image: 'https://images.unsplash.com/photo-1629185752193-0d25bb978c04',
     collectionId: 'mist-and-morning',
     materials: 'Merino-cotton blend, 180gsm',
     sizes: ['S', 'M', 'L', 'XL'],
@@ -152,6 +153,7 @@ export const PRODUCTS = [
     desc: 'Packable shell for damp mornings',
     price: 3200,
     gradient: 'linear-gradient(135deg, #6B8068, #C7D3C2)',
+    image: 'https://images.unsplash.com/photo-1595174028948-42a4b1786664',
     collectionId: 'mist-and-morning',
     materials: 'Ripstop nylon, DWR coating',
     sizes: ['S', 'M', 'L', 'XL'],
@@ -165,6 +167,7 @@ export const PRODUCTS = [
     desc: 'Waterproof trail backpack',
     price: 2800,
     gradient: 'linear-gradient(135deg, #1E3347, #5A7A96)',
+    image: 'https://images.unsplash.com/photo-1509762774605-f07235a08f1f',
     collectionId: 'silent-altitude',
     materials: 'Welded-seam TPU shell, 40L capacity',
     sizes: ['One Size'],
@@ -178,6 +181,7 @@ export const PRODUCTS = [
     desc: 'Merino wool summit beanie',
     price: 1100,
     gradient: 'linear-gradient(135deg, #2A3B4D, #7F97AC)',
+    image: 'https://images.unsplash.com/photo-1648483092137-6e63796c8b06',
     collectionId: 'silent-altitude',
     materials: '100% merino wool',
     sizes: ['One Size'],
@@ -191,6 +195,7 @@ export const PRODUCTS = [
     desc: 'Merino wool cap',
     price: 1500,
     gradient: 'linear-gradient(135deg, #2E1F16, #7A4F35)',
+    image: 'https://images.unsplash.com/photo-1780758841669-c961af1a5a7e',
     collectionId: 'o-collection',
     materials: 'Merino wool crown, cotton twill brim',
     sizes: ['One Size'],
@@ -204,6 +209,7 @@ export const PRODUCTS = [
     desc: 'Dust-shield trail scarf',
     price: 900,
     gradient: 'linear-gradient(135deg, #7A4F35, #D9B08C)',
+    image: 'https://images.unsplash.com/photo-1706206086774-0017933e52e2',
     collectionId: 'o-collection',
     materials: 'Brushed cotton-linen blend',
     sizes: ['One Size'],
@@ -217,6 +223,7 @@ export const PRODUCTS = [
     desc: 'Insulated steel bottle',
     price: 1200,
     gradient: 'linear-gradient(135deg, #27481F, #7BA46F)',
+    image: 'https://images.unsplash.com/photo-1605539582747-ce302b9afca2',
     collectionId: 'o-collection',
     materials: '18/8 stainless steel, double-wall vacuum insulation',
     sizes: ['750ml'],
@@ -337,14 +344,14 @@ export const COMMUNITY_PHOTOS = [
 ]
 
 export const TRAIL_MAP_POINTS = [
-  { name: 'Har Ki Dun', x: 22, y: 28, altitude: '3,566m', difficulty: 'Moderate' },
-  { name: 'Kedarkantha', x: 30, y: 42, altitude: '3,800m', difficulty: 'Moderate' },
-  { name: 'Kuari Pass', x: 46, y: 22, altitude: '4,268m', difficulty: 'Moderate–Hard' },
-  { name: 'Roopkund', x: 55, y: 35, altitude: '5,029m', difficulty: 'Hard' },
-  { name: 'Chandrashila', x: 40, y: 55, altitude: '3,690m', difficulty: 'Easy–Moderate' },
-  { name: 'Valley of Flowers', x: 62, y: 48, altitude: '3,658m', difficulty: 'Moderate' },
-  { name: 'Brahmatal', x: 35, y: 65, altitude: '3,734m', difficulty: 'Moderate' },
-  { name: 'Nag Tibba', x: 15, y: 60, altitude: '3,022m', difficulty: 'Easy' },
+  { name: 'Har Ki Dun', x: 22, y: 28, altitude: '3,566m', difficulty: 'Moderate', story: 'The valley of gods — quiet enough to hear your own doubt leave.' },
+  { name: 'Kedarkantha', x: 30, y: 42, altitude: '3,800m', difficulty: 'Moderate', story: 'A summit built for sunrise, and a reason to remember why you climbed.' },
+  { name: 'Kuari Pass', x: 46, y: 22, altitude: '4,268m', difficulty: 'Moderate–Hard', story: 'The ridge Nehru walked for one view of Nanda Devi. Still worth the lungs it costs.' },
+  { name: 'Roopkund', x: 55, y: 35, altitude: '5,029m', difficulty: 'Hard', story: 'A mystery lake and a trail that earns the story you\'ll tell for years.' },
+  { name: 'Chandrashila', x: 40, y: 55, altitude: '3,690m', difficulty: 'Easy–Moderate', story: 'The easiest hard thing you\'ll do before breakfast.' },
+  { name: 'Valley of Flowers', x: 62, y: 48, altitude: '3,658m', difficulty: 'Moderate', story: 'Blooms once a year. Forgives nothing twice.' },
+  { name: 'Brahmatal', x: 35, y: 65, altitude: '3,734m', difficulty: 'Moderate', story: 'A frozen lake and the kind of cold that feels like clarity.' },
+  { name: 'Nag Tibba', x: 15, y: 60, altitude: '3,022m', difficulty: 'Easy', story: 'The weekend trek that talks you into booking the harder one.' },
 ]
 
 export const TREKS = [

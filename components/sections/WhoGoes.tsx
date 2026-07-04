@@ -1,9 +1,18 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { gsap } from '@/lib/gsap'
-import { MANIFESTO_TAGS } from '@/lib/constants'
 import SplitText from '@/components/SplitText'
+
+// Each mood tag doubles as a shop-by-activity filter, so this section earns its
+// place as more than a fourth restatement of the brand's "who we are" copy.
+const ACTIVITY_TAGS = [
+  { label: 'Early Risers', collectionId: 'mist-and-morning' },
+  { label: 'Fog Chasers', collectionId: 'mist-and-morning' },
+  { label: 'Quiet Finishers', collectionId: 'silent-altitude' },
+  { label: 'Slow Travelers', collectionId: 'o-collection' },
+]
 
 export default function WhoGoes() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -67,13 +76,22 @@ export default function WhoGoes() {
           />
         </div>
 
-        <div className="mt-14 flex flex-wrap items-center justify-center gap-x-3 gap-y-3">
-          {MANIFESTO_TAGS.map((tag, i) => (
-            <div key={tag} className="flex items-center gap-3">
-              <span className="manifesto-tag font-body text-[10px] tracking-[0.15em] text-paper/75 uppercase border border-paper/15 rounded-full px-4 py-2 hover:bg-paper/5 hover:text-paper transition-all duration-300">
-                {tag}
-              </span>
-              {i < MANIFESTO_TAGS.length - 1 && (
+        <div className="mt-3 font-body text-[10px] tracking-[0.15em] text-sage/60 uppercase">
+          Shop the mood
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-3">
+          {ACTIVITY_TAGS.map((tag, i) => (
+            <div key={tag.label} className="flex items-center gap-3">
+              <Link
+                href={`/collections/${tag.collectionId}`}
+                data-cursor="view"
+                data-cursor-text="Shop"
+                className="manifesto-tag font-body text-[10px] tracking-[0.15em] text-paper/75 uppercase border border-paper/15 rounded-full px-4 py-2 hover:bg-paper/5 hover:text-paper hover:border-sage/40 transition-all duration-300"
+              >
+                {tag.label}
+              </Link>
+              {i < ACTIVITY_TAGS.length - 1 && (
                 <span className="hidden sm:inline text-sage/30">·</span>
               )}
             </div>

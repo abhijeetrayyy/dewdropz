@@ -43,6 +43,12 @@ export default function CollectionScrollWebGL({ progressRef }: CollectionScrollW
       }
     }
     window.addEventListener('resize', handleResize)
+    // GSAP's ScrollTrigger pin wraps this section in a spacer after mount, which can
+    // change the container's real size after the resize call above already ran (using
+    // a stale, too-small measurement). A window resize listener alone never catches
+    // that — only observing the container itself does.
+    const resizeObserver = new ResizeObserver(handleResize)
+    resizeObserver.observe(container)
 
     // Load textures
     const textures = COLLECTIONS.map((c) => {
@@ -163,6 +169,7 @@ export default function CollectionScrollWebGL({ progressRef }: CollectionScrollW
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()
       cancelAnimationFrame(animFrameId)
       if (container.contains(gl.canvas)) {
         container.removeChild(gl.canvas)

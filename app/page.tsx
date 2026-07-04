@@ -2,15 +2,16 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import HeroSection from '@/components/sections/HeroSection'
 import BrandStatement from '@/components/sections/BrandStatement'
+import FeaturedGear from '@/components/sections/FeaturedGear'
+import CollectionScroll from '@/components/sections/CollectionScroll'
 import TrekManifesto from '@/components/sections/TrekManifesto'
 import WhoGoes from '@/components/sections/WhoGoes'
+import GearSpotlight from '@/components/sections/GearSpotlight'
 import MarqueeBand from '@/components/sections/MarqueeBand'
-import CollectionScroll from '@/components/sections/CollectionScroll'
-import FeaturedGear from '@/components/sections/FeaturedGear'
-import JournalStrip from '@/components/sections/JournalStrip'
-import BrandStory from '@/components/sections/BrandStory'
 import StatsBand from '@/components/sections/StatsBand'
 import TrailMap from '@/components/sections/TrailMap'
+import JournalStrip from '@/components/sections/JournalStrip'
+import BrandStory from '@/components/sections/BrandStory'
 import Community from '@/components/sections/Community'
 import NewsletterBar from '@/components/sections/NewsletterBar'
 
@@ -21,15 +22,16 @@ export default function Home() {
       <main>
         <HeroSection />
         <BrandStatement />
+        <FeaturedGear />
+        <CollectionScroll />
         <TrekManifesto />
         <WhoGoes />
+        <GearSpotlight />
         <MarqueeBand />
-        <CollectionScroll />
-        <FeaturedGear />
-        <JournalStrip />
-        <BrandStory />
         <StatsBand />
         <TrailMap />
+        <JournalStrip />
+        <BrandStory />
         <Community />
         <NewsletterBar />
       </main>

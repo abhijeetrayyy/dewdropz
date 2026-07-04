@@ -42,32 +42,10 @@ export default function BrandStory() {
 
           <ScrollReveal
             containerClassName="mt-4"
-            textClassName="!font-display !font-light !text-[clamp(36px,5.5vw,64px)] !text-white !leading-[1.05]"
+            textClassName="!font-display !font-light !text-[clamp(28px,4vw,44px)] !text-white !leading-[1.15]"
           >
-            Built for the people who go.
+            Born on a foggy ridgeline. Tested on every one since.
           </ScrollReveal>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ delay: 0.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="font-body text-sm text-white/65 leading-relaxed max-w-sm mt-6"
-          >
-            DEWDROPZ was born on a foggy ridgeline, where the air is thin and the noise of the world
-            disappears. We build gear for the people who chase that quiet.
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ delay: 0.4, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="font-body text-sm text-white/65 leading-relaxed max-w-sm mt-4"
-          >
-            Every stitch, strap, and seam is tested against altitude, mist, and mud — so you can go
-            further without thinking twice.
-          </motion.p>
 
           <motion.div
             ref={storyLink.ref as React.RefObject<HTMLDivElement>}

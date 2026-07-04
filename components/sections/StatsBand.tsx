@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Image from 'next/image'
+import { motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
-import { STATS } from '@/lib/constants'
+import { BLUR_DATA_URL, STATS, STATS_BG_IMAGE } from '@/lib/constants'
 
 export default function StatsBand() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -37,8 +39,33 @@ export default function StatsBand() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="bg-ink px-6 md:px-10 py-24">
-      <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6 text-center">
+    <section ref={sectionRef} className="relative bg-ink px-6 md:px-10 py-28 md:py-36 overflow-hidden">
+      <Image
+        src={STATS_BG_IMAGE}
+        alt="Sunrise over a Himalayan summit, seen from above the clouds"
+        fill
+        sizes="100vw"
+        placeholder="blur"
+        blurDataURL={BLUR_DATA_URL}
+        className="object-cover opacity-45"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/70 to-ink pointer-events-none" />
+
+      <div className="relative max-w-3xl mx-auto text-center mb-16">
+        <div className="font-body text-[10px] tracking-[0.3em] text-sage uppercase">Not Just Numbers</div>
+        <motion.p
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="mt-4 font-display font-light text-[clamp(24px,3.4vw,36px)] text-paper leading-snug"
+        >
+          None of this happened in a lab. It happened one ridge, one whiteout,
+          one exhausted last mile at a time.
+        </motion.p>
+      </div>
+
+      <div className="relative max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6 text-center">
         {STATS.map((stat, i) => (
           <div key={stat.label}>
             <div className="font-display font-light text-[clamp(32px,5vw,56px)] text-paper tabular-nums">
