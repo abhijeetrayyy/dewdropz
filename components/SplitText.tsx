@@ -162,7 +162,11 @@ const SplitText: React.FC<SplitTextProps> = ({
       willChange: 'transform, opacity'
     };
     const classes = `split-parent overflow-hidden inline-block whitespace-normal ${className}`;
-    const Tag = (tag || 'p') as React.ElementType;
+    // Keep this on the narrow `tag` union rather than widening to React.ElementType —
+    // a broad ElementType resolves against the full JSX.IntrinsicElements set, which
+    // @react-three/fiber's global augmentation (adding <mesh>, <group>, etc.) makes
+    // incompatible with a single-child render like this one.
+    const Tag = tag || 'p';
 
     return (
       <Tag ref={ref} style={style} className={classes}>

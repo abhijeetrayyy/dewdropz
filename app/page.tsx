@@ -9,6 +9,7 @@ import WhoGoes from '@/components/sections/WhoGoes'
 import GearSpotlight from '@/components/sections/GearSpotlight'
 import MarqueeBand from '@/components/sections/MarqueeBand'
 import StatsBand from '@/components/sections/StatsBand'
+import TerrainFlythrough from '@/components/sections/TerrainFlythrough'
 import TrailMap from '@/components/sections/TrailMap'
 import JournalStrip from '@/components/sections/JournalStrip'
 import BrandStory from '@/components/sections/BrandStory'
@@ -29,6 +30,7 @@ export default function Home() {
         <GearSpotlight />
         <MarqueeBand />
         <StatsBand />
+        <TerrainFlythrough />
         <TrailMap />
         <JournalStrip />
         <BrandStory />

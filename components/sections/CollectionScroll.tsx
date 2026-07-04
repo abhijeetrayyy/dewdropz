@@ -59,6 +59,10 @@ export default function CollectionScroll() {
     const ctx = gsap.context(() => {
       slides.forEach((slide, i) => {
         slide.style.opacity = String(i === 0 ? 1 : 0)
+        // Every slide is an absolutely-positioned inset-0 overlay at the same z-index —
+        // without this, an invisible (opacity 0) slide still intercepts clicks, so every
+        // "Explore" button ends up routing through whichever slide is last in DOM order.
+        slide.style.pointerEvents = i === 0 ? 'auto' : 'none'
       })
 
       const trigger = ScrollTrigger.create({
@@ -72,10 +76,11 @@ export default function CollectionScroll() {
         onUpdate: (self) => {
           const progress = self.progress * (n - 1)
           progressRef.current = progress
+          const rounded = Math.round(progress)
           slides.forEach((slide, i) => {
             slide.style.opacity = String(slideOpacity(progress, i))
+            slide.style.pointerEvents = i === rounded ? 'auto' : 'none'
           })
-          const rounded = Math.round(progress)
           setActive((prev) => (prev === rounded ? prev : rounded))
         },
       })

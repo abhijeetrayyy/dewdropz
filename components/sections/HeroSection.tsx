@@ -92,7 +92,7 @@ export default function HeroSection() {
             loop
             playsInline
             poster="/videos/hero-trek-poster.jpg"
-            className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+            className="absolute inset-0 h-full w-full object-cover object-[80%_center] lg:object-center pointer-events-none"
           >
             <source src="/videos/hero-trek.mp4" type="video/mp4" />
           </video>
