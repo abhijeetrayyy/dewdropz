@@ -1,2 +1,3 @@
-export { createServerSupabaseClient, createAdminSupabaseClient } from './server'
+export { createServerSupabaseClient } from './server'
+export { createAdminSupabaseClient } from './admin'
 export { createBrowserSupabaseClient } from './client'

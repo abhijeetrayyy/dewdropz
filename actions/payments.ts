@@ -124,7 +124,7 @@ export async function verifyStripeWebhook(payload: string, signature: string) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
   const event = getStripe().webhooks.constructEvent(payload, signature, webhookSecret)
 
-  const supabase = await createAdminSupabaseClient()
+  const supabase = createAdminSupabaseClient()
 
   await supabase.from('webhook_events').insert({
     provider: 'stripe',
@@ -170,7 +170,7 @@ export async function verifyRazorpayWebhook(payload: Record<string, unknown>, si
     return { error: 'Invalid signature' }
   }
 
-  const supabase = await createAdminSupabaseClient()
+  const supabase = createAdminSupabaseClient()
   const event = payload as { event: string; payload: { payment: { entity: Record<string, unknown> } } }
 
   await supabase.from('webhook_events').insert({

@@ -5,91 +5,53 @@ const protectedRoutes = ['/account', '/orders', '/checkout']
 const adminRoutes = ['/admin']
 const authRoutes = ['/auth/login', '/auth/signup', '/auth/reset-password']
 
-function isSupabaseConfigured() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return false
-  if (url.includes('placeholder')) return false
-  return true
-}
-
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  let response = NextResponse.next({ request })
   const { pathname } = request.nextUrl
 
-  if (!isSupabaseConfigured()) {
-    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
-    const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
+  const isProtected = protectedRoutes.some((r) => pathname.startsWith(r))
+  const isAdmin = adminRoutes.some((r) => pathname.startsWith(r))
+  const isAuth = authRoutes.some((r) => pathname.startsWith(r))
 
-    if (isProtectedRoute || isAdminRoute) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/'
-      return NextResponse.redirect(url)
-    }
-
-    return supabaseResponse
-  }
+  if (!isProtected && !isAdmin && !isAuth) return response
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           )
         },
       },
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route))
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
-
-  if (!user && isProtectedRoute) {
+  // Redirect unauthenticated away from protected/admin routes
+  if (!user && (isProtected || isAdmin)) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
-    url.searchParams.set('redirected', 'true')
     url.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(url)
   }
 
-  if (user && isAdminRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  if (user && isAuthRoute) {
+  // Redirect logged-in users away from auth pages
+  if (user && isAuth) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

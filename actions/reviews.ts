@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import { requireAdmin } from './auth'
 import { reviewSchema, newsletterSchema } from '@/lib/validations'
 import { getSession } from './auth'
 import type { Review } from '@/types/database'
@@ -152,18 +153,18 @@ export async function getAllReviews(options?: { approved?: boolean; limit?: numb
 }
 
 export async function approveReview(reviewId: string) {
-  const supabase = await createServerSupabaseClient()
-  const { error } = await supabase
-    .from('reviews')
-    .update({ is_approved: true })
-    .eq('id', reviewId)
-
+  await requireAdmin()
+  const supabase = createAdminSupabaseClient()
+  const { data: review } = await supabase.from('reviews').select('product_id').eq('id', reviewId).single()
+  const { error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', reviewId)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/reviews')
+  if (review?.product_id) revalidatePath(`/products/${review.product_id}`)
 }
 
 export async function deleteReview(reviewId: string) {
-  const supabase = await createServerSupabaseClient()
+  await requireAdmin()
+  const supabase = createAdminSupabaseClient()
   const { error } = await supabase
     .from('reviews')
     .delete()

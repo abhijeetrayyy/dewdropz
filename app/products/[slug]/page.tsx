@@ -4,6 +4,7 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import ProductDetail from '@/components/sections/ProductDetail'
 import { COLLECTIONS, PRODUCTS } from '@/lib/constants'
+import { getRelatedProducts } from '@/lib/recommendations'
 
 export function generateStaticParams() {
   return PRODUCTS.map((p) => ({ slug: p.slug }))
@@ -25,7 +26,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!product) notFound()
 
   const collection = COLLECTIONS.find((c) => c.id === product.collectionId)
-  const related = PRODUCTS.filter((p) => p.collectionId === product.collectionId && p.slug !== product.slug).slice(0, 3)
+  const related = getRelatedProducts(product.slug, 3)
 
   return (
     <>

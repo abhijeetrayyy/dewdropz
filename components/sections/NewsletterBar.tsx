@@ -3,14 +3,25 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
+import { subscribeToNewsletter } from '@/actions/reviews'
 
 export default function NewsletterBar() {
+  const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
   const submitBtn = useMagneticHover(0.4, 10)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    try {
+      await subscribeToNewsletter({ email, source: 'footer' })
+      setSubmitted(true)
+    } catch (e) {
+      // Ignored for now
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -35,6 +46,8 @@ export default function NewsletterBar() {
                 <input
                   type="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your email"
                   className="border-b border-rule bg-transparent font-body text-sm py-3 flex-1 focus:outline-none focus:border-forest"
                 />
@@ -46,9 +59,10 @@ export default function NewsletterBar() {
                   data-cursor="view"
                   data-cursor-text="Join"
                   type="submit"
-                  className="bg-forest text-paper font-body text-xs tracking-[0.1em] uppercase px-6 py-3 mt-4 md:mt-0 md:ml-4"
+                  disabled={loading}
+                  className="bg-forest text-paper font-body text-xs tracking-[0.1em] uppercase px-6 py-3 mt-4 md:mt-0 md:ml-4 disabled:opacity-50"
                 >
-                  Subscribe
+                  {loading ? 'Joining...' : 'Subscribe'}
                 </motion.button>
               </motion.form>
             ) : (

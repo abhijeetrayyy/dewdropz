@@ -1,12 +1,14 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
 import ProductCard from '@/components/ProductCard'
 import Accordion from '@/components/Accordion'
+import SizeGuideModal from '@/components/SizeGuideModal'
+import { trackEvent } from '@/lib/analytics'
 import type { COLLECTIONS, PRODUCTS } from '@/lib/constants'
 
 interface ProductDetailProps {
@@ -52,6 +54,7 @@ export default function ProductDetail({ product, collection, related }: ProductD
   }
 
   const handleAddToCart = () => {
+    trackEvent('add_to_cart', { currency: 'INR', value: product.price, items: [{ item_id: product.slug, item_name: product.name }] })
     addItem(
       { slug: product.slug, name: product.name, price: product.price, gradient: product.gradient, size },
       quantity
@@ -59,6 +62,23 @@ export default function ProductDetail({ product, collection, related }: ProductD
     setAdded(true)
     setTimeout(() => setAdded(false), 1800)
   }
+
+  // Track Recently Viewed & ViewItem
+  useEffect(() => {
+    trackEvent('view_item', { currency: 'INR', value: product.price, items: [{ item_id: product.slug, item_name: product.name }] })
+    
+    const stored = localStorage.getItem('dewdropz_recently_viewed')
+    let items: string[] = []
+    if (stored) {
+      try {
+        items = JSON.parse(stored)
+      } catch (e) {}
+    }
+    items = items.filter((s) => s !== product.slug)
+    items.unshift(product.slug)
+    if (items.length > 6) items = items.slice(0, 6)
+    localStorage.setItem('dewdropz_recently_viewed', JSON.stringify(items))
+  }, [product.slug])
 
   return (
     <>
@@ -138,7 +158,10 @@ export default function ProductDetail({ product, collection, related }: ProductD
               <p className="mt-6 font-body text-sm text-mid leading-relaxed max-w-md">{product.longDescription}</p>
 
               <div className="mt-8">
-                <div className="font-body text-[10px] tracking-[0.15em] text-text uppercase mb-3">Size</div>
+                <div className="flex items-center mb-3">
+                  <div className="font-body text-[10px] tracking-[0.15em] text-text uppercase">Size</div>
+                  <SizeGuideModal />
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((s) => (
                     <button

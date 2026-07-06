@@ -255,8 +255,8 @@ export async function validateCoupon(code: string, subtotal: number, userId?: st
     .select('*')
     .eq('code', code.toUpperCase())
     .eq('is_active', true)
-    .lte('starts_at', new Date().toISOString())
-    .single()
+    .or(`starts_at.lte.${new Date().toISOString()},starts_at.is.null`)
+    .maybeSingle()
 
   if (error || !coupon) return { error: 'Invalid coupon code' }
 

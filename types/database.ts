@@ -79,11 +79,76 @@ export interface Database {
         Insert: Omit<WebhookEvent, 'id' | 'created_at'>
         Update: Partial<Omit<WebhookEvent, 'id'>>
       }
+      // Phase 1 new tables
+      categories: {
+        Row: Category
+        Insert: Omit<Category, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Category, 'id'>>
+      }
+      product_categories: {
+        Row: ProductCategory
+        Insert: Omit<ProductCategory, 'created_at'>
+        Update: Partial<Omit<ProductCategory, 'product_id' | 'category_id'>>
+      }
+      tags: {
+        Row: Tag
+        Insert: Omit<Tag, 'id' | 'created_at'>
+        Update: Partial<Omit<Tag, 'id'>>
+      }
+      product_tags: {
+        Row: ProductTag
+        Insert: Omit<ProductTag, 'created_at'>
+        Update: Partial<Omit<ProductTag, 'product_id' | 'tag_id'>>
+      }
+      attributes: {
+        Row: Attribute
+        Insert: Omit<Attribute, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Attribute, 'id'>>
+      }
+      attribute_values: {
+        Row: AttributeValue
+        Insert: Omit<AttributeValue, 'id' | 'created_at'>
+        Update: Partial<Omit<AttributeValue, 'id'>>
+      }
+      product_attribute_values: {
+        Row: ProductAttributeValue
+        Insert: Omit<ProductAttributeValue, 'created_at'>
+        Update: Partial<Omit<ProductAttributeValue, 'product_id' | 'attribute_id' | 'attribute_value_id'>>
+      }
+      variant_option_values: {
+        Row: VariantOptionValue
+        Insert: Omit<VariantOptionValue, ''>
+        Update: Partial<Omit<VariantOptionValue, 'variant_id' | 'attribute_id'>>
+      }
+      inventory_movements: {
+        Row: InventoryMovement
+        Insert: Omit<InventoryMovement, 'id' | 'created_at'>
+        Update: Partial<Omit<InventoryMovement, 'id'>>
+      }
+      store_settings: {
+        Row: StoreSettings
+        Insert: Partial<StoreSettings>
+        Update: Partial<StoreSettings>
+      }
+      shipping_zones: {
+        Row: ShippingZone
+        Insert: Omit<ShippingZone, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<ShippingZone, 'id'>>
+      }
+      shipping_rates: {
+        Row: ShippingRate
+        Insert: Omit<ShippingRate, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<ShippingRate, 'id'>>
+      }
     }
     Functions: {
       generate_order_number: {
         Args: Record<string, never>
         Returns: string
+      }
+      get_current_stock: {
+        Args: { p_product_id: string; p_variant_id?: string }
+        Returns: number
       }
     }
   }
@@ -130,6 +195,9 @@ export interface Product {
   images: string[]
   is_featured: boolean
   is_active: boolean
+  status: 'draft' | 'active' | 'archived'
+  low_stock_threshold: number
+  deleted_at: string | null
   meta_title: string | null
   meta_description: string | null
   created_at: string
@@ -143,6 +211,7 @@ export interface ProductVariant {
   sku: string | null
   price_adjustment: number | null
   inventory_quantity: number | null
+  low_stock_threshold: number
   sort_order: number | null
   created_at: string
   updated_at: string
@@ -288,6 +357,89 @@ export interface WebhookEvent {
   processed_at: string | null
 }
 
+// Phase 1: Product Taxonomy & Attributes
+export interface Category {
+  id: string
+  parent_id: string | null
+  slug: string
+  name: string
+  description: string | null
+  image_url: string | null
+  is_primary_eligible: boolean
+  sort_order: number | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ProductCategory {
+  product_id: string
+  category_id: string
+  is_primary: boolean
+  created_at: string
+}
+
+export interface Tag {
+  id: string
+  name: string
+  slug: string
+  created_at: string
+}
+
+export interface ProductTag {
+  product_id: string
+  tag_id: string
+  created_at: string
+}
+
+export interface Attribute {
+  id: string
+  name: string
+  slug: string
+  input_type: 'text' | 'select' | 'multiselect' | 'boolean' | 'number'
+  is_variant_attribute: boolean
+  is_filterable: boolean
+  sort_order: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AttributeValue {
+  id: string
+  attribute_id: string
+  value: string
+  slug: string
+  sort_order: number | null
+  created_at: string
+}
+
+export interface ProductAttributeValue {
+  product_id: string
+  attribute_id: string
+  attribute_value_id: string | null
+  text_value: string | null
+  created_at: string
+}
+
+export interface VariantOptionValue {
+  variant_id: string
+  attribute_id: string
+  attribute_value_id: string
+}
+
+export interface InventoryMovement {
+  id: string
+  product_id: string
+  variant_id: string | null
+  quantity_change: number
+  reason: 'restock' | 'sale' | 'return' | 'adjustment' | 'damaged' | 'initial'
+  reference_type: 'order' | 'manual' | 'return' | null
+  reference_id: string | null
+  created_by: string | null
+  notes: string | null
+  created_at: string
+}
+
 // Derived types
 export interface CartItemWithProduct extends CartItem {
   product: Product
@@ -309,4 +461,70 @@ export interface ProductWithCollection extends Product {
 
 export interface ProductWithVariants extends Product {
   variants: ProductVariant[]
+}
+
+export interface CategoryWithChildren extends Category {
+  children: CategoryWithChildren[]
+}
+
+export interface AttributeWithValues extends Attribute {
+  values: AttributeValue[]
+}
+
+export interface VariantWithOptions extends ProductVariant {
+  options: (VariantOptionValue & { attribute: Attribute; value: AttributeValue })[]
+}
+
+export interface ProductWithAll extends Product {
+  collection: Collection | null
+  variants: VariantWithOptions[]
+  categories: ProductCategory[]
+  tags: (ProductTag & { tag: Tag })[]
+  attributes: (ProductAttributeValue & { attribute: Attribute; value?: AttributeValue })[]
+}
+
+export interface InventoryMovementWithDetails extends InventoryMovement {
+  product: Product | null
+  variant: ProductVariant | null
+  admin: Profile | null
+}
+
+export interface StoreSettings {
+  id: number
+  store_name: string
+  support_email: string
+  flat_shipping_rate: number
+  free_shipping_threshold: number
+  enable_tax: boolean
+  gst_percentage: number
+  currency: string
+  timezone: string
+  updated_at: string
+}
+
+export interface ShippingZone {
+  id: string
+  name: string
+  countries: string[]
+  states: string[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShippingRate {
+  id: string
+  zone_id: string
+  name: string
+  type: 'flat' | 'weight_based' | 'price_based'
+  price: number
+  min_value: number
+  max_value: number | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShippingZoneWithRates extends ShippingZone {
+  rates: ShippingRate[]
 }

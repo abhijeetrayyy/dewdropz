@@ -5,14 +5,15 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
 import ProductCard from '@/components/ProductCard'
-import { COLLECTIONS, PRODUCTS } from '@/lib/constants'
+import { COLLECTIONS } from '@/lib/constants'
+import { getCartRecommendations } from '@/lib/recommendations'
 
 export default function CartView() {
   const { items, updateQuantity, removeItem, subtotal } = useCart()
   const checkoutBtn = useMagneticHover(0.3, 10)
 
-  const cartSlugs = new Set(items.map((i) => i.slug))
-  const suggestions = PRODUCTS.filter((p) => !cartSlugs.has(p.slug)).slice(0, 3)
+  const cartSlugs = items.map((i) => i.slug)
+  const suggestions = getCartRecommendations(cartSlugs, 3)
 
   if (items.length === 0) {
     return (
@@ -144,6 +145,11 @@ export default function CartView() {
                 data-cursor="view"
                 data-cursor-text="Soon"
                 type="button"
+                onClick={() => {
+                  import('@/lib/analytics').then(({ trackEvent }) => {
+                    trackEvent('begin_checkout', { currency: 'INR', value: subtotal, items: items.map(i => ({ item_id: i.slug, item_name: i.name, quantity: i.quantity })) })
+                  })
+                }}
                 disabled
                 className="w-full bg-forest/50 text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm cursor-not-allowed"
               >

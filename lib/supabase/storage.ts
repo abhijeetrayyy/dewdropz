@@ -1,5 +1,5 @@
 import { createBrowserSupabaseClient } from './client'
-import { createAdminSupabaseClient } from './server'
+import { createAdminSupabaseClient } from './admin'
 
 const STORAGE_BUCKETS = {
   PRODUCTS: 'products',
@@ -30,7 +30,7 @@ export async function uploadFileAdmin(
   file: File | ArrayBuffer,
   contentType: string
 ) {
-  const supabase = await createAdminSupabaseClient()
+  const supabase = createAdminSupabaseClient()
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(filePath, file, {
@@ -68,7 +68,7 @@ export async function listFiles(bucket: BucketName, prefix?: string) {
 }
 
 export async function ensureBucketsExist() {
-  const supabase = await createAdminSupabaseClient()
+  const supabase = createAdminSupabaseClient()
   
   const buckets = Object.values(STORAGE_BUCKETS)
   for (const bucket of buckets) {

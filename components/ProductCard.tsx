@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
+import { useWishlist } from '@/providers/WishlistProvider'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import type { PRODUCTS } from '@/lib/constants'
 
@@ -55,8 +56,29 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
     setTimeout(() => setAdded(false), 1600)
   }
 
+  const { toggleItem, hasItem } = useWishlist()
+  
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault()
+    toggleItem(product.slug)
+  }
+
   return (
-    <div className="product-card group">
+    <div className="product-card group relative">
+      <button 
+        onClick={handleWishlist}
+        className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-paper"
+      >
+        <svg 
+          width="16" height="16" viewBox="0 0 24 24" 
+          fill={hasItem(product.slug) ? "var(--forest)" : "none"} 
+          stroke={hasItem(product.slug) ? "var(--forest)" : "currentColor"} 
+          strokeWidth="1.5"
+        >
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>
+      </button>
+
       <Link href={`/products/${product.slug}`} data-cursor="image" data-cursor-text="View">
         <motion.div
           ref={ref}
