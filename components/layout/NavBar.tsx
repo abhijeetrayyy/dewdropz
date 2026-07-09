@@ -8,6 +8,7 @@ import { ScrollTrigger } from '@/lib/gsap'
 import { useCart } from '@/providers/CartProvider'
 
 const NAV_LINKS = [
+  { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
   { label: 'Treks', href: '/treks' },
   { label: 'About', href: '/about' },

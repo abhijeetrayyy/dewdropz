@@ -137,24 +137,23 @@ export default function CartView() {
                 <span className="text-forest tabular-nums">Rs. {subtotal.toLocaleString('en-IN')}</span>
               </div>
 
-              <motion.button
-                ref={checkoutBtn.ref as React.RefObject<HTMLButtonElement>}
+              <motion.a
+                ref={checkoutBtn.ref as React.RefObject<HTMLAnchorElement>}
                 onMouseMove={checkoutBtn.onMouseMove}
                 onMouseLeave={checkoutBtn.onMouseLeave}
                 style={{ x: checkoutBtn.x, y: checkoutBtn.y }}
                 data-cursor="view"
-                data-cursor-text="Soon"
-                type="button"
+                data-cursor-text="Checkout"
+                href="/checkout"
                 onClick={() => {
                   import('@/lib/analytics').then(({ trackEvent }) => {
                     trackEvent('begin_checkout', { currency: 'INR', value: subtotal, items: items.map(i => ({ item_id: i.slug, item_name: i.name, quantity: i.quantity })) })
                   })
                 }}
-                disabled
-                className="w-full bg-forest/50 text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm cursor-not-allowed"
+                className="block w-full text-center bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300"
               >
-                Checkout — Coming Soon
-              </motion.button>
+                Checkout
+              </motion.a>
             </div>
           </div>
         </div>

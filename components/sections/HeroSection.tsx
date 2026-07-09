@@ -87,6 +87,12 @@ export default function HeroSection() {
     video.pause()
     if (reducedMotion) {
       video.currentTime = VIDEO_IN_POINT
+      // chapter/focus/final are mid- and end-of-story beats that only make sense
+      // stacked on top of the scroll sequence — `final` in particular shares the
+      // same bottom-anchored, full-bleed slot as `intro`, so unhiding it here would
+      // just overlay a second giant headline on top of the first. The CTA that
+      // normally lives inside `final` is restored separately, in the intro's own
+      // detail column (see the reducedMotion branch in the JSX below).
       gsap.set([chapter, focus, final], { autoAlpha: 0 })
       gsap.set(progress, { scaleX: 0 })
       return
@@ -271,11 +277,20 @@ export default function HeroSection() {
               </h1>
               <div data-hero-reveal="detail" className="invisible mb-3 max-w-[260px] lg:justify-self-end">
                 <p className="font-body text-sm leading-relaxed text-paper/75">
-                  Follow the hikers. The trail moves when you do.
+                  {reducedMotion ? 'Equipment for the miles that turn into stories.' : 'Follow the hikers. The trail moves when you do.'}
                 </p>
-                <p className="mt-5 font-mono text-[9px] uppercase tracking-[0.24em] text-sage">
-                  Scroll to begin ↓
-                </p>
+                {reducedMotion ? (
+                  <Link
+                    href="/collections"
+                    className="mt-5 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.24em] text-sage hover:text-paper transition-colors duration-300"
+                  >
+                    Explore the collection ↗
+                  </Link>
+                ) : (
+                  <p className="mt-5 font-mono text-[9px] uppercase tracking-[0.24em] text-sage">
+                    Scroll to begin ↓
+                  </p>
+                )}
               </div>
             </div>
           </div>

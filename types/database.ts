@@ -150,6 +150,22 @@ export interface Database {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
       }
+      adjust_stock_atomic: {
+        Args: {
+          p_product_id: string
+          p_quantity_change: number
+          p_reason: string
+          p_variant_id?: string | null
+          p_notes?: string | null
+          p_reference_type?: string
+          p_reference_id?: string | null
+        }
+        Returns: void
+      }
+      increment_coupon_usage: {
+        Args: { coupon_id: string }
+        Returns: void
+      }
     }
   }
 }

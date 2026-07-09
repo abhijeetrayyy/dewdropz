@@ -1,39 +1,36 @@
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
-import HeroSection from '@/components/sections/HeroSection'
-import BrandStatement from '@/components/sections/BrandStatement'
+import SummitHero from '@/components/sections/SummitHero'
+import TrustBand from '@/components/sections/TrustBand'
+import SeasonKit from '@/components/sections/SeasonKit'
+import ShopByCategory from '@/components/sections/ShopByCategory'
 import FeaturedGear from '@/components/sections/FeaturedGear'
-import CollectionScroll from '@/components/sections/CollectionScroll'
-import TrekManifesto from '@/components/sections/TrekManifesto'
-import WhoGoes from '@/components/sections/WhoGoes'
+import CollectionsRow from '@/components/sections/CollectionsRow'
 import GearSpotlight from '@/components/sections/GearSpotlight'
-import MarqueeBand from '@/components/sections/MarqueeBand'
-import StatsBand from '@/components/sections/StatsBand'
-import TerrainFlythrough from '@/components/sections/TerrainFlythrough'
-import TrailMap from '@/components/sections/TrailMap'
-import JournalStrip from '@/components/sections/JournalStrip'
-import BrandStory from '@/components/sections/BrandStory'
+import BrandPulse from '@/components/sections/BrandPulse'
 import Community from '@/components/sections/Community'
 import NewsletterBar from '@/components/sections/NewsletterBar'
 
+// One mountain, one descent, one store. SummitHero fuses what used to be two
+// separate pinned set-pieces (the 400vh video hero + the mid-page terrain
+// flythrough) into a single continuous journey: land on the summit at dawn,
+// scroll to descend past collection and trek waypoints, and arrive in the store
+// — where SeasonKit greets you with the trek window that's open right now and
+// the exact kit to pack for it. The old video HeroSection and TerrainFlythrough
+// files remain in the repo, just unplugged.
 export default function Home() {
   return (
     <>
       <NavBar />
       <main>
-        <HeroSection />
-        <BrandStatement />
+        <SummitHero />
+        <TrustBand />
+        <SeasonKit />
+        <ShopByCategory />
         <FeaturedGear />
-        <CollectionScroll />
-        <TrekManifesto />
-        <WhoGoes />
+        <CollectionsRow />
         <GearSpotlight />
-        <MarqueeBand />
-        <StatsBand />
-        <TerrainFlythrough />
-        <TrailMap />
-        <JournalStrip />
-        <BrandStory />
+        <BrandPulse />
         <Community />
         <NewsletterBar />
       </main>

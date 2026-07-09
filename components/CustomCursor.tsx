@@ -1,12 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, useMotionValue, useSpring } from 'motion/react'
 
 type CursorType = 'default' | 'text' | 'image' | 'magnetic'
 
 export default function CustomCursor() {
-  const [enabled, setEnabled] = useState(false)
+  const pathname = usePathname()
+  // Admin is a working tool, not part of the brand site — a hidden native cursor
+  // there is a usability regression, not a stylistic choice.
+  const isAdminRoute = pathname?.startsWith('/admin') ?? false
+  const [pointerFine, setPointerFine] = useState(false)
+  const enabled = pointerFine && !isAdminRoute
   const [active, setActive] = useState(false)
   const [label, setLabel] = useState('')
   const [cursorType, setCursorType] = useState<CursorType>('default')
@@ -24,14 +30,20 @@ export default function CustomCursor() {
 
   useEffect(() => {
     const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
-    setEnabled(mq.matches)
-    const listener = (e: MediaQueryListEvent) => setEnabled(e.matches)
+    setPointerFine(mq.matches)
+    const listener = (e: MediaQueryListEvent) => setPointerFine(e.matches)
     mq.addEventListener('change', listener)
     return () => mq.removeEventListener('change', listener)
   }, [])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      // Covers the SPA-navigation case: pointerFine stays true when a client-side
+      // route change lands on /admin, so the class has to be dropped explicitly here
+      // rather than relying on this effect simply not running.
+      document.documentElement.classList.remove('has-custom-cursor')
+      return
+    }
     document.documentElement.classList.add('has-custom-cursor')
 
     const move = (e: PointerEvent) => {

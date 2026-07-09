@@ -62,13 +62,18 @@ function worldY(x: number, z: number) {
   return rawHeight(x, z) * 3.4 - 4.5
 }
 
-// Two real places on this exact terrain — a genuine snow peak (t=0.95, found by
-// sampling the height field, not guessed) and the treeline hollow the trail already
-// ends at — each carrying the collection that actually belongs at that elevation.
-// Exported so the DOM wrapper can render matching interactive labels over them.
+// Real places on this exact terrain, every coordinate found by sampling the height
+// field, not guessed. Two kinds: 'collection' pins sit at the elevations their gear
+// is built for; 'trek' pins put actual bookable trails on the range at plausible
+// relative heights (Kedarkantha on the far left ridge t≈0.65, Har Ki Dun and Nag
+// Tibba in the treeline foreground t≈0.44) — the old TrailMap section's job, done
+// in-world. Exported so the DOM wrapper can render matching interactive labels.
 export const WAYPOINTS = [
-  { id: 'silent-altitude', name: 'Silent Altitude', x: -9.5, z: -31.5, labelHeight: 2.4 },
-  { id: 'mist-and-morning', name: 'Mist & Morning', x: 4, z: -27, labelHeight: 1.5 },
+  { id: 'silent-altitude', name: 'Silent Altitude', kind: 'collection', href: '/collections/silent-altitude', x: -9.5, z: -31.5, labelHeight: 2.4 },
+  { id: 'mist-and-morning', name: 'Mist & Morning', kind: 'collection', href: '/collections/mist-and-morning', x: 4, z: -27, labelHeight: 1.5 },
+  { id: 'kedarkantha', name: 'Kedarkantha — 3,800m', kind: 'trek', href: '/treks', x: -23.5, z: -29, labelHeight: 1.9 },
+  { id: 'har-ki-dun', name: 'Har Ki Dun — 3,566m', kind: 'trek', href: '/treks', x: 5, z: -9.5, labelHeight: 1.3 },
+  { id: 'nag-tibba', name: 'Nag Tibba — 3,022m', kind: 'trek', href: '/treks', x: -18.5, z: -9, labelHeight: 1.3 },
 ] as const
 
 export interface WaypointScreenState {
@@ -245,7 +250,7 @@ function WaypointMarkers() {
             rotation={[-Math.PI / 2, 0, 0]}
           >
             <ringGeometry args={[0.14, 0.18, 24]} />
-            <meshBasicMaterial color="#7BA46F" transparent opacity={0.5} fog={false} />
+            <meshBasicMaterial color={w.kind === 'trek' ? '#B8826B' : '#7BA46F'} transparent opacity={0.5} fog={false} />
           </mesh>
         </group>
       ))}
@@ -367,25 +372,50 @@ function Atmosphere({
   const scratch = useRef(new THREE.Color())
 
   useFrame(() => {
-    const p = reduceMotion ? 0.2 : (progressRef.current ?? 0)
+    const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
     if (lightRef.current) {
       scratch.current.lerpColors(DAWN_LIGHT, MORNING_LIGHT, p)
       lightRef.current.color.copy(scratch.current)
       lightRef.current.intensity = 1.5 + p * 0.7
     }
     if (scene.fog && 'color' in scene.fog) {
+      const fog = scene.fog as THREE.Fog
       scratch.current.lerpColors(DAWN_FOG, MORNING_FOG, p)
-      ;(scene.fog as THREE.Fog).color.copy(scratch.current)
+      fog.color.copy(scratch.current)
+      // The summit hold sits much further back (z=34) than the fog range this
+      // scene was tuned for (10–40), which buried the whole range in fog at p=0.
+      // Clear air at altitude, thickening as the camera descends into the valley
+      // mist — physically honest, and it makes the hero vista actually visible.
+      const descent = Math.min(1, p / 0.3)
+      fog.near = 18 - descent * 8
+      fog.far = 80 - descent * 40
     }
   })
 
   return <directionalLight ref={lightRef} position={[10, 14, 6]} intensity={1.5} color={DAWN_LIGHT} />
 }
 
+// Three-keyframe descent: HERO is the summit-dawn hold the page opens on (wide,
+// high, the whole range in frame), START is the old flythrough entry, END is the
+// treeline. p 0→0.3 blends HERO→START, 0.3→1 runs the original descent.
+const HERO_POS = new THREE.Vector3(0, 17, 34)
 const START_POS = new THREE.Vector3(0, 13, 26)
 const END_POS = new THREE.Vector3(0, 3, 3.5)
+const HERO_LOOK = new THREE.Vector3(0, 3.5, -14)
 const START_LOOK = new THREE.Vector3(0, 2, -10)
 const END_LOOK = new THREE.Vector3(0, 0.8, -20)
+const HERO_PHASE = 0.3
+
+function pathLerp(out: THREE.Vector3, hero: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3, p: number) {
+  if (p < HERO_PHASE) {
+    // Smoothstep the summit-to-entry blend so leaving the hold feels like a
+    // push-off rather than a linear slide.
+    const t = p / HERO_PHASE
+    out.lerpVectors(hero, start, t * t * (3 - 2 * t))
+  } else {
+    out.lerpVectors(start, end, (p - HERO_PHASE) / (1 - HERO_PHASE))
+  }
+}
 
 export interface DragState {
   yaw: number
@@ -411,7 +441,8 @@ function CameraRig({
   const appliedDrag = useRef({ yaw: 0, pitch: 0 })
 
   useFrame(({ camera, pointer, size }) => {
-    const p = reduceMotion ? 0.2 : (progressRef.current ?? 0)
+    // Reduced motion holds just off the summit — the hero framing, held still.
+    const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
     smoothed.current.x += (pointer.x - smoothed.current.x) * 0.04
     smoothed.current.y += (pointer.y - smoothed.current.y) * 0.04
 
@@ -422,12 +453,12 @@ function CameraRig({
     const aspect = size.width / size.height
     const portrait = Math.max(0, 0.85 - aspect)
 
-    pos.current.lerpVectors(START_POS, END_POS, p)
+    pathLerp(pos.current, HERO_POS, START_POS, END_POS, p)
     pos.current.x += smoothed.current.x * 1.1
     pos.current.y += smoothed.current.y * 0.45 - portrait * 9
     camera.position.copy(pos.current)
 
-    look.current.lerpVectors(START_LOOK, END_LOOK, p)
+    pathLerp(look.current, HERO_LOOK, START_LOOK, END_LOOK, p)
     look.current.y -= portrait * 6
     camera.lookAt(look.current)
 
@@ -451,6 +482,7 @@ export default function TerrainScene({
   treeCount,
   dragRef,
   onWaypointProject,
+  onReady,
 }: {
   progressRef: RefObject<number>
   reduceMotion: boolean
@@ -458,13 +490,15 @@ export default function TerrainScene({
   treeCount: number
   dragRef: RefObject<DragState>
   onWaypointProject: (states: Record<string, WaypointScreenState>) => void
+  onReady?: () => void
 }) {
   return (
     <Canvas
       dpr={[1, 1.6]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-      camera={{ fov: 45, near: 0.5, far: 100, position: [0, 13, 26] }}
+      camera={{ fov: 45, near: 0.5, far: 100, position: [0, 17, 34] }}
       className="!absolute inset-0"
+      onCreated={() => onReady?.()}
     >
       <color attach="background" args={['#182b22']} />
       <fog attach="fog" args={['#1c2f24', 10, 40]} />

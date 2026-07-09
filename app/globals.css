@@ -15,6 +15,45 @@
 
   --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
+
+  /* shadcn/ui theme tokens — components.json declares cssVariables:true and
+     baseColor "slate", but these were never actually defined here. Every shadcn
+     component (Button, Badge, Dialog, Select, Checkbox, Table, Card, Tabs) in the
+     admin panel references bg-primary/text-foreground/bg-destructive/etc.; with no
+     variables backing those utility names, Tailwind v4 has nothing to generate them
+     from, so buttons render with no fill, badges can't show a status color, and
+     dialogs render with no background (technically open, but invisible/unusable —
+     this is the root cause of "add buttons don't work" and "status not visible").
+     Scoped to names the storefront's own components never reference, so this is
+     purely additive and doesn't touch the site's existing palette. */
+  --background:             #ffffff;
+  --foreground:             #0f172a;
+  --card:                   #ffffff;
+  --card-foreground:        #0f172a;
+  --popover:                #ffffff;
+  --popover-foreground:     #0f172a;
+  --primary:                #0f172a;
+  --primary-foreground:     #f8fafc;
+  --secondary:              #eef1f4;
+  --secondary-foreground:   #334155;
+  --muted:                  #f6f7f9;
+  --muted-foreground:       #6b7280;
+  --accent:                 #eef4ec;
+  --accent-foreground:      #1f2d1a;
+  --destructive:            #dc2626;
+  --destructive-foreground: #fef2f2;
+  --success:                #16a34a;
+  --success-foreground:     #f0fdf4;
+  --success-soft:           #eafbf0;
+  --warning:                #d97706;
+  --warning-foreground:     #fffbeb;
+  --warning-soft:           #fef7e8;
+  --info:                   #2563eb;
+  --info-foreground:        #eff6ff;
+  --info-soft:              #eef4ff;
+  --border:                 #e7e9ec;
+  --input:                  #e2e8f0;
+  --ring:                   #0f172a;
 }
 
 @theme inline {
@@ -29,6 +68,35 @@
   --color-mid:        var(--mid);
   --color-light:      var(--light);
   --color-rule:       var(--rule);
+
+  --color-background:             var(--background);
+  --color-foreground:              var(--foreground);
+  --color-card:                    var(--card);
+  --color-card-foreground:         var(--card-foreground);
+  --color-popover:                 var(--popover);
+  --color-popover-foreground:      var(--popover-foreground);
+  --color-primary:                 var(--primary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-secondary:               var(--secondary);
+  --color-secondary-foreground:    var(--secondary-foreground);
+  --color-muted:                   var(--muted);
+  --color-muted-foreground:        var(--muted-foreground);
+  --color-accent:                  var(--accent);
+  --color-accent-foreground:       var(--accent-foreground);
+  --color-destructive:             var(--destructive);
+  --color-destructive-foreground:  var(--destructive-foreground);
+  --color-success:                 var(--success);
+  --color-success-foreground:      var(--success-foreground);
+  --color-success-soft:            var(--success-soft);
+  --color-warning:                 var(--warning);
+  --color-warning-foreground:      var(--warning-foreground);
+  --color-warning-soft:            var(--warning-soft);
+  --color-info:                    var(--info);
+  --color-info-foreground:         var(--info-foreground);
+  --color-info-soft:               var(--info-soft);
+  --color-border:                  var(--border);
+  --color-input:                   var(--input);
+  --color-ring:                    var(--ring);
 
   --font-display: var(--font-display), Georgia, serif;
   --font-body:    var(--font-body), system-ui, sans-serif;
@@ -72,6 +140,29 @@
     html.has-custom-cursor,
     html.has-custom-cursor * {
       cursor: none !important;
+    }
+  }
+
+  /* Community "contact sheet" strip — the photo list is rendered twice, so
+     drifting exactly -50% loops seamlessly. Pauses on hover for reading. */
+  @keyframes trail-drift {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .trail-marquee {
+    animation: trail-drift 55s linear infinite;
+  }
+
+  .trail-marquee:hover {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .trail-marquee {
+      animation: none;
+      overflow-x: auto;
+      width: 100%;
     }
   }
 }

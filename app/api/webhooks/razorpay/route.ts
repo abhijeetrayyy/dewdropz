@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server'
 import { verifyRazorpayWebhook } from '@/actions/payments'
 
 export async function POST(request: Request) {
-  try {
-    const payload = await request.json()
-    const signature = request.headers.get('x-razorpay-signature')!
+  const signature = request.headers.get('x-razorpay-signature')
+  if (!signature) {
+    return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
+  }
 
-    const result = await verifyRazorpayWebhook(payload, signature)
+  try {
+    // Signature verification needs the exact bytes Razorpay signed — read as text,
+    // not request.json(), which would hand the handler an already-parsed object.
+    const rawBody = await request.text()
+    const result = await verifyRazorpayWebhook(rawBody, signature)
+    if ('error' in result) return NextResponse.json(result, { status: 400 })
     return NextResponse.json(result)
   } catch (error) {
     console.error('Razorpay webhook error:', error)

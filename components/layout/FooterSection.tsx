@@ -3,16 +3,41 @@
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
-import { SITE } from '@/lib/constants'
+import { CATEGORY_TILES, COLLECTIONS, SITE } from '@/lib/constants'
 
-const NAV_LINKS = [
-  { label: 'Collections', href: '/collections' },
-  { label: 'Treks', href: '/treks' },
-  { label: 'About', href: '/about' },
-  { label: 'Journal', href: '/journal' },
-  { label: 'Contact', href: '/contact' },
-  { label: 'Sustainability', href: '/sustainability' },
-  { label: 'Privacy', href: '/privacy' },
+const FOOTER_COLUMNS = [
+  {
+    heading: 'Shop',
+    links: [
+      { label: 'All Gear', href: '/shop' },
+      ...CATEGORY_TILES.map((t) => ({ label: t.name, href: `/shop?category=${t.id}` })),
+    ],
+  },
+  {
+    heading: 'Collections',
+    links: [
+      ...COLLECTIONS.map((c) => ({ label: c.name, href: `/collections/${c.id}` })),
+      { label: 'View All', href: '/collections' },
+    ],
+  },
+  {
+    heading: 'Explore',
+    links: [
+      { label: 'Treks', href: '/treks' },
+      { label: 'Journal', href: '/journal' },
+      { label: 'About', href: '/about' },
+      { label: 'Sustainability', href: '/sustainability' },
+    ],
+  },
+  {
+    heading: 'Support',
+    links: [
+      { label: 'Contact & FAQs', href: '/contact' },
+      { label: 'Your Account', href: '/account' },
+      { label: 'Cart', href: '/cart' },
+      { label: 'Privacy', href: '/privacy' },
+    ],
+  },
 ]
 
 function SocialLink({
@@ -43,11 +68,23 @@ function SocialLink({
 
 export default function FooterSection() {
   return (
-    <footer className="bg-ink text-white/60 py-16 px-6 md:px-10">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
-        <div>
-          <div className="font-display text-white text-xl">DEWDROPZ</div>
+    <footer className="bg-ink text-white/60 pt-20 px-6 md:px-10 overflow-hidden">
+      {/* Brand + sitemap */}
+      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-x-6 gap-y-12">
+        <div className="col-span-2">
+          <div className="font-display text-white text-xl tracking-tight">DEWDROPZ</div>
           <div className="font-display italic text-sage text-sm mt-1">— Feel Alive</div>
+          <p className="mt-5 font-body text-sm text-white/40 leading-relaxed max-w-[260px]">
+            Trekking gear built by guides in Dehradun, tested above 5,200 metres on the
+            trails we still walk every season.
+          </p>
+
+          <div className="mt-6 space-y-1.5 font-body text-sm">
+            <a href={`mailto:${SITE.email}`} className="block hover:text-white transition-colors">{SITE.email}</a>
+            <a href={`tel:${SITE.phone.replace(/\s/g, '')}`} className="block hover:text-white transition-colors">{SITE.phone}</a>
+            <div className="text-white/35 leading-relaxed pt-1">{SITE.address}</div>
+          </div>
+
           <div className="flex items-center gap-4 mt-6">
             <SocialLink href={SITE.instagram} label="Instagram">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -64,34 +101,44 @@ export default function FooterSection() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 font-body text-sm">
-          {NAV_LINKS.map((link) => (
-            <Link key={link.label} href={link.href} className="hover:text-white transition-colors py-1">
-              {link.label}
-            </Link>
-          ))}
-        </div>
+        {FOOTER_COLUMNS.map((col) => (
+          <nav key={col.heading} aria-label={col.heading}>
+            <div className="font-body text-[10px] tracking-[0.2em] text-sage uppercase mb-4">{col.heading}</div>
+            <ul className="space-y-2.5">
+              {col.links.map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className="font-body text-sm hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
+      </div>
 
-        <div className="md:text-right">
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 100 100"
-            className="text-sage md:ml-auto"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M50 15C35 35 25 50 25 65a25 25 0 0 0 50 0c0-15-10-30-25-50z" />
-            <path d="M35 65l10-12 8 8 12-15" />
-          </svg>
-          <div className="font-display italic text-sage text-3xl mt-4">Feel Alive</div>
-          <div className="font-mono text-[11px] text-white/30 mt-2">dewdropz.shop</div>
+      {/* Logistics reassurance, one quiet line */}
+      <div className="max-w-7xl mx-auto border-t border-white/10 mt-14 pt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-body text-[11px] tracking-[0.08em] uppercase text-white/35">
+        <span>COD · UPI · Cards</span>
+        <span>Free shipping over ₹2,000</span>
+        <span>7-day returns</span>
+        <span>Ships from Dehradun in 2 days</span>
+      </div>
+
+      {/* The sign-off — oversized wordmark, like a summit marker */}
+      <div className="max-w-7xl mx-auto mt-12 select-none" aria-hidden="true">
+        <div
+          className="font-display font-light uppercase leading-[0.8] tracking-[-0.03em] text-transparent text-[clamp(64px,12.5vw,190px)] whitespace-nowrap"
+          style={{ WebkitTextStroke: '1px rgba(246,243,230,0.14)' }}
+        >
+          Dewdropz
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto border-t border-white/10 mt-12 pt-6 flex items-center justify-between">
-        <span className="font-body text-xs text-white/30">© 2026 DEWDROPZ</span>
+      {/* Legal row */}
+      <div className="max-w-7xl mx-auto border-t border-white/10 mt-4 py-6 flex flex-wrap items-center justify-between gap-3">
+        <span className="font-body text-xs text-white/30">© 2026 DEWDROPZ · Est. 2019, Dehradun</span>
+        <span className="font-mono text-[10px] tracking-[0.1em] text-white/25">30.3165° N, 78.0322° E</span>
         <span className="font-body text-xs text-white/30">Made by DoonDzn</span>
       </div>
     </footer>

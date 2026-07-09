@@ -141,6 +141,7 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #4A5D52, #9AAE9C)',
     image: 'https://images.unsplash.com/photo-1629185752193-0d25bb978c04',
     collectionId: 'mist-and-morning',
+    category: 'layers',
     materials: 'Merino-cotton blend, 180gsm',
     sizes: ['S', 'M', 'L', 'XL'],
     longDescription:
@@ -155,6 +156,7 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #6B8068, #C7D3C2)',
     image: 'https://images.unsplash.com/photo-1595174028948-42a4b1786664',
     collectionId: 'mist-and-morning',
+    category: 'layers',
     materials: 'Ripstop nylon, DWR coating',
     sizes: ['S', 'M', 'L', 'XL'],
     longDescription:
@@ -169,6 +171,7 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #1E3347, #5A7A96)',
     image: 'https://images.unsplash.com/photo-1509762774605-f07235a08f1f',
     collectionId: 'silent-altitude',
+    category: 'packs',
     materials: 'Welded-seam TPU shell, 40L capacity',
     sizes: ['One Size'],
     longDescription:
@@ -183,6 +186,7 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #2A3B4D, #7F97AC)',
     image: 'https://images.unsplash.com/photo-1648483092137-6e63796c8b06',
     collectionId: 'silent-altitude',
+    category: 'headwear',
     materials: '100% merino wool',
     sizes: ['One Size'],
     longDescription:
@@ -197,6 +201,7 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #2E1F16, #7A4F35)',
     image: 'https://images.unsplash.com/photo-1780758841669-c961af1a5a7e',
     collectionId: 'o-collection',
+    category: 'headwear',
     materials: 'Merino wool crown, cotton twill brim',
     sizes: ['One Size'],
     longDescription:
@@ -211,6 +216,7 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #7A4F35, #D9B08C)',
     image: 'https://images.unsplash.com/photo-1706206086774-0017933e52e2',
     collectionId: 'o-collection',
+    category: 'headwear',
     materials: 'Brushed cotton-linen blend',
     sizes: ['One Size'],
     longDescription:
@@ -225,11 +231,103 @@ export const PRODUCTS = [
     gradient: 'linear-gradient(135deg, #27481F, #7BA46F)',
     image: 'https://images.unsplash.com/photo-1605539582747-ce302b9afca2',
     collectionId: 'o-collection',
+    category: 'hydration',
     materials: '18/8 stainless steel, double-wall vacuum insulation',
     sizes: ['750ml'],
     longDescription:
       'Keeps water cold for 24 hours and tea hot for 12 — tested in the field, not just in a lab, across three-day desert-ridge crossings.',
     care: 'Hand wash. Do not microwave or freeze.',
+  },
+]
+
+// The packer's entry point — for the visitor with a trek booked and a checklist,
+// not a mood. Tiles link into /shop pre-filtered by category.
+export const CATEGORY_TILES = [
+  {
+    id: 'layers',
+    name: 'Layers & Shells',
+    blurb: 'Base layers to windproof shells',
+    image: 'https://images.unsplash.com/photo-1595174028948-42a4b1786664',
+  },
+  {
+    id: 'packs',
+    name: 'Packs & Carry',
+    blurb: 'Welded-seam packs that shrug off monsoon',
+    image: 'https://images.unsplash.com/photo-1509762774605-f07235a08f1f',
+  },
+  {
+    id: 'headwear',
+    name: 'Head & Sun',
+    blurb: 'Caps, beanies, and dust shields',
+    image: 'https://images.unsplash.com/photo-1780758841669-c961af1a5a7e',
+  },
+  {
+    id: 'hydration',
+    name: 'Bottles & Extras',
+    blurb: 'Cold water on day three, hot tea at the summit',
+    image: 'https://images.unsplash.com/photo-1605539582747-ce302b9afca2',
+  },
+]
+
+// Real logistics facts (see CONTACT_FAQS + store settings) surfaced as a single
+// trust strip — the "will it arrive, can I return it" anxieties answered up front.
+export const TRUST_POINTS = [
+  'COD available across India',
+  'Free shipping over ₹2,000',
+  '7-day easy returns',
+  'Field-tested at 5,200m',
+]
+
+// The hero's live "drop card" — small-batch scarcity is this brand's one honest
+// urgency signal (runs of 200–500 that sell out in days), so it lives on the
+// front door. Structured so it can later be fed from real inventory instead.
+export const CURRENT_DROP = {
+  productSlug: 'altitude-pack',
+  name: 'Altitude Pack 40L',
+  batchLabel: 'Batch 06 — welded in Dehradun',
+  batchSize: 300,
+  remaining: 41,
+}
+
+// The season-aware sub-hero: which trek window is open right now, and the exact
+// kit we'd pack for it. Months are 1-12; the component picks by calendar month,
+// so the homepage merchandising changes four times a year without a redesign.
+export const SEASON_KITS = [
+  {
+    id: 'winter',
+    months: [12, 1, 2],
+    seasonLabel: 'Winter window',
+    trekSlug: 'kedarkantha-winter',
+    headline: 'Snow on Kedarkantha.',
+    line: 'Minus-eight nights, blue-sky summit mornings. This is the kit that keeps you out there.',
+    products: ['ridge-beanie', 'dew-windbreaker', 'altitude-pack', 'summit-flask'],
+  },
+  {
+    id: 'pre-monsoon',
+    months: [3, 4, 5, 6],
+    seasonLabel: 'Pre-monsoon window',
+    trekSlug: 'roopkund-expedition',
+    headline: 'Roopkund before the rains.',
+    line: 'The high routes open for eight short weeks. Wind-sealed and insulated, or turned back at the ridge.',
+    products: ['altitude-pack', 'dew-windbreaker', 'ridge-beanie', 'summit-flask'],
+  },
+  {
+    id: 'monsoon',
+    months: [7, 8, 9],
+    seasonLabel: 'Monsoon window',
+    trekSlug: 'valley-of-flowers',
+    headline: 'The valley is blooming.',
+    line: 'Valley of Flowers only happens in the rain. Welded seams and fast-dry layers make it worth it.',
+    products: ['dew-windbreaker', 'altitude-pack', 'mist-tee', 'desert-scarf'],
+  },
+  {
+    id: 'post-monsoon',
+    months: [10, 11],
+    seasonLabel: 'Post-monsoon window',
+    trekSlug: 'har-ki-dun',
+    headline: 'Har Ki Dun, washed clean.',
+    line: 'The clearest air of the year. Cold mornings, warm miles — layer for both.',
+    products: ['mist-tee', 'dew-windbreaker', 'trail-cap', 'altitude-pack'],
   },
 ]
 
@@ -293,12 +391,18 @@ export const CONTACT_FAQS = [
   },
 ]
 
+// Each report pairs a voice with the photo and altitude of the trek it happened
+// on — the quote and the image are one artifact (a field report), not two
+// separate "testimonials" and "gallery" sections.
 export const TESTIMONIALS = [
   {
     name: 'Ananya Krishnan',
     initials: 'AK',
     location: 'Bengaluru',
     trek: 'Kedarkantha, Dec 2025',
+    altitude: '3,800m',
+    gear: 'Altitude Pack 40L',
+    image: 'https://images.unsplash.com/photo-1633231610793-a5be285cb418',
     quote:
       "The Altitude Pack survived a whiteout at 3,800m that ruined two other people's gear in our group. I stopped thinking about my pack entirely by day two, which is exactly the point.",
     gradient: 'linear-gradient(135deg, #1E3347, #7BA46F)',
@@ -308,6 +412,9 @@ export const TESTIMONIALS = [
     initials: 'VN',
     location: 'Pune',
     trek: 'Har Ki Dun, Oct 2025',
+    altitude: '3,566m',
+    gear: 'Dew Windbreaker',
+    image: 'https://images.unsplash.com/photo-1689825422854-8e3083c2fb82',
     quote:
       "I've bought three 'waterproof' shells from other brands that all soaked through by hour four. The Dew Windbreaker is the first one that actually held up through a full monsoon crossing.",
     gradient: 'linear-gradient(135deg, #4A5D52, #C8906A)',
@@ -317,6 +424,9 @@ export const TESTIMONIALS = [
     initials: 'RS',
     location: 'Delhi',
     trek: 'Roopkund, May 2026',
+    altitude: '5,029m',
+    gear: 'Trail Cap',
+    image: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a',
     quote:
       'Small thing, but the Trail Cap brim held its shape after being crushed in my pack for six days straight. Sounds minor until you\'re the one person on the trek whose hat still looks like a hat.',
     gradient: 'linear-gradient(135deg, #2E1F16, #9AAE9C)',
@@ -326,6 +436,9 @@ export const TESTIMONIALS = [
     initials: 'DR',
     location: 'Hyderabad',
     trek: 'Valley of Flowers, Jul 2025',
+    altitude: '3,658m',
+    gear: 'Altitude Pack 40L',
+    image: 'https://images.unsplash.com/photo-1587547131116-a0655a526190',
     quote:
       "What got me was the reply when I emailed about a strap issue — an actual person who'd clearly worn the pack themselves wrote back with a fix in twenty minutes. Never happened with any bigger brand.",
     gradient: 'linear-gradient(135deg, #142536, #5A7A96)',
@@ -333,12 +446,12 @@ export const TESTIMONIALS = [
 ]
 
 export const COMMUNITY_PHOTOS = [
-  { image: 'https://images.unsplash.com/photo-1633231610793-a5be285cb418', caption: 'Mount Ruapehu crater climb' },
+  { image: 'https://images.unsplash.com/photo-1633231610793-a5be285cb418', caption: 'Kedarkantha summit push' },
   { image: 'https://images.unsplash.com/photo-1522506209496-4536d9020ec4', caption: 'Chandrashila Peak, dawn' },
   { image: 'https://images.unsplash.com/photo-1758272960205-96258d60ac1f', caption: 'Basecamp, night before summit' },
   { image: 'https://images.unsplash.com/photo-1689825422854-8e3083c2fb82', caption: 'Group push above tree line' },
-  { image: 'https://images.unsplash.com/photo-1639938794001-bcc9e3770fd4', caption: 'Todd Crag, summit moment' },
-  { image: 'https://images.unsplash.com/photo-1722410141874-5494d14deeca', caption: 'Andes crossing, day two' },
+  { image: 'https://images.unsplash.com/photo-1639938794001-bcc9e3770fd4', caption: 'Chandrashila, summit moment' },
+  { image: 'https://images.unsplash.com/photo-1722410141874-5494d14deeca', caption: 'Kuari Pass crossing, day two' },
   { image: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a', caption: 'Roopkund ridge, fog window' },
   { image: 'https://images.unsplash.com/photo-1587547131116-a0655a526190', caption: 'Trailhead, first light' },
 ]

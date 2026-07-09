@@ -165,21 +165,23 @@ export default function TerrainFlythrough() {
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#182b22] via-transparent to-[#182b22]/40 z-[1]" />
 
       {/* Real hotspots anchored to the terrain itself, not the UI chrome around it —
-          each is a working link, projected to screen space every frame in TerrainScene. */}
+          each is a working link, projected to screen space every frame in TerrainScene.
+          Collection pins pulse sage and sell gear; trek pins glow clay and link to the
+          bookable trails themselves — the old TrailMap section's content, in-world. */}
       {WAYPOINTS.map((w) => (
         <Link
           key={w.id}
           ref={(el) => {
             waypointLabelRefs.current[w.id] = el
           }}
-          href={`/collections/${w.id}`}
+          href={w.href}
           data-cursor="view"
-          data-cursor-text="Explore"
+          data-cursor-text={w.kind === 'trek' ? 'Trek' : 'Explore'}
           className="group absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 opacity-0 transition-opacity duration-300"
         >
           <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage/60" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-paper ring-2 ring-sage/40" />
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${w.kind === 'trek' ? 'bg-clay/60' : 'bg-sage/60'}`} />
+            <span className={`relative inline-flex h-2.5 w-2.5 rounded-full bg-paper ring-2 ${w.kind === 'trek' ? 'ring-clay/40' : 'ring-sage/40'}`} />
           </span>
           <span className="whitespace-nowrap rounded-sm bg-ink/60 px-2.5 py-1 font-body text-[9px] uppercase tracking-[0.15em] text-paper backdrop-blur-sm transition-colors duration-300 group-hover:bg-ink/85">
             {w.name} ↗
