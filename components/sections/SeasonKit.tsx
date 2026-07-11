@@ -81,7 +81,7 @@ export default function SeasonKit() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">Built for this window</div>
-                <div className="mt-0.5 font-display text-lg text-paper leading-tight truncate">{collection.name}</div>
+                <div className="mt-0.5 font-display text-lg text-paper leading-tight">{collection.name}</div>
                 <div className="mt-1 font-mono text-[10px] tracking-[0.08em] text-paper/50 uppercase">
                   {collection.conditions[0].value} · {collection.conditions[1].value}
                 </div>

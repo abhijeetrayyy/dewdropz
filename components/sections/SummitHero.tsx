@@ -49,6 +49,13 @@ function clamp01(v: number) {
   return Math.min(1, Math.max(0, v))
 }
 
+// "Mobile" here means how the page is *consumed*, not just how wide it is: on a
+// coarse-pointer device the scroll-scrubbed descent becomes flick-labour — three
+// full swipes through darkness — so those devices get the ambient hold instead.
+function isTouchConsumption() {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth < 768
+}
+
 function clampRange(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
@@ -62,6 +69,7 @@ export default function SummitHero() {
   const waypointLabelRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
   const [progress, setProgress] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
+  const [ambientMobile, setAmbientMobile] = useState(false)
   const [segments, setSegments] = useState(90)
   const [treeCount, setTreeCount] = useState(90)
   const [sceneReady, setSceneReady] = useState(false)
@@ -69,7 +77,8 @@ export default function SummitHero() {
 
   useEffect(() => {
     setReduceMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-    const mobile = window.innerWidth < 768
+    const mobile = isTouchConsumption()
+    setAmbientMobile(mobile)
     setSegments(mobile ? 48 : 90)
     setTreeCount(mobile ? 40 : 90)
     setMounted(true)
@@ -90,10 +99,15 @@ export default function SummitHero() {
     return () => ctx.revert()
   }, [introDone])
 
-  // The descent. Reduced motion skips the pin entirely — the summit hold, held.
+  // The descent — desktop only. Reduced motion and touch devices skip the pin
+  // entirely: the summit hold becomes a living, time-driven vista (camera drift,
+  // mist, stars) that scrolls away naturally instead of demanding scrub-labour.
+  // Detection reads the environment directly (not state) so no transient trigger
+  // is ever created on mobile before hydration effects settle.
   useEffect(() => {
     const section = sectionRef.current
     if (!section || reduceMotion) return
+    if (isTouchConsumption()) return
     const trigger = ScrollTrigger.create({
       trigger: section,
       start: 'top top',
@@ -149,8 +163,8 @@ export default function SummitHero() {
     }
   }, [])
 
-  const introOpacity = reduceMotion ? 1 : 1 - clamp01(progress / INTRO_FADE_END)
-  const descentOpacity = reduceMotion ? 0 : clamp01((progress - DESCENT_UI_START) / 0.15)
+  const introOpacity = reduceMotion || ambientMobile ? 1 : 1 - clamp01(progress / INTRO_FADE_END)
+  const descentOpacity = reduceMotion || ambientMobile ? 0 : clamp01((progress - DESCENT_UI_START) / 0.15)
   const zoneIndex = progress < ZONE_SWITCH ? 0 : 1
   const zone = ZONES[zoneIndex]
   const altitude = Math.round(PEAK_ALTITUDE - progress * (PEAK_ALTITUDE - VALLEY_ALTITUDE))
@@ -180,6 +194,7 @@ export default function SummitHero() {
           <TerrainScene
             progressRef={progressRef}
             reduceMotion={reduceMotion}
+            ambient={ambientMobile && !reduceMotion}
             segments={segments}
             treeCount={treeCount}
             dragRef={dragRef}
@@ -267,9 +282,11 @@ export default function SummitHero() {
           </div>
         </div>
 
+        {/* "Scroll to descend" is only true where the pin exists; on mobile the
+            page simply continues, so the hint is a plain arrow. */}
         {!reduceMotion && (
           <div data-summit-reveal className="invisible absolute bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-2 font-body text-[9px] tracking-[0.2em] text-paper/40 uppercase pointer-events-none">
-            Scroll to descend ↓
+            {ambientMobile ? '↓' : 'Scroll to descend ↓'}
           </div>
         )}
       </div>

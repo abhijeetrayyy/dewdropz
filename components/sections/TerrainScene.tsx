@@ -587,10 +587,12 @@ export interface DragState {
 function CameraRig({
   progressRef,
   reduceMotion,
+  ambient,
   dragRef,
 }: {
   progressRef: RefObject<number>
   reduceMotion: boolean
+  ambient?: boolean
   dragRef: RefObject<DragState>
 }) {
   const smoothed = useRef({ x: 0, y: 0 })
@@ -601,11 +603,20 @@ function CameraRig({
   const look = useRef(new THREE.Vector3())
   const appliedDrag = useRef({ yaw: 0, pitch: 0 })
 
-  useFrame(({ camera, pointer, size }) => {
+  useFrame(({ camera, pointer, size, clock }) => {
     // Reduced motion holds just off the summit — the hero framing, held still.
     const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
-    smoothed.current.x += (pointer.x - smoothed.current.x) * 0.04
-    smoothed.current.y += (pointer.y - smoothed.current.y) * 0.04
+    if (ambient) {
+      // Touch devices have no hover parallax, so the vista breathes on its own —
+      // a slow figure-eight drift through the same smoothing path the mouse uses,
+      // making the mountain feel alive without asking the thumb for anything.
+      const t = clock.elapsedTime
+      smoothed.current.x += (Math.sin(t * 0.11) * 0.55 - smoothed.current.x) * 0.02
+      smoothed.current.y += (Math.cos(t * 0.07) * 0.3 - smoothed.current.y) * 0.02
+    } else {
+      smoothed.current.x += (pointer.x - smoothed.current.x) * 0.04
+      smoothed.current.y += (pointer.y - smoothed.current.y) * 0.04
+    }
 
     // A tall/narrow (portrait) viewport shows far less horizontal terrain relative to
     // its height than the landscape framing this path was tuned for, leaving the ridge
@@ -639,6 +650,7 @@ function CameraRig({
 export default function TerrainScene({
   progressRef,
   reduceMotion,
+  ambient,
   segments,
   treeCount,
   dragRef,
@@ -647,6 +659,9 @@ export default function TerrainScene({
 }: {
   progressRef: RefObject<number>
   reduceMotion: boolean
+  // Touch-consumption mode: no scroll scrub drives the camera, so it drifts on
+  // its own clock instead of following the (nonexistent) hover pointer.
+  ambient?: boolean
   segments: number
   treeCount: number
   dragRef: RefObject<DragState>
@@ -679,7 +694,7 @@ export default function TerrainScene({
       </group>
       <DriftingMist />
       <Waypoints onProject={onWaypointProject} />
-      <CameraRig progressRef={progressRef} reduceMotion={reduceMotion} dragRef={dragRef} />
+      <CameraRig progressRef={progressRef} reduceMotion={reduceMotion} ambient={ambient} dragRef={dragRef} />
     </Canvas>
   )
 }

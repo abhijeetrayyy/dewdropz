@@ -91,13 +91,19 @@ export default function Community() {
                   type="button"
                   onClick={() => setActive(i)}
                   aria-label={`Read ${t.name}'s report`}
-                  className={`font-mono text-[11px] tracking-[0.1em] pb-1 border-b transition-colors duration-300 ${
-                    i === active
-                      ? 'text-forest border-forest'
-                      : 'text-light border-transparent hover:text-mid'
-                  }`}
+                  // p-3/-m-3 grows the tap target to ~40px for thumbs without
+                  // shifting the visual layout; the underline lives on the span.
+                  className="p-3 -m-3"
                 >
-                  {String(i + 1).padStart(2, '0')}
+                  <span
+                    className={`font-mono text-[11px] tracking-[0.1em] pb-1 border-b transition-colors duration-300 ${
+                      i === active
+                        ? 'text-forest border-forest'
+                        : 'text-light border-transparent hover:text-mid'
+                    }`}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
                 </button>
               ))}
               <div className="flex-1 h-px bg-rule" />
