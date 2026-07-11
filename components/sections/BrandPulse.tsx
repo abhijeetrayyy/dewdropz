@@ -58,7 +58,7 @@ export default function BrandPulse() {
       <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/70 to-ink pointer-events-none" />
 
       <div className="relative max-w-3xl mx-auto text-center">
-        <div className="font-body text-[10px] tracking-[0.3em] text-sage uppercase">Why Dewdropz</div>
+        <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">19:30 · Basecamp</div>
         <motion.h2
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}

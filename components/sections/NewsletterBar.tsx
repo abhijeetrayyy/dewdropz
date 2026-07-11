@@ -58,7 +58,7 @@ export default function NewsletterBar() {
 
       <div className="relative max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
         <div>
-          <div className="font-body text-[10px] tracking-[0.3em] text-sage uppercase">The Trail Dispatch</div>
+          <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">21:00 · Radio check — The Trail Dispatch</div>
           <h2 className="mt-4 font-display font-light text-[clamp(30px,4.4vw,48px)] text-paper leading-[1.1]">
             One email a month.
             <br />

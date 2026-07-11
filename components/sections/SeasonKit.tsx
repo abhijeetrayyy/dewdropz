@@ -4,7 +4,9 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCart } from '@/providers/CartProvider'
-import { BLUR_DATA_URL, PRODUCTS, SEASON_KITS, TREKS } from '@/lib/constants'
+import { BLUR_DATA_URL, COLLECTIONS, PRODUCTS, SEASON_KITS } from '@/lib/constants'
+// Treks paused — restore the TREKS import alongside the trek card below.
+// import { TREKS } from '@/lib/constants'
 
 // The homepage's heartbeat: mountains have seasons, so the store does too. This
 // section knows the calendar — which trek window is open right now and the exact
@@ -14,7 +16,9 @@ import { BLUR_DATA_URL, PRODUCTS, SEASON_KITS, TREKS } from '@/lib/constants'
 export default function SeasonKit() {
   const month = new Date().getMonth() + 1
   const kit = SEASON_KITS.find((k) => k.months.includes(month)) ?? SEASON_KITS[0]
-  const trek = TREKS.find((t) => t.slug === kit.trekSlug)
+  // Treks paused — the card below now features the season's collection instead.
+  // const trek = TREKS.find((t) => t.slug === kit.trekSlug)
+  const collection = COLLECTIONS.find((c) => c.id === kit.collectionId)
   const products = kit.products
     .map((slug) => PRODUCTS.find((p) => p.slug === slug))
     .filter((p): p is (typeof PRODUCTS)[number] => Boolean(p))
@@ -41,8 +45,8 @@ export default function SeasonKit() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage/70" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-sage" />
             </span>
-            <span className="font-body text-[10px] tracking-[0.28em] text-sage uppercase">
-              {kit.seasonLabel} — open now
+            <span className="font-mono text-[10px] tracking-[0.22em] text-sage uppercase">
+              06:10 · First light — {kit.seasonLabel} open
             </span>
           </div>
 
@@ -53,17 +57,21 @@ export default function SeasonKit() {
             {kit.line}
           </p>
 
-          {trek && (
+          {/* Treks paused — this card used to show the season's bookable trek
+              (image, dates, spots left). Restore by uncommenting the trek lookup
+              above and swapping this collection card back for the original.
+              For now: the collection built for these exact conditions. */}
+          {collection && (
             <Link
-              href="/treks"
+              href={`/collections/${collection.id}`}
               data-cursor="view"
-              data-cursor-text="Trek"
+              data-cursor-text="Explore"
               className="group mt-8 flex items-center gap-4 border border-paper/15 rounded-sm p-4 max-w-md hover:border-sage/40 transition-colors duration-300"
             >
               <div className="relative h-16 w-16 rounded-sm overflow-hidden flex-shrink-0">
                 <Image
-                  src={trek.image}
-                  alt={trek.name}
+                  src={collection.image}
+                  alt={collection.name}
                   fill
                   sizes="64px"
                   placeholder="blur"
@@ -72,15 +80,15 @@ export default function SeasonKit() {
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-display text-lg text-paper leading-tight truncate">{trek.name}</div>
+                <div className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">Built for this window</div>
+                <div className="mt-0.5 font-display text-lg text-paper leading-tight truncate">{collection.name}</div>
                 <div className="mt-1 font-mono text-[10px] tracking-[0.08em] text-paper/50 uppercase">
-                  {trek.date} · {trek.duration} · {trek.altitude}
+                  {collection.conditions[0].value} · {collection.conditions[1].value}
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="font-body text-[9px] tracking-[0.15em] text-clay uppercase">{trek.spotsLeft} spots left</div>
-                <div className="mt-1 font-body text-[10px] tracking-[0.1em] text-sage uppercase group-hover:text-paper transition-colors">
-                  View →
+                <div className="font-body text-[10px] tracking-[0.1em] text-sage uppercase group-hover:text-paper transition-colors">
+                  Explore →
                 </div>
               </div>
             </Link>

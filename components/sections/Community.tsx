@@ -26,17 +26,20 @@ export default function Community() {
   const report = TESTIMONIALS[active]
 
   return (
-    <section className="bg-paper px-6 md:px-10 py-24 md:py-32 overflow-hidden">
+    // Late afternoon on the page's clock — the warmest paper of the day, before
+    // the final sections go to night.
+    <section className="bg-[#F4EBD7] px-6 md:px-10 py-24 md:py-32 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="mb-14 md:mb-16 flex items-end justify-between">
           <div>
-            <div className="font-body text-xs tracking-[0.18em] text-forest uppercase">Field Reports</div>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">16:30 · The Way Down</div>
             <h2 className="mt-3 font-display font-light text-[clamp(30px,4.5vw,48px)] text-text leading-[1.1]">
               Worn. Tested. Reported back.
             </h2>
           </div>
           <p className="hidden md:block font-body text-sm text-mid max-w-[240px] text-right leading-relaxed">
-            No stock reviews — every report is from a real trek above 3,000 metres.
+            Stories are what people trade on the descent. Every one of these is from a
+            real trek above 3,000 metres.
           </p>
         </div>
 

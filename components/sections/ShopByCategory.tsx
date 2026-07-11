@@ -7,14 +7,18 @@ import { BLUR_DATA_URL, CATEGORY_TILES, PRODUCTS } from '@/lib/constants'
 // catalogue by what they need, before any more storytelling.
 export default function ShopByCategory() {
   return (
-    <section className="bg-paper px-6 md:px-10 pt-20 pb-24 md:pt-24">
+    // Early afternoon on the page's clock — paper warms a step past midday.
+    <section className="bg-[#F6F0E2] px-6 md:px-10 pt-20 pb-24 md:pt-24">
       <div className="max-w-7xl mx-auto">
         <div className="mb-12 flex items-end justify-between">
           <div>
-            <div className="font-body text-xs tracking-[0.18em] text-forest uppercase">Gear Up</div>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">13:00 · Pack Check</div>
             <h2 className="font-display text-[clamp(34px,5vw,54px)] text-text mt-2">
               What are you packing for?
             </h2>
+            <p className="mt-3 font-display italic text-base text-mid max-w-md">
+              &ldquo;Lay everything out. If you can&apos;t say why it&apos;s in the pack, it stays behind.&rdquo;
+            </p>
           </div>
           <Link
             href="/shop"

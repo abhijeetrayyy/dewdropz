@@ -8,12 +8,13 @@ import { BLUR_DATA_URL, COLLECTIONS } from '@/lib/constants'
 // in half a screen instead of the three full pinned slides it used to take.
 export default function CollectionsRow() {
   return (
-    <section className="bg-ink px-6 md:px-10 py-20 md:py-24">
+    // Midday on the page's clock — the brightest stop of the day arc.
+    <section className="bg-paper px-6 md:px-10 py-20 md:py-24">
       <div className="max-w-7xl mx-auto">
         <div className="mb-10 flex items-end justify-between">
           <div>
-            <div className="font-body text-xs tracking-[0.18em] text-sage uppercase">The Collections</div>
-            <h2 className="font-display text-[clamp(30px,4.4vw,46px)] text-paper mt-2">
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">11:00 · The Ridge</div>
+            <h2 className="font-display text-[clamp(30px,4.4vw,46px)] text-text mt-2">
               Three conditions. Three kits.
             </h2>
           </div>
@@ -21,7 +22,7 @@ export default function CollectionsRow() {
             href="/collections"
             data-cursor="view"
             data-cursor-text="View"
-            className="hidden md:inline-block font-body text-xs tracking-[0.1em] text-sage uppercase hover:text-paper transition-colors duration-300"
+            className="hidden md:inline-block font-body text-xs tracking-[0.1em] text-forest uppercase hover:text-text transition-colors duration-300"
           >
             View All →
           </Link>

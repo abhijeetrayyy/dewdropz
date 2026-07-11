@@ -10,7 +10,9 @@ import { useCart } from '@/providers/CartProvider'
 const NAV_LINKS = [
   { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
-  { label: 'Treks', href: '/treks' },
+  // Treks paused as a business line — restore by uncommenting (and the other
+  // "Treks paused" blocks: footer, SummitHero, SeasonKit, TerrainScene, /treks page).
+  // { label: 'Treks', href: '/treks' },
   { label: 'About', href: '/about' },
   { label: 'Journal', href: '/journal' },
   { label: 'Contact', href: '/contact' },

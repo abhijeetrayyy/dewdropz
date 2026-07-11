@@ -23,7 +23,8 @@ const FOOTER_COLUMNS = [
   {
     heading: 'Explore',
     links: [
-      { label: 'Treks', href: '/treks' },
+      // Treks paused — restore by uncommenting.
+      // { label: 'Treks', href: '/treks' },
       { label: 'Journal', href: '/journal' },
       { label: 'About', href: '/about' },
       { label: 'Sustainability', href: '/sustainability' },

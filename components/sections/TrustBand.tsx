@@ -7,6 +7,9 @@ export default function TrustBand() {
   return (
     <section className="bg-forest px-6 md:px-10 py-5">
       <ul className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-10 gap-y-2">
+        <li className="font-mono text-[10px] tracking-[0.2em] uppercase text-sage">
+          05:50 — The brief
+        </li>
         {TRUST_POINTS.map((point) => (
           <li
             key={point}

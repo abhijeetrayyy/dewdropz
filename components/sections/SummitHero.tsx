@@ -10,20 +10,19 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { gsap, ScrollTrigger } from '@/lib/gsap'
 import { useIntro } from '@/providers/IntroProvider'
-import { BLUR_DATA_URL, COLLECTIONS, CURRENT_DROP, PRODUCTS } from '@/lib/constants'
+import { BLUR_DATA_URL, COLLECTIONS } from '@/lib/constants'
 import type { DragState, WaypointScreenState } from './TerrainScene'
 import { WAYPOINTS } from './TerrainScene'
 
 const TerrainScene = dynamic(() => import('./TerrainScene'), { ssr: false })
 
 // The hero and the terrain flythrough, fused: the page opens on the summit of
-// the brand's own 3D range at dawn — headline, two doors (shop / trek), proof
-// line, and the live small-batch drop card — and scrolling doesn't play a video,
-// it descends the mountain past collection and trek waypoints until the journey
-// lands in the store. One world, one motion, from pixel one.
+// the brand's own 3D range at dawn holding exactly one experience — headline,
+// one line, one door — and scrolling doesn't play a video, it descends the
+// mountain, revealing the trail and its waypoints as the journey's reward.
+// One world, one motion, one thing at a time.
 const SILENT_ALTITUDE = COLLECTIONS.find((c) => c.id === 'silent-altitude')!
 const MIST_AND_MORNING = COLLECTIONS.find((c) => c.id === 'mist-and-morning')!
-const DROP_PRODUCT = PRODUCTS.find((p) => p.slug === CURRENT_DROP.productSlug)!
 
 const ZONES = [
   {
@@ -83,7 +82,9 @@ export default function SummitHero() {
       gsap.fromTo(
         '[data-summit-reveal]',
         { autoAlpha: 0, y: 26, filter: 'blur(8px)' },
-        { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 1, stagger: 0.09, ease: 'power3.out' }
+        // Deliberately unhurried stagger — each element gets its own beat, so the
+        // hold reads as a sequence (headline → line → door → hint), never a wall.
+        { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 1.2, stagger: 0.26, ease: 'power3.out' }
       )
     }, sectionRef)
     return () => ctx.revert()
@@ -135,11 +136,11 @@ export default function SummitHero() {
       const el = waypointLabelRefs.current[id]
       if (!el) continue
       const s = states[id]
-      // Trek pins sit in the lower terrain where the headline lives during the
-      // summit hold — they belong to the descent, so they fade in once it starts.
-      // Collection pins glow from the first frame; they're clear of the type.
+      // The summit hold belongs to the headline alone — every label waits for the
+      // descent, collections arriving a beat before the trek pins. Gates mirror
+      // the 3D markers in TerrainScene so dot and label always move together.
       const kind = WAYPOINTS.find((w) => w.id === id)?.kind
-      const gate = kind === 'trek' ? clamp01((progressRef.current - 0.16) / 0.1) : 1
+      const gate = clamp01((progressRef.current - (kind === 'trek' ? 0.16 : 0.13)) / 0.1)
       const opacity = s.visible ? gate : 0
       el.style.left = `${s.x}%`
       el.style.top = `${s.y}%`
@@ -153,7 +154,6 @@ export default function SummitHero() {
   const zoneIndex = progress < ZONE_SWITCH ? 0 : 1
   const zone = ZONES[zoneIndex]
   const altitude = Math.round(PEAK_ALTITUDE - progress * (PEAK_ALTITUDE - VALLEY_ALTITUDE))
-  const dropPercentLeft = Math.round((CURRENT_DROP.remaining / CURRENT_DROP.batchSize) * 100)
 
   return (
     <section
@@ -213,101 +213,62 @@ export default function SummitHero() {
         </Link>
       ))}
 
-      {/* ——— Summit hold: the actual hero ——— */}
+      {/* ——— Summit hold: one experience, one axis. Headline, one line, one door.
+          Everything else (waypoints, trail, HUD) belongs to the descent. ——— */}
       <div
         className="absolute inset-0 z-10"
         style={{ opacity: introOpacity, pointerEvents: introOpacity < 0.15 ? 'none' : undefined }}
       >
         <div className="absolute left-6 top-24 md:left-10 pointer-events-none">
-          <p data-summit-reveal className="invisible font-mono text-[9px] uppercase leading-relaxed tracking-[0.24em] text-paper/60">
-            Himalayan field notes
+          <p data-summit-reveal className="invisible font-mono text-[9px] uppercase leading-relaxed tracking-[0.24em] text-paper/55">
+            04:30 — The start
             <br />
             30.3165° N, 78.0322° E
           </p>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 px-6 pb-10 md:px-10 md:pb-12">
-          <div className="mb-6 h-px w-full origin-left bg-paper/20" data-summit-reveal />
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
-            <div className="max-w-3xl">
-              <h1 className="font-display font-light uppercase leading-[0.82] tracking-[-0.045em] text-[clamp(52px,9.5vw,140px)] text-paper">
-                <span data-summit-reveal className="invisible block">Go where</span>
-                <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
-              </h1>
-              <p data-summit-reveal className="invisible mt-5 font-body text-sm md:text-base text-paper/70 leading-relaxed max-w-md">
-                Trekking gear built by the guides who live at 3,800 metres — tested on
-                the ridges we still walk every season.
-              </p>
+        {/* Soft scrim so the type never fights the ridgeline behind it */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 62% 52% at 50% 55%, rgba(12,16,13,0.44), transparent 72%)',
+          }}
+        />
 
-              <div data-summit-reveal className="invisible mt-7 flex flex-wrap items-center gap-4">
-                <Link
-                  href="/shop"
-                  data-cursor="magnetic"
-                  data-cursor-text="Shop"
-                  className="inline-flex items-center gap-3 rounded-full bg-paper px-7 py-3.5 font-body text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-sage"
-                >
-                  Shop the Gear
-                  <span aria-hidden="true">↗</span>
-                </Link>
-                <Link
-                  href="/treks"
-                  data-cursor="magnetic"
-                  data-cursor-text="Treks"
-                  className="inline-flex items-center gap-3 rounded-full border border-paper/30 px-7 py-3.5 font-body text-[10px] font-medium uppercase tracking-[0.16em] text-paper transition-colors duration-300 hover:bg-paper/10"
-                >
-                  Find Your Trek
-                </Link>
-              </div>
-
-              <p data-summit-reveal className="invisible mt-6 font-mono text-[9px] uppercase tracking-[0.22em] text-paper/45">
-                Tested at 5,200m · 12,000+ trekkers geared · Est. Dehradun 2019
-              </p>
-            </div>
-
-            {/* The live drop — small-batch scarcity on the front door */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <h1 className="font-display font-light uppercase leading-[0.86] tracking-[-0.04em] text-[clamp(46px,8vw,116px)] text-paper">
+            <span data-summit-reveal className="invisible block">Go where</span>
+            <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
+          </h1>
+          <p data-summit-reveal className="invisible mt-6 font-body text-sm md:text-base text-paper/70 leading-relaxed max-w-md">
+            Gear built by the guides who live at 3,800 metres.
+          </p>
+          <div data-summit-reveal className="invisible mt-9 flex flex-col sm:flex-row items-center gap-5">
             <Link
-              href={`/products/${CURRENT_DROP.productSlug}`}
-              data-summit-reveal
-              data-cursor="view"
-              data-cursor-text="View"
-              className="invisible hidden sm:block w-[270px] flex-shrink-0 rounded-sm border border-paper/15 bg-ink/55 backdrop-blur-md p-4 transition-colors duration-300 hover:border-sage/40"
+              href="/shop"
+              data-cursor="magnetic"
+              data-cursor-text="Shop"
+              className="inline-flex items-center gap-3 rounded-full bg-paper px-8 py-4 font-body text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-sage"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-body text-[9px] tracking-[0.2em] text-sage uppercase">Current drop</span>
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage/70" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sage" />
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="relative h-12 w-12 rounded-sm overflow-hidden flex-shrink-0 border border-paper/10">
-                  <Image
-                    src={DROP_PRODUCT.image}
-                    alt={CURRENT_DROP.name}
-                    fill
-                    sizes="48px"
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                    className="object-cover"
-                  />
-                </div>
-                <div>
-                  <div className="font-display text-base text-paper leading-tight">{CURRENT_DROP.name}</div>
-                  <div className="font-body text-[10px] text-paper/50 mt-0.5">{CURRENT_DROP.batchLabel}</div>
-                </div>
-              </div>
-              <div className="mt-3 h-1 rounded-full bg-paper/10 overflow-hidden">
-                <div className="h-full rounded-full bg-sage" style={{ width: `${dropPercentLeft}%` }} />
-              </div>
-              <div className="mt-2 font-mono text-[10px] text-paper/60 tabular-nums">
-                {CURRENT_DROP.remaining} of {CURRENT_DROP.batchSize} left
-              </div>
+              Shop the Gear
+              <span aria-hidden="true">↗</span>
+            </Link>
+            {/* Treks paused — the quiet door pointed to /treks ("or find your trek"). */}
+            <Link
+              href="/collections"
+              data-cursor="view"
+              data-cursor-text="Explore"
+              className="font-body text-[10px] uppercase tracking-[0.16em] text-paper/60 border-b border-paper/25 pb-1 transition-colors duration-300 hover:text-paper hover:border-sage"
+            >
+              or explore the collections
             </Link>
           </div>
         </div>
 
         {!reduceMotion && (
-          <div data-summit-reveal className="invisible absolute bottom-10 left-1/2 -translate-x-1/2 hidden lg:flex items-center gap-2 font-body text-[9px] tracking-[0.2em] text-paper/40 uppercase pointer-events-none">
+          <div data-summit-reveal className="invisible absolute bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-2 font-body text-[9px] tracking-[0.2em] text-paper/40 uppercase pointer-events-none">
             Scroll to descend ↓
           </div>
         )}

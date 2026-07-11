@@ -298,6 +298,7 @@ export const SEASON_KITS = [
     months: [12, 1, 2],
     seasonLabel: 'Winter window',
     trekSlug: 'kedarkantha-winter',
+    collectionId: 'silent-altitude',
     headline: 'Snow on Kedarkantha.',
     line: 'Minus-eight nights, blue-sky summit mornings. This is the kit that keeps you out there.',
     products: ['ridge-beanie', 'dew-windbreaker', 'altitude-pack', 'summit-flask'],
@@ -307,6 +308,7 @@ export const SEASON_KITS = [
     months: [3, 4, 5, 6],
     seasonLabel: 'Pre-monsoon window',
     trekSlug: 'roopkund-expedition',
+    collectionId: 'silent-altitude',
     headline: 'Roopkund before the rains.',
     line: 'The high routes open for eight short weeks. Wind-sealed and insulated, or turned back at the ridge.',
     products: ['altitude-pack', 'dew-windbreaker', 'ridge-beanie', 'summit-flask'],
@@ -316,6 +318,7 @@ export const SEASON_KITS = [
     months: [7, 8, 9],
     seasonLabel: 'Monsoon window',
     trekSlug: 'valley-of-flowers',
+    collectionId: 'mist-and-morning',
     headline: 'The valley is blooming.',
     line: 'Valley of Flowers only happens in the rain. Welded seams and fast-dry layers make it worth it.',
     products: ['dew-windbreaker', 'altitude-pack', 'mist-tee', 'desert-scarf'],
@@ -325,9 +328,42 @@ export const SEASON_KITS = [
     months: [10, 11],
     seasonLabel: 'Post-monsoon window',
     trekSlug: 'har-ki-dun',
+    collectionId: 'mist-and-morning',
     headline: 'Har Ki Dun, washed clean.',
     line: 'The clearest air of the year. Cold mornings, warm miles — layer for both.',
     products: ['mist-tee', 'dew-windbreaker', 'trail-cap', 'altitude-pack'],
+  },
+]
+
+// "The Climb" — the page's single merged gear story (replaces the old
+// FeaturedGear grid + GearSpotlight rows, which re-sold the same 7-SKU catalog
+// three times). Products appear once, in ascending altitude order, each earning
+// its place on the mountain in the guide's voice.
+export const CLIMB_STATIONS = [
+  {
+    slug: 'mist-tee',
+    altitude: '3,000M',
+    line: 'You start sweating before sunrise. Merino-cotton, because the first hour is always too warm.',
+  },
+  {
+    slug: 'dew-windbreaker',
+    altitude: '3,600M',
+    line: 'The fog band. This goes on at the second switchback and stays on until the ridge.',
+  },
+  {
+    slug: 'altitude-pack',
+    altitude: '4,200M',
+    line: 'Scree now. Whatever you packed, you are carrying it — welded seams earn their keep here.',
+  },
+  {
+    slug: 'summit-flask',
+    altitude: '4,800M',
+    line: 'Water freezes in cheap bottles up here. Tea stays hot in this one until the descent.',
+  },
+  {
+    slug: 'ridge-beanie',
+    altitude: '5,200M',
+    line: 'The summit wind finds every gap you left open. This closes the last one.',
   },
 ]
 

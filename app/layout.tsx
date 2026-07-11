@@ -6,7 +6,6 @@ import { CartProvider } from '@/providers/CartProvider'
 import Preloader from '@/components/Preloader'
 import CustomCursor from '@/components/CustomCursor'
 import Grain from '@/components/Grain'
-import TrekTrailPath from '@/components/TrekTrailPath'
 import AnalyticsProvider from '@/providers/AnalyticsProvider'
 import { WishlistProvider } from '@/providers/WishlistProvider'
 import './globals.css'
@@ -44,7 +43,6 @@ export default function RootLayout({
                 <Preloader />
                 <CustomCursor />
                 <Grain />
-                <TrekTrailPath />
                 <LenisProvider>{children}</LenisProvider>
               </IntroProvider>
             </CartProvider>

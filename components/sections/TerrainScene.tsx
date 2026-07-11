@@ -68,13 +68,26 @@ function worldY(x: number, z: number) {
 // relative heights (Kedarkantha on the far left ridge t≈0.65, Har Ki Dun and Nag
 // Tibba in the treeline foreground t≈0.44) — the old TrailMap section's job, done
 // in-world. Exported so the DOM wrapper can render matching interactive labels.
-export const WAYPOINTS = [
+// Typed explicitly (not `as const`) so the trek-handling code keeps compiling
+// while the trek entries below are paused.
+export interface Waypoint {
+  id: string
+  name: string
+  kind: 'collection' | 'trek'
+  href: string
+  x: number
+  z: number
+  labelHeight: number
+}
+
+export const WAYPOINTS: readonly Waypoint[] = [
   { id: 'silent-altitude', name: 'Silent Altitude', kind: 'collection', href: '/collections/silent-altitude', x: -9.5, z: -31.5, labelHeight: 2.4 },
   { id: 'mist-and-morning', name: 'Mist & Morning', kind: 'collection', href: '/collections/mist-and-morning', x: 4, z: -27, labelHeight: 1.5 },
-  { id: 'kedarkantha', name: 'Kedarkantha — 3,800m', kind: 'trek', href: '/treks', x: -23.5, z: -29, labelHeight: 1.9 },
-  { id: 'har-ki-dun', name: 'Har Ki Dun — 3,566m', kind: 'trek', href: '/treks', x: 5, z: -9.5, labelHeight: 1.3 },
-  { id: 'nag-tibba', name: 'Nag Tibba — 3,022m', kind: 'trek', href: '/treks', x: -18.5, z: -9, labelHeight: 1.3 },
-] as const
+  // Treks paused as a business line — restore the in-world trek pins by uncommenting.
+  // { id: 'kedarkantha', name: 'Kedarkantha — 3,800m', kind: 'trek', href: '/treks', x: -23.5, z: -29, labelHeight: 1.9 },
+  // { id: 'har-ki-dun', name: 'Har Ki Dun — 3,566m', kind: 'trek', href: '/treks', x: 5, z: -9.5, labelHeight: 1.3 },
+  // { id: 'nag-tibba', name: 'Nag Tibba — 3,022m', kind: 'trek', href: '/treks', x: -18.5, z: -9, labelHeight: 1.3 },
+]
 
 export interface WaypointScreenState {
   x: number
@@ -198,7 +211,11 @@ function Trees({ count }: { count: number }) {
 // A single glowing route threading through the range — the same "trail mapped"
 // language as the interactive map section, just felt here instead of read. Runs
 // through both waypoints so it reads as one continuous journey between them.
-function TrailPath() {
+// Hidden during the summit hold: the bright line cut straight through the
+// headline's space and competed with it — the trail is the descent's reward,
+// revealed only once the journey actually starts.
+function TrailPath({ progressRef, reduceMotion }: { progressRef: RefObject<number>; reduceMotion: boolean }) {
+  const matRef = useRef<THREE.MeshBasicMaterial>(null)
   const geometry = useMemo(() => {
     const controlPoints: [number, number][] = [
       [-15, 21],
@@ -212,26 +229,41 @@ function TrailPath() {
     return new THREE.TubeGeometry(curve, 120, 0.05, 6, false)
   }, [])
 
+  useFrame(() => {
+    const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
+    const gate = Math.min(1, Math.max(0, (p - 0.14) / 0.1))
+    if (matRef.current) matRef.current.opacity = 0.5 * gate
+  })
+
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial color="#D8E8C8" transparent opacity={0.5} fog={false} />
+      <meshBasicMaterial ref={matRef} color="#D8E8C8" transparent opacity={0} fog={false} />
     </mesh>
   )
 }
 
 // A small pulsing marker at each waypoint — the in-world anchor the DOM label
 // (rendered by the parent, projected to screen space) visually latches onto.
-function WaypointMarkers() {
+// All markers stay dark during the summit hold and fade in with the descent,
+// matching their DOM labels — the hold belongs to the headline alone; the pins
+// are what the descent reveals.
+function WaypointMarkers({ progressRef, reduceMotion }: { progressRef: RefObject<number>; reduceMotion: boolean }) {
   const ringRefs = useRef<(THREE.Mesh | null)[]>([])
+  const dotMatRefs = useRef<(THREE.MeshBasicMaterial | null)[]>([])
 
   useFrame(({ clock }) => {
-    WAYPOINTS.forEach((_, i) => {
+    const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
+    WAYPOINTS.forEach((w, i) => {
+      const gate = Math.min(1, Math.max(0, (p - (w.kind === 'trek' ? 0.16 : 0.13)) / 0.1))
       const ring = ringRefs.current[i]
-      if (!ring) return
-      const t = (clock.elapsedTime + i * 1.3) % 2.6
-      ring.scale.setScalar(1 + t * 2.2)
-      const material = ring.material as THREE.MeshBasicMaterial
-      material.opacity = Math.max(0, 0.55 - t * 0.24)
+      if (ring) {
+        const t = (clock.elapsedTime + i * 1.3) % 2.6
+        ring.scale.setScalar(1 + t * 2.2)
+        const material = ring.material as THREE.MeshBasicMaterial
+        material.opacity = Math.max(0, 0.55 - t * 0.24) * gate
+      }
+      const dotMat = dotMatRefs.current[i]
+      if (dotMat) dotMat.opacity = gate
     })
   })
 
@@ -241,7 +273,14 @@ function WaypointMarkers() {
         <group key={w.id} position={[w.x, worldY(w.x, w.z) + 0.12, w.z]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <circleGeometry args={[0.11, 16]} />
-            <meshBasicMaterial color="#F6F3EA" fog={false} />
+            <meshBasicMaterial
+              ref={(el) => {
+                dotMatRefs.current[i] = el
+              }}
+              color="#F6F3EA"
+              transparent
+              fog={false}
+            />
           </mesh>
           <mesh
             ref={(el) => {
@@ -352,9 +391,133 @@ function DriftingMist() {
   )
 }
 
+// The sky. A gradient dome (deep night at the zenith, a warm pre-sunrise band at
+// the horizon), a soft glow where the sun is about to break, and stars that burn
+// off as the descent begins. Without this, everything above the ridgeline was a
+// flat void — a dawn with no sky.
+const SKY_VERT = /* glsl */ `
+  varying vec3 vDir;
+  void main() {
+    vDir = normalize(position);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+const SKY_FRAG = /* glsl */ `
+  varying vec3 vDir;
+  uniform float uDay;
+  void main() {
+    float h = clamp(vDir.y, -0.15, 1.0);
+    vec3 zenith  = mix(vec3(0.030, 0.066, 0.052), vec3(0.052, 0.100, 0.078), uDay);
+    vec3 mid     = mix(vec3(0.070, 0.132, 0.104), vec3(0.096, 0.164, 0.126), uDay);
+    vec3 horizon = mix(vec3(0.820, 0.600, 0.360), vec3(0.930, 0.760, 0.470), uDay);
+    vec3 col = mix(mid, zenith, smoothstep(0.05, 0.62, h));
+    float glow = pow(1.0 - clamp(abs(h - 0.02) * 3.2, 0.0, 1.0), 2.4);
+    col = mix(col, horizon, glow * (0.50 + 0.28 * uDay));
+    gl_FragColor = vec4(col, 1.0);
+  }
+`
+
+function DawnSky({ progressRef, reduceMotion }: { progressRef: RefObject<number>; reduceMotion: boolean }) {
+  const matRef = useRef<THREE.ShaderMaterial>(null)
+
+  useFrame(() => {
+    const mat = matRef.current
+    if (mat) mat.uniforms.uDay.value = reduceMotion ? 0.1 : (progressRef.current ?? 0)
+  })
+
+  return (
+    <mesh renderOrder={-2}>
+      <sphereGeometry args={[88, 32, 20]} />
+      <shaderMaterial
+        ref={matRef}
+        side={THREE.BackSide}
+        depthWrite={false}
+        uniforms={{ uDay: { value: 0 } }}
+        vertexShader={SKY_VERT}
+        fragmentShader={SKY_FRAG}
+      />
+    </mesh>
+  )
+}
+
+// Soft additive glow low on the horizon — the sun about to break, placed over the
+// right side of the frame where the vista used to be at its emptiest.
+function DawnGlow() {
+  const texture = useSoftMistTexture()
+  return (
+    <mesh position={[18, 3, -78]} renderOrder={-1}>
+      <planeGeometry args={[85, 48]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        opacity={0.55}
+        color="#F0B87A"
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        fog={false}
+      />
+    </mesh>
+  )
+}
+
+function DawnStars({ progressRef, reduceMotion }: { progressRef: RefObject<number>; reduceMotion: boolean }) {
+  const matRef = useRef<THREE.PointsMaterial>(null)
+  const geometry = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    const count = 220
+    const positions = new Float32Array(count * 3)
+    // Deterministic LCG so the constellation is stable across mounts.
+    let seed = 20260710
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647
+      return seed / 2147483647
+    }
+    for (let i = 0; i < count; i++) {
+      const theta = rand() * Math.PI * 2
+      const y = 0.12 + rand() * 0.82
+      const r = Math.sqrt(Math.max(0, 1 - y * y))
+      const radius = 84
+      positions[i * 3] = Math.cos(theta) * r * radius
+      positions[i * 3 + 1] = y * radius
+      positions[i * 3 + 2] = Math.sin(theta) * r * radius
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    return g
+  }, [])
+
+  useFrame(() => {
+    const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
+    // Stars burn off in the first third of the descent as the day arrives.
+    if (matRef.current) matRef.current.opacity = 0.8 * (1 - Math.min(1, p / 0.35))
+  })
+
+  return (
+    <points geometry={geometry} renderOrder={-1}>
+      <pointsMaterial
+        ref={matRef}
+        size={1.4}
+        sizeAttenuation={false}
+        color="#D8E4DA"
+        transparent
+        opacity={0.8}
+        depthWrite={false}
+        fog={false}
+      />
+    </points>
+  )
+}
+
 // Dawn cools everything at the peak; by the time you've descended to the treeline
 // the light has turned warm, like real morning sun breaking through. Both the key
 // light and the fog colour lerp together so the shift reads as one continuous event.
+// The summit hold sits much further back (z=34) than the fog range this scene
+// was tuned for (10–40), which buried the whole range in fog at p=0. Clear air
+// at altitude, thickening as the camera descends into the valley mist.
+function updateFogRange(fog: THREE.Fog, descent: number) {
+  fog.near = 18 - descent * 8
+  fog.far = 80 - descent * 40
+}
+
 const DAWN_LIGHT = new THREE.Color('#B9D3F0')
 const MORNING_LIGHT = new THREE.Color('#F6D9A0')
 const DAWN_FOG = new THREE.Color('#1c2f24')
@@ -386,9 +549,7 @@ function Atmosphere({
       // scene was tuned for (10–40), which buried the whole range in fog at p=0.
       // Clear air at altitude, thickening as the camera descends into the valley
       // mist — physically honest, and it makes the hero vista actually visible.
-      const descent = Math.min(1, p / 0.3)
-      fog.near = 18 - descent * 8
-      fog.far = 80 - descent * 40
+      updateFogRange(fog, Math.min(1, p / 0.3))
     }
   })
 
@@ -496,20 +657,25 @@ export default function TerrainScene({
     <Canvas
       dpr={[1, 1.6]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-      camera={{ fov: 45, near: 0.5, far: 100, position: [0, 17, 34] }}
+      // Far plane must clear the sky dome's far side (r=88 sphere seen from a
+      // camera ~38 units off-centre), or the dawn sky gets clipped to void.
+      camera={{ fov: 45, near: 0.5, far: 240, position: [0, 17, 34] }}
       className="!absolute inset-0"
       onCreated={() => onReady?.()}
     >
       <color attach="background" args={['#182b22']} />
       <fog attach="fog" args={['#1c2f24', 10, 40]} />
+      <DawnSky progressRef={progressRef} reduceMotion={reduceMotion} />
+      <DawnStars progressRef={progressRef} reduceMotion={reduceMotion} />
+      <DawnGlow />
       <hemisphereLight args={['#cfe0c8', '#0c100d', 0.75]} />
       <Atmosphere progressRef={progressRef} reduceMotion={reduceMotion} />
       <ambientLight intensity={0.15} />
       <group position={[0, -1.5, -10]}>
         <Terrain segments={segments} />
         <Trees count={treeCount} />
-        <TrailPath />
-        <WaypointMarkers />
+        <TrailPath progressRef={progressRef} reduceMotion={reduceMotion} />
+        <WaypointMarkers progressRef={progressRef} reduceMotion={reduceMotion} />
       </group>
       <DriftingMist />
       <Waypoints onProject={onWaypointProject} />

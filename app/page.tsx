@@ -1,38 +1,56 @@
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
+import TrailSpine from '@/components/TrailSpine'
 import SummitHero from '@/components/sections/SummitHero'
 import TrustBand from '@/components/sections/TrustBand'
 import SeasonKit from '@/components/sections/SeasonKit'
-import ShopByCategory from '@/components/sections/ShopByCategory'
-import FeaturedGear from '@/components/sections/FeaturedGear'
+import TheClimb from '@/components/sections/TheClimb'
 import CollectionsRow from '@/components/sections/CollectionsRow'
-import GearSpotlight from '@/components/sections/GearSpotlight'
-import BrandPulse from '@/components/sections/BrandPulse'
+import ShopByCategory from '@/components/sections/ShopByCategory'
 import Community from '@/components/sections/Community'
+import BrandPulse from '@/components/sections/BrandPulse'
 import NewsletterBar from '@/components/sections/NewsletterBar'
 
-// One mountain, one descent, one store. SummitHero fuses what used to be two
-// separate pinned set-pieces (the 400vh video hero + the mid-page terrain
-// flythrough) into a single continuous journey: land on the summit at dawn,
-// scroll to descend past collection and trek waypoints, and arrive in the store
-// — where SeasonKit greets you with the trek window that's open right now and
-// the exact kit to pack for it. The old video HeroSection and TerrainFlythrough
-// files remain in the repo, just unplugged.
+// The homepage is one day on the mountain, lived by scrolling: pre-dawn start on
+// the summit, first light, the climb, the ridge at midday, pack check, stories on
+// the way down, basecamp at night, and the last radio check before lights out.
+// TrailSpine reads the data-trail-* wrappers below and keeps a small fixed HUD
+// ticking time and altitude — the thread that makes eleven sections one journey.
+// The light follows the clock: dawn dark → blue hour → bright paper at midday →
+// warm afternoon paper → night ink. FeaturedGear and GearSpotlight were merged
+// into TheClimb (each product now appears exactly once, at its altitude); their
+// files remain in the repo, unplugged.
 export default function Home() {
   return (
     <>
       <NavBar />
+      <TrailSpine />
       <main>
         <SummitHero />
-        <TrustBand />
-        <SeasonKit />
-        <ShopByCategory />
-        <FeaturedGear />
-        <CollectionsRow />
-        <GearSpotlight />
-        <BrandPulse />
-        <Community />
-        <NewsletterBar />
+        <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="The brief">
+          <TrustBand />
+        </div>
+        <div data-trail-time="06:10" data-trail-alt="4,980M" data-trail-label="First light">
+          <SeasonKit />
+        </div>
+        <div data-trail-time="08:30" data-trail-alt="4,200M" data-trail-label="The climb">
+          <TheClimb />
+        </div>
+        <div data-trail-time="11:00" data-trail-alt="4,500M" data-trail-label="The ridge">
+          <CollectionsRow />
+        </div>
+        <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
+          <ShopByCategory />
+        </div>
+        <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
+          <Community />
+        </div>
+        <div data-trail-time="19:30" data-trail-alt="2,900M" data-trail-label="Basecamp">
+          <BrandPulse />
+        </div>
+        <div data-trail-time="21:00" data-trail-alt="2,900M" data-trail-label="Radio check">
+          <NewsletterBar />
+        </div>
       </main>
       <FooterSection />
     </>
