@@ -1,12 +1,24 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
 import ProductCard from '@/components/ProductCard'
-import { COLLECTIONS } from '@/lib/constants'
+import { BLUR_DATA_URL, COLLECTIONS, PRODUCTS } from '@/lib/constants'
 import { getCartRecommendations } from '@/lib/recommendations'
+
+// Matches the free-shipping threshold quoted in TrustBand/FooterSection —
+// no numeric constant exists yet for it, so this mirrors that copy exactly.
+// Plain rupees, not paise: PRODUCTS/CartProvider prices are stored as whole
+// rupees (e.g. Mist Tee is `price: 1800`), unlike the backend order/checkout
+// system, which stores paise — the two are different unit systems today.
+const FREE_SHIPPING_THRESHOLD = 2000
+
+function productImage(slug: string) {
+  return PRODUCTS.find((p) => p.slug === slug)?.image
+}
 
 export default function CartView() {
   const { items, updateQuantity, removeItem, subtotal } = useCart()
@@ -14,13 +26,16 @@ export default function CartView() {
 
   const cartSlugs = items.map((i) => i.slug)
   const suggestions = getCartRecommendations(cartSlugs, 3)
+  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)
+  const shippingProgress = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100))
 
   if (items.length === 0) {
     return (
       <>
         <section className="bg-paper px-6 md:px-10 pt-40 pb-24 min-h-[50vh] flex items-center justify-center">
           <div className="text-center max-w-sm">
-            <h1 className="font-display font-light text-3xl text-text">Your cart is empty.</h1>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">The Pack</div>
+            <h1 className="mt-3 font-display font-light text-3xl text-text">Your cart is empty.</h1>
             <p className="mt-3 font-body text-sm text-mid">
               Nothing packed yet. Go find something worth carrying uphill.
             </p>
@@ -35,22 +50,39 @@ export default function CartView() {
           </div>
         </section>
 
-        <section className="bg-altitude px-6 md:px-10 py-16">
-          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
-            {COLLECTIONS.map((c) => (
-              <Link
-                key={c.id}
-                href={`/collections/${c.id}`}
-                data-cursor="view"
-                data-cursor-text="View"
-                className="group border border-white/10 rounded-lg p-6 hover:border-sage/40 transition-colors duration-300"
-              >
-                <span className="font-body text-[10px] tracking-[0.15em] text-sage uppercase">{c.bestFor}</span>
-                <h3 className="mt-2 font-display text-xl text-white group-hover:text-sage transition-colors duration-300">
-                  {c.name}
-                </h3>
-              </Link>
-            ))}
+        <section className="bg-ink px-6 md:px-10 py-16 md:py-20">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8 font-mono text-[10px] tracking-[0.2em] text-sage uppercase text-center">
+              Three conditions, three kits
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {COLLECTIONS.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/collections/${c.id}`}
+                  data-cursor="view"
+                  data-cursor-text="View"
+                  className="group relative aspect-[4/5] rounded-sm overflow-hidden"
+                >
+                  <Image
+                    src={c.image}
+                    alt={c.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
+                    className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-5">
+                    <span className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">{c.bestFor}</span>
+                    <h3 className="mt-1 font-display text-xl text-paper group-hover:text-sage transition-colors duration-300">
+                      {c.name}
+                    </h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       </>
@@ -60,7 +92,13 @@ export default function CartView() {
   return (
     <section className="bg-paper px-6 md:px-10 pt-32 pb-24 md:pt-40 min-h-[60vh]">
       <div className="max-w-6xl mx-auto">
-        <h1 className="font-display font-light text-[clamp(32px,5vw,48px)] text-text mb-10">Your Cart</h1>
+        <div className="mb-10 border-b border-rule pb-8">
+          <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">The Pack</div>
+          <h1 className="mt-3 font-display font-light text-[clamp(32px,5vw,48px)] text-text">Your Cart</h1>
+          <p className="mt-2 font-body text-sm text-mid">
+            {items.reduce((n, i) => n + i.quantity, 0)} piece{items.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'} — ships from Dehradun in 2 days.
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 flex flex-col">
@@ -73,8 +111,20 @@ export default function CartView() {
                   transition={{ duration: 0.3 }}
                   className="flex items-center gap-4 md:gap-6 border-b border-rule py-6 overflow-hidden"
                 >
-                  <Link href={`/products/${item.slug}`} className="w-16 h-20 md:w-20 md:h-24 rounded-sm overflow-hidden flex-shrink-0">
-                    <div className="w-full h-full" style={{ background: item.gradient }} />
+                  <Link href={`/products/${item.slug}`} className="relative w-20 h-24 md:w-24 md:h-28 rounded-sm overflow-hidden flex-shrink-0">
+                    {productImage(item.slug) ? (
+                      <Image
+                        src={productImage(item.slug)!}
+                        alt={item.name}
+                        fill
+                        sizes="96px"
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full" style={{ background: item.gradient }} />
+                    )}
                   </Link>
 
                   <div className="flex-1 min-w-0">
@@ -124,12 +174,31 @@ export default function CartView() {
           <div className="lg:col-span-1">
             <div className="border border-rule rounded-lg p-6 sticky top-28">
               <h2 className="font-body text-[10px] tracking-[0.15em] text-text uppercase mb-4">Order Summary</h2>
+
+              {/* Free-shipping progress — the same reassurance TrustBand promises
+                  up front, made concrete right before checkout. */}
+              <div className="mb-5 pb-5 border-b border-rule">
+                {remaining > 0 ? (
+                  <p className="font-body text-xs text-mid leading-relaxed">
+                    Add <span className="text-forest font-medium">Rs. {remaining.toLocaleString('en-IN')}</span> more for free shipping.
+                  </p>
+                ) : (
+                  <p className="font-body text-xs text-forest font-medium">Free shipping unlocked ✓</p>
+                )}
+                <div className="mt-2.5 h-1 rounded-full bg-rule overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-forest transition-[width] duration-500"
+                    style={{ width: `${shippingProgress}%` }}
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-between font-body text-sm text-mid py-2">
                 <span>Subtotal</span>
                 <span className="text-text tabular-nums">Rs. {subtotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-b border-rule">
-                <span>Shipping</span>
+                <span>Shipping &amp; tax</span>
                 <span className="text-mid">Calculated at checkout</span>
               </div>
               <div className="flex items-center justify-between font-body text-base font-medium py-4">
@@ -154,6 +223,12 @@ export default function CartView() {
               >
                 Checkout
               </motion.a>
+
+              <div className="mt-4 flex items-center justify-center gap-2 font-body text-[9px] tracking-[0.08em] uppercase text-light">
+                <span>COD available</span>
+                <span aria-hidden="true">·</span>
+                <span>7-day returns</span>
+              </div>
             </div>
           </div>
         </div>
