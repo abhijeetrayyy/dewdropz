@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard,
@@ -71,10 +72,10 @@ export function Sidebar() {
   return (
     <aside className="fixed top-0 left-0 h-full w-56 bg-white border-r border-gray-200 shadow-[1px_0_3px_rgba(15,23,42,0.04)] flex flex-col z-50">
       <div className="px-4 py-4 border-b border-gray-200">
-        <Link href="/admin" className="flex items-center gap-2">
-          <span className="font-bold text-lg tracking-tight text-black">DEWDROPZ</span>
+        <div className="flex items-center gap-2">
+          <Logo href="/admin" markHeight={22} wordmarkClassName="font-bold text-lg tracking-tight text-black" />
           <span className="text-xs text-success bg-success-soft px-1.5 py-0.5 rounded font-medium">Admin</span>
-        </Link>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">

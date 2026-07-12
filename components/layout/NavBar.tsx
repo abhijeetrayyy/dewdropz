@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ScrollTrigger } from '@/lib/gsap'
 import { useCart } from '@/providers/CartProvider'
+import { Logo } from '@/components/Logo'
 
 const NAV_LINKS = [
   { label: 'Shop', href: '/shop' },
@@ -53,9 +54,7 @@ export default function NavBar() {
         solid ? 'h-14 backdrop-blur-md bg-ink/80' : 'h-[72px] bg-transparent'
       }`}
     >
-      <Link href="/" className="font-display text-base tracking-widest text-paper">
-        DEWDROPZ
-      </Link>
+      <Logo markHeight={26} priority wordmarkClassName="font-display text-base tracking-widest text-paper" />
 
       <nav className="hidden lg:flex items-center gap-8">
         {NAV_LINKS.map((link) => (

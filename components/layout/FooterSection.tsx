@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
+import { Logo } from '@/components/Logo'
 import { CATEGORY_TILES, COLLECTIONS, SITE } from '@/lib/constants'
 
 const FOOTER_COLUMNS = [
@@ -73,8 +74,12 @@ export default function FooterSection() {
       {/* Brand + sitemap */}
       <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-x-6 gap-y-12">
         <div className="col-span-2">
-          <div className="font-display text-white text-xl tracking-tight">DEWDROPZ</div>
-          <div className="font-display italic text-sage text-sm mt-1">— Feel Alive</div>
+          <Logo
+            markHeight={34}
+            wordmarkClassName="font-display text-white text-xl tracking-tight"
+            tagline="— Feel Alive"
+            taglineClassName="font-display italic text-sage text-sm"
+          />
           <p className="mt-5 font-body text-sm text-white/40 leading-relaxed max-w-[260px]">
             Trekking gear built by guides in Dehradun, tested above 5,200 metres on the
             trails we still walk every season.

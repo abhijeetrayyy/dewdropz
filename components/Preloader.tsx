@@ -1,13 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { gsap } from '@/lib/gsap'
 import { useIntro } from '@/providers/IntroProvider'
-
-const MARK_PATHS = [
-  'M50 15C35 35 25 50 25 65a25 25 0 0 0 50 0c0-15-10-30-25-50z',
-  'M35 65l10-12 8 8 12-15',
-]
 
 const TELEMETRY_PHASES = [
   { max: 25, text: 'PREPARING DEWDROPZ EXPEDITION' },
@@ -21,28 +17,21 @@ export default function Preloader() {
   const [visible, setVisible] = useState(true)
   const [telemetry, setTelemetry] = useState('CALIBRATING SENSORS')
   const panelRef = useRef<HTMLDivElement>(null)
-  const pathRefs = useRef<(SVGPathElement | null)[]>([])
+  const logoRef = useRef<HTMLDivElement>(null)
+  const glowRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef<HTMLSpanElement>(null)
-  const logoRef = useRef<SVGSVGElement>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const skippedRef = useRef(false)
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
 
-    const paths = pathRefs.current.filter(Boolean) as SVGPathElement[]
-    paths.forEach((p) => {
-      try {
-        const length = p.getTotalLength()
-        gsap.set(p, { strokeDasharray: length, strokeDashoffset: length })
-      } catch {
-        // path not yet measured, skip animation
-      }
-    })
-
-    // Subtly pulse logo glow during load (soft and glowing, not harsh)
-    if (logoRef.current) {
-      gsap.to(logoRef.current, {
+    // Subtly pulse logo glow during load (soft and glowing, not harsh). Lives on
+    // its own inner element — the entrance tween below also animates `filter`
+    // (for the blur-in), and two tweens writing the same CSS property on the
+    // same node stomp each other every frame instead of composing.
+    if (glowRef.current) {
+      gsap.to(glowRef.current, {
         filter: 'drop-shadow(0 0 10px rgba(123, 164, 111, 0.28))',
         duration: 0.8,
         repeat: -1,
@@ -69,11 +58,18 @@ export default function Preloader() {
     })
     tlRef.current = tl
 
-    // Animate drawing paths of the brand mark
-    if (paths.length > 0) {
-      tl.to(paths, { strokeDashoffset: 0, duration: 1.2, ease: 'power2.inOut', stagger: 0.18 }, 0)
+    // The mark can't stroke-draw like the old hand-coded SVG did (it's a raster
+    // logo now), so the entrance is a soft rise-and-focus instead: starts low,
+    // blurred and translucent, settles into place as the counter climbs.
+    if (logoRef.current) {
+      tl.fromTo(
+        logoRef.current,
+        { autoAlpha: 0, y: 16, scale: 0.92, filter: 'blur(6px)' },
+        { autoAlpha: 1, y: 0, scale: 1, filter: 'blur(0px)', duration: 1.2, ease: 'power2.out' },
+        0
+      )
     }
-    
+
     // Animate percentage count smoothly
     tl.to(
       counter,
@@ -135,28 +131,12 @@ export default function Preloader() {
         clipPath: 'ellipse(160% 100% at 50% 50%)',
       }}
     >
-      <div className="flex flex-col items-center gap-6 select-none">
-        <svg
-          ref={logoRef}
-          width="80"
-          height="80"
-          viewBox="0 0 100 100"
-          fill="none"
-          stroke="#7BA46F"
-          strokeWidth="2"
-          className="transition-all duration-300"
-        >
-          {MARK_PATHS.map((d, i) => (
-            <path
-              key={i}
-              ref={(el) => {
-                pathRefs.current[i] = el
-              }}
-              d={d}
-            />
-          ))}
-        </svg>
-        <span ref={counterRef} className="font-mono text-xl tracking-[0.2em] text-paper/90 tabular-nums">
+      <div ref={logoRef} className="flex flex-col items-center gap-4 select-none invisible">
+        <div ref={glowRef} className="flex flex-col items-center gap-4">
+          <Image src="/logo/mountain-mark.png" alt="" width={168} height={97} priority className="h-16 w-auto md:h-20" />
+          <span className="font-display text-lg tracking-[0.3em] text-paper/90">DEWDROPZ</span>
+        </div>
+        <span ref={counterRef} className="mt-2 font-mono text-xl tracking-[0.2em] text-paper/90 tabular-nums">
           000
         </span>
       </div>
