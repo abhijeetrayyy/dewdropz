@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion, useMotionValue, useSpring } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useWishlist } from '@/providers/WishlistProvider'
+import { useHasMounted } from '@/hooks/useHasMounted'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import type { PRODUCTS } from '@/lib/constants'
 
@@ -21,6 +22,14 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
   const [holoY, setHoloY] = useState(50)
   const [holoOpacity, setHoloOpacity] = useState(0)
   const [added, setAdded] = useState(false)
+  // hasItem() reads localStorage via WishlistProvider, which the server can never
+  // see — rendering it immediately risks a hydration mismatch if the provider's
+  // own load effect fires before this component's hydration pass completes (it's
+  // a race, so this showed up as "sometimes," same shape as the Lenis scroll bug).
+  // Gating on this component's own mount, not the provider's data, guarantees the
+  // first client render matches the server every time; the real state appears a
+  // frame later once mounted flips true.
+  const mounted = useHasMounted()
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const el = ref.current
@@ -69,10 +78,10 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
         onClick={handleWishlist}
         className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-paper"
       >
-        <svg 
-          width="16" height="16" viewBox="0 0 24 24" 
-          fill={hasItem(product.slug) ? "var(--forest)" : "none"} 
-          stroke={hasItem(product.slug) ? "var(--forest)" : "currentColor"} 
+        <svg
+          width="16" height="16" viewBox="0 0 24 24"
+          fill={mounted && hasItem(product.slug) ? "var(--forest)" : "none"}
+          stroke={mounted && hasItem(product.slug) ? "var(--forest)" : "currentColor"}
           strokeWidth="1.5"
         >
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -133,8 +142,12 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
       </Link>
       <p className="font-body text-sm text-mid">{product.desc}</p>
       <div className="mt-2 overflow-hidden relative h-6">
+        {/* The wrapper below stacks two h-6 rows (price, then the button) inside
+            itself, so it's 48px tall — -translate-y-full moves it by 100% of its
+            OWN height (48px), clearing both rows out of this 24px window instead
+            of swapping between them. -translate-y-1/2 (24px, one row) is correct. */}
         <div
-          className={`transition-transform duration-300 ${added ? '-translate-y-full' : 'group-hover:-translate-y-full'}`}
+          className={`transition-transform duration-300 ${added ? '-translate-y-1/2' : 'group-hover:-translate-y-1/2'}`}
         >
           <span className="font-body text-sm font-medium text-forest block h-6">
             Rs. {product.price.toLocaleString('en-IN')}

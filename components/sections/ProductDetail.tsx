@@ -4,7 +4,9 @@ import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
+import { useWishlist } from '@/providers/WishlistProvider'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
+import { useHasMounted } from '@/hooks/useHasMounted'
 import ProductCard from '@/components/ProductCard'
 import Accordion from '@/components/Accordion'
 import SizeGuideModal from '@/components/SizeGuideModal'
@@ -27,6 +29,11 @@ const TRUST_BADGES = [
 
 export default function ProductDetail({ product, collection, related }: ProductDetailProps) {
   const { addItem } = useCart()
+  const { toggleItem, hasItem } = useWishlist()
+  const saved = hasItem(product.slug)
+  // Gate on this component's own mount, not the provider's localStorage load, so
+  // the first client render always matches the server (same fix as ProductCard).
+  const mounted = useHasMounted()
   const [size, setSize] = useState(product.sizes[0])
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
@@ -214,6 +221,20 @@ export default function ProductDetail({ product, collection, related }: ProductD
                 >
                   {added ? 'Added to cart ✓' : 'Add to Cart'}
                 </motion.button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleItem(product.slug)}
+                  aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'}
+                  aria-pressed={saved}
+                  data-cursor="view"
+                  data-cursor-text={saved ? 'Saved' : 'Save'}
+                  className="w-[52px] h-[52px] flex-shrink-0 flex items-center justify-center border border-rule rounded-sm hover:border-forest transition-colors duration-300"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill={mounted && saved ? 'var(--forest)' : 'none'} stroke={mounted && saved ? 'var(--forest)' : 'currentColor'} strokeWidth="1.5" className="text-mid">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                </button>
               </div>
 
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">

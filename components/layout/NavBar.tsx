@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ScrollTrigger } from '@/lib/gsap'
 import { useCart } from '@/providers/CartProvider'
+import { useWishlist } from '@/providers/WishlistProvider'
 import { Logo } from '@/components/Logo'
 
 const NAV_LINKS = [
@@ -24,6 +25,7 @@ export default function NavBar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { count } = useCart()
+  const { items: wishlistItems } = useWishlist()
   const pathname = usePathname()
   // Only the homepage opens on a full-bleed dark hero video, so only there can the
   // nav start transparent with light text. Every other page's first section can be
@@ -70,6 +72,19 @@ export default function NavBar() {
       </nav>
 
       <div className="flex items-center gap-6">
+        <Link
+          href="/wishlist"
+          aria-label="Wishlist"
+          data-cursor="view"
+          data-cursor-text="Saved"
+          className="flex items-center gap-2 text-paper/80 hover:text-paper transition-colors duration-300"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill={wishlistItems.length > 0 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          <span className="font-body text-xs">{wishlistItems.length}</span>
+        </Link>
+
         <Link
           href="/cart"
           aria-label="Cart"
