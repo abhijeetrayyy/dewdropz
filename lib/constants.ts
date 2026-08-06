@@ -370,8 +370,8 @@ export const CLIMB_STATIONS = [
 export const FOUNDER_QUOTE = {
   quote:
     "We didn't set out to build a brand. We set out to stop apologizing to our clients for gear that failed them halfway up a ridge. Everything else followed from that.",
-  name: 'Rohan Thapliyal',
-  role: 'Co-founder, Head Guide',
+  name: 'Swastik Ghosh Dastidar',
+  role: 'Founder & Owner',
 }
 
 export const PHILOSOPHY_VALUES = [

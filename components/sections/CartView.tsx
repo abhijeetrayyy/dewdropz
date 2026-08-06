@@ -6,26 +6,29 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
 import ProductCard from '@/components/ProductCard'
-import { BLUR_DATA_URL, COLLECTIONS, PRODUCTS } from '@/lib/constants'
+import RecentlyViewed from '@/components/sections/RecentlyViewed'
+import { BLUR_DATA_URL } from '@/lib/constants'
+import { formatPrice } from '@/lib/utils'
 import { getCartRecommendations } from '@/lib/recommendations'
+import type { ProductWithCollection, Collection } from '@/types/database'
 
 // Matches the free-shipping threshold quoted in TrustBand/FooterSection —
 // no numeric constant exists yet for it, so this mirrors that copy exactly.
-// Plain rupees, not paise: PRODUCTS/CartProvider prices are stored as whole
-// rupees (e.g. Mist Tee is `price: 1800`), unlike the backend order/checkout
-// system, which stores paise — the two are different unit systems today.
-const FREE_SHIPPING_THRESHOLD = 2000
+// Paise, same unit as everything else touching real product/order data.
+const FREE_SHIPPING_THRESHOLD = 200000
 
-function productImage(slug: string) {
-  return PRODUCTS.find((p) => p.slug === slug)?.image
-}
-
-export default function CartView() {
+export default function CartView({
+  allProducts,
+  collections,
+}: {
+  allProducts: ProductWithCollection[]
+  collections: Collection[]
+}) {
   const { items, updateQuantity, removeItem, subtotal } = useCart()
   const checkoutBtn = useMagneticHover(0.3, 10)
 
   const cartSlugs = items.map((i) => i.slug)
-  const suggestions = getCartRecommendations(cartSlugs, 3)
+  const suggestions = getCartRecommendations(allProducts, cartSlugs, 6)
   const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)
   const shippingProgress = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100))
 
@@ -56,26 +59,28 @@ export default function CartView() {
               Three conditions, three kits
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {COLLECTIONS.map((c) => (
+              {collections.map((c) => (
                 <Link
                   key={c.id}
-                  href={`/collections/${c.id}`}
+                  href={`/collections/${c.slug}`}
                   data-cursor="view"
                   data-cursor-text="View"
-                  className="group relative aspect-[4/5] rounded-sm overflow-hidden"
+                  className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
                 >
-                  <Image
-                    src={c.image}
-                    alt={c.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                    className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
-                  />
+                  {c.image_url && (
+                    <Image
+                      src={c.image_url}
+                      alt={c.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
+                      className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-5">
-                    <span className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">{c.bestFor}</span>
+                    {c.tagline && <span className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">{c.tagline}</span>}
                     <h3 className="mt-1 font-display text-xl text-paper group-hover:text-sage transition-colors duration-300">
                       {c.name}
                     </h3>
@@ -85,11 +90,14 @@ export default function CartView() {
             </div>
           </div>
         </section>
+
+        <RecentlyViewed className="bg-paper px-6 md:px-10 py-16 md:py-20 border-t border-rule" />
       </>
     )
   }
 
   return (
+    <>
     <section className="bg-paper px-6 md:px-10 pt-32 pb-24 md:pt-40 min-h-[60vh]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-10 border-b border-rule pb-8">
@@ -105,16 +113,16 @@ export default function CartView() {
             <AnimatePresence initial={false}>
               {items.map((item) => (
                 <motion.div
-                  key={`${item.slug}-${item.size}`}
+                  key={`${item.slug}-${item.size}-${item.customDesignId ?? ''}`}
                   initial={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   transition={{ duration: 0.3 }}
                   className="flex items-center gap-4 md:gap-6 border-b border-rule py-6 overflow-hidden"
                 >
-                  <Link href={`/products/${item.slug}`} className="relative w-20 h-24 md:w-24 md:h-28 rounded-sm overflow-hidden flex-shrink-0">
-                    {productImage(item.slug) ? (
+                  <Link href={`/products/${item.slug}`} className="relative w-20 h-24 md:w-24 md:h-28 rounded-sm overflow-hidden flex-shrink-0 bg-rule/40">
+                    {item.image && (
                       <Image
-                        src={productImage(item.slug)!}
+                        src={item.image}
                         alt={item.name}
                         fill
                         sizes="96px"
@@ -122,8 +130,6 @@ export default function CartView() {
                         blurDataURL={BLUR_DATA_URL}
                         className="object-cover"
                       />
-                    ) : (
-                      <div className="w-full h-full" style={{ background: item.gradient }} />
                     )}
                   </Link>
 
@@ -131,13 +137,20 @@ export default function CartView() {
                     <Link href={`/products/${item.slug}`} className="font-display text-lg text-text hover:text-forest transition-colors">
                       {item.name}
                     </Link>
-                    <div className="font-body text-xs text-mid mt-1 uppercase tracking-[0.05em]">Size: {item.size}</div>
+                    <div className="font-body text-xs text-mid mt-1 uppercase tracking-[0.05em] flex items-center gap-2">
+                      Size: {item.size}
+                      {item.customDesignId && (
+                        <span className="px-1.5 py-0.5 rounded-sm bg-forest/10 text-forest text-[9px] tracking-[0.08em] normal-case">
+                          Custom Design
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center border border-rule rounded-sm">
                     <button
                       type="button"
-                      onClick={() => updateQuantity(item.slug, item.size, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.slug, item.size, item.quantity - 1, item.customDesignId)}
                       className="w-8 h-8 flex items-center justify-center text-mid hover:text-forest transition-colors"
                       aria-label="Decrease quantity"
                     >
@@ -146,7 +159,7 @@ export default function CartView() {
                     <span className="w-7 text-center font-body text-sm tabular-nums">{item.quantity}</span>
                     <button
                       type="button"
-                      onClick={() => updateQuantity(item.slug, item.size, item.quantity + 1)}
+                      onClick={() => updateQuantity(item.slug, item.size, item.quantity + 1, item.customDesignId)}
                       className="w-8 h-8 flex items-center justify-center text-mid hover:text-forest transition-colors"
                       aria-label="Increase quantity"
                     >
@@ -155,12 +168,12 @@ export default function CartView() {
                   </div>
 
                   <div className="w-20 md:w-24 text-right font-body text-sm font-medium text-forest tabular-nums">
-                    Rs. {(item.price * item.quantity).toLocaleString('en-IN')}
+                    {formatPrice(item.price * item.quantity)}
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => removeItem(item.slug, item.size)}
+                    onClick={() => removeItem(item.slug, item.size, item.customDesignId)}
                     aria-label="Remove item"
                     className="text-mid hover:text-clay transition-colors text-lg leading-none"
                   >
@@ -180,7 +193,7 @@ export default function CartView() {
               <div className="mb-5 pb-5 border-b border-rule">
                 {remaining > 0 ? (
                   <p className="font-body text-xs text-mid leading-relaxed">
-                    Add <span className="text-forest font-medium">Rs. {remaining.toLocaleString('en-IN')}</span> more for free shipping.
+                    Add <span className="text-forest font-medium">{formatPrice(remaining)}</span> more for free shipping.
                   </p>
                 ) : (
                   <p className="font-body text-xs text-forest font-medium">Free shipping unlocked ✓</p>
@@ -195,7 +208,7 @@ export default function CartView() {
 
               <div className="flex items-center justify-between font-body text-sm text-mid py-2">
                 <span>Subtotal</span>
-                <span className="text-text tabular-nums">Rs. {subtotal.toLocaleString('en-IN')}</span>
+                <span className="text-text tabular-nums">{formatPrice(subtotal)}</span>
               </div>
               <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-b border-rule">
                 <span>Shipping &amp; tax</span>
@@ -203,7 +216,7 @@ export default function CartView() {
               </div>
               <div className="flex items-center justify-between font-body text-base font-medium py-4">
                 <span className="text-text">Total</span>
-                <span className="text-forest tabular-nums">Rs. {subtotal.toLocaleString('en-IN')}</span>
+                <span className="text-forest tabular-nums">{formatPrice(subtotal)}</span>
               </div>
 
               <motion.a
@@ -245,5 +258,8 @@ export default function CartView() {
         </div>
       )}
     </section>
+
+    <RecentlyViewed className="bg-paper px-6 md:px-10 pb-24 border-t border-rule pt-16" />
+    </>
   )
 }

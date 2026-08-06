@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { gsap } from '@/lib/gsap'
 import { useIntro } from '@/providers/IntroProvider'
@@ -14,6 +15,12 @@ const TELEMETRY_PHASES = [
 
 export default function Preloader() {
   const { finishIntro } = useIntro()
+  // Admin is a working tool, not the brand experience — it never gets the
+  // mountain-loading splash. Captured once on mount (not reactive to later
+  // navigation) since this is a one-time "first load" component, matching
+  // CustomCursor's admin guard elsewhere in this layout.
+  const pathname = usePathname()
+  const isAdminRoute = useRef(pathname?.startsWith('/admin') ?? false)
   const [visible, setVisible] = useState(true)
   const [telemetry, setTelemetry] = useState('CALIBRATING SENSORS')
   const panelRef = useRef<HTMLDivElement>(null)
@@ -24,6 +31,12 @@ export default function Preloader() {
   const skippedRef = useRef(false)
 
   useEffect(() => {
+    if (isAdminRoute.current) {
+      finishIntro()
+      setVisible(false)
+      return
+    }
+
     document.body.style.overflow = 'hidden'
 
     // Subtly pulse logo glow during load (soft and glowing, not harsh). Lives on

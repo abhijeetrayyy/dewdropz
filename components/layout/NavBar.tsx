@@ -2,12 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ScrollTrigger } from '@/lib/gsap'
 import { useCart } from '@/providers/CartProvider'
 import { useWishlist } from '@/providers/WishlistProvider'
 import { Logo } from '@/components/Logo'
+import { createBrowserSupabaseClient } from '@/lib/supabase/client'
+import { logout } from '@/actions/auth'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const NAV_LINKS = [
   { label: 'Shop', href: '/shop' },
@@ -22,11 +29,32 @@ const NAV_LINKS = [
 
 export default function NavBar() {
   const navRef = useRef<HTMLElement>(null)
+  const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { count } = useCart()
   const { items: wishlistItems } = useWishlist()
   const pathname = usePathname()
+  const [authEmail, setAuthEmail] = useState<string | null>(null)
+
+  // NavBar is mounted per-page (not from one root layout), so it keeps its
+  // own lightweight auth check rather than requiring every page to fetch and
+  // pass down a user prop. onAuthStateChange keeps the account entry point in
+  // sync immediately after sign-in/out, without a full page reload.
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient()
+    supabase.auth.getUser().then(({ data }) => setAuthEmail(data.user?.email ?? null))
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthEmail(session?.user?.email ?? null)
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  async function handleSignOut() {
+    await logout()
+    setAuthEmail(null)
+    router.refresh()
+  }
   // Only the homepage opens on a full-bleed dark hero video, so only there can the
   // nav start transparent with light text. Every other page's first section can be
   // light (PageHeader's paper variant), so the solid bar is always on to stay legible.
@@ -53,7 +81,9 @@ export default function NavBar() {
     <header
       ref={navRef}
       className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 transition-all duration-500 ease-[var(--ease-out)] ${
-        solid ? 'h-14 backdrop-blur-md bg-ink/80' : 'h-[72px] bg-transparent'
+        solid
+          ? 'h-14 bg-ink/95 backdrop-blur-md border-b border-white/[0.06] shadow-[0_2px_24px_rgba(0,0,0,0.2)]'
+          : 'h-[72px] bg-transparent'
       }`}
     >
       <Logo markHeight={26} priority wordmarkClassName="font-display text-base tracking-widest text-paper" />
@@ -98,6 +128,47 @@ export default function NavBar() {
           </svg>
           <span className="font-body text-xs">{count}</span>
         </Link>
+
+        {authEmail ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Account"
+              data-cursor="view"
+              data-cursor-text="Account"
+              className="relative flex items-center text-paper/80 hover:text-paper transition-colors duration-300"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M4.5 20c0-4.14 3.36-7 7.5-7s7.5 2.86 7.5 7" strokeLinecap="round" />
+              </svg>
+              <span className="absolute -top-0.5 -right-0.5 h-[7px] w-[7px] rounded-full bg-sage ring-2 ring-ink" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="truncate font-body text-xs text-mid">{authEmail}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild><Link href="/account">My Account</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/account/orders">Orders</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/account/addresses">Addresses</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/account/designs">My Designs</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/account/settings">Settings</Link></DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Link
+            href="/auth/login"
+            aria-label="Sign in"
+            data-cursor="view"
+            data-cursor-text="Sign In"
+            className="flex items-center text-paper/80 hover:text-paper transition-colors duration-300"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M4.5 20c0-4.14 3.36-7 7.5-7s7.5 2.86 7.5 7" strokeLinecap="round" />
+            </svg>
+          </Link>
+        )}
 
         <button
           aria-label="Menu"

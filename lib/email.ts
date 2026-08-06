@@ -1,6 +1,14 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
+// Lazy, like getStripe() in lib/stripe.ts — constructing this at module scope
+// throws immediately if RESEND_API_KEY isn't set, which crashes the build (and
+// any other route) the moment something imports this file, even if that code
+// path never actually sends an email at runtime.
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY!)
+  return _resend
+}
 
 type SendEmailParams = {
   to: string | string[]
@@ -10,7 +18,7 @@ type SendEmailParams = {
 }
 
 export async function sendEmail({ to, subject, html, from }: SendEmailParams) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: from ?? process.env.EMAIL_FROM ?? 'DEWDROPZ <noreply@dewdropz.com>',
     to: Array.isArray(to) ? to : [to],
     subject,
@@ -65,6 +73,92 @@ export async function sendOrderConfirmationEmail(params: {
           ${address.address_line2 ? address.address_line2 + '<br/>' : ''}
           ${address.city}, ${address.state} ${address.postal_code}
         </p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:13px;color:#999;">
+          Need help? <a href="mailto:orders@dewdropz.com" style="color:#27481F;">orders@dewdropz.com</a>
+        </p>
+      </div>
+    `,
+  })
+}
+
+// Fired from cancelOrderInternal regardless of whether a refund was
+// successfully issued alongside the cancellation — the customer needs to
+// know their order stopped either way, and if a refund went through, when.
+export async function sendOrderCancellationEmail(params: {
+  email: string
+  orderNumber: string
+  refunded: boolean
+  refundAmount?: number
+}) {
+  return sendEmail({
+    to: params.email,
+    subject: `Order Cancelled — ${params.orderNumber}`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:40px 20px;">
+        <h1 style="font-size:28px;letter-spacing:-0.5px;margin-bottom:8px;">DEWDROPZ</h1>
+        <p style="font-style:italic;color:#7BA46F;">Your order has been cancelled.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:14px;color:#666;">Order <strong>${params.orderNumber}</strong> has been cancelled.</p>
+        ${
+          params.refunded
+            ? `<p style="font-size:14px;color:#666;">A refund of <strong>₹${((params.refundAmount ?? 0) / 100).toLocaleString('en-IN')}</strong> has been issued and should reach your original payment method within 5-7 business days.</p>`
+            : `<p style="font-size:14px;color:#666;">No payment had been captured for this order, so there's nothing to refund.</p>`
+        }
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:13px;color:#999;">
+          Need help? <a href="mailto:orders@dewdropz.com" style="color:#27481F;">orders@dewdropz.com</a>
+        </p>
+      </div>
+    `,
+  })
+}
+
+// Covers admin-issued refunds that aren't part of a cancellation (partial
+// refunds, goodwill refunds, quality issues) — the cancellation email above
+// already tells the customer about refunds tied to a cancelled order.
+export async function sendRefundEmail(params: {
+  email: string
+  orderNumber: string
+  amount: number
+  partial: boolean
+}) {
+  return sendEmail({
+    to: params.email,
+    subject: `Refund Issued — ${params.orderNumber}`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:40px 20px;">
+        <h1 style="font-size:28px;letter-spacing:-0.5px;margin-bottom:8px;">DEWDROPZ</h1>
+        <p style="font-style:italic;color:#7BA46F;">A refund is on its way.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:14px;color:#666;">
+          ${params.partial ? 'A partial refund' : 'A full refund'} of <strong>₹${(params.amount / 100).toLocaleString('en-IN')}</strong>
+          has been issued for order <strong>${params.orderNumber}</strong>.
+        </p>
+        <p style="font-size:14px;color:#666;">It should reach your original payment method within 5-7 business days.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:13px;color:#999;">
+          Need help? <a href="mailto:orders@dewdropz.com" style="color:#27481F;">orders@dewdropz.com</a>
+        </p>
+      </div>
+    `,
+  })
+}
+
+export async function sendPaymentFailedEmail(params: { email: string; orderNumber: string }) {
+  return sendEmail({
+    to: params.email,
+    subject: `Payment Failed — ${params.orderNumber}`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:40px 20px;">
+        <h1 style="font-size:28px;letter-spacing:-0.5px;margin-bottom:8px;">DEWDROPZ</h1>
+        <p style="font-style:italic;color:#7BA46F;">Your payment didn't go through.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:14px;color:#666;">
+          We couldn't process payment for order <strong>${params.orderNumber}</strong>. The items have not been charged
+          and the order has not been placed — nothing has been reserved on our end past a short hold.
+        </p>
+        <p style="font-size:14px;color:#666;">Feel free to try again, or reach out if your card keeps getting declined.</p>
         <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
         <p style="font-size:13px;color:#999;">
           Need help? <a href="mailto:orders@dewdropz.com" style="color:#27481F;">orders@dewdropz.com</a>

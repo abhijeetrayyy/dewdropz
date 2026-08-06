@@ -3,7 +3,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from 'react'
-import { getAllOrders, updateOrderStatus, addTrackingInfo, bulkUpdateOrderStatus, refundOrder } from '@/actions/orders'
+import Image from 'next/image'
+import { getAllOrders, updateOrderStatus, addTrackingInfo, bulkUpdateOrderStatus, refundOrder, cancelOrderAsAdmin, getRefundAttentionCount } from '@/actions/orders'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Package, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Package, Search, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
 import { CardListSkeleton } from '@/components/admin/CardListSkeleton'
 import type { OrderWithItems, Order } from '@/types/database'
 
@@ -51,6 +52,8 @@ export default function OrdersPage() {
   const [refundForm, setRefundForm] = useState({ amount: '', reason: '', restock: true })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [attentionCount, setAttentionCount] = useState(0)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,11 +63,17 @@ export default function OrdersPage() {
     return () => clearTimeout(timer)
   }, [search])
 
+  function loadAttentionCount() {
+    getRefundAttentionCount().then(setAttentionCount).catch(() => {})
+  }
+  useEffect(() => { loadAttentionCount() }, [])
+
   async function load() {
     setLoading(true)
     try {
       const { orders: rows, total: t } = await getAllOrders({
-        status: filter && filter !== 'all' ? filter : undefined,
+        needsAttention: filter === 'needs_attention',
+        status: filter && filter !== 'all' && filter !== 'needs_attention' ? filter : undefined,
         search: debouncedSearch || undefined,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
@@ -78,8 +87,24 @@ export default function OrdersPage() {
   useEffect(() => { load() }, [filter, debouncedSearch, page])
 
   async function changeStatus(orderId: string, status: Order['status']) {
-    try { await updateOrderStatus(orderId, status); toast.success(`Order ${status}`); load() }
+    try { await updateOrderStatus(orderId, status); toast.success(`Order ${status}`); load(); loadAttentionCount() }
     catch { toast.error('Failed to update') }
+  }
+
+  async function cancelSingleOrder(order: OrderWithItems) {
+    if (!confirm(`Cancel order ${order.order_number}? Stock will be released${order.payment_status === 'paid' || order.payment_status === 'partially_refunded' ? ' and the captured payment will be refunded automatically' : ''}.`)) return
+    setCancellingId(order.id)
+    try {
+      const result = await cancelOrderAsAdmin(order.id)
+      if (result && 'error' in result) { toast.error(result.error); return }
+      toast.success(result?.refundIssued ? 'Order cancelled and refunded' : 'Order cancelled')
+      load()
+      loadAttentionCount()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to cancel order')
+    } finally {
+      setCancellingId(null)
+    }
   }
 
   async function shipOrder() {
@@ -113,6 +138,7 @@ export default function OrdersPage() {
       toast.success('Refund issued')
       setRefundDialog(false)
       load()
+      loadAttentionCount()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Refund failed') }
     finally { setSaving(false) }
   }
@@ -157,9 +183,23 @@ export default function OrdersPage() {
             <SelectItem value="shipped">Shipped</SelectItem>
             <SelectItem value="delivered">Delivered</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="needs_attention">⚠ Needs Attention{attentionCount > 0 ? ` (${attentionCount})` : ''}</SelectItem>
           </SelectContent>
         </Select>
       </div>
+
+      {attentionCount > 0 && filter !== 'needs_attention' && (
+        <button
+          type="button"
+          onClick={() => { setFilter('needs_attention'); setPage(0) }}
+          className="w-full flex items-center gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-left hover:bg-red-100 transition-colors"
+        >
+          <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+          <span className="text-sm text-red-800">
+            <strong>{attentionCount}</strong> order{attentionCount === 1 ? '' : 's'} had a refund fail automatically and need{attentionCount === 1 ? 's' : ''} manual attention.
+          </span>
+        </button>
+      )}
 
       <div className="flex items-center justify-between gap-4">
         <div className="relative w-full max-w-xs">
@@ -204,6 +244,9 @@ export default function OrdersPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {o.refund_needs_attention && (
+                <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Needs Refund</Badge>
+              )}
               <Badge variant={statusColors[o.status]} className="capitalize">{o.status}</Badge>
               <Badge variant={paymentStatusColors[o.payment_status] ?? 'secondary'} className="capitalize">{o.payment_status.replace('_', ' ')}</Badge>
             </div>
@@ -221,7 +264,33 @@ export default function OrdersPage() {
               <TableBody>
                 {o.items?.map((i) => (
                   <TableRow key={i.id}>
-                    <TableCell className="font-medium text-gray-900">{i.product_name}{i.variant_name ? ` — ${i.variant_name}` : ''}</TableCell>
+                    <TableCell className="font-medium text-gray-900">
+                      <div className="flex items-center gap-3">
+                        {i.custom_design_id && (i.design?.front_preview_url || i.design?.back_preview_url) && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            {[i.design.front_preview_url, i.design.back_preview_url].filter(Boolean).map((url, idx) => (
+                              <a key={idx} href={url!} target="_blank" rel="noopener noreferrer" className="block h-10 w-10 rounded-sm overflow-hidden border border-gray-200 hover:border-gray-400 transition-colors">
+                                <Image src={url!} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        <div>
+                          <div>{i.product_name}{i.variant_name ? ` — ${i.variant_name}` : ''}</div>
+                          {i.custom_design_id && (
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="secondary" className="text-[10px]">Custom Design</Badge>
+                              {(i.design?.front_print_url || i.design?.back_print_url) && (
+                                <span className="flex gap-2 text-[11px]">
+                                  {i.design.front_print_url && <a href={i.design.front_print_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black underline">Front print file</a>}
+                                  {i.design.back_print_url && <a href={i.design.back_print_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black underline">Back print file</a>}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">{i.quantity}</TableCell>
                     <TableCell className="text-right text-gray-500">{fmtAmount(i.unit_price)}</TableCell>
                     <TableCell className="text-right">{fmtAmount(i.total_price)}</TableCell>
@@ -229,6 +298,12 @@ export default function OrdersPage() {
                 ))}
               </TableBody>
             </Table>
+
+            {o.admin_notes && (
+              <div className="mt-3 pt-3 border-t text-xs text-gray-500 whitespace-pre-line">
+                {o.admin_notes}
+              </div>
+            )}
 
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <div className="text-sm text-gray-500">
@@ -247,7 +322,20 @@ export default function OrdersPage() {
                 {o.status === 'processing' && <Button size="sm" onClick={() => openShip(o)}>Ship</Button>}
                 {o.status === 'shipped' && <Button size="sm" onClick={() => changeStatus(o.id, 'delivered')}>Delivered</Button>}
                 {(o.payment_status === 'paid' || o.payment_status === 'partially_refunded') && (
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => openRefund(o)}>Refund</Button>
+                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => openRefund(o)}>
+                    {o.refund_needs_attention ? 'Retry Refund' : 'Refund'}
+                  </Button>
+                )}
+                {(o.status === 'pending' || o.status === 'confirmed' || o.status === 'processing') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-500 hover:text-red-700"
+                    disabled={cancellingId === o.id}
+                    onClick={() => cancelSingleOrder(o)}
+                  >
+                    {cancellingId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Cancel'}
+                  </Button>
                 )}
               </div>
             </div>

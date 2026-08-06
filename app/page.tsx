@@ -10,6 +10,8 @@ import ShopByCategory from '@/components/sections/ShopByCategory'
 import Community from '@/components/sections/Community'
 import BrandPulse from '@/components/sections/BrandPulse'
 import NewsletterBar from '@/components/sections/NewsletterBar'
+import { getProducts, getCollections } from '@/actions/products'
+import { getCategories } from '@/actions/categories'
 
 // The homepage is one day on the mountain, lived by scrolling: pre-dawn start on
 // the summit, first light, the climb, the ridge at midday, pack check, stories on
@@ -20,7 +22,13 @@ import NewsletterBar from '@/components/sections/NewsletterBar'
 // warm afternoon paper → night ink. FeaturedGear and GearSpotlight were merged
 // into TheClimb (each product now appears exactly once, at its altitude); their
 // files remain in the repo, unplugged.
-export default function Home() {
+export default async function Home() {
+  const [products, collections, categories] = await Promise.all([
+    getProducts(),
+    getCollections(),
+    getCategories({ parentId: null }),
+  ])
+
   return (
     <>
       <NavBar />
@@ -31,16 +39,16 @@ export default function Home() {
           <TrustBand />
         </div>
         <div data-trail-time="06:10" data-trail-alt="4,980M" data-trail-label="First light">
-          <SeasonKit />
+          <SeasonKit allProducts={products} collections={collections} />
         </div>
         <div data-trail-time="08:30" data-trail-alt="4,200M" data-trail-label="The climb">
-          <TheClimb />
+          <TheClimb products={products} />
         </div>
         <div data-trail-time="11:00" data-trail-alt="4,500M" data-trail-label="The ridge">
-          <CollectionsRow />
+          <CollectionsRow collections={collections} />
         </div>
         <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
-          <ShopByCategory />
+          <ShopByCategory categories={categories} products={products} />
         </div>
         <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
           <Community />

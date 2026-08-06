@@ -6,16 +6,26 @@ export interface CartLine {
   slug: string
   name: string
   price: number
-  gradient: string
+  image: string
   size: string
   quantity: number
+  // Only set for a customized item — real product/variant identity (no
+  // fuzzy matching needed at checkout) and the design it's carrying. Every
+  // customized line is distinct, even if it shares a slug+size with another.
+  productId?: string
+  variantId?: string | null
+  customDesignId?: string
+}
+
+function sameLine(l: CartLine, slug: string, size: string, customDesignId?: string) {
+  return customDesignId ? l.customDesignId === customDesignId : l.slug === slug && l.size === size && !l.customDesignId
 }
 
 interface CartContextValue {
   items: CartLine[]
   addItem: (item: Omit<CartLine, 'quantity'>, quantity?: number) => void
-  updateQuantity: (slug: string, size: string, quantity: number) => void
-  removeItem: (slug: string, size: string) => void
+  updateQuantity: (slug: string, size: string, quantity: number, customDesignId?: string) => void
+  removeItem: (slug: string, size: string, customDesignId?: string) => void
   clear: () => void
   count: number
   subtotal: number
@@ -45,26 +55,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem: CartContextValue['addItem'] = (item, quantity = 1) => {
     setItems((prev) => {
-      const existing = prev.find((l) => l.slug === item.slug && l.size === item.size)
+      // A customized design is never merged into an existing line — it's
+      // always its own new entry, even if the same product/size is already
+      // in the cart (as a plain item or a different design).
+      if (item.customDesignId) {
+        return [...prev, { ...item, quantity }]
+      }
+      const existing = prev.find((l) => sameLine(l, item.slug, item.size))
       if (existing) {
-        return prev.map((l) =>
-          l.slug === item.slug && l.size === item.size ? { ...l, quantity: l.quantity + quantity } : l
-        )
+        return prev.map((l) => (sameLine(l, item.slug, item.size) ? { ...l, quantity: l.quantity + quantity } : l))
       }
       return [...prev, { ...item, quantity }]
     })
   }
 
-  const updateQuantity: CartContextValue['updateQuantity'] = (slug, size, quantity) => {
+  const updateQuantity: CartContextValue['updateQuantity'] = (slug, size, quantity, customDesignId) => {
     setItems((prev) =>
       quantity <= 0
-        ? prev.filter((l) => !(l.slug === slug && l.size === size))
-        : prev.map((l) => (l.slug === slug && l.size === size ? { ...l, quantity } : l))
+        ? prev.filter((l) => !sameLine(l, slug, size, customDesignId))
+        : prev.map((l) => (sameLine(l, slug, size, customDesignId) ? { ...l, quantity } : l))
     )
   }
 
-  const removeItem: CartContextValue['removeItem'] = (slug, size) => {
-    setItems((prev) => prev.filter((l) => !(l.slug === slug && l.size === size)))
+  const removeItem: CartContextValue['removeItem'] = (slug, size, customDesignId) => {
+    setItems((prev) => prev.filter((l) => !sameLine(l, slug, size, customDesignId)))
   }
 
   const clear = () => setItems([])

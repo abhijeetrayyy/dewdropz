@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Product, ProductVariant, Collection, ProductWithCollection } from '@/types/database'
 
@@ -10,9 +10,9 @@ import type { Product, ProductVariant, Collection, ProductWithCollection } from 
 export async function getProducts(options?: {
   collection?: string; featured?: boolean; limit?: number; offset?: number
 }) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   let query = supabase.from('products')
-    .select('*, collection:collections(*), variants:product_variants(*)')
+    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
     .eq('is_active', true).order('created_at', { ascending: false })
   if (options?.collection) query = query.eq('collection_id', options.collection)
   if (options?.featured) query = query.eq('is_featured', true)
@@ -24,18 +24,30 @@ export async function getProducts(options?: {
 }
 
 export async function getProductBySlug(slug: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('products')
-    .select('*, collection:collections(*), variants:product_variants(*)')
+    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
     .eq('slug', slug).eq('is_active', true).single()
   if (error) return null
   return data as unknown as ProductWithCollection
 }
 
-export async function getProductById(id: string) {
-  const supabase = await createServerSupabaseClient()
+// Batch-hydrates a list of product slugs into real product records — used by
+// RecentlyViewed and the wishlist, both of which only ever persist slugs.
+export async function getProductsBySlugs(slugs: string[]) {
+  if (slugs.length === 0) return []
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('products')
-    .select('*, collection:collections(*), variants:product_variants(*)')
+    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
+    .in('slug', slugs).eq('is_active', true)
+  if (error) throw new Error(error.message)
+  return data as unknown as ProductWithCollection[]
+}
+
+export async function getProductById(id: string) {
+  const supabase = createPublicSupabaseClient()
+  const { data, error } = await supabase.from('products')
+    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
     .eq('id', id).eq('is_active', true).maybeSingle()
   if (error) return null
   return data as unknown as ProductWithCollection
@@ -45,14 +57,14 @@ export async function getProductById(id: string) {
 export async function getProductByIdAdmin(id: string) {
   const supabase = createAdminSupabaseClient()
   const { data, error } = await supabase.from('products')
-    .select('*, collection:collections(*), variants:product_variants(*)')
+    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
     .eq('id', id).maybeSingle()
   if (error) return null
   return data as unknown as ProductWithCollection
 }
 
 export async function getCollections() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('collections')
     .select('*, products:products(*)').eq('is_active', true).order('sort_order', { ascending: true })
   if (error) throw new Error(error.message)
@@ -60,7 +72,7 @@ export async function getCollections() {
 }
 
 export async function getCollectionBySlug(slug: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('collections')
     .select('*, products:products(*)').eq('slug', slug).eq('is_active', true).single()
   if (error) return null
@@ -77,6 +89,8 @@ export async function createProduct(input: {
   collection_id?: string | null; slug: string; name: string; description?: string
   short_description?: string; price: number; compare_at_price?: number; sku?: string
   inventory_quantity?: number; weight?: number; images?: string[]
+  highlights?: string[]; care_instructions?: string | null
+  story_blocks?: { images: string[]; heading: string; body: string }[]
   is_featured?: boolean; is_active?: boolean
 }) {
   await requireAdmin()
@@ -120,7 +134,7 @@ export async function archiveProduct(id: string) {
 }
 
 export async function getProductVariants(productId: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('product_variants').select('*')
     .eq('product_id', productId).order('sort_order', { ascending: true })
   if (error) throw new Error(error.message)
@@ -144,9 +158,19 @@ export async function updateProductVariant(id: string, input: Partial<{
 }>) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
-  const { error } = await supabase.from('product_variants').update(input).eq('id', id)
+  // A variant price/stock edit changes what a customer can actually buy, but
+  // this only ever revalidated the admin list — the public PDP kept serving
+  // whatever it had cached until something else happened to touch it.
+  const { data, error } = await supabase
+    .from('product_variants')
+    .update(input)
+    .eq('id', id)
+    .select('product:products(slug)')
+    .single()
   if (error) throw new Error(error.message)
   revalidatePath('/admin/products', 'layout')
+  const slug = (data?.product as { slug?: string } | null)?.slug
+  if (slug) revalidatePath(`/products/${slug}`)
 }
 
 export async function getAllProducts(opts?: { search?: string; limit?: number; offset?: number }) {

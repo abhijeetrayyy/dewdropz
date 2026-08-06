@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react'
 
 interface AccordionProps {
   title: string
-  content: string
+  content: React.ReactNode
   defaultOpen?: boolean
   variant?: 'paper' | 'altitude'
   titleSize?: 'label' | 'question'
@@ -49,7 +49,7 @@ export default function Accordion({
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <p className={`font-body text-sm mt-3 leading-relaxed ${styles.body}`}>{content}</p>
+            <div className={`font-body text-sm mt-3 leading-relaxed ${styles.body}`}>{content}</div>
           </motion.div>
         )}
       </AnimatePresence>

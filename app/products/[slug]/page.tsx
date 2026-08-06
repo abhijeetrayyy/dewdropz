@@ -3,36 +3,37 @@ import { notFound } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import ProductDetail from '@/components/sections/ProductDetail'
-import { COLLECTIONS, PRODUCTS } from '@/lib/constants'
+import { getProductBySlug, getProducts, getCollections } from '@/actions/products'
 import { getRelatedProducts } from '@/lib/recommendations'
 
-export function generateStaticParams() {
-  return PRODUCTS.map((p) => ({ slug: p.slug }))
+export async function generateStaticParams() {
+  const products = await getProducts()
+  return products.map((p) => ({ slug: p.slug }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const product = PRODUCTS.find((p) => p.slug === slug)
+  const product = await getProductBySlug(slug)
   if (!product) return {}
   return {
     title: `${product.name} — DEWDROPZ`,
-    description: product.longDescription,
+    description: product.description ?? product.short_description ?? undefined,
   }
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const product = PRODUCTS.find((p) => p.slug === slug)
+  const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const collection = COLLECTIONS.find((c) => c.id === product.collectionId)
-  const related = getRelatedProducts(product.slug, 3)
+  const [allProducts, collections] = await Promise.all([getProducts(), getCollections()])
+  const related = getRelatedProducts(allProducts, product.slug, 6)
 
   return (
     <>
       <NavBar />
       <main>
-        <ProductDetail product={product} collection={collection} related={related} />
+        <ProductDetail product={product} collection={product.collection} related={related} collections={collections} />
       </main>
       <FooterSection />
     </>

@@ -7,6 +7,7 @@ import { syncLocalCartToDbCart } from '@/actions/checkout'
 import { createAddress } from '@/actions/addresses'
 import { createOrder } from '@/actions/orders'
 import { createRazorpayOrder } from '@/actions/payments'
+import { formatPrice } from '@/lib/utils'
 import type { Address } from '@/types/database'
 
 const RAZORPAY_SCRIPT_ID = 'razorpay-checkout-js'
@@ -73,7 +74,14 @@ export default function CheckoutClient({
     setPlacing(true)
     try {
       const { skipped } = await syncLocalCartToDbCart(
-        items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity })),
+        items.map((i) => ({
+          slug: i.slug,
+          size: i.size,
+          quantity: i.quantity,
+          productId: i.productId,
+          variantId: i.variantId,
+          customDesignId: i.customDesignId,
+        })),
         userId
       )
       if (skipped.length === items.length) {
@@ -253,7 +261,7 @@ export default function CheckoutClient({
               {items.map((item) => (
                 <div key={`${item.slug}-${item.size}`} className="flex items-center justify-between font-body text-sm text-mid py-2">
                   <span className="truncate pr-2">{item.name} × {item.quantity}</span>
-                  <span className="text-text tabular-nums shrink-0">Rs. {(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                  <span className="text-text tabular-nums shrink-0">{formatPrice(item.price * item.quantity)}</span>
                 </div>
               ))}
               <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-t border-rule mt-2">
@@ -262,7 +270,7 @@ export default function CheckoutClient({
               </div>
               <div className="flex items-center justify-between font-body text-base font-medium py-4">
                 <span className="text-text">Subtotal</span>
-                <span className="text-forest tabular-nums">Rs. {subtotal.toLocaleString('en-IN')}</span>
+                <span className="text-forest tabular-nums">{formatPrice(subtotal)}</span>
               </div>
 
               {error && <p className="text-clay text-xs font-body mb-3">{error}</p>}

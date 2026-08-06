@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ImageUploader } from '@/components/admin/ImageUploader'
+import { BulletListEditor } from '@/components/admin/BulletListEditor'
+import { StoryBlockEditor, type StoryBlock } from '@/components/admin/StoryBlockEditor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, Save, PackagePlus, Loader2, PackageOpen, Layers, Hash, Sparkles, Boxes, Lock } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,6 +38,9 @@ export default function NewProductPage() {
   const [slug, setSlug] = useState('')
   const [desc, setDesc] = useState('')
   const [shortDesc, setShortDesc] = useState('')
+  const [highlights, setHighlights] = useState<string[]>([])
+  const [careInstructions, setCareInstructions] = useState('')
+  const [storyBlocks, setStoryBlocks] = useState<StoryBlock[]>([])
   const [price, setPrice] = useState('')
   const [comparePrice, setComparePrice] = useState('')
   const [sku, setSku] = useState('')
@@ -68,6 +73,11 @@ export default function NewProductPage() {
         slug,
         description: desc || undefined,
         short_description: shortDesc || undefined,
+        highlights: highlights.map((h) => h.trim()).filter(Boolean),
+        care_instructions: careInstructions.trim() || undefined,
+        story_blocks: storyBlocks
+          .map((b) => ({ images: b.images, heading: b.heading.trim(), body: b.body.trim() }))
+          .filter((b) => b.images.length > 0 && b.heading),
         price: Math.round(parseFloat(price) * 100),
         compare_at_price: comparePrice ? Math.round(parseFloat(comparePrice) * 100) : undefined,
         sku: sku || undefined,
@@ -131,6 +141,21 @@ export default function NewProductPage() {
                   <div>
                     <Label htmlFor="short_desc">Short Description</Label>
                     <Input id="short_desc" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="A quick summary for product cards" className="mt-1" />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label>Highlights</Label>
+                    <p className="text-xs text-gray-400 mb-2">Short, punchy differentiators shown as bullets on the product page — leave empty to hide the section.</p>
+                    <BulletListEditor value={highlights} onChange={setHighlights} />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label>Care Instructions</Label>
+                    <p className="text-xs text-gray-400 mb-1">Leave blank to show generic care guidance on the product page instead.</p>
+                    <Textarea value={careInstructions} onChange={(e) => setCareInstructions(e.target.value)} rows={3} placeholder="e.g. Machine wash cold, no bleach. Re-apply DWR spray every 15-20 washes." className="mt-1" />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label>Product Story</Label>
+                    <p className="text-xs text-gray-400 mb-2">Full-bleed image + text sections shown between Highlights and Specifications — use this for lifestyle photography and &ldquo;what this product is about&rdquo; storytelling. Leave empty to hide the section.</p>
+                    <StoryBlockEditor value={storyBlocks} onChange={setStoryBlocks} />
                   </div>
                   <div>
                     <Label>Images</Label>

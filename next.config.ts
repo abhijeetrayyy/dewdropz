@@ -1,13 +1,21 @@
 import type { NextConfig } from "next";
 
-const supabasePatterns = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? [new URL(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/**`)]
+// `new URL(...)` shorthand implicitly locks `search: ''` (no query string
+// allowed at all) — real product photos come through with `?w=800` etc.
+// (both from seeded Unsplash URLs and Supabase Storage's public URLs), so
+// these need the object form with `search` omitted entirely to allow any
+// query string, not the shorthand.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  : null;
+const supabasePatterns = supabaseUrl
+  ? [{ protocol: "https" as const, hostname: supabaseUrl.hostname, pathname: "/storage/v1/object/public/**" }]
   : [];
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      new URL("https://images.unsplash.com/**"),
+      { protocol: "https" as const, hostname: "images.unsplash.com", pathname: "/**" },
       ...supabasePatterns,
     ],
   },

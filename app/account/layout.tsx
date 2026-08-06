@@ -25,7 +25,11 @@ export default async function AccountLayout({ children }: { children: React.Reac
           <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-12">
             <aside className="space-y-6">
               <nav className="flex flex-col space-y-3 font-body text-sm">
-                <Link href="/account" className="text-text hover:text-forest transition-colors">Profile & Orders</Link>
+                <Link href="/account" className="text-text hover:text-forest transition-colors">Overview</Link>
+                <Link href="/account/orders" className="text-text hover:text-forest transition-colors">Orders</Link>
+                <Link href="/account/addresses" className="text-text hover:text-forest transition-colors">Addresses</Link>
+                <Link href="/account/designs" className="text-text hover:text-forest transition-colors">My Designs</Link>
+                <Link href="/account/settings" className="text-text hover:text-forest transition-colors">Settings</Link>
                 <Link href="/wishlist" className="text-text hover:text-forest transition-colors">Wishlist</Link>
                 {profile?.role === 'admin' && (
                   <Link href="/admin" className="text-amber-600 hover:underline transition-colors mt-4 block">Admin Dashboard</Link>

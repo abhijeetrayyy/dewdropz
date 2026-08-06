@@ -23,3 +23,23 @@ export async function deleteAdminImage(bucket: MediaBucket, url: string) {
   if (!path) throw new Error('Could not determine storage path from URL')
   await deleteFile(bucketName, decodeURIComponent(path))
 }
+
+const CUSTOMER_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+const CUSTOMER_UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+// The one non-admin upload path in the app — any shopper designing a
+// T-shirt needs to place their own photo, so this deliberately skips
+// requireAdmin(). The trust boundary is real validation instead: raster
+// images only (no SVG — avoids embedded-script/parsing risk), a real size
+// cap, and a random filename (never the client-supplied name).
+export async function uploadCustomerImage(file: File) {
+  if (!CUSTOMER_UPLOAD_MIME_TYPES.includes(file.type)) {
+    throw new Error('Please upload a JPEG, PNG, or WebP image.')
+  }
+  if (file.size > CUSTOMER_UPLOAD_MAX_BYTES) {
+    throw new Error('Image is too large — please upload something under 10MB.')
+  }
+  const ext = file.type.split('/')[1]
+  const path = `${crypto.randomUUID()}.${ext}`
+  return uploadFileAdmin(STORAGE_BUCKETS.DESIGNS, path, file, file.type)
+}

@@ -2,6 +2,7 @@
 
 import { clearCart, addToCart } from './cart'
 import { getProductBySlug } from './products'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Bridges the storefront's local cart (slug + plain size string, no DB identity)
 // to the real cart the order/payment system needs (product_id + variant_id). The
@@ -13,16 +14,32 @@ import { getProductBySlug } from './products'
 // so a line matches the first variant whose name starts with "<size> /", falling
 // back to the first variant on the product if nothing starts with that prefix.
 export async function syncLocalCartToDbCart(
-  lines: { slug: string; size: string; quantity: number }[],
-  userId: string
+  lines: { slug: string; size: string; quantity: number; productId?: string; variantId?: string | null; customDesignId?: string }[],
+  userId: string,
+  client?: SupabaseClient
 ) {
   // Start from a clean DB cart for this user so re-running checkout (after a
   // cancelled payment, say) doesn't pile duplicate quantities on top of last time.
-  await clearCart(userId, null)
+  await clearCart(userId, null, client)
 
   const skipped: string[] = []
 
   for (const line of lines) {
+    // A customized line already knows its exact product/variant from the
+    // studio — no need for (and no risk from) the fuzzy size match below.
+    if (line.customDesignId && line.productId) {
+      const result = await addToCart({
+        product_id: line.productId,
+        variant_id: line.variantId ?? null,
+        custom_design_id: line.customDesignId,
+        quantity: line.quantity,
+        userId,
+        client,
+      })
+      if (result && 'error' in result) skipped.push(line.slug)
+      continue
+    }
+
     const product = await getProductBySlug(line.slug)
     if (!product) { skipped.push(line.slug); continue }
 
@@ -33,7 +50,7 @@ export async function syncLocalCartToDbCart(
       variantId = (match ?? product.variants[0]).id
     }
 
-    const result = await addToCart({ product_id: product.id, variant_id: variantId, quantity: line.quantity, userId })
+    const result = await addToCart({ product_id: product.id, variant_id: variantId, quantity: line.quantity, userId, client })
     if (result && 'error' in result) skipped.push(line.slug)
   }
 

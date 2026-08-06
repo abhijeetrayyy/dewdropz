@@ -8,9 +8,10 @@ import { useCart } from '@/providers/CartProvider'
 import { useWishlist } from '@/providers/WishlistProvider'
 import { useHasMounted } from '@/hooks/useHasMounted'
 import { BLUR_DATA_URL } from '@/lib/constants'
-import type { PRODUCTS } from '@/lib/constants'
+import { formatPrice } from '@/lib/utils'
+import type { ProductWithCollection } from '@/types/database'
 
-export default function ProductCard({ product }: { product: (typeof PRODUCTS)[number] }) {
+export default function ProductCard({ product }: { product: ProductWithCollection }) {
   const { addItem } = useCart()
   const ref = useRef<HTMLDivElement>(null)
   const rotateX = useMotionValue(0)
@@ -54,27 +55,37 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
   }
 
   const handleAddToCart = () => {
+    if (soldOut) return
     addItem({
       slug: product.slug,
       name: product.name,
       price: product.price,
-      gradient: product.gradient,
-      size: product.sizes[0],
+      image: product.images?.[0] ?? '',
+      size: product.variants?.[0]?.name ?? '',
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }
 
   const { toggleItem, hasItem } = useWishlist()
-  
+
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
     toggleItem(product.slug)
   }
 
+  const discountPct =
+    product.compare_at_price && product.compare_at_price > product.price
+      ? Math.round((1 - product.price / product.compare_at_price) * 100)
+      : null
+
+  const stock = product.inventory_quantity
+  const soldOut = stock != null && stock <= 0
+  const lowStock = stock != null && stock > 0 && stock <= product.low_stock_threshold
+
   return (
     <div className="product-card group relative">
-      <button 
+      <button
         onClick={handleWishlist}
         className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-paper"
       >
@@ -88,6 +99,24 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
         </svg>
       </button>
 
+      {(discountPct || soldOut || lowStock) && (
+        <div className="absolute top-4 left-4 z-20 flex flex-col gap-1 items-start">
+          {discountPct ? (
+            <span className="bg-forest text-paper text-[11px] font-medium px-2 py-1 rounded-sm">
+              {discountPct}% OFF
+            </span>
+          ) : null}
+          {soldOut ? (
+            <span className="bg-mid text-paper text-[11px] font-medium px-2 py-1 rounded-sm">Sold out</span>
+          ) : lowStock ? (
+            <span className="bg-paper/90 text-clay text-[11px] font-medium pl-1.5 pr-2 py-1 rounded-sm backdrop-blur-sm flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-clay animate-pulse flex-shrink-0" />
+              Only {stock} left
+            </span>
+          ) : null}
+        </div>
+      )}
+
       <Link href={`/products/${product.slug}`} data-cursor="image" data-cursor-text="View">
         <motion.div
           ref={ref}
@@ -96,16 +125,27 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
           style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 800 }}
           className="product-image aspect-[3/4] rounded-sm overflow-hidden relative"
         >
-          <div className="h-full w-full relative" style={{ background: product.gradient }}>
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(max-width: 640px) 50vw, 25vw"
-              placeholder="blur"
-              blurDataURL={BLUR_DATA_URL}
-              className="object-cover"
-            />
+          <div className={`h-full w-full relative bg-rule/40 ${soldOut ? 'opacity-60' : ''}`}>
+            {product.images?.[0] ? (
+              <Image
+                src={product.images[0]}
+                alt={product.name}
+                fill
+                sizes="(max-width: 640px) 50vw, 25vw"
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
+                className={`object-cover transition-opacity duration-300 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
+              />
+            ) : null}
+            {product.images?.[1] ? (
+              <Image
+                src={product.images[1]}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 50vw, 25vw"
+                className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              />
+            ) : null}
           </div>
 
           <div
@@ -140,7 +180,7 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
           {product.name}
         </h3>
       </Link>
-      <p className="font-body text-sm text-mid">{product.desc}</p>
+      <p className="font-body text-sm text-mid">{product.short_description}</p>
       <div className="mt-2 overflow-hidden relative h-6">
         {/* The wrapper below stacks two h-6 rows (price, then the button) inside
             itself, so it's 48px tall — -translate-y-full moves it by 100% of its
@@ -149,16 +189,20 @@ export default function ProductCard({ product }: { product: (typeof PRODUCTS)[nu
         <div
           className={`transition-transform duration-300 ${added ? '-translate-y-1/2' : 'group-hover:-translate-y-1/2'}`}
         >
-          <span className="font-body text-sm font-medium text-forest block h-6">
-            Rs. {product.price.toLocaleString('en-IN')}
+          <span className="font-body text-sm font-medium text-forest h-6 flex items-center gap-1.5">
+            {formatPrice(product.price)}
+            {discountPct ? (
+              <span className="text-mid line-through font-normal">{formatPrice(product.compare_at_price!)}</span>
+            ) : null}
           </span>
           <button
             type="button"
             onClick={handleAddToCart}
+            disabled={soldOut}
             data-cursor="magnetic"
-            className="font-body text-sm font-medium text-forest block h-6 cursor-pointer hover:underline text-left"
+            className="font-body text-sm font-medium text-forest block h-6 cursor-pointer hover:underline text-left disabled:text-mid disabled:cursor-not-allowed disabled:no-underline"
           >
-            {added ? 'Added ✓' : 'Add to cart'}
+            {soldOut ? 'Sold out' : added ? 'Added ✓' : 'Add to cart'}
           </button>
         </div>
       </div>

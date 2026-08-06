@@ -20,6 +20,7 @@ import {
   Star,
   Users,
   Mail,
+  MessageSquare,
   Settings,
   ExternalLink,
   ChevronDown,
@@ -57,6 +58,7 @@ const navGroups = [
       { href: '/admin/customers', label: 'Customers', icon: Users },
       { href: '/admin/reviews', label: 'Reviews', icon: Star },
       { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
+      { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
     ],
   },
 ]

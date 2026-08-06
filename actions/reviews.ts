@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
-import { requireAdmin } from './auth'
+import { requireAdmin, getUser } from './auth'
 import { reviewSchema, newsletterSchema } from '@/lib/validations'
 import { getSession } from './auth'
 import type { Review } from '@/types/database'
@@ -134,6 +134,34 @@ export async function unsubscribeFromNewsletter(email: string) {
     .eq('email', email)
 
   if (error) throw new Error(error.message)
+}
+
+// newsletter_subscribers has no user_id column and its RLS only allows
+// admins to SELECT/DELETE (by design — the public unsubscribe flow above is
+// meant to go through a session/token elsewhere, not a raw client read).
+// A signed-in user checking or changing *their own* subscription is safe to
+// route through the admin client here because the email always comes from
+// the server-verified session, never from client input.
+export async function getMyNewsletterStatus() {
+  const user = await getUser()
+  if (!user?.email) return false
+  const admin = createAdminSupabaseClient()
+  const { data } = await admin.from('newsletter_subscribers').select('id').eq('email', user.email).maybeSingle()
+  return !!data
+}
+
+export async function setMyNewsletterSubscription(subscribed: boolean) {
+  const user = await getUser()
+  if (!user?.email) return { error: 'Not authenticated' }
+  const admin = createAdminSupabaseClient()
+  if (subscribed) {
+    const { error } = await admin.from('newsletter_subscribers').insert({ email: user.email, source: 'account_settings' })
+    if (error && error.code !== '23505') return { error: error.message }
+  } else {
+    const { error } = await admin.from('newsletter_subscribers').delete().eq('email', user.email)
+    if (error) return { error: error.message }
+  }
+  return { success: true }
 }
 
 export async function getAllReviews(options?: { approved?: boolean; limit?: number; offset?: number }) {

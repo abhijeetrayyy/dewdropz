@@ -6,9 +6,23 @@ import crypto from 'crypto'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { getStripe } from '@/lib/stripe'
 import { getCart } from './cart'
-import { createOrder, updatePaymentStatus } from './orders'
+import { createOrder, sendOrderConfirmationIfFirstTime } from './orders'
+import { setPaymentStatusInternal } from '@/lib/orders-internal'
+import { sendPaymentFailedEmail } from '@/lib/email'
+import { sendSlackAlert } from '@/lib/slack'
 import { requireAdmin } from './auth'
 import type Stripe from 'stripe'
+
+// Not exported (see the same note on notifyCancellation in actions/orders.ts)
+// — payment_intent.payment_failed and Razorpay's payment.failed both need
+// the same "tell the customer, ping ops" follow-up.
+async function notifyPaymentFailed(orderId: string) {
+  const supabase = createAdminSupabaseClient()
+  const { data: order } = await supabase.from('orders').select('email, order_number').eq('id', orderId).single()
+  if (!order) return
+  await sendPaymentFailedEmail({ email: order.email, orderNumber: order.order_number }).catch(() => {})
+  await sendSlackAlert(`:x: Payment failed for order ${order.order_number} (${order.email}).`)
+}
 
 export async function createStripeCheckoutSession(input: {
   userId?: string | null
@@ -111,7 +125,7 @@ export async function createRazorpayOrder(input: {
 
   if (razorpayOrder.error) return { error: razorpayOrder.error.description }
 
-  await updatePaymentStatus(orderResult.orderId, 'pending', razorpayOrder.id)
+  await setPaymentStatusInternal(orderResult.orderId, 'pending', razorpayOrder.id)
 
   return {
     success: true,
@@ -127,15 +141,25 @@ export async function verifyStripeWebhook(payload: string, signature: string) {
 
   const supabase = createAdminSupabaseClient()
 
-  const { data: eventRow } = await supabase
+  // Stripe retries webhook delivery on anything short of a prompt 200, so the same
+  // event.id can arrive more than once. The unique index on (provider, event_type,
+  // event_id) makes this insert fail with 23505 on a redelivery — that failure IS
+  // the dedup check, not an error to surface; caught below, we just no-op and ack.
+  const { data: eventRow, error: insertError } = await supabase
     .from('webhook_events')
     .insert({
       provider: 'stripe',
       event_type: event.type,
+      event_id: event.id,
       payload: event.data.object as unknown as Record<string, unknown>,
     })
     .select('id')
     .single()
+
+  if (insertError) {
+    if (insertError.code === '23505') return { received: true }
+    throw new Error(insertError.message)
+  }
 
   async function markProcessed(error?: string) {
     if (!eventRow) return
@@ -152,11 +176,14 @@ export async function verifyStripeWebhook(payload: string, signature: string) {
         const session = event.data.object as Stripe.Checkout.Session
         const orderId = session.metadata?.order_id
         if (orderId) {
-          await updatePaymentStatus(orderId, 'paid', session.id)
+          const { data: existing } = await supabase.from('orders').select('payment_status').eq('id', orderId).single()
+          const alreadyPaid = existing?.payment_status === 'paid'
+          await setPaymentStatusInternal(orderId, 'paid', session.id)
           await supabase
             .from('orders')
             .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
             .eq('id', orderId)
+          if (!alreadyPaid) await sendOrderConfirmationIfFirstTime(orderId).catch(() => {})
         }
         break
       }
@@ -164,7 +191,8 @@ export async function verifyStripeWebhook(payload: string, signature: string) {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         const orderId = paymentIntent.metadata?.order_id
         if (orderId) {
-          await updatePaymentStatus(orderId, 'failed')
+          await setPaymentStatusInternal(orderId, 'failed')
+          await notifyPaymentFailed(orderId)
         }
         break
       }
@@ -199,18 +227,37 @@ export async function verifyRazorpayWebhook(rawBody: string, signature: string) 
     return { error: 'Invalid signature' }
   }
 
-  const event = JSON.parse(rawBody) as { event: string; payload: { payment: { entity: Record<string, unknown> } } }
+  const event = JSON.parse(rawBody) as {
+    event: string
+    payload: {
+      payment?: { entity: { id?: string; order_id?: string } }
+      order?: { entity: { id?: string } }
+      refund?: { entity: { id?: string } }
+    }
+  }
   const supabase = createAdminSupabaseClient()
 
-  const { data: eventRow } = await supabase
+  // Unlike Stripe, a Razorpay webhook body has no single top-level event id — the
+  // identity that actually needs deduplicating is "this event type happened to this
+  // payment/order/refund again", so the entity's own id stands in for it.
+  const razorpayEventId =
+    event.payload?.payment?.entity?.id ?? event.payload?.order?.entity?.id ?? event.payload?.refund?.entity?.id ?? null
+
+  const { data: eventRow, error: insertError } = await supabase
     .from('webhook_events')
     .insert({
       provider: 'razorpay',
       event_type: event.event,
+      event_id: razorpayEventId,
       payload: event as unknown as Record<string, unknown>,
     })
     .select('id')
     .single()
+
+  if (insertError) {
+    if (insertError.code === '23505') return { received: true }
+    throw new Error(insertError.message)
+  }
 
   async function markProcessed(error?: string) {
     if (!eventRow) return
@@ -228,16 +275,18 @@ export async function verifyRazorpayWebhook(rawBody: string, signature: string) 
         if (razorpayOrderId) {
           const { data: order } = await supabase
             .from('orders')
-            .select('id')
+            .select('id, payment_status')
             .eq('payment_intent_id', razorpayOrderId)
             .single()
 
           if (order) {
-            await updatePaymentStatus(order.id, 'paid')
+            const alreadyPaid = order.payment_status === 'paid'
+            await setPaymentStatusInternal(order.id, 'paid')
             await supabase
               .from('orders')
               .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
               .eq('id', order.id)
+            if (!alreadyPaid) await sendOrderConfirmationIfFirstTime(order.id).catch(() => {})
           }
         }
         break
@@ -252,7 +301,8 @@ export async function verifyRazorpayWebhook(rawBody: string, signature: string) 
             .single()
 
           if (order) {
-            await updatePaymentStatus(order.id, 'failed')
+            await setPaymentStatusInternal(order.id, 'failed')
+            await notifyPaymentFailed(order.id)
           }
         }
         break
@@ -295,7 +345,7 @@ export async function verifyRazorpayPayment(input: {
   const supabase = createAdminSupabaseClient()
   const { data: order } = await supabase
     .from('orders')
-    .select('id, payment_intent_id')
+    .select('id, payment_intent_id, payment_status')
     .eq('id', input.orderId)
     .single()
 
@@ -303,11 +353,13 @@ export async function verifyRazorpayPayment(input: {
     return { error: 'Order does not match this payment' }
   }
 
-  await updatePaymentStatus(order.id, 'paid', input.razorpayPaymentId)
+  const alreadyPaid = order.payment_status === 'paid'
+  await setPaymentStatusInternal(order.id, 'paid', input.razorpayPaymentId)
   await supabase
     .from('orders')
     .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
     .eq('id', order.id)
+  if (!alreadyPaid) await sendOrderConfirmationIfFirstTime(order.id).catch(() => {})
 
   return { success: true }
 }

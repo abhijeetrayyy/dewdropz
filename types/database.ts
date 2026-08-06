@@ -195,6 +195,26 @@ export interface Collection {
   updated_at: string
 }
 
+// A print zone in the "canonical" mockup coordinate space — the studio
+// always renders the mockup at a fixed reference width (800px) and scales
+// the whole canvas uniformly for other viewport sizes, so x/y/widthPx/
+// heightPx never need to change with screen size. widthIn/heightIn are the
+// real-world print dimensions used to compute export DPI.
+export interface CustomizationZone {
+  mockupImage: string
+  x: number
+  y: number
+  widthPx: number
+  heightPx: number
+  widthIn: number
+  heightIn: number
+}
+
+export interface CustomizationConfig {
+  front?: CustomizationZone
+  back?: CustomizationZone
+}
+
 export interface Product {
   id: string
   collection_id: string | null
@@ -209,6 +229,11 @@ export interface Product {
   weight: number | null
   dimensions: Json | null
   images: string[]
+  highlights: string[]
+  care_instructions: string | null
+  story_blocks: { images: string[]; heading: string; body: string }[]
+  is_customizable: boolean
+  customization_config: CustomizationConfig | null
   is_featured: boolean
   is_active: boolean
   status: 'draft' | 'active' | 'archived'
@@ -263,9 +288,27 @@ export interface CartItem {
   cart_id: string
   product_id: string
   variant_id: string | null
+  custom_design_id: string | null
   quantity: number
   created_at: string
   updated_at: string
+}
+
+// A shopper's saved front/back design for one customizable product.
+// Immutable once created — editing a design already in a cart/order means
+// creating a new row, never mutating one that might already be ordered.
+export interface CustomDesign {
+  id: string
+  user_id: string | null
+  product_id: string
+  variant_id: string | null
+  front_design: Json | null
+  back_design: Json | null
+  front_preview_url: string | null
+  back_preview_url: string | null
+  front_print_url: string | null
+  back_print_url: string | null
+  created_at: string
 }
 
 export interface Order {
@@ -291,6 +334,8 @@ export interface Order {
   carrier: string | null
   notes: string | null
   admin_notes: string | null
+  refunded_amount: number
+  refund_needs_attention: boolean
   created_at: string
   updated_at: string
   confirmed_at: string | null
@@ -304,6 +349,7 @@ export interface OrderItem {
   order_id: string
   product_id: string | null
   variant_id: string | null
+  custom_design_id: string | null
   product_name: string
   variant_name: string | null
   sku: string | null
@@ -311,6 +357,9 @@ export interface OrderItem {
   quantity: number
   total_price: number
   created_at: string
+  // Only populated by admin queries that explicitly join it (getAllOrders) —
+  // the customer-facing order preview URLs, for fulfillment.
+  design?: Pick<CustomDesign, 'front_preview_url' | 'back_preview_url' | 'front_print_url' | 'back_print_url'> | null
 }
 
 export interface Coupon {
@@ -366,6 +415,7 @@ export interface WebhookEvent {
   id: string
   provider: 'stripe' | 'razorpay'
   event_type: string
+  event_id: string | null
   payload: Json
   processed: boolean
   error: string | null
@@ -473,6 +523,8 @@ export interface OrderWithItems extends Order {
 export interface ProductWithCollection extends Product {
   collection: Collection | null
   variants: ProductVariant[]
+  categories: ProductCategory[]
+  attributes: (ProductAttributeValue & { attribute: Attribute; value: AttributeValue | null })[]
 }
 
 export interface ProductWithVariants extends Product {
@@ -536,6 +588,8 @@ export interface ShippingRate {
   price: number
   min_value: number
   max_value: number | null
+  estimated_min_days: number | null
+  estimated_max_days: number | null
   is_active: boolean
   created_at: string
   updated_at: string

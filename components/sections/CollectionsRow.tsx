@@ -1,12 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { BLUR_DATA_URL, COLLECTIONS } from '@/lib/constants'
+import { BLUR_DATA_URL } from '@/lib/constants'
+import type { Collection } from '@/types/database'
 
 // The terrain flythrough above sells the two mountain collections in-world;
 // this compact row is where that journey lands — all three kits side by side
 // (including O Collection's desert range, which doesn't belong on that terrain)
 // in half a screen instead of the three full pinned slides it used to take.
-export default function CollectionsRow() {
+export default function CollectionsRow({ collections }: { collections: Collection[] }) {
   return (
     // Midday on the page's clock — the brightest stop of the day arc.
     <section className="bg-paper px-6 md:px-10 py-20 md:py-24">
@@ -29,28 +30,30 @@ export default function CollectionsRow() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {COLLECTIONS.map((c) => (
+          {collections.map((c) => (
             <Link
               key={c.id}
-              href={`/collections/${c.id}`}
+              href={`/collections/${c.slug}`}
               data-cursor="view"
               data-cursor-text="Explore"
-              className="group relative aspect-[4/3] md:aspect-[3/4] lg:aspect-[4/3] rounded-sm overflow-hidden"
+              className="group relative aspect-[4/3] md:aspect-[3/4] lg:aspect-[4/3] rounded-sm overflow-hidden bg-ink"
             >
-              <Image
-                src={c.image}
-                alt={c.name}
-                fill
-                sizes="(max-width: 768px) 100vw, 33vw"
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-                className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
-              />
+              {c.image_url && (
+                <Image
+                  src={c.image_url}
+                  alt={c.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/25 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-6">
-                <div className="font-body text-[9px] tracking-[0.2em] text-sage uppercase">{c.bestFor}</div>
+                <div className="font-body text-[9px] tracking-[0.2em] text-sage uppercase">Collection</div>
                 <h3 className="font-display text-2xl text-paper mt-1">{c.name}</h3>
-                <p className="font-body text-xs text-paper/60 mt-1 italic">{c.tagline}</p>
+                {c.tagline && <p className="font-body text-xs text-paper/60 mt-1 italic">{c.tagline}</p>}
               </div>
             </Link>
           ))}

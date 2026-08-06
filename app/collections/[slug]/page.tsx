@@ -7,29 +7,31 @@ import ProductCard from '@/components/ProductCard'
 import CollectionHero from '@/components/sections/CollectionHero'
 import CollectionNarrative from '@/components/sections/CollectionNarrative'
 import CollectionCrossSell from '@/components/sections/CollectionCrossSell'
-import { COLLECTIONS, PRODUCTS } from '@/lib/constants'
+import { getCollections, getCollectionBySlug, getProducts } from '@/actions/products'
 
-export function generateStaticParams() {
-  return COLLECTIONS.map((c) => ({ slug: c.id }))
+export async function generateStaticParams() {
+  const collections = await getCollections()
+  return collections.map((c) => ({ slug: c.slug }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const collection = COLLECTIONS.find((c) => c.id === slug)
+  const collection = await getCollectionBySlug(slug)
   if (!collection) return {}
   return {
     title: `${collection.name} — DEWDROPZ`,
-    description: collection.description,
+    description: collection.description ?? undefined,
   }
 }
 
 export default async function CollectionDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const collection = COLLECTIONS.find((c) => c.id === slug)
+  const collection = await getCollectionBySlug(slug)
   if (!collection) notFound()
 
-  const products = PRODUCTS.filter((p) => p.collectionId === collection.id)
-  const others = COLLECTIONS.filter((c) => c.id !== collection.id)
+  const allProducts = await getProducts({ collection: collection.id })
+  const allCollections = await getCollections()
+  const others = allCollections.filter((c) => c.id !== collection.id)
 
   return (
     <>
@@ -42,17 +44,17 @@ export default async function CollectionDetailPage({ params }: { params: Promise
           <div className="max-w-7xl mx-auto">
             <div className="mb-14 flex items-end justify-between border-t border-rule pt-14">
               <div>
-                <div className="font-body text-xs tracking-[0.18em] text-forest uppercase">Signature</div>
-                <h2 className="font-display text-[clamp(28px,4vw,40px)] text-text mt-2">{collection.signature}</h2>
+                <div className="font-body text-xs tracking-[0.18em] text-forest uppercase">The Gear</div>
+                <h2 className="font-display text-[clamp(28px,4vw,40px)] text-text mt-2">{collection.name}</h2>
               </div>
               <span className="font-body text-xs text-mid">
-                {products.length} {products.length === 1 ? 'piece' : 'pieces'}
+                {allProducts.length} {allProducts.length === 1 ? 'piece' : 'pieces'}
               </span>
             </div>
 
-            {products.length > 0 ? (
+            {allProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-                {products.map((p) => (
+                {allProducts.map((p) => (
                   <ProductCard key={p.slug} product={p} />
                 ))}
               </div>

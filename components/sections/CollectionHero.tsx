@@ -4,21 +4,23 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { BLUR_DATA_URL } from '@/lib/constants'
-import type { COLLECTIONS } from '@/lib/constants'
+import type { Collection } from '@/types/database'
 
-export default function CollectionHero({ collection }: { collection: (typeof COLLECTIONS)[number] }) {
+export default function CollectionHero({ collection }: { collection: Collection }) {
   return (
-    <section className="relative h-[70vh] min-h-[480px] md:h-[85vh] overflow-hidden">
-      <Image
-        src={collection.image}
-        alt={collection.name}
-        fill
-        sizes="100vw"
-        placeholder="blur"
-        blurDataURL={BLUR_DATA_URL}
-        priority
-        className="object-cover"
-      />
+    <section className="relative h-[70vh] min-h-[480px] md:h-[85vh] overflow-hidden bg-ink">
+      {collection.image_url && (
+        <Image
+          src={collection.image_url}
+          alt={collection.name}
+          fill
+          sizes="100vw"
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
+          priority
+          className="object-cover"
+        />
+      )}
       <div
         className="absolute inset-0"
         style={{ background: 'linear-gradient(to top, rgba(12,16,13,0.92), rgba(12,16,13,0.25) 55%, rgba(12,16,13,0.5))' }}
@@ -40,7 +42,7 @@ export default function CollectionHero({ collection }: { collection: (typeof COL
             transition={{ duration: 0.6 }}
             className="font-body text-[11px] tracking-[0.25em] text-sage uppercase"
           >
-            Best for {collection.bestFor}
+            Collection
           </motion.span>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
@@ -50,14 +52,16 @@ export default function CollectionHero({ collection }: { collection: (typeof COL
           >
             {collection.name}
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35 }}
-            className="mt-4 font-display italic text-white/70 text-lg md:text-xl"
-          >
-            {collection.tagline}
-          </motion.p>
+          {collection.tagline && (
+            <motion.p
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.35 }}
+              className="mt-4 font-display italic text-white/70 text-lg md:text-xl"
+            >
+              {collection.tagline}
+            </motion.p>
+          )}
         </div>
       </div>
     </section>

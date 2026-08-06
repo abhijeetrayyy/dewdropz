@@ -22,9 +22,13 @@ export default function LenisProvider({ children }: { children: React.ReactNode 
   const isPopNavigation = useRef(false)
 
   useEffect(() => {
+    // Lower lerp = more lag between input and motion ("sluggish"); pushed up
+    // again (0.07 -> 0.15 -> 0.3) so scroll tracks input almost immediately,
+    // just enough smoothing left to round off raw wheel-delta jitter.
+    // duration only governs non-immediate scrollTo() calls, tightened to match.
     const lenis = new Lenis({
-      lerp: 0.07,
-      duration: 1.4,
+      lerp: 0.3,
+      duration: 0.6,
     })
     lenisRef.current = lenis
 

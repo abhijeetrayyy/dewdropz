@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import { toast } from 'sonner'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
+import { submitContactMessage } from '@/actions/contact'
 import { SITE } from '@/lib/constants'
 
 function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
@@ -34,11 +36,25 @@ function InfoRow({ label, value, href }: { label: string; value: string; href?: 
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [form, setForm] = useState({ name: '', email: '', message: '' })
   const submitBtn = useMagneticHover(0.35, 10)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSending(true)
+    try {
+      const result = await submitContactMessage(form)
+      if ('error' in result) {
+        toast.error(typeof result.error === 'string' ? result.error : 'Please check the form and try again')
+        return
+      }
+      setSubmitted(true)
+    } catch {
+      toast.error('Could not send your message — please try again.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -97,6 +113,8 @@ export default function ContactForm() {
                   <input
                     type="text"
                     required
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                     className="w-full border-b border-white/20 bg-transparent font-body text-sm text-white py-3 mt-1 focus:outline-none focus:border-sage transition-colors"
                   />
                 </div>
@@ -105,6 +123,8 @@ export default function ContactForm() {
                   <input
                     type="email"
                     required
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
                     className="w-full border-b border-white/20 bg-transparent font-body text-sm text-white py-3 mt-1 focus:outline-none focus:border-sage transition-colors"
                   />
                 </div>
@@ -113,6 +133,8 @@ export default function ContactForm() {
                   <textarea
                     required
                     rows={4}
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
                     className="w-full border-b border-white/20 bg-transparent font-body text-sm text-white py-3 mt-1 focus:outline-none focus:border-sage transition-colors resize-none"
                   />
                 </div>
@@ -124,9 +146,10 @@ export default function ContactForm() {
                   data-cursor="view"
                   data-cursor-text="Send"
                   type="submit"
-                  className="mt-2 bg-sage text-ink font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 w-fit rounded-sm hover:bg-white transition-colors duration-300"
+                  disabled={sending}
+                  className="mt-2 bg-sage text-ink font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 w-fit rounded-sm hover:bg-white transition-colors duration-300 disabled:opacity-50"
                 >
-                  Send Message
+                  {sending ? 'Sending…' : 'Send Message'}
                 </motion.button>
               </motion.form>
             ) : (
@@ -139,7 +162,7 @@ export default function ContactForm() {
               >
                 <span className="font-display text-2xl text-white">Message received.</span>
                 <p className="font-body text-sm text-white/60 max-w-xs">
-                  We&apos;ll get back to you within one or two trail days.
+                  We read every message ourselves — expect a reply within 24 hours.
                 </p>
               </motion.div>
             )}

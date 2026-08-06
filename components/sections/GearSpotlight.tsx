@@ -7,7 +7,10 @@ import { motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
 import { useCart } from '@/providers/CartProvider'
-import { BLUR_DATA_URL, PRODUCTS } from '@/lib/constants'
+import { BLUR_DATA_URL } from '@/lib/constants'
+import { formatPrice } from '@/lib/utils'
+import { getProductsBySlugs } from '@/actions/products'
+import type { ProductWithCollection } from '@/types/database'
 
 // The three pieces that don't make the top-fold grid, given one unhurried moment
 // each instead of being crammed into a second identical card row — same commerce,
@@ -28,21 +31,20 @@ const SPOTLIGHT = [
 ]
 
 function SpotlightRow({
-  slug,
+  product,
   moment,
   reverse,
 }: {
-  slug: string
+  product: ProductWithCollection
   moment: string
   reverse: boolean
 }) {
-  const product = PRODUCTS.find((p) => p.slug === slug)!
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
   const cta = useMagneticHover(0.35, 12)
 
   const handleAddToCart = () => {
-    addItem({ slug: product.slug, name: product.name, price: product.price, gradient: product.gradient, size: product.sizes[0] })
+    addItem({ slug: product.slug, name: product.name, price: product.price, image: product.images?.[0] ?? '', size: product.variants?.[0]?.name ?? '' })
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }
@@ -50,22 +52,24 @@ function SpotlightRow({
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center">
       <div className={`md:col-span-7 ${reverse ? 'md:order-2' : ''}`}>
-        <div className="spotlight-image relative aspect-[4/3] rounded-sm overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 60vw"
-            placeholder="blur"
-            blurDataURL={BLUR_DATA_URL}
-            className="object-cover"
-          />
+        <div className="spotlight-image relative aspect-[4/3] rounded-sm overflow-hidden bg-rule/40">
+          {product.images?.[0] && (
+            <Image
+              src={product.images[0]}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 60vw"
+              placeholder="blur"
+              blurDataURL={BLUR_DATA_URL}
+              className="object-cover"
+            />
+          )}
         </div>
       </div>
 
       <div className={`md:col-span-5 ${reverse ? 'md:order-1' : ''}`}>
         <div className="font-body text-[10px] tracking-[0.2em] text-forest uppercase">
-          {product.desc}
+          {product.short_description}
         </div>
         <h3 className="mt-3 font-display font-light text-[clamp(28px,3.4vw,42px)] text-text leading-[1.05]">
           {product.name}
@@ -76,7 +80,7 @@ function SpotlightRow({
 
         <div className="mt-7 flex items-center gap-6">
           <span className="font-body text-sm font-medium text-forest">
-            Rs. {product.price.toLocaleString('en-IN')}
+            {formatPrice(product.price)}
           </span>
 
           <motion.div
@@ -111,10 +115,15 @@ function SpotlightRow({
 
 export default function GearSpotlight() {
   const sectionRef = useRef<HTMLElement>(null)
+  const [products, setProducts] = useState<ProductWithCollection[]>([])
+
+  useEffect(() => {
+    getProductsBySlugs(SPOTLIGHT.map((s) => s.slug)).catch(() => []).then((p) => setProducts(p ?? []))
+  }, [])
 
   useEffect(() => {
     const section = sectionRef.current
-    if (!section) return
+    if (!section || products.length === 0) return
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>('.spotlight-image').forEach((el) => {
         gsap.fromTo(
@@ -130,7 +139,7 @@ export default function GearSpotlight() {
       })
     }, sectionRef)
     return () => ctx.revert()
-  }, [])
+  }, [products])
 
   return (
     <section ref={sectionRef} className="bg-paper px-6 md:px-10 py-28 md:py-32">
@@ -143,9 +152,12 @@ export default function GearSpotlight() {
         </div>
 
         <div className="flex flex-col gap-20 md:gap-28">
-          {SPOTLIGHT.map((item, i) => (
-            <SpotlightRow key={item.slug} slug={item.slug} moment={item.moment} reverse={i % 2 === 1} />
-          ))}
+          {SPOTLIGHT.map((item, i) => {
+            const product = products.find((p) => p.slug === item.slug)
+            return product ? (
+              <SpotlightRow key={item.slug} product={product} moment={item.moment} reverse={i % 2 === 1} />
+            ) : null
+          })}
         </div>
       </div>
     </section>

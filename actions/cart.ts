@@ -2,11 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { releaseStaleOrdersForUser } from '@/lib/orders-internal'
 import { cartItemSchema, updateCartItemSchema } from '@/lib/validations'
 import type { CartWithItems } from '@/types/database'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-async function getOrCreateCart(userId?: string | null, sessionId?: string | null) {
-  const supabase = await createServerSupabaseClient()
+// `client` is optional everywhere below and defaults to the cookie-bound
+// session client used by the web app. The mobile checkout route has no
+// cookie session to key RLS off (`auth.uid()` would be null), so it passes
+// the admin client instead, already scoped to a token-verified user id.
+async function getOrCreateCart(userId?: string | null, sessionId?: string | null, client?: SupabaseClient) {
+  const supabase = client ?? await createServerSupabaseClient()
 
   // Try to find existing cart
   let query = supabase
@@ -39,26 +45,34 @@ async function getOrCreateCart(userId?: string | null, sessionId?: string | null
 export async function addToCart(input: {
   product_id: string
   variant_id?: string | null
+  custom_design_id?: string | null
   quantity?: number
   userId?: string | null
   sessionId?: string | null
+  client?: SupabaseClient
 }) {
   const parsed = cartItemSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
-  const cart = await getOrCreateCart(input.userId, input.sessionId)
+  const cart = await getOrCreateCart(input.userId, input.sessionId, input.client)
   if (!cart) return { error: 'Could not create cart' }
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = input.client ?? await createServerSupabaseClient()
 
-  // Check if item already in cart
-  const { data: existing } = await supabase
-    .from('cart_items')
-    .select('id, quantity')
-    .eq('cart_id', cart.id)
-    .eq('product_id', parsed.data.product_id)
-    .eq('variant_id', parsed.data.variant_id ?? 'null')
-    .single()
+  // A customized line is never merged into an existing row — every design
+  // is its own distinct cart line, even if it's the same product/variant as
+  // something already in the cart.
+  const existing = parsed.data.custom_design_id
+    ? null
+    : (
+        await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('cart_id', cart.id)
+          .eq('product_id', parsed.data.product_id)
+          .eq('variant_id', parsed.data.variant_id ?? 'null')
+          .single()
+      ).data
 
   if (existing) {
     const { error } = await supabase
@@ -74,6 +88,7 @@ export async function addToCart(input: {
         cart_id: cart.id,
         product_id: parsed.data.product_id,
         variant_id: parsed.data.variant_id ?? null,
+        custom_design_id: parsed.data.custom_design_id ?? null,
         quantity: parsed.data.quantity,
       })
 
@@ -122,10 +137,18 @@ export async function removeFromCart(itemId: string) {
   return { success: true }
 }
 
-export async function getCart(userId?: string | null, sessionId?: string | null) {
+export async function getCart(userId?: string | null, sessionId?: string | null, client?: SupabaseClient) {
   if (!userId && !sessionId) return null
 
-  const supabase = await createServerSupabaseClient()
+  // Best-effort: releases stock held by the user's own abandoned/unpaid
+  // orders before they build a new cart, so a stale hold doesn't wrongly
+  // show a product as sold out to them (or anyone else) forever. Never let
+  // this block the actual cart read.
+  if (userId) {
+    await releaseStaleOrdersForUser(userId).catch(() => {})
+  }
+
+  const supabase = client ?? await createServerSupabaseClient()
   let query = supabase
     .from('carts')
     .select(`
@@ -149,11 +172,11 @@ export async function getCart(userId?: string | null, sessionId?: string | null)
   return data as unknown as CartWithItems
 }
 
-export async function clearCart(userId?: string | null, sessionId?: string | null) {
-  const cart = await getOrCreateCart(userId, sessionId)
+export async function clearCart(userId?: string | null, sessionId?: string | null, client?: SupabaseClient) {
+  const cart = await getOrCreateCart(userId, sessionId, client)
   if (!cart) return { error: 'Cart not found' }
 
-  const supabase = await createServerSupabaseClient()
+  const supabase = client ?? await createServerSupabaseClient()
   const { error } = await supabase
     .from('cart_items')
     .delete()
@@ -247,8 +270,8 @@ export async function getCartTotal(userId?: string | null, sessionId?: string | 
   }
 }
 
-export async function validateCoupon(code: string, subtotal: number, userId?: string) {
-  const supabase = await createServerSupabaseClient()
+export async function validateCoupon(code: string, subtotal: number, userId?: string, client?: SupabaseClient) {
+  const supabase = client ?? await createServerSupabaseClient()
 
   const { data: coupon, error } = await supabase
     .from('coupons')

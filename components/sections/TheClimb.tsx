@@ -5,22 +5,17 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
-import { BLUR_DATA_URL, CLIMB_STATIONS, PRODUCTS } from '@/lib/constants'
+import { BLUR_DATA_URL, CLIMB_STATIONS } from '@/lib/constants'
+import { formatPrice } from '@/lib/utils'
+import type { ProductWithCollection } from '@/types/database'
 
-// The page's one gear story: five stations in ascending altitude order, strung
-// on a single trail line. Each product appears exactly once on the homepage and
-// earns its place on the mountain — replacing the old FeaturedGear grid and
-// GearSpotlight rows, which between them re-sold a 7-SKU catalog three times.
-const STATIONS = CLIMB_STATIONS.map((s) => ({
-  ...s,
-  product: PRODUCTS.find((p) => p.slug === s.slug)!,
-})).filter((s) => Boolean(s.product))
+type Station = (typeof CLIMB_STATIONS)[number] & { product: ProductWithCollection }
 
 function StationRow({
   station,
   index,
 }: {
-  station: (typeof STATIONS)[number]
+  station: Station
   index: number
 }) {
   const { addItem } = useCart()
@@ -29,7 +24,7 @@ function StationRow({
   const p = station.product
 
   function handleAdd() {
-    addItem({ slug: p.slug, name: p.name, price: p.price, gradient: p.gradient, size: p.sizes[0] })
+    addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '' })
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }
@@ -47,9 +42,9 @@ function StationRow({
         <span className="h-2 w-2 rounded-full bg-forest ring-4 ring-paper" />
       </div>
 
-      <div className={`relative aspect-[4/3] rounded-sm overflow-hidden ${flip ? 'md:order-2' : ''}`}>
+      <div className={`relative aspect-[4/3] rounded-sm overflow-hidden bg-rule/40 ${flip ? 'md:order-2' : ''}`}>
         <Image
-          src={p.image}
+          src={p.images?.[0] ?? ''}
           alt={p.name}
           fill
           sizes="(max-width: 768px) 100vw, 50vw"
@@ -76,7 +71,7 @@ function StationRow({
         </p>
         <div className={`mt-5 flex items-center gap-6 ${flip ? 'md:justify-end' : ''}`}>
           <span className="font-body text-sm font-medium text-forest tabular-nums">
-            Rs. {p.price.toLocaleString('en-IN')}
+            {formatPrice(p.price)}
           </span>
           <button
             type="button"
@@ -100,7 +95,11 @@ function StationRow({
   )
 }
 
-export default function TheClimb() {
+export default function TheClimb({ products }: { products: ProductWithCollection[] }) {
+  const stations: Station[] = CLIMB_STATIONS
+    .map((s) => ({ ...s, product: products.find((p) => p.slug === s.slug)! }))
+    .filter((s) => Boolean(s.product))
+
   return (
     <section className="bg-paper px-6 md:px-10 py-24 md:py-32">
       <div className="max-w-6xl mx-auto">
@@ -117,7 +116,7 @@ export default function TheClimb() {
 
         {/* The trail line the stations hang from */}
         <ol className="relative space-y-20 md:space-y-28 sm:border-l border-dashed border-forest/25 sm:pl-7 md:pl-11">
-          {STATIONS.map((station, i) => (
+          {stations.map((station, i) => (
             <StationRow key={station.slug} station={station} index={i} />
           ))}
         </ol>

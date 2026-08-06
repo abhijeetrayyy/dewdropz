@@ -18,14 +18,17 @@ import { Badge } from '@/components/ui/badge'
 import { VariantRow } from '@/components/admin/VariantRow'
 import { ImageUploader } from '@/components/admin/ImageUploader'
 import { MultiCombobox } from '@/components/admin/MultiCombobox'
-import { Card, CardContent } from '@/components/ui/card'
+import { BulletListEditor } from '@/components/admin/BulletListEditor'
+import { StoryBlockEditor, type StoryBlock } from '@/components/admin/StoryBlockEditor'
+import { ZoneEditor } from '@/components/admin/ZoneEditor'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, PackageOpen, Layers, Hash, Sparkles, Boxes } from 'lucide-react'
+import { ArrowLeft, Save, PackageOpen, Layers, Hash, Sparkles, Boxes, Palette } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Product, CategoryWithChildren, Tag, AttributeWithValues, VariantWithOptions, InventoryMovementWithDetails } from '@/types/database'
+import type { Product, CategoryWithChildren, Tag, AttributeWithValues, VariantWithOptions, InventoryMovementWithDetails, CustomizationZone } from '@/types/database'
 
 function flattenTree(cats: CategoryWithChildren[]): (CategoryWithChildren & { depth: number })[] {
   const r: (CategoryWithChildren & { depth: number })[] = []
@@ -45,6 +48,12 @@ export default function ProductEditor() {
   const [slug, setSlug] = useState('')
   const [desc, setDesc] = useState('')
   const [shortDesc, setShortDesc] = useState('')
+  const [highlights, setHighlights] = useState<string[]>([])
+  const [careInstructions, setCareInstructions] = useState('')
+  const [storyBlocks, setStoryBlocks] = useState<StoryBlock[]>([])
+  const [isCustomizable, setIsCustomizable] = useState(false)
+  const [frontZone, setFrontZone] = useState<CustomizationZone | null>(null)
+  const [backZone, setBackZone] = useState<CustomizationZone | null>(null)
   const [price, setPrice] = useState('')
   const [comparePrice, setComparePrice] = useState('')
   const [sku, setSku] = useState('')
@@ -80,6 +89,11 @@ export default function ProductEditor() {
     if (!p) { setLoading(false); return }
     setProduct(p)
     setName(p.name); setSlug(p.slug); setDesc(p.description ?? ''); setShortDesc(p.short_description ?? '')
+    setHighlights(p.highlights ?? []); setCareInstructions(p.care_instructions ?? '')
+    setStoryBlocks(p.story_blocks ?? [])
+    setIsCustomizable(p.is_customizable ?? false)
+    setFrontZone(p.customization_config?.front ?? null)
+    setBackZone(p.customization_config?.back ?? null)
     setPrice(String(p.price / 100)); setComparePrice(p.compare_at_price ? String(p.compare_at_price / 100) : '')
     setSku(p.sku ?? ''); setWeight(p.weight ? String(p.weight) : '')
     setFeatured(p.is_featured); setIsActive(p.is_active)
@@ -119,6 +133,11 @@ export default function ProductEditor() {
     try {
       await updateProduct(productId, {
         name, slug, description: desc, short_description: shortDesc,
+        highlights: highlights.map((h) => h.trim()).filter(Boolean),
+        care_instructions: careInstructions.trim() || null,
+        story_blocks: storyBlocks
+          .map((b) => ({ images: b.images, heading: b.heading.trim(), body: b.body.trim() }))
+          .filter((b) => b.images.length > 0 && b.heading),
         price: Math.round(parseFloat(price) * 100),
         compare_at_price: comparePrice ? Math.round(parseFloat(comparePrice) * 100) : null,
         sku: sku || null, weight: weight ? parseFloat(weight) : null,
@@ -129,6 +148,20 @@ export default function ProductEditor() {
       })
       toast.success('Saved')
     } catch { toast.error('Failed to save') }
+    finally { setSaving(false) }
+  }
+
+  async function saveCustomization() {
+    setSaving(true)
+    try {
+      await updateProduct(productId, {
+        is_customizable: isCustomizable,
+        customization_config: isCustomizable
+          ? { front: frontZone ?? undefined, back: backZone ?? undefined }
+          : null,
+      })
+      toast.success('Customization settings saved')
+    } catch { toast.error('Failed to save customization settings') }
     finally { setSaving(false) }
   }
 
@@ -203,38 +236,119 @@ export default function ProductEditor() {
           <TabsTrigger value="attributes" className="data-[state=active]:bg-black data-[state=active]:text-white"><Sparkles className="h-4 w-4 mr-1" /> Attributes</TabsTrigger>
           <TabsTrigger value="variants" className="data-[state=active]:bg-black data-[state=active]:text-white"><Boxes className="h-4 w-4 mr-1" /> Variants</TabsTrigger>
           <TabsTrigger value="inventory" className="data-[state=active]:bg-black data-[state=active]:text-white">Inventory</TabsTrigger>
+          <TabsTrigger value="customization" className="data-[state=active]:bg-black data-[state=active]:text-white"><Palette className="h-4 w-4 mr-1" /> Customization</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="mt-4">
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-                <div><Label>Slug *</Label><Input value={slug} onChange={(e) => setSlug(e.target.value)} /></div>
-                <div><Label>Price (₹) *</Label><Input value={price} onChange={(e) => setPrice(e.target.value)} type="number" /></div>
-                <div><Label>Compare-at Price (₹)</Label><Input value={comparePrice} onChange={(e) => setComparePrice(e.target.value)} type="number" /></div>
-                <div><Label>SKU</Label><Input value={sku} onChange={(e) => setSku(e.target.value)} /></div>
-                <div><Label>Weight (g)</Label><Input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" /></div>
-              </div>
-              <div><Label>Description</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} /></div>
-              <div><Label>Short Description</Label><Input value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} /></div>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2"><Checkbox checked={featured} onCheckedChange={(v) => setFeatured(!!v)} /><span className="text-sm">Featured</span></label>
-                <label className="flex items-center gap-2"><Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(!!v)} /><span className="text-sm">Active</span></label>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                <div><Label>Meta Title</Label><Input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} placeholder="SEO title (max 70 chars)" /></div>
-                <div><Label>Meta Description</Label><Input value={metaDesc} onChange={(e) => setMetaDesc(e.target.value)} placeholder="SEO description (max 160 chars)" /></div>
-              </div>
-              <div>
-                <Label>Images</Label>
-                <div className="mt-1">
-                  <ImageUploader bucket="PRODUCTS" value={images} onChange={setImages} />
-                </div>
-              </div>
-              <Button onClick={saveBasic} disabled={saving}><Save className="h-4 w-4 mr-1" /> Save Changes</Button>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader>
+                  <CardTitle>General Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Product Name *</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Full Description</Label>
+                    <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={5} placeholder="Describe the product details, fit, and materials..." className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Short Description</Label>
+                    <Input value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="A quick summary for product cards" className="mt-1" />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label>Highlights</Label>
+                    <p className="text-xs text-gray-400 mb-2">Short, punchy differentiators shown as bullets on the product page — leave empty to hide the section.</p>
+                    <BulletListEditor value={highlights} onChange={setHighlights} />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label>Care Instructions</Label>
+                    <p className="text-xs text-gray-400 mb-1">Leave blank to show generic care guidance on the product page instead.</p>
+                    <Textarea value={careInstructions} onChange={(e) => setCareInstructions(e.target.value)} rows={3} placeholder="e.g. Machine wash cold, no bleach. Re-apply DWR spray every 15-20 washes." className="mt-1" />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label>Product Story</Label>
+                    <p className="text-xs text-gray-400 mb-2">Full-bleed image + text sections shown between Highlights and Specifications — use this for lifestyle photography and &ldquo;what this product is about&rdquo; storytelling. Leave empty to hide the section.</p>
+                    <StoryBlockEditor value={storyBlocks} onChange={setStoryBlocks} />
+                  </div>
+                  <div>
+                    <Label>Images</Label>
+                    <div className="mt-1">
+                      <ImageUploader bucket="PRODUCTS" value={images} onChange={setImages} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader>
+                  <CardTitle>Pricing & Inventory Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><Label>Price (₹) *</Label><Input value={price} onChange={(e) => setPrice(e.target.value)} type="number" className="mt-1" /></div>
+                    <div><Label>Compare-at Price (₹)</Label><Input value={comparePrice} onChange={(e) => setComparePrice(e.target.value)} type="number" className="mt-1" /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div><Label>SKU</Label><Input value={sku} onChange={(e) => setSku(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Weight (g)</Label><Input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" className="mt-1" /></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader>
+                  <CardTitle>Organization & Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(!!v)} />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Active Product</div>
+                      <div className="text-xs text-gray-500">Available on storefront</div>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Checkbox checked={featured} onCheckedChange={(v) => setFeatured(!!v)} />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Featured</div>
+                      <div className="text-xs text-gray-500">Show on homepage</div>
+                    </div>
+                  </label>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader>
+                  <CardTitle>Search Engine Optimization</CardTitle>
+                  <CardDescription>How this product appears in Google</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>URL Handle (Slug) *</Label>
+                    <Input value={slug} onChange={(e) => setSlug(e.target.value)} className="mt-1 text-gray-600 bg-gray-50 font-mono text-sm" />
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <Label className="text-xs text-gray-500">Meta Title (optional)</Label>
+                    <Input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} placeholder="Max 70 chars" className="mt-1 h-8 text-sm" />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Meta Description (optional)</Label>
+                    <Textarea value={metaDesc} onChange={(e) => setMetaDesc(e.target.value)} placeholder="Max 160 chars" rows={3} className="mt-1 text-sm resize-none" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button onClick={saveBasic} disabled={saving} className="w-full bg-black hover:bg-black/90">
+                <Save className="h-4 w-4 mr-1" /> {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="categories" className="mt-4">
@@ -286,6 +400,7 @@ export default function ProductEditor() {
                   </label>
                 ))}
               </div>
+              {allTags.length === 0 && <p className="text-sm text-gray-400">No tags yet. <a href="/admin/tags" className="text-black underline">Create some</a>.</p>}
               <Button onClick={saveTags} disabled={saving}><Save className="h-4 w-4 mr-1" /> Save Tags</Button>
             </CardContent>
           </Card>
@@ -398,6 +513,34 @@ export default function ProductEditor() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="customization" className="mt-4">
+          <Card>
+            <CardContent className="pt-6 space-y-6">
+              <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-md cursor-pointer hover:bg-gray-50 transition-colors max-w-md">
+                <Checkbox checked={isCustomizable} onCheckedChange={(v) => setIsCustomizable(!!v)} />
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium">Customizable product</div>
+                  <div className="text-xs text-gray-500">
+                    Shoppers get a &ldquo;Customize This Shirt&rdquo; button instead of Add to Cart, and design in the studio
+                    before checkout.
+                  </div>
+                </div>
+              </label>
+
+              {isCustomizable && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2 border-t border-gray-100">
+                  <ZoneEditor label="Front" value={frontZone} onChange={setFrontZone} />
+                  <ZoneEditor label="Back" value={backZone} onChange={setBackZone} />
+                </div>
+              )}
+
+              <Button onClick={saveCustomization} disabled={saving}>
+                <Save className="h-4 w-4 mr-1" /> Save Customization Settings
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Generate Variants Dialog */}
@@ -415,6 +558,9 @@ export default function ProductEditor() {
                 <span className="text-xs text-gray-400">({a.values?.length ?? 0} values)</span>
               </label>
             ))}
+            {varAttrs.length === 0 && (
+              <p className="text-sm text-gray-400">No variant attributes yet (e.g. Size, Color). <a href="/admin/attributes" className="text-black underline">Create one</a> and mark it as a variant attribute.</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGenDialog(false)}>Cancel</Button>

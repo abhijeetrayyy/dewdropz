@@ -1,14 +1,14 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Category, ProductCategory, CategoryWithChildren } from '@/types/database'
 
 // -- Public reads --
 
 export async function getCategories(options?: { parentId?: string | null; activeOnly?: boolean }) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   let query = supabase
     .from('categories')
     .select('*')
@@ -53,7 +53,7 @@ function buildTree(categories: Category[]): CategoryWithChildren[] {
 }
 
 export async function getCategoryBySlug(slug: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data } = await supabase
     .from('categories')
     .select('*')
@@ -64,7 +64,7 @@ export async function getCategoryBySlug(slug: string) {
 }
 
 export async function getProductCategories(productId: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data } = await supabase
     .from('product_categories')
     .select('*, category:categories(*)')

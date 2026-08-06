@@ -45,6 +45,7 @@ export const addressSchema = z.object({
 export const cartItemSchema = z.object({
   product_id: z.string().uuid(),
   variant_id: z.string().uuid().nullable().optional(),
+  custom_design_id: z.string().uuid().nullable().optional(),
   quantity: z.number().int().min(1).max(99).default(1),
 })
 
@@ -67,6 +68,27 @@ export const checkoutSchema = z.object({
   payment_method: z.enum(['stripe', 'razorpay', 'cod']).default('razorpay'),
 })
 
+// Mobile checkout has no `addresses` row to reference yet (the app collects
+// raw fields, not an existing address id) and no server-side cart (its cart
+// is local device state) — this is the shape the mobile app POSTs directly,
+// which app/api/mobile/checkout/route.ts turns into an address row + a
+// synced DB cart before calling the same createOrder() the web app uses.
+export const mobileCheckoutSchema = z.object({
+  fullName: z.string().min(1).max(200),
+  phone: z.string().regex(/^\+?[\d\s-]{10,}$/),
+  addressLine1: z.string().min(1).max(300),
+  addressLine2: z.string().max(300).optional(),
+  city: z.string().min(1).max(120),
+  state: z.string().min(1).max(120),
+  postalCode: z.string().regex(/^\d{6}$/, 'Valid pincode is required'),
+  notes: z.string().max(500).optional(),
+  items: z.array(z.object({
+    slug: z.string().min(1),
+    size: z.string().optional(),
+    quantity: z.number().int().min(1).max(99),
+  })).min(1),
+})
+
 export const reviewSchema = z.object({
   product_id: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
@@ -76,6 +98,12 @@ export const reviewSchema = z.object({
 
 export const newsletterSchema = z.object({
   email: z.string().email('Valid email is required'),
+})
+
+export const contactSchema = z.object({
+  name: z.string().min(2, 'Name is required'),
+  email: z.string().email('Valid email is required'),
+  message: z.string().min(10, 'Message is a little short — give us more to go on').max(2000),
 })
 
 export const productSchema = z.object({
@@ -106,6 +134,7 @@ export type CartItemInput = z.infer<typeof cartItemSchema>
 export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>
 export type CouponInput = z.infer<typeof couponSchema>
 export type CheckoutInput = z.infer<typeof checkoutSchema>
+export type MobileCheckoutInput = z.infer<typeof mobileCheckoutSchema>
 export type ReviewInput = z.infer<typeof reviewSchema>
 export type NewsletterInput = z.infer<typeof newsletterSchema>
 export type ProductInput = z.infer<typeof productSchema>

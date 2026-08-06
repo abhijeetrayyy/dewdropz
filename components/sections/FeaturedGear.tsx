@@ -1,19 +1,24 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { gsap } from '@/lib/gsap'
-import { PRODUCTS } from '@/lib/constants'
+import { getProductsBySlugs } from '@/actions/products'
 import ProductCard from '@/components/ProductCard'
+import type { ProductWithCollection } from '@/types/database'
 
 const FEATURED_SLUGS = ['mist-tee', 'altitude-pack', 'trail-cap', 'summit-flask']
-const FEATURED = FEATURED_SLUGS.map((slug) => PRODUCTS.find((p) => p.slug === slug)!).filter(Boolean)
 
 export default function FeaturedGear() {
   const gridRef = useRef<HTMLDivElement>(null)
+  const [featured, setFeatured] = useState<ProductWithCollection[]>([])
 
   useEffect(() => {
-    if (!gridRef.current) return
+    getProductsBySlugs(FEATURED_SLUGS).catch(() => []).then((p) => setFeatured(p ?? []))
+  }, [])
+
+  useEffect(() => {
+    if (!gridRef.current || featured.length === 0) return
     // Scoped to this grid (not a bare global selector) and `once: true` so the reveal
     // can only ever play forward one time — it can never re-hide the cards on scroll
     // back up, and invalidateOnRefresh keeps the trigger position accurate if layout
@@ -51,7 +56,7 @@ export default function FeaturedGear() {
     }, gridRef)
 
     return () => ctx.revert()
-  }, [])
+  }, [featured])
 
   return (
     <section className="bg-paper px-6 md:px-10 py-24">
@@ -72,7 +77,7 @@ export default function FeaturedGear() {
         </div>
 
         <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
-          {FEATURED.map((p) => (
+          {featured.map((p) => (
             <ProductCard key={p.slug} product={p} />
           ))}
         </div>

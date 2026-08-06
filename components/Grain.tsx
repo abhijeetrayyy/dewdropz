@@ -1,4 +1,12 @@
+'use client'
+
+import { usePathname } from 'next/navigation'
+
 export default function Grain() {
+  const pathname = usePathname()
+  // Admin is a working tool, not the brand experience — no film-grain overlay there.
+  if (pathname?.startsWith('/admin')) return null
+
   return (
     <svg
       aria-hidden="true"

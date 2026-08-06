@@ -25,7 +25,7 @@ export function ShippingEngine() {
   const [zoneForm, setZoneForm] = useState({ name: '', countries: '', states: '' })
   
   const [activeRate, setActiveRate] = useState<ShippingRate | null>(null)
-  const [rateForm, setRateForm] = useState({ name: '', type: 'flat', price: '', min_value: '', max_value: '' })
+  const [rateForm, setRateForm] = useState({ name: '', type: 'flat', price: '', min_value: '', max_value: '', estimated_min_days: '', estimated_max_days: '' })
   
   const [saving, setSaving] = useState(false)
 
@@ -90,11 +90,13 @@ export function ShippingEngine() {
       setRateForm({
         name: rate.name, type: rate.type, price: (rate.price / 100).toString(),
         min_value: rate.type === 'flat' ? '' : rate.min_value.toString(),
-        max_value: rate.max_value ? rate.max_value.toString() : ''
+        max_value: rate.max_value ? rate.max_value.toString() : '',
+        estimated_min_days: rate.estimated_min_days != null ? rate.estimated_min_days.toString() : '',
+        estimated_max_days: rate.estimated_max_days != null ? rate.estimated_max_days.toString() : '',
       })
     } else {
       setActiveRate(null)
-      setRateForm({ name: '', type: 'flat', price: '', min_value: '', max_value: '' })
+      setRateForm({ name: '', type: 'flat', price: '', min_value: '', max_value: '', estimated_min_days: '', estimated_max_days: '' })
     }
     setRateModalOpen(true)
   }
@@ -107,12 +109,14 @@ export function ShippingEngine() {
       const price = Math.round(parseFloat(rateForm.price) * 100)
       const min_value = rateForm.min_value ? parseInt(rateForm.min_value) : 0
       const max_value = rateForm.max_value ? parseInt(rateForm.max_value) : null
-      
+      const estimated_min_days = rateForm.estimated_min_days ? parseInt(rateForm.estimated_min_days) : null
+      const estimated_max_days = rateForm.estimated_max_days ? parseInt(rateForm.estimated_max_days) : null
+
       if (activeRate) {
-        await updateShippingRate(activeRate.id, { name: rateForm.name, type: rateForm.type as any, price, min_value, max_value })
+        await updateShippingRate(activeRate.id, { name: rateForm.name, type: rateForm.type as any, price, min_value, max_value, estimated_min_days, estimated_max_days })
         toast.success('Rate updated')
       } else {
-        await createShippingRate({ zone_id: activeZone.id, name: rateForm.name, type: rateForm.type as any, price, min_value, max_value })
+        await createShippingRate({ zone_id: activeZone.id, name: rateForm.name, type: rateForm.type as any, price, min_value, max_value, estimated_min_days, estimated_max_days })
         toast.success('Rate created')
       }
       setRateModalOpen(false)
@@ -186,6 +190,9 @@ export function ShippingEngine() {
                             {rate.type === 'flat' && 'Standard flat rate'}
                             {rate.type === 'weight_based' && `Condition: ${rate.min_value}g to ${rate.max_value ? rate.max_value + 'g' : 'no limit'}`}
                             {rate.type === 'price_based' && `Condition: ₹${rate.min_value/100} to ${rate.max_value ? '₹' + rate.max_value/100 : 'no limit'}`}
+                            {(rate.estimated_min_days != null || rate.estimated_max_days != null) && (
+                              <span> · Delivers in {rate.estimated_min_days ?? rate.estimated_max_days}–{rate.estimated_max_days ?? rate.estimated_min_days} days</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -272,6 +279,18 @@ export function ShippingEngine() {
                 </div>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Est. Min Days (Optional)</Label>
+                <Input type="number" value={rateForm.estimated_min_days} onChange={e => setRateForm({...rateForm, estimated_min_days: e.target.value})} placeholder="e.g. 2" className="mt-1" />
+              </div>
+              <div>
+                <Label>Est. Max Days (Optional)</Label>
+                <Input type="number" value={rateForm.estimated_max_days} onChange={e => setRateForm({...rateForm, estimated_max_days: e.target.value})} placeholder="e.g. 5" className="mt-1" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 -mt-2">Shown to shoppers in the product page&apos;s pincode delivery checker. Leave blank to show cost only, no day estimate.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRateModalOpen(false)}>Cancel</Button>

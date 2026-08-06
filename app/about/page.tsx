@@ -3,9 +3,11 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import PageHeader from '@/components/PageHeader'
 import AboutStory from '@/components/sections/AboutStory'
-import FounderQuote from '@/components/sections/FounderQuote'
+import StatsBand from '@/components/sections/StatsBand'
+import FounderNote from '@/components/sections/FounderNote'
 import AboutValues from '@/components/sections/AboutValues'
 import AboutTimeline from '@/components/sections/AboutTimeline'
+import AboutSustainabilityLink from '@/components/sections/AboutSustainabilityLink'
 import NewsletterBar from '@/components/sections/NewsletterBar'
 
 export const metadata: Metadata = {
@@ -25,9 +27,11 @@ export default function AboutPage() {
           variant="altitude"
         />
         <AboutStory />
-        <FounderQuote />
+        <StatsBand />
+        <FounderNote />
         <AboutValues />
         <AboutTimeline />
+        <AboutSustainabilityLink />
         <NewsletterBar />
       </main>
       <FooterSection />

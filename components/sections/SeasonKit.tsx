@@ -4,7 +4,9 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCart } from '@/providers/CartProvider'
-import { BLUR_DATA_URL, COLLECTIONS, PRODUCTS, SEASON_KITS } from '@/lib/constants'
+import { BLUR_DATA_URL, SEASON_KITS } from '@/lib/constants'
+import { formatPrice } from '@/lib/utils'
+import type { ProductWithCollection, Collection } from '@/types/database'
 // Treks paused — restore the TREKS import alongside the trek card below.
 // import { TREKS } from '@/lib/constants'
 
@@ -13,15 +15,21 @@ import { BLUR_DATA_URL, COLLECTIONS, PRODUCTS, SEASON_KITS } from '@/lib/constan
 // kit we'd pack for it — and changes four times a year without a redesign. It
 // converts the hero's emotion into a plan within one scroll, and sells the kit
 // as a kit, not four separate decisions.
-export default function SeasonKit() {
+export default function SeasonKit({
+  allProducts,
+  collections,
+}: {
+  allProducts: ProductWithCollection[]
+  collections: Collection[]
+}) {
   const month = new Date().getMonth() + 1
   const kit = SEASON_KITS.find((k) => k.months.includes(month)) ?? SEASON_KITS[0]
   // Treks paused — the card below now features the season's collection instead.
   // const trek = TREKS.find((t) => t.slug === kit.trekSlug)
-  const collection = COLLECTIONS.find((c) => c.id === kit.collectionId)
+  const collection = collections.find((c) => c.slug === kit.collectionId)
   const products = kit.products
-    .map((slug) => PRODUCTS.find((p) => p.slug === slug))
-    .filter((p): p is (typeof PRODUCTS)[number] => Boolean(p))
+    .map((slug) => allProducts.find((p) => p.slug === slug))
+    .filter((p): p is ProductWithCollection => Boolean(p))
   const kitTotal = products.reduce((sum, p) => sum + p.price, 0)
 
   const { addItem } = useCart()
@@ -29,7 +37,7 @@ export default function SeasonKit() {
 
   function addKit() {
     for (const p of products) {
-      addItem({ slug: p.slug, name: p.name, price: p.price, gradient: p.gradient, size: p.sizes[0] })
+      addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '' })
     }
     setAdded(true)
     setTimeout(() => setAdded(false), 2200)
@@ -63,28 +71,30 @@ export default function SeasonKit() {
               For now: the collection built for these exact conditions. */}
           {collection && (
             <Link
-              href={`/collections/${collection.id}`}
+              href={`/collections/${collection.slug}`}
               data-cursor="view"
               data-cursor-text="Explore"
               className="group mt-8 flex items-center gap-4 border border-paper/15 rounded-sm p-4 max-w-md hover:border-sage/40 transition-colors duration-300"
             >
-              <div className="relative h-16 w-16 rounded-sm overflow-hidden flex-shrink-0">
-                <Image
-                  src={collection.image}
-                  alt={collection.name}
-                  fill
-                  sizes="64px"
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
-                  className="object-cover"
-                />
+              <div className="relative h-16 w-16 rounded-sm overflow-hidden flex-shrink-0 bg-ink/60">
+                {collection.image_url && (
+                  <Image
+                    src={collection.image_url}
+                    alt={collection.name}
+                    fill
+                    sizes="64px"
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
+                    className="object-cover"
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">Built for this window</div>
                 <div className="mt-0.5 font-display text-lg text-paper leading-tight">{collection.name}</div>
-                <div className="mt-1 font-mono text-[10px] tracking-[0.08em] text-paper/50 uppercase">
-                  {collection.conditions[0].value} · {collection.conditions[1].value}
-                </div>
+                {collection.tagline && (
+                  <div className="mt-1 font-body text-[11px] text-paper/50 italic">{collection.tagline}</div>
+                )}
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="font-body text-[10px] tracking-[0.1em] text-sage uppercase group-hover:text-paper transition-colors">
@@ -106,22 +116,24 @@ export default function SeasonKit() {
                 data-cursor-text="View"
                 className="group"
               >
-                <div className="relative aspect-[3/4] rounded-sm overflow-hidden">
-                  <Image
-                    src={p.image}
-                    alt={p.name}
-                    fill
-                    sizes="(max-width: 640px) 50vw, 15vw"
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                    className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
-                  />
+                <div className="relative aspect-[3/4] rounded-sm overflow-hidden bg-ink/40">
+                  {p.images?.[0] && (
+                    <Image
+                      src={p.images[0]}
+                      alt={p.name}
+                      fill
+                      sizes="(max-width: 640px) 50vw, 15vw"
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
+                      className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
+                    />
+                  )}
                   <span className="absolute top-2 left-2 font-mono text-[9px] text-paper/80 bg-ink/50 backdrop-blur-sm rounded-sm px-1.5 py-0.5">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                 </div>
                 <div className="mt-2 font-body text-xs text-paper leading-tight">{p.name}</div>
-                <div className="font-body text-[11px] text-paper/50 mt-0.5">Rs. {p.price.toLocaleString('en-IN')}</div>
+                <div className="font-body text-[11px] text-paper/50 mt-0.5">{formatPrice(p.price)}</div>
               </Link>
             ))}
           </div>
@@ -132,7 +144,7 @@ export default function SeasonKit() {
                 The full kit — {products.length} pieces
               </div>
               <div className="font-display text-2xl text-paper mt-0.5 tabular-nums">
-                Rs. {kitTotal.toLocaleString('en-IN')}
+                {formatPrice(kitTotal)}
               </div>
             </div>
             <button

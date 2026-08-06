@@ -5,7 +5,15 @@ const STORAGE_BUCKETS = {
   PRODUCTS: 'products',
   AVATARS: 'avatars',
   COLLECTIONS: 'collections',
+  DESIGNS: 'design-uploads',
 } as const
+
+// Per-bucket overrides for ensureBucketsExist — everything defaults to the
+// 5MB/raster-image policy below except where noted (customer design uploads
+// are often large photos, so they get more headroom).
+const BUCKET_OVERRIDES: Partial<Record<(typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS], { fileSizeLimit: number }>> = {
+  [STORAGE_BUCKETS.DESIGNS]: { fileSizeLimit: 10485760 }, // 10MB
+}
 
 type BucketName = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS]
 
@@ -76,7 +84,7 @@ export async function ensureBucketsExist() {
     if (!existing) {
       await supabase.storage.createBucket(bucket, {
         public: true,
-        fileSizeLimit: 5242880, // 5MB
+        fileSizeLimit: BUCKET_OVERRIDES[bucket]?.fileSizeLimit ?? 5242880, // 5MB
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'],
       })
     }

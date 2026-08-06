@@ -6,8 +6,9 @@ import Link from 'next/link'
 import { useWishlist } from '@/providers/WishlistProvider'
 import { useCart } from '@/providers/CartProvider'
 import ProductCard from '@/components/ProductCard'
-import { BLUR_DATA_URL, COLLECTIONS, PRODUCTS } from '@/lib/constants'
+import { BLUR_DATA_URL } from '@/lib/constants'
 import { getCartRecommendations } from '@/lib/recommendations'
+import type { ProductWithCollection, Collection } from '@/types/database'
 
 // Mirrors CartView's structure and voice — the two are the same kind of page
 // (a saved-items list backed by localStorage, no login required) and should
@@ -16,17 +17,23 @@ import { getCartRecommendations } from '@/lib/recommendations'
 // to (so "what did I save this for" is legible at a glance), a one-click way
 // to move everything into the cart, and genuine recommendations — the same
 // getCartRecommendations helper Cart uses, since it works off any slug list.
-export default function WishlistView() {
+export default function WishlistView({
+  allProducts,
+  collections,
+}: {
+  allProducts: ProductWithCollection[]
+  collections: Collection[]
+}) {
   const { items } = useWishlist()
   const { addItem } = useCart()
   const [addedAll, setAddedAll] = useState(false)
 
-  const saved = PRODUCTS.filter((p) => items.includes(p.slug))
-  const recommendations = getCartRecommendations(items, 3)
+  const saved = allProducts.filter((p) => items.includes(p.slug))
+  const recommendations = getCartRecommendations(allProducts, items, 6)
 
-  const grouped = COLLECTIONS.map((c) => ({
+  const grouped = collections.map((c) => ({
     collection: c,
-    products: saved.filter((p) => p.collectionId === c.id),
+    products: saved.filter((p) => p.collection_id === c.id),
   })).filter((g) => g.products.length > 0)
   // Grouping only earns its keep once there's more than one group to tell apart —
   // a single "Mist & Morning" header over every item you own is just noise.
@@ -34,7 +41,7 @@ export default function WishlistView() {
 
   function handleAddAllToCart() {
     for (const p of saved) {
-      addItem({ slug: p.slug, name: p.name, price: p.price, gradient: p.gradient, size: p.sizes[0] })
+      addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '' })
     }
     setAddedAll(true)
     setTimeout(() => setAddedAll(false), 2200)
@@ -67,26 +74,28 @@ export default function WishlistView() {
               Three conditions, three kits
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {COLLECTIONS.map((c) => (
+              {collections.map((c) => (
                 <Link
                   key={c.id}
-                  href={`/collections/${c.id}`}
+                  href={`/collections/${c.slug}`}
                   data-cursor="view"
                   data-cursor-text="View"
-                  className="group relative aspect-[4/5] rounded-sm overflow-hidden"
+                  className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
                 >
-                  <Image
-                    src={c.image}
-                    alt={c.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                    className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
-                  />
+                  {c.image_url && (
+                    <Image
+                      src={c.image_url}
+                      alt={c.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
+                      className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-5">
-                    <span className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">{c.bestFor}</span>
+                    {c.tagline && <span className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">{c.tagline}</span>}
                     <h3 className="mt-1 font-display text-xl text-paper group-hover:text-sage transition-colors duration-300">
                       {c.name}
                     </h3>

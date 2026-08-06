@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import PageHeader from '@/components/PageHeader'
+import VisitStudio from '@/components/sections/VisitStudio'
 import ContactForm from '@/components/sections/ContactForm'
 import ContactFAQ from '@/components/sections/ContactFAQ'
 
@@ -19,7 +20,9 @@ export default function ContactPage() {
           eyebrow="Contact"
           title="Say hello."
           subtitle="Whether it's a sizing question, a wholesale inquiry, or you just want trail advice — we're a small team and we actually answer."
+          variant="altitude"
         />
+        <VisitStudio />
         <ContactForm />
         <ContactFAQ />
       </main>

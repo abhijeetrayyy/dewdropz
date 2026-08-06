@@ -1,75 +1,53 @@
-'use client'
-
 import Link from 'next/link'
-import { motion } from 'motion/react'
-import { useMagneticHover } from '@/hooks/useMagneticHover'
 import { Logo } from '@/components/Logo'
-import { CATEGORY_TILES, COLLECTIONS, SITE } from '@/lib/constants'
+import { SocialLink } from '@/components/layout/SocialLink'
+import { SITE } from '@/lib/constants'
+import { getCollections } from '@/actions/products'
+import { getCategories } from '@/actions/categories'
 
-const FOOTER_COLUMNS = [
-  {
-    heading: 'Shop',
-    links: [
-      { label: 'All Gear', href: '/shop' },
-      ...CATEGORY_TILES.map((t) => ({ label: t.name, href: `/shop?category=${t.id}` })),
-    ],
-  },
-  {
-    heading: 'Collections',
-    links: [
-      ...COLLECTIONS.map((c) => ({ label: c.name, href: `/collections/${c.id}` })),
-      { label: 'View All', href: '/collections' },
-    ],
-  },
-  {
-    heading: 'Explore',
-    links: [
-      // Treks paused — restore by uncommenting.
-      // { label: 'Treks', href: '/treks' },
-      { label: 'Journal', href: '/journal' },
-      { label: 'About', href: '/about' },
-      { label: 'Sustainability', href: '/sustainability' },
-    ],
-  },
-  {
-    heading: 'Support',
-    links: [
-      { label: 'Contact & FAQs', href: '/contact' },
-      { label: 'Your Account', href: '/account' },
-      { label: 'Wishlist', href: '/wishlist' },
-      { label: 'Cart', href: '/cart' },
-      { label: 'Privacy', href: '/privacy' },
-    ],
-  },
-]
+export default async function FooterSection() {
+  const [collections, categories] = await Promise.all([
+    getCollections(),
+    getCategories({ parentId: null }),
+  ])
 
-function SocialLink({
-  href,
-  label,
-  children,
-}: {
-  href: string
-  label: string
-  children: React.ReactNode
-}) {
-  const magnetic = useMagneticHover(0.45, 10)
-  return (
-    <motion.a
-      ref={magnetic.ref as React.RefObject<HTMLAnchorElement>}
-      onMouseMove={magnetic.onMouseMove}
-      onMouseLeave={magnetic.onMouseLeave}
-      style={{ x: magnetic.x, y: magnetic.y }}
-      data-cursor="view"
-      href={href}
-      aria-label={label}
-      className="hover:text-white transition-colors"
-    >
-      {children}
-    </motion.a>
-  )
-}
+  const footerColumns = [
+    {
+      heading: 'Shop',
+      links: [
+        { label: 'All Gear', href: '/shop' },
+        ...categories.map((t) => ({ label: t.name, href: `/shop?category=${t.slug}` })),
+      ],
+    },
+    {
+      heading: 'Collections',
+      links: [
+        ...collections.map((c) => ({ label: c.name, href: `/collections/${c.slug}` })),
+        { label: 'View All', href: '/collections' },
+      ],
+    },
+    {
+      heading: 'Explore',
+      links: [
+        // Treks paused — restore by uncommenting.
+        // { label: 'Treks', href: '/treks' },
+        { label: 'Journal', href: '/journal' },
+        { label: 'About', href: '/about' },
+        { label: 'Sustainability', href: '/sustainability' },
+      ],
+    },
+    {
+      heading: 'Support',
+      links: [
+        { label: 'Contact & FAQs', href: '/contact' },
+        { label: 'Your Account', href: '/account' },
+        { label: 'Wishlist', href: '/wishlist' },
+        { label: 'Cart', href: '/cart' },
+        { label: 'Privacy', href: '/privacy' },
+      ],
+    },
+  ]
 
-export default function FooterSection() {
   return (
     <footer className="bg-ink text-white/60 pt-20 px-6 md:px-10 overflow-hidden">
       {/* Brand + sitemap */}
@@ -108,7 +86,7 @@ export default function FooterSection() {
           </div>
         </div>
 
-        {FOOTER_COLUMNS.map((col) => (
+        {footerColumns.map((col) => (
           <nav key={col.heading} aria-label={col.heading}>
             <div className="font-body text-[10px] tracking-[0.2em] text-sage uppercase mb-4">{col.heading}</div>
             <ul className="space-y-2.5">

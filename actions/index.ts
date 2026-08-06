@@ -71,8 +71,10 @@ export {
   getAllOrders,
   addTrackingInfo,
   cancelOrder,
+  cancelOrderAsAdmin,
   refundOrder,
   bulkUpdateOrderStatus,
+  getRefundAttentionCount,
 } from './orders'
 
 export {

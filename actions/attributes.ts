@@ -1,14 +1,14 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Attribute, AttributeValue, AttributeWithValues, ProductAttributeValue } from '@/types/database'
 
 // -- Public reads --
 
 export async function getAttributes(options?: { variantOnly?: boolean; filterableOnly?: boolean }) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   let query = supabase
     .from('attributes')
     .select('*, values:attribute_values(*)')
@@ -24,7 +24,7 @@ export async function getAttributes(options?: { variantOnly?: boolean; filterabl
 }
 
 export async function getAttributeById(id: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data } = await supabase
     .from('attributes')
     .select('*, values:attribute_values(*)')
@@ -36,7 +36,7 @@ export async function getAttributeById(id: string) {
 }
 
 export async function getProductAttributes(productId: string) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data } = await supabase
     .from('product_attribute_values')
     .select('*, attribute:attributes(*), value:attribute_values(*)')

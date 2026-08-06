@@ -59,7 +59,7 @@ export default function AdminLayoutClient({
   const initial = (adminName || adminEmail || '?').charAt(0).toUpperCase()
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-50 overflow-auto" data-lenis-prevent="true">
+    <div className="fixed inset-0 bg-gray-50 overflow-auto" data-lenis-prevent="true">
       <Sidebar />
       <div className="pl-56 min-h-full">
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200 px-6 py-3 flex items-center justify-between">

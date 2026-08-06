@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { uploadAdminImage, deleteAdminImage, type MediaBucket } from '@/actions/media'
-import { Upload, X, Loader2 } from 'lucide-react'
+import { Upload, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function ImageUploader({
   bucket,
@@ -53,20 +53,57 @@ export function ImageUploader({
     }
   }
 
+  function moveImage(index: number, direction: -1 | 1) {
+    const target = index + direction
+    if (target < 0 || target >= value.length) return
+    const next = [...value]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    onChange(next)
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {value.map((url) => (
+        {value.map((url, index) => (
           <div key={url} className="relative h-20 w-20 rounded-sm overflow-hidden border border-gray-200 group">
             <Image src={url} alt="" fill sizes="80px" className="object-cover" />
-            <button
-              type="button"
-              onClick={() => handleRemove(url)}
-              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              aria-label="Remove image"
-            >
-              <X className="h-5 w-5 text-white" />
-            </button>
+            {index === 0 && (
+              <span className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded-sm">
+                Cover
+              </span>
+            )}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleRemove(url)}
+                className="flex items-center justify-center"
+                aria-label="Remove image"
+              >
+                <X className="h-5 w-5 text-white" />
+              </button>
+              {value.length > 1 && (
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveImage(index, -1)}
+                    disabled={index === 0}
+                    className="disabled:opacity-30"
+                    aria-label="Move image earlier"
+                  >
+                    <ChevronLeft className="h-4 w-4 text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveImage(index, 1)}
+                    disabled={index === value.length - 1}
+                    className="disabled:opacity-30"
+                    aria-label="Move image later"
+                  >
+                    <ChevronRight className="h-4 w-4 text-white" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
         {(multiple ? value.length < maxFiles : value.length === 0) && (
