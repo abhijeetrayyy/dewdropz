@@ -1,0 +1,50 @@
+name: Release stale orders
+
+# This sweep used to live in vercel.json as a Vercel Cron, but Hobby accounts
+# cap cron jobs at once per day and reject any more frequent expression at
+# deploy time — a `*/15 * * * *` schedule there fails the whole deployment.
+# Stock integrity needs the sweep far more often than daily (cart decrements
+# stock at order-creation time, before payment confirms), so it runs here.
+#
+# The endpoint is Bearer-gated: set CRON_SECRET as a repository secret, matching
+# the CRON_SECRET in the Vercel project's environment variables.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  # Lets you run the sweep by hand from the Actions tab without waiting.
+  workflow_dispatch:
+
+# A slow sweep should delay the next run, not race it.
+concurrency:
+  group: release-stale-orders
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sweep abandoned checkouts
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://dewdropz.vercel.app' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET repository secret is not set." >&2
+            exit 1
+          fi
+
+          status=$(curl -sS --fail-with-body \
+            -o response.json -w '%{http_code}' \
+            --retry 3 --retry-delay 5 --retry-connrefused --max-time 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/cron/release-stale-orders") || {
+              echo "::error::Request failed (HTTP ${status:-000})." >&2
+              cat response.json >&2 || true
+              exit 1
+            }
+
+          echo "HTTP ${status}"
+          cat response.json
