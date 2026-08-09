@@ -1,81 +1,167 @@
-import { Link } from "expo-router";
+import { useMemo, useState } from "react";
+import { Link, router } from "expo-router";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/utils";
 import { useOrdersQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { SkeletonRows } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { C, F, R } from "@/lib/theme";
+import { ScreenHeader } from "@/components/editorial/ScreenHeader";
+import { Rule } from "@/components/editorial/Rule";
+import { Icon } from "@/components/ui/Icon";
+import { Chip } from "@/components/ui/Chip";
+import { Body, Mono, Numeric, Title } from "@/components/ui/Type";
+import { C, F, R, S } from "@/lib/theme";
 
-const SC: Record<string, string> = { pending: C.clay, confirmed: C.sage, processing: C.sage, shipped: C.sage, delivered: C.forest, cancelled: C.clay, refunded: C.light };
+const ON_THE_WAY = new Set(["pending", "confirmed", "processing", "shipped"]);
 
+// Every status the orders table can hold gets a tone. v4 only distinguished
+// "delivered" from "everything else", so an order that had been cancelled
+// still rendered as "ON THE ROAD" with a truck icon.
+const STATUS_TONE: Record<string, { label: string; fg: string; bg: string }> = {
+  delivered: { label: "DELIVERED", fg: C.meadowDeep, bg: C.meadow12 },
+  shipped: { label: "ON THE ROAD", fg: C.marigoldDeep, bg: C.marigold12 },
+  processing: { label: "PACKING", fg: C.marigoldDeep, bg: C.marigold12 },
+  confirmed: { label: "CONFIRMED", fg: C.textMid, bg: C.cream },
+  pending: { label: "PENDING", fg: C.textMid, bg: C.cream },
+  cancelled: { label: "CANCELLED", fg: C.danger, bg: C.danger12 },
+};
+
+// Orders. v4 rendered each order as a shadowed card containing two grey
+// placeholder squares standing in for product thumbnails — decoration where
+// information should be. v5 makes each order a ruled docket row: status,
+// number, date, piece count, total. Everything you'd actually scan for.
 export default function OrdersScreen() {
   const { user } = useAuthStore();
   const { data: orders = [], isLoading, isError, refetch } = useOrdersQuery(user?.id);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
+  const [filter, setFilter] = useState<"all" | "active" | "delivered">("all");
+
+  const filtered = useMemo(() => {
+    if (filter === "active") return orders.filter((o) => ON_THE_WAY.has(o.status));
+    if (filter === "delivered") return orders.filter((o) => o.status === "delivered");
+    return orders;
+  }, [orders, filter]);
+
+  const activeCount = orders.filter((o) => ON_THE_WAY.has(o.status)).length;
 
   return (
-    <ScrollView
-      style={S.root}
-      contentContainerStyle={{ paddingTop: 24, paddingHorizontal: 24, paddingBottom: 40 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.forest} />}
-    >
-      <Text style={S.eb}>Orders</Text>
-      <Text style={S.t}>My Orders</Text>
+    <View style={s.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: S.section }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ink} />}
+      >
+        <ScreenHeader
+          eyebrow="Your history"
+          title="Orders"
+          lede={activeCount > 0 ? `${activeCount} on the way right now.` : undefined}
+        />
 
-      {!user ? (
-        <EmptyState title="Sign in to see your orders" ctaLabel="Sign in" ctaHref="/auth/login" />
-      ) : isLoading ? (
-        <View style={{ gap: 12 }}>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={78} radius={4} />
-          ))}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+          <Chip label="All" count={orders.length} selected={filter === "all"} onPress={() => setFilter("all")} />
+          <Chip label="On the way" selected={filter === "active"} onPress={() => setFilter("active")} />
+          <Chip label="Delivered" selected={filter === "delivered"} onPress={() => setFilter("delivered")} />
+        </ScrollView>
+
+        <View style={{ paddingHorizontal: S.gutter, marginTop: S.lg }}>
+          {!user ? (
+            <EmptyState
+              eyebrow="Signed out"
+              icon="receipt_long"
+              title="Sign in to see your orders."
+              body="Your order history follows your account across every device."
+              ctaLabel="Sign in"
+              ctaHref="/auth/login"
+            />
+          ) : isLoading ? (
+            <SkeletonRows count={3} />
+          ) : isError ? (
+            <ErrorState message="Couldn't load your orders." onRetry={() => refetch()} />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              eyebrow="Nothing here"
+              icon="receipt_long"
+              title={filter === "all" ? "No orders yet." : "Nothing in this state."}
+              body={
+                filter === "all"
+                  ? "When you place an order it'll show up here with live tracking."
+                  : "Try another filter — your other orders are still here."
+              }
+              ctaLabel={filter === "all" ? "Start shopping" : "Show all orders"}
+              onPress={filter === "all" ? () => router.push("/(tabs)/shop") : () => setFilter("all")}
+            />
+          ) : (
+            <>
+              <Rule weight="ink" />
+              {filtered.map((o, i) => {
+                const tone = STATUS_TONE[o.status] ?? STATUS_TONE.pending;
+                const delivered = o.status === "delivered";
+                // Sum quantities, not lines — an order of one item ×3 is
+                // "3 pieces" to a customer, not "1 piece".
+                const count = o.items?.reduce((n, it) => n + (it.quantity ?? 0), 0) ?? 0;
+
+                return (
+                  <Animated.View key={o.id} entering={FadeInDown.delay(Math.min(i, 6) * 50).springify().damping(18)}>
+                    <Link href={`/orders/${o.id}`} asChild>
+                      <TouchableOpacity activeOpacity={0.7}>
+                        <View style={s.row}>
+                          <View style={s.rowTop}>
+                            <View style={[s.status, { backgroundColor: tone.bg }]}>
+                              <Text style={[s.statusT, { color: tone.fg }]}>{tone.label}</Text>
+                            </View>
+                            <View style={{ flex: 1 }} />
+                            <Mono color={C.textFaint}>#{o.order_number}</Mono>
+                          </View>
+
+                          <View style={s.rowBody}>
+                            <View style={{ flex: 1 }}>
+                              <Title>
+                                {count} {count === 1 ? "piece" : "pieces"}
+                              </Title>
+                              <Body color={C.textMid} style={{ marginTop: 3 }}>
+                                {delivered ? "Delivered" : "Ordered"}{" "}
+                                {new Date(o.created_at).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                })}
+                              </Body>
+                            </View>
+                            <View style={{ alignItems: "flex-end", gap: 6 }}>
+                              <Numeric>{formatPrice(o.total_amount)}</Numeric>
+                              <View style={s.go}>
+                                <Text style={s.goT}>{delivered ? "Buy again" : "Track"}</Text>
+                                <Icon name="arrow_forward" size={15} color={C.ink} />
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                        <Rule weight="soft" />
+                      </TouchableOpacity>
+                    </Link>
+                  </Animated.View>
+                );
+              })}
+            </>
+          )}
         </View>
-      ) : isError ? (
-        <ErrorState message="Couldn't load your orders." onRetry={() => refetch()} />
-      ) : orders.length === 0 ? (
-        <EmptyState title="No orders yet" ctaLabel="Start shopping" ctaHref="/shop" />
-      ) : (
-        orders.map((o, i) => (
-          <Animated.View key={o.id} entering={FadeInDown.delay(i * 50).springify().damping(18)}>
-            <Link href={`/orders/${o.id}`} asChild>
-              <TouchableOpacity style={S.card}>
-                <View style={S.r}>
-                  <Text style={S.on}>#{o.order_number}</Text>
-                  <Text style={S.ot}>{formatPrice(o.total_amount)}</Text>
-                </View>
-                <View style={S.r}>
-                  <View style={S.pillRow}>
-                    <View style={[S.pill, { backgroundColor: (SC[o.status] ?? C.text) + "1A" }]}>
-                      <Text style={[S.pillT, { color: SC[o.status] ?? C.text }]}>{o.status}</Text>
-                    </View>
-                    <Text style={S.pay}>{o.payment_status}</Text>
-                  </View>
-                  <Text style={S.od}>{new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</Text>
-                </View>
-              </TouchableOpacity>
-            </Link>
-          </Animated.View>
-        ))
-      )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
-const S = StyleSheet.create({
+const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
-  eb: { fontFamily: F.mono, fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: C.forest, marginBottom: 6 },
-  t: { fontFamily: F.display, fontSize: 28, color: C.text, marginBottom: 24 },
-  card: { backgroundColor: C.surface, borderRadius: R.md + 4, padding: 18, borderWidth: 1, borderColor: C.rule, marginBottom: 12 },
-  r: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  on: { fontFamily: F.mono, fontSize: 11, letterSpacing: 2, color: C.text, textTransform: "uppercase" },
-  ot: { fontFamily: F.display, fontSize: 20, color: C.forest },
-  pillRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
-  pillT: { fontFamily: F.bodyBold, fontSize: 11, textTransform: "capitalize" },
-  pay: { fontFamily: F.body, fontSize: 11, color: C.light, textTransform: "capitalize" },
-  od: { fontFamily: F.body, fontSize: 11, color: C.light },
+  chips: { gap: 8, paddingHorizontal: S.gutter },
+  row: { paddingVertical: S.lg, gap: S.md },
+  rowTop: { flexDirection: "row", alignItems: "center", gap: S.sm },
+  status: { borderRadius: R.tag, paddingHorizontal: 7, paddingVertical: 3.5 },
+  statusT: { fontFamily: F.monoBold, fontSize: 9, letterSpacing: 1.1 },
+  rowBody: { flexDirection: "row", alignItems: "flex-start", gap: S.md },
+  go: { flexDirection: "row", alignItems: "center", gap: 4 },
+  goT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.ink },
 });

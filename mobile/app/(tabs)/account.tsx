@@ -1,32 +1,62 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Link, router } from "expo-router";
-import { Package, Heart, LogOut, MapPin } from "lucide-react-native";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/auth";
 import { useWishlistStore } from "@/stores/wishlist";
-import { Header } from "@/components/Header";
+import { useOrdersQuery } from "@/lib/queries";
 import { Button } from "@/components/Button";
+import { Icon } from "@/components/ui/Icon";
+import { IconButton } from "@/components/ui/IconButton";
+import { Rule } from "@/components/editorial/Rule";
+import { Body, Display1, Display2, Eyebrow, Mono, Title } from "@/components/ui/Type";
 import { haptics } from "@/lib/haptics";
 import { toast } from "@/components/ui/Toast";
-import { C, F, R } from "@/lib/theme";
+import { SITE } from "@/lib/editorial";
+import { C, F, S } from "@/lib/theme";
 
+const ON_THE_WAY = new Set(["pending", "confirmed", "processing", "shipped"]);
+
+// The account hub. v4 was a mint header strip plus two shadowed lists of
+// identical grey rows — every destination weighted the same, including "Email
+// offers" sitting one row below "Orders".
+//
+// v5 splits it into three ranks:
+//   • Two count tiles (orders on the way, saved pieces) — the two things a
+//     returning customer opens this tab to check.
+//   • A primary ruled list of real destinations.
+//   • A quiet secondary list for support and sign-out.
+// Plus links to the editorial screens, which had no entry point anywhere in
+// the app's navigation before this pass.
 export default function AccountScreen() {
+  const insets = useSafeAreaInsets();
   const { user, signOut } = useAuthStore();
-  const wc = useWishlistStore((s) => s.count());
+  const wishlistCount = useWishlistStore((st) => st.count());
+  const { data: orders = [] } = useOrdersQuery(user?.id);
   const [signingOut, setSigningOut] = useState(false);
 
   if (!user) {
     return (
-      <View style={S.root}>
-        <Header />
-        <View style={S.gt}>
-          <Text style={S.gtT}>Your expedition HQ</Text>
-          <Text style={S.gtB}>Sign in to track orders, manage addresses, and save gear for later.</Text>
-          <Button title="Sign In" onPress={() => router.push("/auth/login")} />
-          <TouchableOpacity onPress={() => router.push("/auth/signup")} style={{ marginTop: 18 }}>
-            <Text style={S.lnk}>Create an account →</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={s.root}>
+        <ScrollView contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: S.section }}>
+          <View style={{ paddingHorizontal: S.gutter }}>
+            <Eyebrow>Your account</Eyebrow>
+            <Display1 style={{ marginTop: 8 }}>Sign in.</Display1>
+            <Body color={C.textMid} style={{ marginTop: 12 }}>
+              One account keeps your pack, your orders and your saved gear in sync across every device you own.
+            </Body>
+            <Button title="Sign in" variant="dark" onPress={() => router.push("/auth/login")} style={{ marginTop: S.xl, alignSelf: "flex-start" }} />
+            <Button title="Create an account" variant="link" onPress={() => router.push("/auth/signup")} style={{ marginTop: S.md }} />
+
+            <View style={{ marginTop: S.section }}>
+              <Eyebrow>Read while you&apos;re here</Eyebrow>
+              <Rule weight="ink" style={{ marginTop: 9 }} />
+              <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
+              <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
+              <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} last />
+            </View>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -37,81 +67,124 @@ export default function AccountScreen() {
     await signOut();
     setSigningOut(false);
     toast.show("Signed out");
-    router.replace("/account");
   }
 
+  const name = (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "Member";
+  const active = orders.filter((o) => ON_THE_WAY.has(o.status)).length;
+
   return (
-    <View style={S.root}>
-      <Header />
-      <ScrollView contentContainerStyle={{ paddingTop: 20, paddingHorizontal: 24, paddingBottom: 120 }}>
-        <Text style={S.eb}>Account</Text>
-        <Text style={S.t}>Your basecamp</Text>
-        <View style={S.prf}>
-          <View style={S.av}>
-            <Text style={S.avT}>{user.email?.[0]?.toUpperCase() ?? "D"}</Text>
+    <View style={s.root}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
+        {/* ── Identity ────────────────────────────────────────────────────── */}
+        <View style={{ paddingHorizontal: S.gutter }}>
+          <View style={s.idRow}>
+            <View style={{ flex: 1 }}>
+              <Eyebrow>Signed in</Eyebrow>
+              <Display2 style={{ marginTop: 8 }} numberOfLines={2}>
+                {name}
+              </Display2>
+              {user.email ? (
+                <Mono color={C.textMuted} style={{ marginTop: 8 }}>
+                  {user.email.toUpperCase()}
+                </Mono>
+              ) : null}
+            </View>
+            <IconButton name="settings" onPress={() => router.push("/settings")} />
           </View>
-          <View style={{ marginLeft: 14 }}>
-            <Text style={S.em}>{user.email}</Text>
-            <Text style={S.rl}>Customer</Text>
+
+          {/* ── Counts ────────────────────────────────────────────────────── */}
+          <View style={s.tiles}>
+            <TouchableOpacity style={s.tile} activeOpacity={0.8} onPress={() => router.push("/orders")}>
+              <Display1>{active || orders.length}</Display1>
+              <Mono color={C.textMuted} style={{ marginTop: 6 }}>
+                {active ? "ON THE WAY" : "ORDERS"}
+              </Mono>
+            </TouchableOpacity>
+            <View style={s.tileRule} />
+            <TouchableOpacity style={s.tile} activeOpacity={0.8} onPress={() => router.push("/saved")}>
+              <Display1>{wishlistCount}</Display1>
+              <Mono color={C.textMuted} style={{ marginTop: 6 }}>
+                SAVED
+              </Mono>
+            </TouchableOpacity>
+          </View>
+          <Rule weight="ink" />
+
+          {/* ── Primary ──────────────────────────────────────────────────── */}
+          <View style={{ marginTop: S.block }}>
+            <Eyebrow>Your things</Eyebrow>
+            <Rule weight="soft" style={{ marginTop: 9 }} />
+            <NavRow icon="receipt_long" label="Orders" value={String(orders.length)} onPress={() => router.push("/orders")} />
+            <NavRow icon="favorite" label="Saved" value={String(wishlistCount)} onPress={() => router.push("/saved")} />
+            <NavRow icon="draw" label="The studio" onPress={() => router.push("/(tabs)/design")} />
+            <NavRow icon="notifications" label="Notifications" onPress={() => router.push("/notifications")} last />
+          </View>
+
+          {/* ── Read ─────────────────────────────────────────────────────── */}
+          <View style={{ marginTop: S.block }}>
+            <Eyebrow>Read</Eyebrow>
+            <Rule weight="soft" style={{ marginTop: 9 }} />
+            <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
+            <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
+            <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} />
+            <NavRow icon="grid_view" label="Collections" onPress={() => router.push("/collections")} last />
+          </View>
+
+          {/* ── Quiet ────────────────────────────────────────────────────── */}
+          <View style={{ marginTop: S.block }}>
+            <Eyebrow>Support</Eyebrow>
+            <Rule weight="soft" style={{ marginTop: 9 }} />
+            <NavRow icon="help" label="Help & returns" onPress={() => haptics.select()} />
+            <NavRow icon="settings" label="Settings" onPress={() => router.push("/settings")} />
+            <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={handleSignOut}>
+              <Icon name="logout" size={20} color={C.danger} />
+              <Text style={[s.rowLabel, { color: C.danger }]}>{signingOut ? "Signing out…" : "Sign out"}</Text>
+            </TouchableOpacity>
+            <Rule weight="soft" />
+          </View>
+
+          <View style={{ marginTop: S.block, gap: 5 }}>
+            <Mono color={C.textFaint}>DEWDROPZ · {SITE.coords}</Mono>
+            <Mono color={C.textFaint}>{SITE.email.toUpperCase()}</Mono>
           </View>
         </View>
-
-        <Link href="/orders" asChild>
-          <TouchableOpacity style={S.menu}>
-            <Package size={18} strokeWidth={1.75} color={C.forest} />
-            <View style={{ flex: 1, marginLeft: 14 }}>
-              <Text style={S.mn}>Orders</Text>
-              <Text style={S.ms}>View your order history</Text>
-            </View>
-            <Text style={S.arr}>→</Text>
-          </TouchableOpacity>
-        </Link>
-
-        <Link href="/wishlist" asChild>
-          <TouchableOpacity style={S.menu}>
-            <Heart size={18} strokeWidth={1.75} color={C.forest} />
-            <View style={{ flex: 1, marginLeft: 14 }}>
-              <Text style={S.mn}>Wishlist</Text>
-              <Text style={S.ms}>{wc > 0 ? `${wc} item${wc > 1 ? "s" : ""} saved` : "Save gear for later"}</Text>
-            </View>
-            <Text style={S.arr}>→</Text>
-          </TouchableOpacity>
-        </Link>
-
-        <View style={[S.menu, { opacity: 0.5 }]}>
-          <MapPin size={18} strokeWidth={1.75} color={C.forest} />
-          <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={S.mn}>Addresses</Text>
-            <Text style={S.ms}>Managed at checkout</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity style={S.so} onPress={handleSignOut} disabled={signingOut}>
-          <LogOut size={16} strokeWidth={1.5} color={C.clay} />
-          <Text style={S.soT}>{signingOut ? "Signing Out…" : "Sign Out"}</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
-const S = StyleSheet.create({
+function NavRow({
+  icon,
+  label,
+  value,
+  last,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  value?: string;
+  last?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <>
+      <TouchableOpacity style={s.row} onPress={onPress} activeOpacity={0.7}>
+        <Icon name={icon} size={20} color={C.textMid} />
+        <Title style={{ flex: 1 }}>{label}</Title>
+        {value ? <Mono color={C.textMuted}>{value}</Mono> : null}
+        <Icon name="chevron_right" size={19} color={C.faintIcon} />
+      </TouchableOpacity>
+      {last ? <Rule weight="soft" /> : <Rule weight="hair" />}
+    </>
+  );
+}
+
+const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
-  gt: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, paddingBottom: 100 },
-  gtT: { fontFamily: F.display, fontSize: 24, color: C.text, textAlign: "center" },
-  gtB: { fontFamily: F.body, fontSize: 14, color: C.mid, textAlign: "center", lineHeight: 21, marginTop: 10, marginBottom: 28 },
-  lnk: { fontFamily: F.bodyBold, fontSize: 14, color: C.forest },
-  eb: { fontFamily: F.mono, fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: C.forest, marginBottom: 6 },
-  t: { fontFamily: F.display, fontSize: 28, color: C.text, marginBottom: 24 },
-  prf: { flexDirection: "row", alignItems: "center", backgroundColor: C.surface, borderRadius: R.md + 4, padding: 18, borderWidth: 1, borderColor: C.rule, marginBottom: 28 },
-  av: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.forest + "1F", alignItems: "center", justifyContent: "center" },
-  avT: { fontFamily: F.display, fontSize: 18, color: C.forest },
-  em: { fontFamily: F.body, fontSize: 15, color: C.text, fontWeight: "500" },
-  rl: { fontFamily: F.body, fontSize: 12, color: C.light, marginTop: 2 },
-  menu: { flexDirection: "row", alignItems: "center", backgroundColor: C.surface, borderRadius: R.md + 4, padding: 18, borderWidth: 1, borderColor: C.rule, marginBottom: 12 },
-  mn: { fontFamily: F.displayBold, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: C.forest, marginBottom: 2 },
-  ms: { fontFamily: F.body, fontSize: 13, color: C.mid },
-  arr: { fontSize: 18, color: C.light, fontFamily: F.display },
-  so: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderColor: C.clay + "40", borderRadius: R.md, paddingVertical: 16, marginTop: 32 },
-  soT: { fontFamily: F.bodyBold, fontSize: 13, color: C.clay, letterSpacing: 0.4, fontWeight: "700" },
+  idRow: { flexDirection: "row", alignItems: "flex-start", gap: S.md },
+  tiles: { flexDirection: "row", alignItems: "stretch", marginTop: S.block },
+  tile: { flex: 1, paddingBottom: S.lg },
+  tileRule: { width: 1, backgroundColor: C.ruleSoft, marginHorizontal: S.lg },
+  row: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.md },
+  rowLabel: { flex: 1, fontFamily: F.bodyBold, fontSize: 16, letterSpacing: -0.1 },
 });

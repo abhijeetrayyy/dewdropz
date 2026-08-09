@@ -1,29 +1,35 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { RefreshCw } from "lucide-react-native";
-import { C, F } from "@/lib/theme";
+import { StyleSheet, View, ViewStyle } from "react-native";
+import { Button } from "@/components/Button";
+import { Icon } from "@/components/ui/Icon";
+import { Body, Eyebrow, Display3 } from "@/components/ui/Type";
+import { Rule } from "@/components/editorial/Rule";
+import { C, S } from "@/lib/theme";
 
-type Props = { message?: string; onRetry?: () => void };
+// The "we couldn't load it" block. Deliberately quieter than EmptyState — a
+// failed fetch is usually transient, so it gets a small headline and a retry
+// rather than a full editorial spread that implies the screen is meant to be
+// empty.
 
-// Shared "something went wrong" layout used by every screen that fetches
-// data — replaces the mismatched "pull to try again" copy that several
-// screens showed without actually wiring a RefreshControl to back it up.
-export function ErrorState({ message = "Something went wrong.", onRetry }: Props) {
+type Props = { message?: string; onRetry?: () => void; style?: ViewStyle };
+
+export function ErrorState({ message = "Something went wrong.", onRetry, style }: Props) {
   return (
-    <View style={s.wrap}>
-      <Text style={s.title}>{message}</Text>
-      {onRetry ? (
-        <TouchableOpacity style={s.btn} activeOpacity={0.85} onPress={onRetry}>
-          <RefreshCw size={14} strokeWidth={2} color={C.forest} />
-          <Text style={s.btnT}>Try again</Text>
-        </TouchableOpacity>
-      ) : null}
+    <View style={[s.wrap, style]}>
+      <View style={s.head}>
+        <Icon name="cloud_off" size={17} color={C.danger} />
+        <Eyebrow color={C.danger}>Couldn&apos;t load</Eyebrow>
+      </View>
+      <Rule weight="strong" style={{ marginTop: 9, alignSelf: "stretch" }} />
+      <Display3 style={{ marginTop: S.md }}>{message}</Display3>
+      <Body color={C.textMid} style={{ marginTop: 8 }}>
+        Check your connection — the catalogue loads from our store in Dehradun.
+      </Body>
+      {onRetry ? <Button title="Try again" variant="quiet" size="md" icon="refresh" onPress={onRetry} style={{ marginTop: S.lg, alignSelf: "flex-start" }} /> : null}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { alignItems: "center", paddingHorizontal: 32, paddingVertical: 56 },
-  title: { fontFamily: F.body, fontSize: 14, color: C.mid, textAlign: "center", lineHeight: 21 },
-  btn: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16 },
-  btnT: { fontFamily: F.bodyBold, fontSize: 13, color: C.forest, letterSpacing: 0.4, fontWeight: "600" },
+  wrap: { alignItems: "flex-start", paddingVertical: S.xxl },
+  head: { flexDirection: "row", alignItems: "center", gap: 7 },
 });

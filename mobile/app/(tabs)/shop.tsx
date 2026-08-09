@@ -1,206 +1,285 @@
-import { useMemo, useRef, useState, useEffect } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Search, X, SlidersHorizontal } from "lucide-react-native";
+import { useMemo, useRef, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { router } from "expo-router";
+import { Image } from "expo-image";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { ProductCard } from "@/components/ProductCard";
-import { Header } from "@/components/Header";
-import { Sheet } from "@/components/ui/Sheet";
+import { Icon } from "@/components/ui/Icon";
+import { Chip } from "@/components/ui/Chip";
+import { Rule } from "@/components/editorial/Rule";
+import { Display1, Eyebrow, Lede, Mono, Serif } from "@/components/ui/Type";
+import { FilterSheet, ShopFilters } from "@/components/shop/FilterSheet";
 import { SkeletonProductGrid } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useCollectionsQuery, useProductsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { haptics } from "@/lib/haptics";
-import { C, F, R } from "@/lib/theme";
+import { C, F, S } from "@/lib/theme";
 
-type SortKey = "newest" | "price-asc" | "price-desc";
-type PriceBucket = "all" | "under-1500" | "1500-3000" | "over-3000";
+const DEFAULT_FILTERS: ShopFilters = { price: "all", inStockOnly: false, sort: "newest" };
 
-const PRICE_BUCKETS: { key: PriceBucket; label: string }[] = [
-  { key: "all", label: "Any price" },
-  { key: "under-1500", label: "Under ₹1,500" },
-  { key: "1500-3000", label: "₹1,500 – ₹3,000" },
-  { key: "over-3000", label: "Over ₹3,000" },
-];
+const SORT_LABEL: Record<ShopFilters["sort"], string> = {
+  newest: "Newest",
+  "price-asc": "Price ↑",
+  "price-desc": "Price ↓",
+};
 
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "newest", label: "Newest" },
-  { key: "price-asc", label: "Price: Low to High" },
-  { key: "price-desc", label: "Price: High to Low" },
-];
+// The catalogue. Three structural changes from v4:
+//
+//   • The filter row is STICKY. v4 scrolled it away, so filtering a long grid
+//     meant scrolling back to the top to change your mind.
+//   • The result count and active sort are stated in mono above the grid, so
+//     the current state of the list is always legible — v4 hid the active
+//     filter count inside a badge on a floating pill.
+//   • An editorial break sits after the first six products: a full-bleed
+//     collection block that interrupts the grid rhythm. A 40-item uniform
+//     grid is the single most template-looking thing a shop app can do.
 
 export default function ShopScreen() {
+  const insets = useSafeAreaInsets();
   const { data: products = [], isLoading, isError, refetch } = useProductsQuery();
   const { data: collections = [] } = useCollectionsQuery();
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
-
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
   const [collectionSlug, setCollectionSlug] = useState<string | null>(null);
-  const [priceBucket, setPriceBucket] = useState<PriceBucket>("all");
-  const [sort, setSort] = useState<SortKey>("newest");
-
-  // Debounce search input so filtering doesn't re-run the whole list on
-  // every keystroke.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput), 250);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
+  const [filters, setFilters] = useState<ShopFilters>(DEFAULT_FILTERS);
   const sheetRef = useRef<BottomSheetModal>(null);
 
   const filtered = useMemo(() => {
-    let list = products.filter((p: any) => {
-      if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase().trim())) return false;
+    let list = (products as any[]).filter((p) => {
       if (collectionSlug && p.collection?.slug !== collectionSlug) return false;
-      if (priceBucket === "under-1500" && p.price >= 150000) return false;
-      if (priceBucket === "1500-3000" && (p.price < 150000 || p.price > 300000)) return false;
-      if (priceBucket === "over-3000" && p.price <= 300000) return false;
+      if (filters.price === "under-1500" && p.price >= 150000) return false;
+      if (filters.price === "1500-3000" && (p.price < 150000 || p.price > 300000)) return false;
+      if (filters.price === "over-3000" && p.price <= 300000) return false;
+      if (filters.inStockOnly && p.inventory_quantity != null && p.inventory_quantity <= 0) return false;
       return true;
     });
-    if (sort === "price-asc") list = [...list].sort((a: any, b: any) => a.price - b.price);
-    else if (sort === "price-desc") list = [...list].sort((a: any, b: any) => b.price - a.price);
+    if (filters.sort === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
+    else if (filters.sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     return list;
-  }, [products, search, collectionSlug, priceBucket, sort]);
+  }, [products, collectionSlug, filters]);
 
-  const activeFilterCount = (collectionSlug ? 1 : 0) + (priceBucket !== "all" ? 1 : 0) + (sort !== "newest" ? 1 : 0);
+  const activeFilterCount =
+    (filters.price !== "all" ? 1 : 0) + (filters.inStockOnly ? 1 : 0) + (filters.sort !== "newest" ? 1 : 0);
+
+  // The break slots in after six cards, and only when there's enough grid
+  // after it to be worth interrupting — otherwise it reads as a footer.
+  const showBreak = filtered.length > 8;
+  const head = showBreak ? filtered.slice(0, 6) : filtered;
+  const tail = showBreak ? filtered.slice(6) : [];
+  const breakCollection: any = collections.find((c: any) => c.slug !== collectionSlug) ?? collections[0];
 
   function clearFilters() {
     haptics.select();
+    setFilters(DEFAULT_FILTERS);
     setCollectionSlug(null);
-    setPriceBucket("all");
-    setSort("newest");
-    setSearchInput("");
   }
 
   return (
     <View style={s.root}>
-      <Header />
       <ScrollView
-        contentContainerStyle={{ paddingTop: 20, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: S.block }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.forest} />}
+        stickyHeaderIndices={[1]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ink} />}
       >
-        <View style={s.h}>
-          <Text style={s.hT}>Catalogue</Text>
-          <Text style={s.hS}>Equipment for the miles that turn into stories.</Text>
-        </View>
-
-        <View style={s.fb}>
-          <View style={s.sr}>
-            <Search size={16} strokeWidth={1.5} color={C.light} />
-            <TextInput placeholder="Search gear..." placeholderTextColor={C.light} value={searchInput} onChangeText={setSearchInput} style={s.si} />
-            {searchInput.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchInput("")}>
-                <X size={16} strokeWidth={1.5} color={C.light} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={s.filterRow}>
-            <TouchableOpacity style={s.filterBtn} onPress={() => sheetRef.current?.present()} activeOpacity={0.8}>
-              <SlidersHorizontal size={14} strokeWidth={1.5} color={C.text} />
-              <Text style={s.filterBtnT}>Filter & Sort</Text>
-              {activeFilterCount > 0 && (
-                <View style={s.filterCount}>
-                  <Text style={s.filterCountT}>{activeFilterCount}</Text>
-                </View>
-              )}
+        {/* 0 — masthead block */}
+        <View style={[s.head, { paddingTop: insets.top + 14 }]}>
+          <View style={s.headRow}>
+            <View style={{ flex: 1 }}>
+              <Eyebrow>Everything we make</Eyebrow>
+              <Display1 style={{ marginTop: 8 }}>The gear room</Display1>
+            </View>
+            <TouchableOpacity onPress={() => router.push("/search")} hitSlop={12} accessibilityLabel="Search">
+              <Icon name="search" size={23} color={C.ink} />
             </TouchableOpacity>
-            <Text style={s.cnt}>
-              {filtered.length} product{filtered.length !== 1 ? "s" : ""}
-            </Text>
           </View>
+          <Lede style={{ marginTop: 10 }}>
+            Small-batch layers, packs and headwear — every piece field-tested before it was listed.
+          </Lede>
         </View>
 
-        {isError ? (
-          <ErrorState message="Couldn't load the catalogue." onRetry={() => refetch()} />
-        ) : isLoading ? (
-          <SkeletonProductGrid count={6} />
-        ) : filtered.length === 0 ? (
-          <EmptyState title="No gear matches your search" ctaLabel="Clear all filters" onPress={clearFilters} />
-        ) : (
-          <View style={s.grid}>
-            {filtered.map((p: any, i: number) => (
-              <Animated.View key={p.id} entering={FadeInDown.delay(Math.min(i, 8) * 40).springify().damping(18)} style={{ width: "48%", marginBottom: 24 }}>
-                <ProductCard productId={p.id} slug={p.slug} name={p.name} price={p.price} imageUri={p.images?.[0] ?? ""} collectionLabel={p.collection?.name} />
-              </Animated.View>
+        {/* 1 — sticky filter rail */}
+        <View style={s.stickyWrap}>
+          <Rule weight="ink" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.chipRail}
+          >
+            <Chip
+              label="All"
+              count={products.length}
+              selected={!collectionSlug}
+              onPress={() => setCollectionSlug(null)}
+            />
+            {(collections as any[]).map((c) => (
+              <Chip
+                key={c.id}
+                label={c.name}
+                selected={collectionSlug === c.slug}
+                onPress={() => setCollectionSlug(collectionSlug === c.slug ? null : c.slug)}
+              />
             ))}
+          </ScrollView>
+          <Rule weight="soft" />
+        </View>
+
+        {/* 2 — state line + grid */}
+        <View style={{ paddingHorizontal: S.gutter }}>
+          <View style={s.stateRow}>
+            <Mono color={C.textMuted}>
+              {filtered.length} {filtered.length === 1 ? "PIECE" : "PIECES"}
+              {activeFilterCount > 0 ? ` · ${activeFilterCount} FILTER${activeFilterCount > 1 ? "S" : ""}` : ""}
+            </Mono>
+            <TouchableOpacity
+              style={s.sortBtn}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.tap();
+                sheetRef.current?.present();
+              }}
+            >
+              <Icon name="tune" size={16} color={C.ink} />
+              <Text style={s.sortBtnT}>{SORT_LABEL[filters.sort]}</Text>
+              {activeFilterCount > 0 ? <View style={s.sortDot} /> : null}
+            </TouchableOpacity>
           </View>
-        )}
+
+          {isError ? (
+            <ErrorState message="Couldn't load the catalogue." onRetry={() => refetch()} />
+          ) : isLoading ? (
+            <View style={{ marginTop: S.lg }}>
+              <SkeletonProductGrid count={6} />
+            </View>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              eyebrow="No matches"
+              title="Nothing fits those filters."
+              body="Try widening the price range, or clear everything and start again."
+              ctaLabel="Clear all filters"
+              onPress={clearFilters}
+            />
+          ) : (
+            <View style={s.grid}>
+              {head.map((p: any, i: number) => (
+                <Animated.View
+                  key={p.id}
+                  entering={FadeInDown.delay(Math.min(i, 6) * 45).springify().damping(18)}
+                  style={s.cell}
+                >
+                  <ProductCard
+                    productId={p.id}
+                    slug={p.slug}
+                    name={p.name}
+                    price={p.price}
+                    imageUri={p.images?.[0] ?? ""}
+                    meta={p.collection?.name}
+                    tag={
+                      p.inventory_quantity != null && p.inventory_quantity <= 3
+                        ? { label: `${p.inventory_quantity} LEFT`, tone: "scarcity" }
+                        : undefined
+                    }
+                    compareAtPrice={p.compare_at_price}
+                    createdAt={p.created_at}
+                    showQuickAdd
+                  />
+                </Animated.View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* 3 — editorial break */}
+        {showBreak && breakCollection ? (
+          <TouchableOpacity
+            activeOpacity={0.94}
+            onPress={() => {
+              haptics.tap();
+              router.push(`/collections/${breakCollection.slug}`);
+            }}
+            style={s.break}
+          >
+            {breakCollection.image_url ? (
+              <Image source={{ uri: breakCollection.image_url }} style={StyleSheet.absoluteFill} contentFit="cover" alt="" />
+            ) : null}
+            <LinearGradient colors={["rgba(12,18,15,0.15)", "rgba(12,18,15,0.8)"]} style={StyleSheet.absoluteFill} />
+            <View style={s.breakBody}>
+              <Mono color="rgba(255,255,255,0.7)">THE COLLECTION</Mono>
+              <Serif color={C.paper} style={{ marginTop: 4 }}>
+                {breakCollection.name}
+              </Serif>
+              <View style={s.breakLink}>
+                <Text style={s.breakLinkT}>See the kit</Text>
+                <Icon name="arrow_forward" size={16} color={C.paper} />
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
+        {/* 4 — remainder of the grid */}
+        {tail.length > 0 ? (
+          <View style={{ paddingHorizontal: S.gutter }}>
+            <View style={s.grid}>
+              {tail.map((p: any) => (
+                <View key={p.id} style={s.cell}>
+                  <ProductCard
+                    productId={p.id}
+                    slug={p.slug}
+                    name={p.name}
+                    price={p.price}
+                    imageUri={p.images?.[0] ?? ""}
+                    meta={p.collection?.name}
+                    tag={
+                      p.inventory_quantity != null && p.inventory_quantity <= 3
+                        ? { label: `${p.inventory_quantity} LEFT`, tone: "scarcity" }
+                        : undefined
+                    }
+                    compareAtPrice={p.compare_at_price}
+                    createdAt={p.created_at}
+                    showQuickAdd
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
-      <Sheet ref={sheetRef} snapPoints={["65%"]}>
-        <Text style={s.sheetTitle}>Filter & Sort</Text>
-
-        <Text style={s.sheetLabel}>Collection</Text>
-        <View style={s.chips}>
-          <TouchableOpacity onPress={() => { haptics.select(); setCollectionSlug(null); }} style={[s.chip, !collectionSlug && s.chipA]}>
-            <Text style={[s.chipT, !collectionSlug && s.chipTA]}>All</Text>
-          </TouchableOpacity>
-          {collections.map((c: any) => (
-            <TouchableOpacity key={c.id} onPress={() => { haptics.select(); setCollectionSlug(c.slug); }} style={[s.chip, collectionSlug === c.slug && s.chipA]}>
-              <Text style={[s.chipT, collectionSlug === c.slug && s.chipTA]}>{c.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={s.sheetLabel}>Price</Text>
-        <View style={s.chips}>
-          {PRICE_BUCKETS.map((b) => (
-            <TouchableOpacity key={b.key} onPress={() => { haptics.select(); setPriceBucket(b.key); }} style={[s.chip, priceBucket === b.key && s.chipA]}>
-              <Text style={[s.chipT, priceBucket === b.key && s.chipTA]}>{b.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={s.sheetLabel}>Sort By</Text>
-        <View style={s.chips}>
-          {SORTS.map((o) => (
-            <TouchableOpacity key={o.key} onPress={() => { haptics.select(); setSort(o.key); }} style={[s.chip, sort === o.key && s.chipA]}>
-              <Text style={[s.chipT, sort === o.key && s.chipTA]}>{o.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={s.sheetActions}>
-          <TouchableOpacity onPress={clearFilters}>
-            <Text style={s.clearT}>Clear all</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.applyBtn} onPress={() => sheetRef.current?.dismiss()}>
-            <Text style={s.applyBtnT}>Show {filtered.length} results</Text>
-          </TouchableOpacity>
-        </View>
-      </Sheet>
+      <FilterSheet
+        ref={sheetRef}
+        filters={filters}
+        onChange={setFilters}
+        onClear={clearFilters}
+        resultCount={filtered.length}
+      />
     </View>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
-  h: { paddingHorizontal: 24, paddingBottom: 28, borderBottomWidth: 1, borderBottomColor: C.rule, marginBottom: 20 },
-  hT: { fontFamily: F.display, fontSize: 38, lineHeight: 42, color: C.text },
-  hS: { fontFamily: F.body, fontSize: 14, color: C.mid, marginTop: 8 },
-  fb: { paddingHorizontal: 24, marginBottom: 20 },
-  sr: { flexDirection: "row", alignItems: "center", backgroundColor: C.surface, borderWidth: 1, borderColor: C.rule, borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
-  si: { flex: 1, fontFamily: F.body, fontSize: 15, color: C.text },
-  filterRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 16 },
-  filterBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.rule, backgroundColor: C.surface, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
-  filterBtnT: { fontFamily: F.bodyBold, fontSize: 12, color: C.text },
-  filterCount: { minWidth: 16, height: 16, borderRadius: 8, backgroundColor: C.forest, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
-  filterCountT: { color: "#FFFFFF", fontSize: 9, fontWeight: "700" },
-  cnt: { fontFamily: F.body, fontSize: 12, color: C.light },
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 24 },
-  sheetTitle: { fontFamily: F.display, fontSize: 22, color: C.text, marginBottom: 20 },
-  sheetLabel: { fontFamily: F.mono, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: C.forest, marginTop: 20, marginBottom: 12 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: C.rule },
-  chipA: { borderColor: C.forest, backgroundColor: C.forest + "14" },
-  chipT: { fontFamily: F.body, fontSize: 12, color: C.mid },
-  chipTA: { color: C.forest, fontWeight: "600" },
-  sheetActions: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 32 },
-  clearT: { fontFamily: F.bodyBold, fontSize: 13, color: C.clay },
-  applyBtn: { backgroundColor: C.forest, borderRadius: R.md, paddingHorizontal: 22, paddingVertical: 14 },
-  applyBtnT: { fontFamily: F.bodyBold, fontSize: 12, color: "#FFFFFF", letterSpacing: 0.3, fontWeight: "700" },
+  head: { paddingHorizontal: S.gutter, paddingBottom: S.lg },
+  headRow: { flexDirection: "row", alignItems: "flex-start", gap: S.md },
+
+  // Opaque paper background is load-bearing: without it the grid scrolls
+  // visibly *through* the sticky rail.
+  stickyWrap: { backgroundColor: C.paper },
+  chipRail: { gap: 8, paddingHorizontal: S.gutter, paddingVertical: 12 },
+
+  stateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: S.md },
+  sortBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
+  sortBtnT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.ink },
+  sortDot: { width: 5, height: 5, borderRadius: 999, backgroundColor: C.ember },
+
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: S.xl },
+  cell: { width: "48%" },
+
+  break: { height: 220, marginTop: S.block, justifyContent: "flex-end", backgroundColor: C.ink },
+  breakBody: { padding: S.gutter },
+  breakLink: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: S.md },
+  breakLinkT: { fontFamily: F.bodySemiBold, fontSize: 14, color: C.paper },
 });

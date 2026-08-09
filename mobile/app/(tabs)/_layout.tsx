@@ -11,8 +11,8 @@ export default function TabsLayout() {
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="shop" />
+      <Tabs.Screen name="design" />
       <Tabs.Screen name="cart" />
-      <Tabs.Screen name="wishlist" />
       <Tabs.Screen name="account" />
     </Tabs>
   );

@@ -1,7 +1,7 @@
 import { TouchableOpacity, View } from "react-native";
-import { Star } from "lucide-react-native";
 import { C } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
+import { Icon } from "./Icon";
 
 type Props = { value: number; size?: number; onChange?: (v: number) => void };
 
@@ -11,7 +11,7 @@ export function RatingStars({ value, size = 14, onChange }: Props) {
     <View style={{ flexDirection: "row", gap: editable ? 6 : 2 }}>
       {[1, 2, 3, 4, 5].map((n) => {
         const filled = n <= Math.round(value);
-        const star = <Star size={size} strokeWidth={1.5} color={C.sage} fill={filled ? C.sage : "transparent"} />;
+        const star = <Icon name="star" size={size} color={filled ? C.marigold : C.ruleStrong} filled={filled} />;
         if (!editable) return <View key={n}>{star}</View>;
         return (
           <TouchableOpacity

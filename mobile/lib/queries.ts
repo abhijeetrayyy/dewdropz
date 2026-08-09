@@ -10,6 +10,7 @@ import { getRecentlyViewed } from "./recentlyViewed";
 export const qk = {
   products: ["products"] as const,
   product: (slug: string) => ["products", slug] as const,
+  customizable: ["products", "customizable"] as const,
   productsBySlugs: (slugs: string[]) => ["products", "by-slugs", [...slugs].sort()] as const,
   collections: ["collections"] as const,
   orders: (userId: string) => ["orders", userId] as const,
@@ -29,6 +30,14 @@ export function useProductQuery(slug: string | undefined) {
     queryFn: () => Data.getProductBySlug(slug!),
     enabled: !!slug,
     staleTime: 60_000,
+  });
+}
+
+export function useCustomizableProductsQuery() {
+  return useQuery({
+    queryKey: qk.customizable,
+    queryFn: Data.getCustomizableProducts,
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -114,7 +123,16 @@ export function useCreateReviewMutation(productId: string) {
 export type CheckoutInput = {
   fullName: string; phone: string; addressLine1: string; addressLine2?: string;
   city: string; state: string; postalCode: string;
-  items: { slug: string; size?: string; quantity: number }[];
+  items: {
+    slug: string;
+    size?: string;
+    quantity: number;
+    // Customized lines carry their exact ids so the server links the saved
+    // design to the order line instead of re-resolving by size string.
+    productId?: string;
+    variantId?: string | null;
+    customDesignId?: string;
+  }[];
 };
 
 export function useCheckoutMutation() {

@@ -1,13 +1,37 @@
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { BadgeCheck } from "lucide-react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { RatingStars } from "@/components/ui/RatingStars";
+import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/Button";
+import { Rule } from "@/components/editorial/Rule";
+import { SectionHead } from "@/components/editorial/SectionHead";
+import { Body, Display1, Mono, Title } from "@/components/ui/Type";
 import { useAuthStore } from "@/stores/auth";
 import { useCreateReviewMutation, useProductRatingQuery, useProductReviewsQuery } from "@/lib/queries";
 import { toast } from "@/components/ui/Toast";
-import { C, F } from "@/lib/theme";
+import { C, F, R, S } from "@/lib/theme";
 
+const AVATAR_TONES = [
+  { bg: C.meadow12, fg: C.meadowDeep },
+  { bg: C.marigold12, fg: C.marigoldDeep },
+  { bg: C.cream, fg: C.textMid },
+];
+
+function initialsFor(name: string) {
+  return (
+    name
+      .split(" ")
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?"
+  );
+}
+
+// Reviews. The summary is now a proper masthead figure — the average set at
+// display size next to the star row and the count in mono — rather than v4's
+// small white card floating alone at the left margin, which read as a stray
+// widget rather than a summary of anything.
 export function ProductReviews({ productId }: { productId: string }) {
   const { user } = useAuthStore();
   const { data: rating } = useProductRatingQuery(productId);
@@ -38,87 +62,117 @@ export function ProductReviews({ productId }: { productId: string }) {
   }
 
   return (
-    <View style={s.wrap}>
-      <View style={s.head}>
-        <Text style={s.label}>Reviews</Text>
-        {rating && rating.count > 0 ? (
-          <View style={s.summary}>
-            <RatingStars value={rating.average} />
-            <Text style={s.summaryT}>
-              {rating.average} · {rating.count} review{rating.count !== 1 ? "s" : ""}
-            </Text>
-          </View>
-        ) : (
-          <Text style={s.empty}>No reviews yet — be the first to field-test this.</Text>
-        )}
-      </View>
+    <View style={{ marginTop: S.section }}>
+      <SectionHead eyebrow="Field reports" title="What people found." size="d3" />
 
-      {reviews.map((r) => (
-        <View key={r.id} style={s.review}>
-          <View style={s.reviewHead}>
-            <RatingStars value={r.rating} size={12} />
-            {r.is_verified && (
-              <View style={s.verified}>
-                <BadgeCheck size={11} strokeWidth={2} color={C.sage} />
-                <Text style={s.verifiedT}>Verified purchase</Text>
-              </View>
-            )}
+      {rating && rating.count > 0 ? (
+        <>
+          <View style={s.summary}>
+            <Display1>{rating.average.toFixed(1)}</Display1>
+            <View style={{ flex: 1, gap: 6 }}>
+              <RatingStars value={rating.average} size={15} />
+              <Mono color={C.textMuted}>
+                {rating.count} {rating.count === 1 ? "REPORT" : "REPORTS"}
+              </Mono>
+            </View>
           </View>
-          {r.title ? <Text style={s.reviewTitle}>{r.title}</Text> : null}
-          {r.content ? <Text style={s.reviewBody}>{r.content}</Text> : null}
-          <Text style={s.reviewBy}>{r.profile?.full_name || "Anonymous"}</Text>
-        </View>
-      ))}
+          <Rule weight="soft" />
+        </>
+      ) : (
+        <Body color={C.textMuted} style={{ marginTop: S.lg }}>
+          No field reports yet — be the first to say how it held up.
+        </Body>
+      )}
+
+      {reviews.map((r, i) => {
+        const name = r.profile?.full_name || "Anonymous";
+        const tone = AVATAR_TONES[name.length % AVATAR_TONES.length];
+        return (
+          <View key={r.id}>
+            {i > 0 ? <Rule weight="hair" /> : null}
+            <View style={s.review}>
+              <View style={s.reviewHead}>
+                <View style={[s.avatar, { backgroundColor: tone.bg }]}>
+                  <Text style={[s.avatarT, { color: tone.fg }]}>{initialsFor(name)}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.nameRow}>
+                    <Title>{name}</Title>
+                    {r.is_verified ? <Icon name="verified" size={15} color={C.meadow} filled /> : null}
+                  </View>
+                  <View style={{ marginTop: 4 }}>
+                    <RatingStars value={r.rating} size={12} />
+                  </View>
+                </View>
+              </View>
+              {r.title ? <Title style={{ marginTop: S.md }}>{r.title}</Title> : null}
+              {r.content ? (
+                <Body color={C.textMid} style={{ marginTop: 6 }}>
+                  {r.content}
+                </Body>
+              ) : null}
+            </View>
+          </View>
+        );
+      })}
+      {reviews.length > 0 ? <Rule weight="soft" /> : null}
 
       {user ? (
         showForm ? (
           <View style={s.form}>
-            <RatingStars value={stars} size={22} onChange={setStars} />
+            <Mono color={C.textMuted}>YOUR RATING</Mono>
+            <RatingStars value={stars} size={26} onChange={setStars} />
             <TextInput
-              placeholder="Title (optional)"
-              placeholderTextColor={C.light}
+              placeholder="Sum it up in a few words"
+              placeholderTextColor={C.textFaint}
               value={title}
               onChangeText={setTitle}
               style={s.input}
+              selectionColor={C.ember}
             />
             <TextInput
-              placeholder="Tell other trekkers how it held up..."
-              placeholderTextColor={C.light}
+              placeholder="How did it hold up? Where did you take it?"
+              placeholderTextColor={C.textFaint}
               value={content}
               onChangeText={setContent}
               multiline
-              style={[s.input, { height: 80, textAlignVertical: "top" }]}
+              style={[s.input, s.inputMulti]}
+              selectionColor={C.ember}
             />
-            <Button title="Submit Review" loading={createReview.isPending} onPress={submit} />
+            <View style={{ flexDirection: "row", gap: S.sm }}>
+              <Button title="Cancel" variant="quiet" onPress={() => setShowForm(false)} style={{ flex: 1 }} />
+              <Button title="Submit" variant="dark" loading={createReview.isPending} onPress={submit} style={{ flex: 1.4 }} />
+            </View>
           </View>
         ) : (
-          <TouchableOpacity onPress={() => setShowForm(true)} style={{ marginTop: 16 }}>
-            <Text style={s.writeLink}>Write a review →</Text>
-          </TouchableOpacity>
+          <Button title="Write a field report" variant="link" icon="edit" onPress={() => setShowForm(true)} style={{ marginTop: S.lg }} />
         )
       ) : (
-        <Text style={s.signInHint}>Sign in to write a review.</Text>
+        <Body color={C.textFaint} style={{ marginTop: S.lg }}>
+          Sign in to write a field report.
+        </Body>
       )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { marginTop: 36, borderTopWidth: 1, borderTopColor: C.rule, paddingTop: 24 },
-  head: { marginBottom: 18 },
-  label: { fontFamily: F.mono, fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: C.forest, marginBottom: 10 },
-  summary: { flexDirection: "row", alignItems: "center", gap: 10 },
-  summaryT: { fontFamily: F.body, fontSize: 13, color: C.mid },
-  empty: { fontFamily: F.body, fontSize: 13, color: C.light },
-  review: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.rule },
-  reviewHead: { flexDirection: "row", alignItems: "center", gap: 10 },
-  verified: { flexDirection: "row", alignItems: "center", gap: 4 },
-  verifiedT: { fontFamily: F.body, fontSize: 10, color: C.forest },
-  reviewTitle: { fontFamily: F.bodyBold, fontSize: 13, color: C.text, marginTop: 8 },
-  reviewBody: { fontFamily: F.body, fontSize: 13, lineHeight: 20, color: C.mid, marginTop: 4 },
-  reviewBy: { fontFamily: F.body, fontSize: 11, color: C.light, marginTop: 8 },
-  form: { marginTop: 18, gap: 12 },
-  input: { fontFamily: F.body, fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.rule, borderRadius: 10, padding: 12 },
-  writeLink: { fontFamily: F.bodyBold, fontSize: 13, color: C.forest },
-  signInHint: { fontFamily: F.body, fontSize: 13, color: C.light, marginTop: 16 },
+  summary: { flexDirection: "row", alignItems: "center", gap: S.lg, paddingVertical: S.lg },
+  review: { paddingVertical: S.lg },
+  reviewHead: { flexDirection: "row", alignItems: "center", gap: S.sm },
+  avatar: { width: 34, height: 34, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  avatarT: { fontFamily: F.monoBold, fontSize: 11 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  form: { marginTop: S.lg, gap: S.md },
+  input: {
+    fontFamily: F.body,
+    fontSize: 15,
+    color: C.ink,
+    borderWidth: 1,
+    borderColor: C.ruleMed,
+    borderRadius: R.panel,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  inputMulti: { height: 96, textAlignVertical: "top" },
 });

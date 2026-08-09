@@ -1,32 +1,46 @@
 import { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
-import { Home, Search, ShoppingBag, Heart, User, LucideIcon } from "lucide-react-native";
-import { C, F } from "@/lib/theme";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { C, F, M } from "@/lib/theme";
 import { useCartStore } from "@/stores/cart";
-import { useWishlistStore } from "@/stores/wishlist";
 import { haptics } from "@/lib/haptics";
+import { Icon } from "@/components/ui/Icon";
+import { Badge } from "@/components/ui/Badge";
 
-const ICONS: Record<string, LucideIcon> = { index: Home, shop: Search, cart: ShoppingBag, wishlist: Heart, account: User };
-const LABELS: Record<string, string> = { index: "Home", shop: "Shop", cart: "Cart", wishlist: "Saved", account: "Account" };
+// v4 marked the active tab with a 58×30 mint pill behind the icon — a stray
+// third accent color living permanently at the bottom of every screen, and the
+// only rounded-rectangle in an app whose whole radius rule is "sharp or fully
+// round, nothing between".
+//
+// v5 marks it the way a printed page marks a running head: a short ink rule
+// above the icon, the icon filled, the label in mono. No color needed, and the
+// rule visually rhymes with the section rules on every screen above it.
 
-function TabIcon({ Icon, focused }: { Icon: LucideIcon; focused: boolean }) {
-  const scale = useSharedValue(1);
+const ICON: Record<string, string> = {
+  index: "home",
+  shop: "storefront",
+  design: "draw",
+  cart: "backpack",
+  account: "person",
+};
+const LABEL: Record<string, string> = {
+  index: "Home",
+  shop: "Shop",
+  design: "Studio",
+  cart: "Pack",
+  account: "You",
+};
+
+function TabMark({ focused }: { focused: boolean }) {
+  const w = useSharedValue(focused ? 16 : 0);
   useEffect(() => {
-    scale.value = withSpring(focused ? 1.16 : 1, { damping: 10, stiffness: 200 });
-  }, [focused, scale]);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Animated.View style={style}>
-      <Icon size={22} strokeWidth={focused ? 2.25 : 1.75} color={focused ? C.forest : C.light} fill={focused && Icon === Heart ? C.forest : "transparent"} />
-    </Animated.View>
-  );
+    w.value = withTiming(focused ? 16 : 0, { duration: M.base });
+  }, [focused, w]);
+  const style = useAnimatedStyle(() => ({ width: w.value, opacity: w.value / 16 }));
+  return <Animated.View style={[s.mark, style]} />;
 }
 
-// expo-router's <Tabs tabBar={...}> forwards @react-navigation/bottom-tabs'
-// standard tabBar render-prop shape; that package isn't a direct dependency
-// here (only nested under expo-router), so this types just the slice used.
 type TabBarProps = {
   state: { index: number; routes: { key: string; name: string }[] };
   navigation: {
@@ -38,37 +52,38 @@ type TabBarProps = {
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const cartCount = useCartStore((s) => s.itemCount());
-  const wishlistCount = useWishlistStore((s) => s.count());
 
   return (
-    <View style={[s.bar, { paddingBottom: insets.bottom + 10 }]}>
+    <View style={[s.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {state.routes.map((route, index) => {
         const focused = state.index === index;
-        const Icon = ICONS[route.name] ?? Home;
-        const label = LABELS[route.name] ?? route.name;
-        const badge = route.name === "cart" ? cartCount : route.name === "wishlist" ? wishlistCount : 0;
+        const badge = route.name === "cart" ? cartCount : 0;
 
         return (
           <TouchableOpacity
             key={route.key}
             style={s.tab}
-            activeOpacity={0.6}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={LABEL[route.name] ?? route.name}
             onPress={() => {
               if (!focused) haptics.select();
               const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
             }}
           >
-            {focused && <View style={s.activeDot} />}
-            <View>
-              <TabIcon Icon={Icon} focused={focused} />
-              {badge > 0 && (
-                <View style={s.badge}>
-                  <Text style={s.badgeT}>{badge > 99 ? "99+" : badge}</Text>
-                </View>
-              )}
+            <TabMark focused={focused} />
+            <View style={s.iconWrap}>
+              <Icon
+                name={ICON[route.name] ?? "home"}
+                size={22}
+                color={focused ? C.ink : C.textMuted}
+                filled={focused}
+              />
+              <Badge count={badge} />
             </View>
-            <Text style={[s.label, focused && s.labelActive]}>{label}</Text>
+            <Text style={[s.label, focused && s.labelActive]}>{(LABEL[route.name] ?? route.name).toUpperCase()}</Text>
           </TouchableOpacity>
         );
       })}
@@ -79,20 +94,18 @@ export function TabBar({ state, navigation }: TabBarProps) {
 const s = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    paddingTop: 14,
-    paddingHorizontal: 8,
+    alignItems: "flex-start",
+    paddingTop: 0,
+    paddingHorizontal: 4,
     backgroundColor: C.paper,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: C.rule,
+    borderTopWidth: 1,
+    borderTopColor: C.ruleSoft,
   },
-  tab: { alignItems: "center", gap: 5, paddingHorizontal: 12, minWidth: 56 },
-  activeDot: { position: "absolute", top: -14, width: 4, height: 4, borderRadius: 2, backgroundColor: C.forest },
-  label: { fontFamily: F.bodyBold, fontSize: 10, color: C.light },
-  labelActive: { color: C.forest },
-  badge: {
-    position: "absolute", top: -5, right: -9, minWidth: 15, height: 15, borderRadius: 8,
-    backgroundColor: C.forest, alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
-  },
-  badgeT: { color: "#fff", fontSize: 9, fontWeight: "700" },
+  tab: { flex: 1, alignItems: "center", gap: 4 },
+  // Sits flush against the bar's top rule, so the active mark reads as a
+  // thickening of that rule rather than a floating dash.
+  mark: { height: 2, backgroundColor: C.ink, marginBottom: 8 },
+  iconWrap: { marginTop: 0 },
+  label: { fontFamily: F.mono, fontSize: 9, letterSpacing: 1.1, color: C.textMuted },
+  labelActive: { fontFamily: F.monoBold, color: C.ink },
 });

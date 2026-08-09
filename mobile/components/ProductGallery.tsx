@@ -4,16 +4,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Extrapolation,
+  interpolate,
+  SharedValue,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { X } from "lucide-react-native";
-import { C, F } from "@/lib/theme";
+import { C, F, R, S } from "@/lib/theme";
+import { Icon } from "@/components/ui/Icon";
 import { haptics } from "@/lib/haptics";
 
-const { width: W } = Dimensions.get("window");
+const { width: W, height: SCREEN_H } = Dimensions.get("window");
+const GALLERY_H = Math.round(SCREEN_H * 0.6);
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 function ZoomableImage({ uri }: { uri: string }) {
@@ -58,9 +62,8 @@ function ZoomableImage({ uri }: { uri: string }) {
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .onEnd(() => {
-      if (scale.value > 1) {
-        reset();
-      } else {
+      if (scale.value > 1) reset();
+      else {
         scale.value = withTiming(2.2);
         savedScale.value = 2.2;
       }
@@ -79,7 +82,18 @@ function ZoomableImage({ uri }: { uri: string }) {
   );
 }
 
-export function ProductGallery({ images, discountPct }: { images: string[]; discountPct?: number }) {
+// v4 paginated with five white dots at the bottom centre — the default control
+// from every app template, and unreadable over a light garment photo.
+//
+// v5 uses a printed-contact-sheet convention instead: a mono "01/04" counter
+// and a segmented progress rule, both sitting in the bottom-left where the
+// gradient scrim already guarantees contrast. The segments are driven off
+// scrollX so they track the drag continuously rather than snapping on
+// momentum end.
+
+type Props = { images: string[]; discountPct?: number; isNew?: boolean };
+
+export function ProductGallery({ images, discountPct, isNew }: Props) {
   const insets = useSafeAreaInsets();
   const list = images.length ? images : [""];
   const [page, setPage] = useState(0);
@@ -90,8 +104,10 @@ export function ProductGallery({ images, discountPct }: { images: string[]; disc
     scrollX.value = e.contentOffset.x;
   });
 
+  const badge = discountPct ? { label: `−${discountPct}%`, bg: C.ember, fg: C.paper } : isNew ? { label: "NEW", bg: C.ink, fg: C.paper } : null;
+
   return (
-    <View>
+    <View style={s.wrap}>
       <Animated.ScrollView
         horizontal
         pagingEnabled
@@ -104,8 +120,9 @@ export function ProductGallery({ images, discountPct }: { images: string[]; disc
         {list.map((img, i) => (
           <TouchableOpacity
             key={i}
-            activeOpacity={0.95}
+            activeOpacity={0.97}
             onPress={() => {
+              if (!img) return;
               haptics.tap();
               setPage(i);
               setLightboxOpen(true);
@@ -113,7 +130,7 @@ export function ProductGallery({ images, discountPct }: { images: string[]; disc
             style={s.slide}
           >
             {img ? (
-              <Image source={{ uri: img }} style={s.slideImg} contentFit="cover" transition={200} alt="" />
+              <Image source={{ uri: img }} style={s.slideImg} contentFit="cover" transition={220} alt="" />
             ) : (
               <View style={s.slidePh}>
                 <Text style={s.slidePhT}>DEWDROPZ</Text>
@@ -123,28 +140,43 @@ export function ProductGallery({ images, discountPct }: { images: string[]; disc
         ))}
       </Animated.ScrollView>
 
-      {discountPct ? (
-        <View style={[s.discountBadge, { top: insets.top + 16 }]}>
-          <Text style={s.discountT}>-{discountPct}%</Text>
+      {badge ? (
+        <View style={[s.badge, { backgroundColor: badge.bg, top: insets.top + 62 }]}>
+          <Text style={[s.badgeT, { color: badge.fg }]}>{badge.label}</Text>
         </View>
       ) : null}
 
-      {list.length > 1 && (
-        <View style={s.dots}>
-          {list.map((_, i) => (
-            <View key={i} style={[s.dot, i === page && s.dotActive]} />
-          ))}
-        </View>
-      )}
+      {/* The counter and its scrim only earn their place when there's more
+          than one frame — "01 / 01" over a single photograph is furniture
+          describing nothing, and the scrim needlessly darkens the garment. */}
+      {list.length > 1 ? (
+        <>
+          <View style={s.scrim} pointerEvents="none" />
+          <View style={s.meter} pointerEvents="none">
+            <Text style={s.counter}>
+              {String(page + 1).padStart(2, "0")}
+              <Text style={s.counterTotal}> / {String(list.length).padStart(2, "0")}</Text>
+            </Text>
+            <View style={s.segments}>
+              {list.map((_, i) => (
+                <Segment key={i} index={i} scrollX={scrollX} />
+              ))}
+            </View>
+          </View>
+          <View style={[s.zoomHint, { top: insets.top + 62 }]} pointerEvents="none">
+            <Icon name="zoom_in" size={15} color={C.paper} />
+          </View>
+        </>
+      ) : null}
 
       <Modal visible={lightboxOpen} animationType="fade" transparent onRequestClose={() => setLightboxOpen(false)}>
         <View style={s.lightbox}>
-          <TouchableOpacity style={s.closeBtn} onPress={() => setLightboxOpen(false)} hitSlop={16}>
-            <X size={22} strokeWidth={2} color={C.paper} />
-          </TouchableOpacity>
-          <Text style={s.counter}>
-            {page + 1} / {list.length}
+          <Text style={[s.lbCounter, { top: insets.top + 18 }]}>
+            {String(page + 1).padStart(2, "0")} / {String(list.length).padStart(2, "0")}
           </Text>
+          <TouchableOpacity style={[s.closeBtn, { top: insets.top + 10 }]} onPress={() => setLightboxOpen(false)} hitSlop={16}>
+            <Icon name="close" size={22} color={C.paper} />
+          </TouchableOpacity>
           <Animated.ScrollView
             horizontal
             pagingEnabled
@@ -162,17 +194,43 @@ export function ProductGallery({ images, discountPct }: { images: string[]; disc
   );
 }
 
+function Segment({ index, scrollX }: { index: number; scrollX: SharedValue<number> }) {
+  const style = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollX.value,
+      [(index - 1) * W, index * W, (index + 1) * W],
+      [0.3, 1, 0.3],
+      Extrapolation.CLAMP,
+    ),
+  }));
+  return <Animated.View style={[s.segment, style]} />;
+}
+
 const s = StyleSheet.create({
-  slide: { width: W, height: W },
-  slideImg: { width: W, height: W },
-  slidePh: { width: W, height: W, backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
-  slidePhT: { fontFamily: F.mono, fontSize: 10, letterSpacing: 4, color: C.light + "66" },
-  discountBadge: { position: "absolute", right: 16, backgroundColor: C.forest, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  discountT: { fontFamily: F.bodyBold, fontSize: 11, color: C.paper },
-  dots: { position: "absolute", bottom: 14, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 6 },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.paper + "40" },
-  dotActive: { backgroundColor: C.paper, width: 16 },
-  lightbox: { flex: 1, backgroundColor: "#000E" },
-  closeBtn: { position: "absolute", top: 56, right: 20, zIndex: 10 },
-  counter: { position: "absolute", top: 60, left: 20, fontFamily: F.body, fontSize: 12, color: C.paper + "CC", zIndex: 10 },
+  wrap: { height: GALLERY_H, overflow: "hidden", backgroundColor: C.sand },
+  slide: { width: W, height: GALLERY_H },
+  slideImg: { width: W, height: GALLERY_H },
+  slidePh: { width: W, height: GALLERY_H, backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
+  slidePhT: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 4, color: "rgba(251,247,239,0.35)" },
+  badge: { position: "absolute", left: S.gutter, borderRadius: R.tag, paddingHorizontal: 8, paddingVertical: 4 },
+  badgeT: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 1 },
+  zoomHint: {
+    position: "absolute",
+    right: S.gutter,
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: "rgba(23,35,29,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: 110, backgroundColor: "rgba(12,18,15,0.22)" },
+  meter: { position: "absolute", left: S.gutter, bottom: S.lg, gap: 9 },
+  counter: { fontFamily: F.monoBold, fontSize: 11, letterSpacing: 1.4, color: C.paper },
+  counterTotal: { fontFamily: F.mono, color: "rgba(251,247,239,0.65)" },
+  segments: { flexDirection: "row", gap: 4 },
+  segment: { width: 22, height: 2, backgroundColor: C.paper },
+  lightbox: { flex: 1, backgroundColor: "#000E", justifyContent: "center" },
+  closeBtn: { position: "absolute", right: 20, zIndex: 10 },
+  lbCounter: { position: "absolute", left: 20, fontFamily: F.mono, fontSize: 11, letterSpacing: 1.4, color: "rgba(251,247,239,0.8)", zIndex: 10 },
 });
