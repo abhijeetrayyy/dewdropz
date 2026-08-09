@@ -10,13 +10,29 @@ type CartItem = {
   image: string;
   size?: string;
   quantity: number;
+  // Set only for lines designed in the studio. Two different designs of the
+  // same product and size are genuinely different products to fulfil, so this
+  // participates in the dedupe key rather than merging them into one line.
+  customDesignId?: string;
+  colorName?: string;
+  variantId?: string | null;
 };
+
+// Identity of a cart line. Plain items still collapse by product+size exactly
+// as before; customized ones only ever merge with themselves.
+function sameLine(a: CartItem, b: { productId: string; size?: string; customDesignId?: string }) {
+  return (
+    a.productId === b.productId &&
+    a.size === b.size &&
+    (a.customDesignId ?? null) === (b.customDesignId ?? null)
+  );
+}
 
 type CartStore = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  removeItem: (productId: string, size?: string) => void;
-  updateQuantity: (productId: string, quantity: number, size?: string) => void;
+  removeItem: (productId: string, size?: string, customDesignId?: string) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string, customDesignId?: string) => void;
   clearCart: () => void;
   itemCount: () => number;
   subtotal: () => number;
@@ -32,42 +48,33 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (item, quantity = 1) =>
         set((state) => {
-          const existing = state.items.find(
-            (i) => i.productId === item.productId && i.size === item.size,
-          );
+          const existing = state.items.find((i) => sameLine(i, item));
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.productId === item.productId && i.size === item.size
-                  ? { ...i, quantity: i.quantity + quantity }
-                  : i,
+                sameLine(i, item) ? { ...i, quantity: i.quantity + quantity } : i,
               ),
             };
           }
           return { items: [...state.items, { ...item, quantity }] };
         }),
 
-      removeItem: (productId, size) =>
+      removeItem: (productId, size, customDesignId) =>
         set((state) => ({
           items: state.items.filter(
-            (i) => !(i.productId === productId && i.size === size),
+            (i) => !sameLine(i, { productId, size, customDesignId }),
           ),
         })),
 
-      updateQuantity: (productId, quantity, size) =>
+      updateQuantity: (productId, quantity, size, customDesignId) =>
         set((state) => {
+          const target = { productId, size, customDesignId };
           if (quantity <= 0) {
-            return {
-              items: state.items.filter(
-                (i) => !(i.productId === productId && i.size === size),
-              ),
-            };
+            return { items: state.items.filter((i) => !sameLine(i, target)) };
           }
           return {
             items: state.items.map((i) =>
-              i.productId === productId && i.size === size
-                ? { ...i, quantity }
-                : i,
+              sameLine(i, target) ? { ...i, quantity } : i,
             ),
           };
         }),

@@ -1,19 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { CheckCircle2, XCircle } from "lucide-react-native";
-import { C, F } from "@/lib/theme";
+import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
+import { C, F, R } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
+import { Icon } from "./Icon";
 
+// Module-level dispatcher so `toast.show(...)` works from anywhere — event
+// handlers, store actions, non-component code — without every call site
+// needing to sit under the provider's context. The provider registers itself
+// here on mount; same pattern `sonner` uses.
 type ToastVariant = "default" | "success" | "error";
 type ToastItem = { id: number; message: string; variant: ToastVariant };
 
-// Module-level dispatcher so `toast.show(...)` can be called from anywhere —
-// event handlers, store actions, non-component code — without every call
-// site needing to be inside a component that can reach the provider's
-// context. The provider registers itself here on mount, same pattern
-// libraries like `sonner` use under the hood.
 let dispatch: ((message: string, variant?: ToastVariant) => void) | null = null;
 
 export const toast = {
@@ -28,6 +27,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const insets = useSafeAreaInsets();
   const nextId = useRef(0);
+  const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   const show = useCallback((message: string, variant: ToastVariant = "default") => {
     const id = nextId.current++;
@@ -35,7 +35,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     if (variant === "success") haptics.success();
     else if (variant === "error") haptics.error();
     else haptics.tap();
-    setTimeout(() => setItems((cur) => cur.filter((t) => t.id !== id)), 2200);
+    const timer = setTimeout(() => {
+      setItems((cur) => cur.filter((t) => t.id !== id));
+      timers.current.delete(id);
+    }, 2400);
+    timers.current.set(id, timer);
   }, []);
 
   useEffect(() => {
@@ -45,16 +49,30 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     };
   }, [show]);
 
+  // Toasts fire from anywhere, including screens that unmount immediately
+  // after (e.g. "Order placed" then a replace()). Without this, those pending
+  // timers keep a setState alive against a torn-down provider.
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
+
   return (
     <ToastContext.Provider value={null}>
       {children}
-      <View pointerEvents="none" style={[s.stack, { top: insets.top + 8 }]}>
+      {/* Bottom-anchored: a toast confirming "added to pack" belongs near the
+          thumb and the action that caused it, not up by the status bar where
+          v4 put it (and where it collided with every screen's header). */}
+      <View pointerEvents="none" style={[s.stack, { bottom: insets.bottom + 92 }]}>
         {items.map((t) => (
-          <Animated.View key={t.id} entering={FadeInDown.springify().damping(16)} exiting={FadeOutUp} style={s.toast}>
+          <Animated.View key={t.id} entering={FadeInUp.springify().damping(17)} exiting={FadeOutDown.duration(180)} style={s.toast}>
             {t.variant === "success" ? (
-              <CheckCircle2 size={16} strokeWidth={2} color={C.sage} />
+              <Icon name="check_circle" size={16} color={C.forest12} filled />
             ) : t.variant === "error" ? (
-              <XCircle size={16} strokeWidth={2} color={C.clay} />
+              <Icon name="error" size={16} color={C.clay} filled />
             ) : null}
             <Text style={s.text} numberOfLines={2}>
               {t.message}
@@ -76,19 +94,17 @@ const s = StyleSheet.create({
   toast: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 9,
     backgroundColor: C.ink,
-    borderWidth: 1,
-    borderColor: C.paper + "1A",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: R.pill,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
     maxWidth: 420,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  text: { fontFamily: F.body, fontSize: 13, color: C.paper, flexShrink: 1 },
+  text: { fontFamily: F.bodySemiBold, fontSize: 14, color: C.paper, flexShrink: 1, letterSpacing: -0.1 },
 });

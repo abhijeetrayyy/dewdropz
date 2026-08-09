@@ -16,6 +16,7 @@ export default async function FooterSection() {
       heading: 'Shop',
       links: [
         { label: 'All Gear', href: '/shop' },
+        { label: 'Design Your Own', href: '/customize' },
         ...categories.map((t) => ({ label: t.name, href: `/shop?category=${t.slug}` })),
       ],
     },

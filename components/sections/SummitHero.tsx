@@ -253,6 +253,8 @@ export default function SummitHero() {
         />
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          {/* Back to h1 — DawnHero/FirstLight are unplugged (see app/page.tsx),
+              so this is the page's hero again. */}
           <h1 className="font-display font-light uppercase leading-[0.86] tracking-[-0.04em] text-[clamp(46px,8vw,116px)] text-paper">
             <span data-summit-reveal className="invisible block">Go where</span>
             <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>

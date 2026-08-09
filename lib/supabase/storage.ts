@@ -35,7 +35,9 @@ export async function uploadFile(
 export async function uploadFileAdmin(
   bucket: BucketName,
   filePath: string,
-  file: File | ArrayBuffer,
+  // Uint8Array covers Node Buffers, which is what server routes get after
+  // base64-decoding an upload from a native client.
+  file: File | ArrayBuffer | Uint8Array,
   contentType: string
 ) {
   const supabase = createAdminSupabaseClient()

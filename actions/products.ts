@@ -14,6 +14,9 @@ export async function getProducts(options?: {
   let query = supabase.from('products')
     .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
     .eq('is_active', true).order('created_at', { ascending: false })
+    // Without this, embedded variants come back in arbitrary order and size
+    // pickers render as e.g. "L XL M S". `sort_order` exists for exactly this.
+    .order('sort_order', { referencedTable: 'product_variants', ascending: true })
   if (options?.collection) query = query.eq('collection_id', options.collection)
   if (options?.featured) query = query.eq('is_featured', true)
   if (options?.limit) query = query.limit(options.limit)
@@ -27,7 +30,9 @@ export async function getProductBySlug(slug: string) {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('products')
     .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
-    .eq('slug', slug).eq('is_active', true).single()
+    .eq('slug', slug).eq('is_active', true)
+    .order('sort_order', { referencedTable: 'product_variants', ascending: true })
+    .single()
   if (error) return null
   return data as unknown as ProductWithCollection
 }

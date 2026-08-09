@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Canvas, FabricObject } from 'fabric'
 import { Textbox, FabricImage } from 'fabric'
-import { Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic } from 'lucide-react'
+import { Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic, FlipHorizontal2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,33 @@ import { useCanvasHistory } from '@/hooks/useCanvasHistory'
 
 const FONTS = ['Inter', 'Fraunces', 'Georgia', 'Arial', 'Courier New']
 
-export default function Toolbar({ canvas }: { canvas: Canvas | null }) {
+// Ink that will actually be legible on the chosen blank. Without this, new
+// text defaults to near-black and lands invisibly on the black garment —
+// which is the default colourway, so it hit every shopper.
+function defaultInkFor(garmentHex: string | undefined): string {
+  if (!garmentHex) return '#1A1A1A'
+  const m = /^#?([0-9a-f]{6})$/i.exec(garmentHex.trim())
+  if (!m) return '#1A1A1A'
+  const n = parseInt(m[1], 16)
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  // Rec. 709 relative luminance — good enough to pick black vs white ink.
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return lum > 0.5 ? '#1A1A1A' : '#FFFFFF'
+}
+
+export default function Toolbar({
+  canvas,
+  activeSide,
+  twoSided,
+  garmentHex,
+  onCopyToOtherSide,
+}: {
+  canvas: Canvas | null
+  activeSide: 'front' | 'back'
+  twoSided: boolean
+  garmentHex?: string
+  onCopyToOtherSide: () => void
+}) {
   const [selected, setSelected] = useState<FabricObject | null>(null)
   const [layers, setLayers] = useState<FabricObject[]>([])
   const [uploading, setUploading] = useState(false)
@@ -25,6 +51,11 @@ export default function Toolbar({ canvas }: { canvas: Canvas | null }) {
     const onSelect = () => setSelected(canvas.getActiveObject() ?? null)
     const onClear = () => setSelected(null)
     const refreshLayers = () => setLayers([...canvas.getObjects()].reverse())
+    // With two canvases sharing one Toolbar, `canvas` swaps identity whenever
+    // the Toolbar's focus moves between front and back — without this,
+    // `selected` would keep pointing at an object on the canvas we just left,
+    // silently editing the wrong side's design.
+    onSelect()
     refreshLayers()
     canvas.on('selection:created', onSelect)
     canvas.on('selection:updated', onSelect)
@@ -54,13 +85,13 @@ export default function Toolbar({ canvas }: { canvas: Canvas | null }) {
       top: canvas.getHeight() / 2 - 15,
       fontFamily: 'Inter',
       fontSize: 24,
-      fill: '#1a1a1a',
+      fill: defaultInkFor(garmentHex),
       width: 160,
     })
     canvas.add(text)
     canvas.setActiveObject(text)
     canvas.renderAll()
-  }, [canvas])
+  }, [canvas, garmentHex])
 
   const handleImagePick = useCallback(() => fileInputRef.current?.click(), [])
 
@@ -144,6 +175,22 @@ export default function Toolbar({ canvas }: { canvas: Canvas | null }) {
 
   return (
     <div className="border-l border-rule p-5 space-y-6 overflow-y-auto">
+      {twoSided && (
+        <div className="flex items-center justify-between gap-2 -mt-1 -mx-1 px-2 py-1.5 rounded-sm bg-forest/5">
+          <span className="font-body text-[11px] text-mid">
+            Editing <span className="font-medium text-forest capitalize">{activeSide}</span>
+          </span>
+          <button
+            type="button"
+            onClick={onCopyToOtherSide}
+            className="flex items-center gap-1 font-body text-[11px] text-mid hover:text-forest transition-colors"
+          >
+            <FlipHorizontal2 className="h-3 w-3" />
+            Copy to {activeSide === 'front' ? 'back' : 'front'}
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={addText} className="flex-1">
           <Type className="h-4 w-4 mr-1.5" /> Text

@@ -28,7 +28,15 @@
       "expo-router",
       "expo-font",
       "expo-splash-screen",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DewDropz needs access to your photos so you can place your own artwork on a custom tee, hoodie, or sweatshirt.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {},
     "extra": {

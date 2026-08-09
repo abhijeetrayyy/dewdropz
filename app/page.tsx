@@ -1,12 +1,17 @@
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrailSpine from '@/components/TrailSpine'
+// DawnHero / FirstLight: unplugged per request — parked, not deleted. Both
+// still typecheck and lint clean; re-add the two <div data-trail-*> blocks
+// below (and drop SummitHero's h1 back to the h2 descent copy) to bring them
+// back.
 import SummitHero from '@/components/sections/SummitHero'
 import TrustBand from '@/components/sections/TrustBand'
 import SeasonKit from '@/components/sections/SeasonKit'
 import TheClimb from '@/components/sections/TheClimb'
 import CollectionsRow from '@/components/sections/CollectionsRow'
 import ShopByCategory from '@/components/sections/ShopByCategory'
+import DesignYourOwn from '@/components/sections/DesignYourOwn'
 import Community from '@/components/sections/Community'
 import BrandPulse from '@/components/sections/BrandPulse'
 import NewsletterBar from '@/components/sections/NewsletterBar'
@@ -49,6 +54,9 @@ export default async function Home() {
         </div>
         <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
           <ShopByCategory categories={categories} products={products} />
+        </div>
+        <div data-trail-time="14:30" data-trail-alt="3,800M" data-trail-label="The workbench">
+          <DesignYourOwn products={products} />
         </div>
         <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
           <Community />

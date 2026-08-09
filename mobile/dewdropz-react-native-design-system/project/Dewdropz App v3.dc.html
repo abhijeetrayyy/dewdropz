@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Archivo:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+<style>
+  body { margin: 0; background: #F4EFE5; }
+  a { color: #16795B; text-decoration: none; }
+  a:hover { color: #17231D; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</helmet>
+
+<div style="background:#F4EFE5;color:#17231D;font-family:Archivo,system-ui,sans-serif;padding:90px 90px 160px;display:flex;flex-direction:column;gap:96px;width:max-content;min-width:100%;box-sizing:border-box">
+
+  <div style="display:flex;gap:80px;align-items:flex-start;max-width:1840px">
+    <div style="flex:1">
+      <div style="display:inline-flex;align-items:center;gap:10px;background:#FFFFFF;border-radius:999px;padding:8px 16px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+        <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#16795B;font-variation-settings:'FILL' 1">hiking</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.14em">DEWDROPZ · v3 · FULL APP</span>
+      </div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:78px;line-height:0.94;letter-spacing:-0.035em;margin-top:24px">Every screen,<br>one grammar.</div>
+      <div style="font-size:17px;line-height:1.6;color:#5C6A62;max-width:680px;margin-top:20px;text-wrap:pretty">Twenty-four screens covering the whole app: first launch, sign-in, browse, search, buy, pay, track, and the account. One icon set, one type scale, one navigation bar, one set of spacing rules — applied without exception, so the app reads as a single product rather than a folder of ideas.</div>
+    </div>
+    <div style="width:600px;background:#FFFFFF;border-radius:24px;padding:28px;box-shadow:0 2px 4px rgba(23,35,29,0.04),0 14px 32px rgba(23,35,29,0.07)">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">WHAT CHANGED FROM v2</div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:14px 16px;margin-top:18px;font-size:15px;line-height:1.5">
+        <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">interests</span>
+        <span><strong style="font-weight:700">Real icon set.</strong> <span style="color:#5C6A62">Material Symbols Rounded, 24px grid, weight 400, FILL 1 for active states. No typographic glyphs anywhere.</span></span>
+        <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">format_size</span>
+        <span><strong style="font-weight:700">Five type sizes, no more.</strong> <span style="color:#5C6A62">34 / 26 / 21 display, 17 title, 15 body, 13 meta, 11 label. Every screen draws from that list only.</span></span>
+        <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">bottom_navigation</span>
+        <span><strong style="font-weight:700">Platform tab bar.</strong> <span style="color:#5C6A62">Full-width, 83pt with safe area, pill indicator on the active tab. Identical on every tabbed screen.</span></span>
+        <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">grid_4x4</span>
+        <span><strong style="font-weight:700">8pt spacing, four radii.</strong> <span style="color:#5C6A62">Gaps are 8/12/16/20/24. Radii are 12 chip, 20 card, 28 sheet, 999 pill. Nothing in between.</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FOUNDATIONS ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Foundations</div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+
+      <div style="width:520px;background:#FFFFFF;border-radius:24px;padding:28px;box-shadow:0 2px 4px rgba(23,35,29,0.04),0 12px 28px rgba(23,35,29,0.06)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">TYPE SCALE — LOCKED</div>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-top:20px">
+          <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(23,35,29,0.07);padding-bottom:14px">
+            <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;letter-spacing:-0.03em;flex:1">Go where you feel alive</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">D1 · 34</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(23,35,29,0.07);padding-bottom:14px">
+            <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.03em;flex:1">Close your gaps</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">D2 · 26</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(23,35,29,0.07);padding-bottom:14px">
+            <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;letter-spacing:-0.025em;flex:1">Dew Windbreaker</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">D3 · 21</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(23,35,29,0.07);padding-bottom:14px">
+            <span style="font-size:17px;font-weight:700;flex:1">Altitude Pack 40L</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">TITLE · 17/700</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(23,35,29,0.07);padding-bottom:14px">
+            <span style="font-size:15px;color:#3B4842;flex:1">Welded seams and fast-dry layers.</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">BODY · 15/400</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(23,35,29,0.07);padding-bottom:14px">
+            <span style="font-size:13px;font-weight:500;color:#5C6A62;flex:1">240 g · welded seams · 3,600 m</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">META · 13/500</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B;flex:1">YOUR NEXT TREK</span>
+            <span style="font-size:11px;font-weight:700;color:#9AA69F;white-space:nowrap">LABEL · 11/700</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:520px;background:#FFFFFF;border-radius:24px;padding:28px;box-shadow:0 2px 4px rgba(23,35,29,0.04),0 12px 28px rgba(23,35,29,0.06)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">ICONOGRAPHY — MATERIAL SYMBOLS ROUNDED</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:18px 8px;margin-top:22px;text-align:center">
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">home</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">home</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">storefront</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">shop</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">explore</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">trails</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">backpack</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">pack</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">person</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">you</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">search</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">search</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">terrain</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">altitude</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">scale</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">weight</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">favorite</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">saved</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">local_shipping</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">shipping</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">tune</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">filter</div></div>
+          <div><span style="font-family:'Material Symbols Rounded';font-size:26px">verified</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">verified</div></div>
+        </div>
+        <div style="border-top:1px solid rgba(23,35,29,0.08);margin-top:24px;padding-top:20px;display:flex;gap:24px;align-items:center">
+          <div style="text-align:center"><span style="font-family:'Material Symbols Rounded';font-size:30px;color:#9AA69F">backpack</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">FILL 0 — rest</div></div>
+          <div style="text-align:center"><span style="font-family:'Material Symbols Rounded';font-size:30px;color:#16795B;font-variation-settings:'FILL' 1">backpack</span><div style="font-size:10px;color:#9AA69F;margin-top:6px">FILL 1 — active</div></div>
+          <div style="flex:1;font-size:13px;line-height:1.55;color:#5C6A62">One family, weight 400, 24px optical size. Active state is the FILL axis animating 0→1 over 160ms — not a colour swap or a second icon file.</div>
+        </div>
+      </div>
+
+      <div style="width:520px;background:#FFFFFF;border-radius:24px;padding:28px;box-shadow:0 2px 4px rgba(23,35,29,0.04),0 12px 28px rgba(23,35,29,0.06)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">TAB BAR — THE ONLY ONE</div>
+        <div style="margin-top:20px;border-radius:20px;overflow:hidden;border:1px solid rgba(23,35,29,0.08)">
+          <div style="height:66px;background:#FFFFFF;display:flex;align-items:center;padding:8px 6px 0">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">home</span></div>
+              <span style="font-size:11px;font-weight:700;color:#125B45">Home</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">storefront</span></div>
+              <span style="font-size:11px;font-weight:500;color:#7A8880">Shop</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div>
+              <span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span>
+                <span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">2</span>
+              </div>
+              <span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div>
+              <span style="font-size:11px;font-weight:500;color:#7A8880">You</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin-top:22px;font-size:13px;line-height:1.5;color:#5C6A62">
+          <span style="font-weight:700;color:#17231D">Height</span><span>49pt bar + 34pt safe area = 83pt. Never floating — floating bars eat content and break on Android gesture nav.</span>
+          <span style="font-weight:700;color:#17231D">Active</span><span>Meadow pill 58×30 behind the icon, FILL 1, label to 700. Inactive labels stay at 500 so the row does not jitter.</span>
+          <span style="font-weight:700;color:#17231D">Badge</span><span>Marigold, counts pieces not rupees, caps at 9+.</span>
+          <span style="font-weight:700;color:#16795B">Trails</span><span style="color:#16795B">Guides and field notes at launch — the seat Trail Buddy takes later without reshaping the bar.</span>
+        </div>
+      </div>
+
+      <div style="width:520px;background:#FFFFFF;border-radius:24px;padding:28px;box-shadow:0 2px 4px rgba(23,35,29,0.04),0 12px 28px rgba(23,35,29,0.06)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">COLOUR &amp; SURFACE</div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <div style="flex:1"><div style="height:64px;border-radius:12px;background:#FBF7EF;border:1px solid rgba(23,35,29,0.1)"></div><div style="font-size:10px;color:#5C6A62;margin-top:8px;line-height:1.5">Paper<br>#FBF7EF</div></div>
+          <div style="flex:1"><div style="height:64px;border-radius:12px;background:#EFE7D9"></div><div style="font-size:10px;color:#5C6A62;margin-top:8px;line-height:1.5">Sand<br>#EFE7D9</div></div>
+          <div style="flex:1"><div style="height:64px;border-radius:12px;background:#16795B"></div><div style="font-size:10px;color:#5C6A62;margin-top:8px;line-height:1.5">Meadow<br>#16795B</div></div>
+          <div style="flex:1"><div style="height:64px;border-radius:12px;background:#DCEFE5"></div><div style="font-size:10px;color:#5C6A62;margin-top:8px;line-height:1.5">Meadow 12<br>#DCEFE5</div></div>
+          <div style="flex:1"><div style="height:64px;border-radius:12px;background:#F0952B"></div><div style="font-size:10px;color:#5C6A62;margin-top:8px;line-height:1.5">Marigold<br>#F0952B</div></div>
+          <div style="flex:1"><div style="height:64px;border-radius:12px;background:#17231D"></div><div style="font-size:10px;color:#5C6A62;margin-top:8px;line-height:1.5">Ink<br>#17231D</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin-top:22px;font-size:13px;line-height:1.5;color:#5C6A62">
+          <span style="font-weight:700;color:#17231D">Meadow</span><span>Every primary action, every active state. Nothing else is green.</span>
+          <span style="font-weight:700;color:#17231D">Marigold</span><span>Badges, scarcity, patches. Never a button — if it were, it would compete with Meadow.</span>
+          <span style="font-weight:700;color:#17231D">Elevation</span><span>One shadow token: 0 2px 4px / 0 12px 28px at 4% and 6%. Cards do not stack shadows.</span>
+          <span style="font-weight:700;color:#17231D">Radii</span><span>12 chip · 20 card · 28 sheet · 999 pill. No other values.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW A — GETTING IN ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Getting in</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">Launch → personalise → account. Skippable end to end.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 01 SPLASH -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">01</span><span>SPLASH</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:linear-gradient(180deg,#FFD8A4 0%,#FFE7C6 40%,#FBF7EF 100%)">
+            <div style="position:absolute;top:70px;right:-50px;width:210px;height:210px;border-radius:999px;background:radial-gradient(circle,#FFF6E2 0%,rgba(255,246,226,0) 70%)"></div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
+              <img src="https://dewdropz.vercel.app/logo/mountain-mark.png" alt="Dewdropz" style="width:64px;height:64px;object-fit:contain">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:0.22em">DEWDROPZ</div>
+              <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:21px;color:#5C6A62;margin-top:-10px">Feel Alive</div>
+            </div>
+            <div style="position:absolute;left:0;right:0;bottom:120px;display:flex;justify-content:center;gap:6px">
+              <span style="width:7px;height:7px;border-radius:999px;background:#16795B"></span>
+              <span style="width:7px;height:7px;border-radius:999px;background:rgba(22,121,91,0.3)"></span>
+              <span style="width:7px;height:7px;border-radius:999px;background:rgba(22,121,91,0.3)"></span>
+            </div>
+            <div style="position:absolute;left:0;right:0;bottom:74px;text-align:center;font-size:13px;font-weight:500;color:#7A8880">Dehradun, Uttarakhand · Est. 2019</div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Under 1.2s. Holds only while fonts and the cart hydrate, then pushes forward on its own.</div>
+      </div>
+
+      <!-- 02 ONBOARDING -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">02</span><span>WHERE ARE YOU HEADED</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF;display:flex;flex-direction:column">
+            <div style="position:relative;height:364px;flex:none;border-radius:0 0 28px 28px;overflow:hidden">
+              <img src="https://images.unsplash.com/photo-1522506209496-4536d9020ec4?w=1000&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(23,35,29,0.35) 0%,rgba(23,35,29,0) 45%)"></div>
+              <div style="position:absolute;top:60px;left:20px;right:20px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.22em;color:#FFFFFF">DEWDROPZ</span>
+                <span style="font-size:13px;font-weight:600;color:#FFFFFF">Skip</span>
+              </div>
+            </div>
+            <div style="flex:1;padding:28px 20px 0">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">STEP 1 OF 2</div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em;margin-top:10px">Where are you headed?</div>
+              <div style="font-size:15px;line-height:1.55;color:#5C6A62;margin-top:10px">Pick a trail or two. We'll only show gear that survives it.</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">
+                <span style="display:flex;align-items:center;gap:6px;background:#16795B;color:#FFFFFF;border-radius:12px;padding:11px 14px;font-size:15px;font-weight:600"><span style="font-family:'Material Symbols Rounded';font-size:18px;font-variation-settings:'FILL' 1">check</span>Kedarkantha</span>
+                <span style="background:#FFFFFF;color:#3B4842;border-radius:12px;padding:11px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Valley of Flowers</span>
+                <span style="background:#FFFFFF;color:#3B4842;border-radius:12px;padding:11px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Kuari Pass</span>
+                <span style="background:#FFFFFF;color:#3B4842;border-radius:12px;padding:11px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Hampta</span>
+                <span style="background:#FFFFFF;color:#3B4842;border-radius:12px;padding:11px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Roopkund</span>
+                <span style="background:#FFFFFF;color:#3B4842;border-radius:12px;padding:11px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Chandrashila</span>
+              </div>
+            </div>
+            <div style="flex:none;margin-top:auto;padding:16px 20px 44px">
+              <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Continue<span style="font-family:'Material Symbols Rounded';font-size:20px">arrow_forward</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">The single most valuable thing a gear shop can learn about you, asked once, in plain language.</div>
+      </div>
+
+      <!-- 03 SIGN IN -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">03</span><span>SIGN IN</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF;display:flex;flex-direction:column">
+            <div style="flex:none;padding:66px 20px 0;display:flex;align-items:center;justify-content:space-between">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="font-size:15px;font-weight:600;color:#16795B">Skip for now</span>
+            </div>
+            <div style="flex:1;padding:32px 20px 0">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em">Your kit,<br>on every device.</div>
+              <div style="font-size:15px;line-height:1.55;color:#5C6A62;margin-top:12px">One number. No password to forget at 4,000 metres.</div>
+
+              <div style="margin-top:28px;background:#FFFFFF;border-radius:20px;padding:6px;display:flex;align-items:center;gap:2px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+                <div style="display:flex;align-items:center;gap:6px;padding:14px 14px;border-right:1px solid rgba(23,35,29,0.08)">
+                  <span style="font-size:17px;font-weight:600">+91</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#7A8880">expand_more</span>
+                </div>
+                <div style="flex:1;padding:14px 12px;font-size:17px;font-weight:600;letter-spacing:0.04em">98765 43210</div>
+              </div>
+
+              <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;margin-top:16px;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Send code</div>
+
+              <div style="display:flex;align-items:center;gap:14px;margin-top:28px">
+                <span style="flex:1;height:1px;background:rgba(23,35,29,0.1)"></span>
+                <span style="font-size:13px;font-weight:500;color:#9AA69F">or</span>
+                <span style="flex:1;height:1px;background:rgba(23,35,29,0.1)"></span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:12px;margin-top:24px">
+                <div style="height:52px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:600;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">mail</span>Continue with email</div>
+                <div style="height:52px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:600;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">apple</span>Continue with Apple</div>
+              </div>
+            </div>
+            <div style="flex:none;padding:0 24px 44px;text-align:center;font-size:13px;line-height:1.6;color:#7A8880">By continuing you agree to our <span style="color:#16795B;font-weight:600">Terms</span> and <span style="color:#16795B;font-weight:600">Privacy Policy</span>.</div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Phone-first, because that is how India signs in. Always skippable — the store works logged out.</div>
+      </div>
+
+      <!-- 04 OTP -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">04</span><span>VERIFY</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" keyboard="{{ true }}" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:66px 20px 0">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em;margin-top:26px">Check your messages</div>
+              <div style="font-size:15px;line-height:1.55;color:#5C6A62;margin-top:10px">Six digits sent to +91 98765 43210. <span style="color:#16795B;font-weight:600">Change</span></div>
+              <div style="display:flex;gap:8px;margin-top:28px">
+                <div style="flex:1;height:60px;border-radius:16px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;box-shadow:0 2px 8px rgba(23,35,29,0.06)">4</div>
+                <div style="flex:1;height:60px;border-radius:16px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;box-shadow:0 2px 8px rgba(23,35,29,0.06)">8</div>
+                <div style="flex:1;height:60px;border-radius:16px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;box-shadow:0 2px 8px rgba(23,35,29,0.06)">2</div>
+                <div style="flex:1;height:60px;border-radius:16px;background:#FFFFFF;border:2px solid #16795B;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700">1</div>
+                <div style="flex:1;height:60px;border-radius:16px;background:#F1EADD"></div>
+                <div style="flex:1;height:60px;border-radius:16px;background:#F1EADD"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:20px;font-size:13px;font-weight:500;color:#7A8880">
+                <span style="font-family:'Material Symbols Rounded';font-size:18px">schedule</span>Resend code in 0:24
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Auto-reads the SMS on both platforms; the keyboard never covers the field.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW B — DISCOVER ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Discover</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">Home opens on your trek, not on a sale.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 05 HOME -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">05</span><span>HOME</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="position:relative;height:196px;background:linear-gradient(180deg,#FFD8A4 0%,#FFE7C6 46%,#FBF7EF 100%);overflow:hidden">
+              <div style="position:absolute;top:20px;right:-40px;width:170px;height:170px;border-radius:999px;background:radial-gradient(circle,#FFF6E2 0%,rgba(255,246,226,0) 70%)"></div>
+              <div style="position:absolute;top:60px;left:20px;right:20px;display:flex;align-items:flex-start;justify-content:space-between">
+                <div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#B4761A">05:52 · FIRST LIGHT</div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;line-height:1.05;letter-spacing:-0.03em;margin-top:6px">Morning, {{ firstName }}</div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.82);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">search</span></span>
+                  <span style="position:relative;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.82);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">notifications</span>
+                    <span style="position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:999px;background:#F0952B;border:1.5px solid #FFF6E9"></span>
+                  </span>
+                </div>
+              </div>
+              <div style="position:absolute;left:20px;bottom:16px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.82);border-radius:999px;padding:8px 14px">
+                <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#B4761A;font-variation-settings:'FILL' 1">sunny</span>
+                <span style="font-size:13px;font-weight:600">Dehradun 14°</span>
+                <span style="width:1px;height:12px;background:rgba(23,35,29,0.14)"></span>
+                <span style="font-size:13px;font-weight:500;color:#5C6A62">Clear till Thursday</span>
+              </div>
+            </div>
+
+            <div style="margin:4px 16px 0;background:#FFFFFF;border-radius:20px;box-shadow:0 2px 4px rgba(23,35,29,0.04),0 12px 28px rgba(23,35,29,0.07)">
+              <div style="display:flex;gap:14px;padding:16px">
+                <div style="width:76px;height:76px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1633231610793-a5be285cb418?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">YOUR NEXT TREK</div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;line-height:1.1;letter-spacing:-0.025em;margin-top:4px">Kedarkantha</div>
+                  <div style="display:flex;align-items:center;gap:10px;margin-top:6px;font-size:13px;font-weight:500;color:#5C6A62">
+                    <span style="display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">calendar_month</span>12 days</span>
+                    <span style="display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:15px">terrain</span>3,800 m</span>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:0 16px 16px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline">
+                  <span style="font-size:13px;font-weight:600">Pack 68% ready</span>
+                  <span style="font-size:13px;font-weight:500;color:#7A8880">2 gaps</span>
+                </div>
+                <div style="height:8px;border-radius:999px;background:#EFE7D9;margin-top:8px;position:relative;overflow:hidden">
+                  <div style="position:absolute;inset:0 32% 0 0;border-radius:999px;background:#16795B"></div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#B4761A;background:#FDEBD4;border-radius:12px;padding:7px 11px"><span style="font-family:'Material Symbols Rounded';font-size:16px">ac_unit</span>Insulation</span>
+                  <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#B4761A;background:#FDEBD4;border-radius:12px;padding:7px 11px"><span style="font-family:'Material Symbols Rounded';font-size:16px">checkroom</span>Headwear</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:22px 0 0 16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding-right:16px">
+                <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;letter-spacing:-0.025em">Close your gaps</span>
+                <span style="display:flex;align-items:center;gap:2px;font-size:13px;font-weight:600;color:#16795B">See all<span style="font-family:'Material Symbols Rounded';font-size:18px">chevron_right</span></span>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:14px;overflow:hidden">
+                <div style="width:158px;flex:none">
+                  <div style="position:relative;height:124px;border-radius:20px;overflow:hidden;background:#EFE7D9">
+                    <img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                    <span style="position:absolute;top:8px;left:8px;background:#FFFFFF;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">3,600 m</span>
+                  </div>
+                  <div style="font-size:15px;font-weight:600;margin-top:9px">Dew Windbreaker</div>
+                  <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">240 g</span><span style="font-weight:700;color:#16795B">₹3,200</span></div>
+                </div>
+                <div style="width:158px;flex:none">
+                  <div style="position:relative;height:124px;border-radius:20px;overflow:hidden;background:#EFE7D9">
+                    <img src="https://images.unsplash.com/photo-1648483092137-6e63796c8b06?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                    <span style="position:absolute;top:8px;left:8px;background:#FFFFFF;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">5,200 m</span>
+                  </div>
+                  <div style="font-size:15px;font-weight:600;margin-top:9px">Ridge Beanie</div>
+                  <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">62 g</span><span style="font-weight:700;color:#16795B">₹1,100</span></div>
+                </div>
+                <div style="width:70px;flex:none;height:124px;border-radius:20px;background:#EFE7D9"></div>
+              </div>
+            </div>
+
+            <div style="margin:20px 16px 0;border-radius:20px;overflow:hidden;position:relative;height:120px">
+              <img src="https://images.unsplash.com/photo-1769631417306-a1da09f42b20?w=800&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(23,35,29,0.72),rgba(23,35,29,0.1))"></div>
+              <div style="position:absolute;inset:0;padding:18px;display:flex;flex-direction:column;justify-content:center">
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#9FE0C2">COLLECTION</div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;color:#FFFFFF;margin-top:4px">Silent Altitude</div>
+                <div style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.8);margin-top:2px">Above the treeline · 6 pieces</div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">home</span></div><span style="font-size:11px;font-weight:700;color:#125B45">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">storefront</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span><span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{ cartCount }}</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Readiness reframes shopping as preparation. The two products shown feel chosen, not pushed.</div>
+      </div>
+
+      <!-- 06 SEARCH -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">06</span><span>SEARCH — RESTING</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" keyboard="{{ true }}" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:10px">
+              <div style="flex:1;height:48px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;gap:10px;padding:0 16px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+                <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">search</span>
+                <span style="font-size:15px;color:#9AA69F">Search gear, trails, guides</span>
+              </div>
+              <span style="font-size:15px;font-weight:600;color:#16795B">Cancel</span>
+            </div>
+            <div style="padding:24px 16px 0">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880">RECENT</span>
+                <span style="font-size:13px;font-weight:600;color:#16795B">Clear</span>
+              </div>
+              <div style="display:flex;flex-direction:column;margin-top:8px">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 0"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#9AA69F">history</span><span style="flex:1;font-size:15px">windbreaker</span><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#C6CCC7">north_west</span></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 0"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#9AA69F">history</span><span style="flex:1;font-size:15px">40l pack</span><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#C6CCC7">north_west</span></div>
+              </div>
+
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880;margin-top:20px">TRENDING THIS WINDOW</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+                <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Monsoon shells</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Under 500 g</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Kedarkantha kit</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Merino</span>
+              </div>
+
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880;margin-top:22px">BROWSE BY ALTITUDE</div>
+              <div style="display:flex;gap:10px;margin-top:12px">
+                <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:14px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#6FB5D6">landscape</span>
+                  <div style="font-size:15px;font-weight:600;margin-top:8px">Below 3,500</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:2px">Treeline &amp; valley</div>
+                </div>
+                <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:14px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">terrain</span>
+                  <div style="font-size:15px;font-weight:600;margin-top:8px">Above 3,500</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:2px">Alpine &amp; snow</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">An empty search field is prime real estate — trending queries are tied to the live season, not to all-time bestsellers.</div>
+      </div>
+
+      <!-- 07 SEARCH RESULTS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">07</span><span>SEARCH — RESULTS</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:10px">
+              <div style="flex:1;height:48px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;gap:10px;padding:0 16px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+                <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#17231D">search</span>
+                <span style="flex:1;font-size:15px;font-weight:500">shell</span>
+                <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#9AA69F">close</span>
+              </div>
+              <span style="font-size:15px;font-weight:600;color:#16795B">Cancel</span>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 0">
+              <span style="font-size:13px;font-weight:500;color:#5C6A62">4 pieces · sorted by altitude</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;background:#FFFFFF;border-radius:999px;padding:8px 12px;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:18px">tune</span>Filter</span>
+            </div>
+
+            <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:14px;background:#FFFFFF;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="width:84px;height:84px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">LAYERS &amp; SHELLS</div>
+                  <div style="font-size:17px;font-weight:700;margin-top:3px">Dew Windbreaker</div>
+                  <div style="font-size:13px;font-weight:500;color:#7A8880;margin-top:3px">240 g · 3,600 m · 10K</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                    <span style="font-size:17px;font-weight:700;color:#16795B">₹3,200</span>
+                    <span style="display:flex;align-items:center;gap:3px;font-size:13px;font-weight:500;color:#7A8880"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>4.9</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px;background:#FFFFFF;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="width:84px;height:84px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">LAYERS &amp; SHELLS</div>
+                  <div style="font-size:17px;font-weight:700;margin-top:3px">Mist Tee</div>
+                  <div style="font-size:13px;font-weight:500;color:#7A8880;margin-top:3px">160 g · 3,000 m · merino</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                    <span style="font-size:17px;font-weight:700;color:#16795B">₹1,800</span>
+                    <span style="font-size:11px;font-weight:700;color:#B4761A;background:#FDEBD4;border-radius:999px;padding:4px 9px">2 LEFT</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px;background:#FFFFFF;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="width:84px;height:84px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1509762774605-f07235a08f1f?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">PACKS &amp; CARRY</div>
+                  <div style="font-size:17px;font-weight:700;margin-top:3px">Altitude Pack 40L</div>
+                  <div style="font-size:13px;font-weight:500;color:#7A8880;margin-top:3px">1.3 kg · 4,200 m · welded</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                    <span style="font-size:17px;font-weight:700;color:#16795B">₹2,800</span>
+                    <span style="display:flex;align-items:center;gap:3px;font-size:13px;font-weight:500;color:#7A8880"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>4.8</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:16px 16px 0;background:#DCEFE5;border-radius:20px;padding:16px;display:flex;align-items:center;gap:12px">
+              <span style="font-family:'Material Symbols Rounded';font-size:24px;color:#125B45">menu_book</span>
+              <div style="flex:1">
+                <div style="font-size:15px;font-weight:700;color:#125B45">Which shell for the monsoon?</div>
+                <div style="font-size:13px;color:#3B6E5B;margin-top:2px">A guide's answer · 4 min read</div>
+              </div>
+              <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45">chevron_right</span>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">home</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">storefront</span></div><span style="font-size:11px;font-weight:700;color:#125B45">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span><span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{ cartCount }}</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">List rows, not a grid — search is a comparison task, so weight and altitude sit next to the price. A guide's article ranks alongside products.</div>
+      </div>
+
+      <!-- 08 NOTIFICATIONS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">08</span><span>NOTIFICATIONS</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Notifications</span>
+              <span style="font-size:13px;font-weight:600;color:#16795B">Mark read</span>
+            </div>
+
+            <div style="padding:22px 16px 0;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);border-left:3px solid #16795B">
+                <span style="width:38px;height:38px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#125B45">local_shipping</span></span>
+                <div style="flex:1">
+                  <div style="font-size:15px;font-weight:700">Your pack is on the road</div>
+                  <div style="font-size:13px;line-height:1.5;color:#5C6A62;margin-top:3px">Order #DD2841 left Dehradun. Arriving Thursday.</div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#9AA69F;margin-top:8px">2 HOURS AGO</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);border-left:3px solid #F0952B">
+                <span style="width:38px;height:38px;border-radius:999px;background:#FDEBD4;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#B4761A">ac_unit</span></span>
+                <div style="flex:1">
+                  <div style="font-size:15px;font-weight:700">Kedarkantha drops to −11° next week</div>
+                  <div style="font-size:13px;line-height:1.5;color:#5C6A62;margin-top:3px">Your pack has no insulation layer yet. Two options under ₹3,000.</div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#9AA69F;margin-top:8px">YESTERDAY</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <span style="width:38px;height:38px;border-radius:999px;background:#F1EADD;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">workspace_premium</span></span>
+                <div style="flex:1">
+                  <div style="font-size:15px;font-weight:700">Silent Altitude restocked</div>
+                  <div style="font-size:13px;line-height:1.5;color:#5C6A62;margin-top:3px">Run of 300. Subscribers had 48 hours first.</div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#9AA69F;margin-top:8px">3 DAYS AGO</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <span style="width:38px;height:38px;border-radius:999px;background:#F1EADD;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">menu_book</span></span>
+                <div style="flex:1">
+                  <div style="font-size:15px;font-weight:700">The Dispatch — August</div>
+                  <div style="font-size:13px;line-height:1.5;color:#5C6A62;margin-top:3px">Kuari Pass in the shoulder season, and what broke on it.</div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:#9AA69F;margin-top:8px">5 DAYS AGO</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:20px 16px 0;border-radius:20px;border:1px dashed rgba(23,35,29,0.16);padding:16px;display:flex;align-items:center;gap:12px">
+              <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">tune</span>
+              <span style="flex:1;font-size:13px;line-height:1.5;color:#5C6A62">Weather alerts and drop alerts can be turned off separately in Settings.</span>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Notifications earn their place by being useful: a temperature drop tied to a gap in your kit beats any promo push.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW C — BROWSE ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Browse</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">Altitude is the primary filter. Everything else is secondary.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 09 CATALOGUE -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">09</span><span>CATALOGUE</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0">
+              <div style="display:flex;align-items:flex-end;justify-content:space-between">
+                <div>
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">EVERYTHING WE MAKE</div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;letter-spacing:-0.03em;margin-top:6px">The gear room</div>
+                </div>
+                <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">search</span></span>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:16px;overflow:hidden">
+                <span style="background:#17231D;color:#FBF7EF;border-radius:12px;padding:9px 14px;font-size:15px;font-weight:600;flex:none">All 9</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:9px 14px;font-size:15px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Layers</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:9px 14px;font-size:15px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Packs</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:9px 14px;font-size:15px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Head</span>
+                <span style="background:#FFFFFF;border-radius:12px;padding:9px 14px;font-size:15px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Hydration</span>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;padding:18px 16px 0">
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;left:8px;background:#DCEFE5;color:#125B45;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">GUIDE PICK</span>
+                  <span style="position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(23,35,29,0.14)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">add</span></span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Dew Windbreaker</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">3,600 m</span><span style="font-weight:700;color:#16795B">₹3,200</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1509762774605-f07235a08f1f?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(23,35,29,0.14)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">add</span></span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Altitude Pack 40L</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">4,200 m</span><span style="font-weight:700;color:#16795B">₹2,800</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;left:8px;background:#FDEBD4;color:#B4761A;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">2 LEFT</span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Mist Tee</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">3,000 m</span><span style="font-weight:700;color:#16795B">₹1,800</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Summit Flask</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">4,800 m</span><span style="font-weight:700;color:#16795B">₹1,200</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1648483092137-6e63796c8b06?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Ridge Beanie</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">5,200 m</span><span style="font-weight:700;color:#16795B">₹1,100</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1587547131116-a0655a526190?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Desert Scarf</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">2,800 m</span><span style="font-weight:700;color:#16795B">₹900</span></div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:83px;height:90px;background:linear-gradient(180deg,rgba(251,247,239,0) 0%,#FBF7EF 70%)"></div>
+            <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:99px;height:44px;padding:0 18px;border-radius:999px;background:#17231D;color:#FBF7EF;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 8px 22px rgba(23,35,29,0.26)"><span style="font-family:'Material Symbols Rounded';font-size:20px">tune</span>Filter<span style="background:#F0952B;color:#FFFFFF;border-radius:999px;font-size:11px;font-weight:700;padding:2px 7px">2</span></div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">home</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">storefront</span></div><span style="font-size:11px;font-weight:700;color:#125B45">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span><span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{ cartCount }}</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Nine products is a strength, not a gap — the grid is generous rather than dense, and every card states altitude before price.</div>
+      </div>
+
+      <!-- 10 FILTER SHEET -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">10</span><span>FILTER SHEET</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#EFE7D9">
+            <div style="position:absolute;inset:0;background:rgba(23,35,29,0.42)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:664px;background:#FBF7EF;border-radius:28px 28px 0 0;padding:0 20px">
+              <div style="display:flex;justify-content:center;padding:10px 0 0"><span style="width:38px;height:4px;border-radius:999px;background:rgba(23,35,29,0.18)"></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.03em">Filter</span>
+                <span style="font-size:15px;font-weight:600;color:#16795B">Reset</span>
+              </div>
+
+              <div style="margin-top:24px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">terrain</span>How high are you going?</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:13px;font-weight:500;color:#7A8880"><span>2,800 m</span><span style="font-size:15px;font-weight:700;color:#16795B">3,000 – 4,800 m</span><span>5,200 m</span></div>
+                <div style="position:relative;height:24px;margin-top:10px">
+                  <div style="position:absolute;top:10px;left:0;right:0;height:4px;border-radius:999px;background:#EFE7D9"></div>
+                  <div style="position:absolute;top:10px;left:8%;right:20%;height:4px;border-radius:999px;background:#16795B"></div>
+                  <div style="position:absolute;top:1px;left:8%;width:22px;height:22px;border-radius:999px;background:#FFFFFF;border:2px solid #16795B;margin-left:-11px;box-shadow:0 2px 6px rgba(23,35,29,0.14)"></div>
+                  <div style="position:absolute;top:1px;right:20%;width:22px;height:22px;border-radius:999px;background:#FFFFFF;border:2px solid #16795B;margin-right:-11px;box-shadow:0 2px 6px rgba(23,35,29,0.14)"></div>
+                </div>
+              </div>
+
+              <div style="margin-top:24px;border-top:1px solid rgba(23,35,29,0.08);padding-top:20px">
+                <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">scale</span>Weight</span>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+                  <span style="background:#16795B;color:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;font-weight:600">Under 500 g</span>
+                  <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">500 g – 1 kg</span>
+                  <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Over 1 kg</span>
+                </div>
+              </div>
+
+              <div style="margin-top:22px;border-top:1px solid rgba(23,35,29,0.08);padding-top:20px">
+                <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">rainy</span>Conditions</span>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+                  <span style="background:#16795B;color:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;font-weight:600">Monsoon</span>
+                  <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Snow</span>
+                  <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Dry cold</span>
+                  <span style="background:#FFFFFF;border-radius:12px;padding:10px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Sun</span>
+                </div>
+              </div>
+
+              <div style="margin-top:22px;border-top:1px solid rgba(23,35,29,0.08);padding-top:20px;display:flex;align-items:center;gap:12px">
+                <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">inventory_2</span>
+                <span style="flex:1;font-size:15px;font-weight:700">In stock only</span>
+                <span style="width:50px;height:30px;border-radius:999px;background:#16795B;display:flex;align-items:center;justify-content:flex-end;padding:3px"><span style="width:24px;height:24px;border-radius:999px;background:#FFFFFF"></span></span>
+              </div>
+
+              <div style="position:absolute;left:20px;right:20px;bottom:44px;display:flex;gap:12px">
+                <span style="flex:1;height:54px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Clear</span>
+                <span style="flex:2;height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Show 4 pieces</span>
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Filters phrased as questions a trekker asks. The primary button counts results live, so nobody applies a filter blind.</div>
+      </div>
+
+      <!-- 11 COLLECTION -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">11</span><span>COLLECTION</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="position:relative;height:300px;overflow:hidden">
+              <img src="https://images.unsplash.com/photo-1769631417306-a1da09f42b20?w=1000&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(23,35,29,0.5) 0%,rgba(23,35,29,0.05) 40%,rgba(23,35,29,0.78) 100%)"></div>
+              <div style="position:absolute;top:58px;left:16px;right:16px;display:flex;justify-content:space-between">
+                <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+                <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">ios_share</span></span>
+              </div>
+              <div style="position:absolute;left:20px;right:20px;bottom:20px">
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#9FE0C2">4,500 M AND ABOVE</div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em;color:#FFFFFF;margin-top:6px">Silent Altitude</div>
+                <div style="font-size:15px;line-height:1.5;color:rgba(255,255,255,0.85);margin-top:8px;max-width:300px">Above the treeline, wind never stops asking questions. Wind-sealed shells, real insulation.</div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px 0">
+              <span style="font-size:13px;font-weight:500;color:#5C6A62">6 pieces · from ₹1,100</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;background:#FFFFFF;border-radius:999px;padding:8px 12px;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:18px">sort</span>Altitude</span>
+            </div>
+
+            <div style="margin:16px 16px 0;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:14px">
+              <span style="width:44px;height:44px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-family:'Material Symbols Rounded';font-size:24px;color:#125B45">inventory_2</span></span>
+              <div style="flex:1">
+                <div style="font-size:15px;font-weight:700">Take the whole kit</div>
+                <div style="font-size:13px;color:#5C6A62;margin-top:2px">6 pieces · ₹11,400 · save ₹1,200</div>
+              </div>
+              <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">chevron_right</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;padding:16px 16px 0">
+              <div>
+                <div style="position:relative;height:140px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1648483092137-6e63796c8b06?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;left:8px;background:#FFFFFF;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">5,200 m</span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Ridge Beanie</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">62 g</span><span style="font-weight:700;color:#16795B">₹1,100</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:140px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;left:8px;background:#FFFFFF;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">4,800 m</span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Summit Flask</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">320 g</span><span style="font-weight:700;color:#16795B">₹1,200</span></div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">home</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">storefront</span></div><span style="font-size:11px;font-weight:700;color:#125B45">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span><span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{ cartCount }}</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Collections are conditions, so the kit bundle belongs at the top — it is the reason collections exist commercially.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW D — DECIDE ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Decide</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">A named guide removes more doubt than any spec table.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 12 PRODUCT -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">12</span><span>PRODUCT</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="position:relative;height:388px;border-radius:0 0 28px 28px;overflow:hidden;background:#EFE7D9">
+              <img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=1000&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;top:58px;left:16px;right:16px;display:flex;justify-content:space-between">
+                <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(23,35,29,0.12)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+                <div style="display:flex;gap:8px">
+                  <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(23,35,29,0.12)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">favorite</span></span>
+                  <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(23,35,29,0.12)"><span style="font-family:'Material Symbols Rounded';font-size:22px">ios_share</span></span>
+                </div>
+              </div>
+              <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:14px;display:flex;gap:5px">
+                <span style="width:18px;height:4px;border-radius:2px;background:#FFFFFF"></span>
+                <span style="width:5px;height:4px;border-radius:2px;background:rgba(255,255,255,0.55)"></span>
+                <span style="width:5px;height:4px;border-radius:2px;background:rgba(255,255,255,0.55)"></span>
+                <span style="width:5px;height:4px;border-radius:2px;background:rgba(255,255,255,0.55)"></span>
+              </div>
+            </div>
+
+            <div style="padding:18px 20px 0">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">LAYERS &amp; SHELLS</span>
+                <span style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:#5C6A62"><span style="font-family:'Material Symbols Rounded';font-size:17px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>4.9 · 128 reports</span>
+              </div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em;margin-top:6px">Dew Windbreaker</div>
+              <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px">
+                <span style="font-size:21px;font-weight:700;color:#16795B">₹3,200</span>
+                <span style="font-size:13px;font-weight:500;color:#7A8880">incl. all taxes</span>
+              </div>
+
+              <div style="display:flex;gap:8px;margin-top:16px">
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:#FFFFFF;border-radius:12px;padding:10px 4px;box-shadow:0 2px 8px rgba(23,35,29,0.05)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">terrain</span><span style="font-size:13px;font-weight:700">3,600 m</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:#FFFFFF;border-radius:12px;padding:10px 4px;box-shadow:0 2px 8px rgba(23,35,29,0.05)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">scale</span><span style="font-size:13px;font-weight:700">240 g</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:#FFFFFF;border-radius:12px;padding:10px 4px;box-shadow:0 2px 8px rgba(23,35,29,0.05)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">rainy</span><span style="font-size:13px;font-weight:700">10K</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:#FFFFFF;border-radius:12px;padding:10px 4px;box-shadow:0 2px 8px rgba(23,35,29,0.05)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#5C6A62">bolt</span><span style="font-size:13px;font-weight:700">Welded</span></span>
+              </div>
+
+              <div style="display:flex;gap:12px;margin-top:18px;background:#FFFFFF;border-radius:20px;padding:14px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <span style="width:36px;height:36px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px;font-weight:700;color:#125B45">SG</span>
+                <div style="flex:1">
+                  <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:19px;line-height:1.4;color:#17231D">“The fog band. This goes on at the second switchback and stays on until the ridge.”</div>
+                  <div style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;color:#7A8880;margin-top:8px"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#16795B;font-variation-settings:'FILL' 1">verified</span>Swastik · guide, 41 summits</div>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
+                <span style="font-size:15px;font-weight:700">Size</span>
+                <span style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#16795B">Size guide<span style="font-family:'Material Symbols Rounded';font-size:17px">straighten</span></span>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <span style="flex:1;height:48px;border-radius:12px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">S</span>
+                <span style="flex:1;height:48px;border-radius:12px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">M</span>
+                <span style="flex:1;height:48px;border-radius:12px;background:#17231D;color:#FBF7EF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">L</span>
+                <span style="flex:1;height:48px;border-radius:12px;background:#F1EADD;display:flex;align-items:center;justify-content:center;font-size:15px;color:#A9B2AC;text-decoration:line-through">XL</span>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:center;gap:12px">
+              <div style="flex:none">
+                <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:#5C6A62"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#16795B">local_shipping</span>Free</div>
+                <div style="font-size:13px;font-weight:700;margin-top:2px">Ships Tuesday</div>
+              </div>
+              <div style="flex:1;height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(22,121,91,0.28)"><span style="font-family:'Material Symbols Rounded';font-size:22px">backpack</span>Add to pack</div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Four spec tiles carry the numbers so the copy can stay human. Sold-out sizes stay visible and struck through.</div>
+      </div>
+
+      <!-- 13 SIZE GUIDE -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">13</span><span>SIZE GUIDE SHEET</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#EFE7D9">
+            <div style="position:absolute;inset:0;background:rgba(23,35,29,0.42)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:600px;background:#FBF7EF;border-radius:28px 28px 0 0;padding:0 20px">
+              <div style="display:flex;justify-content:center;padding:10px 0 0"><span style="width:38px;height:4px;border-radius:999px;background:rgba(23,35,29,0.18)"></span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.03em">Size guide</span>
+                <span style="width:34px;height:34px;border-radius:999px;background:#F1EADD;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:20px">close</span></span>
+              </div>
+              <div style="font-size:15px;line-height:1.55;color:#5C6A62;margin-top:8px">Measured flat, in centimetres. Layering room is already built in — do not size up for a fleece.</div>
+
+              <div style="margin-top:20px;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:#F1EADD;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#5C6A62">
+                  <span style="padding:12px 14px">SIZE</span><span style="padding:12px 6px">CHEST</span><span style="padding:12px 6px">LENGTH</span><span style="padding:12px 6px">SLEEVE</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:15px;border-bottom:1px solid rgba(23,35,29,0.06)">
+                  <span style="padding:14px;font-weight:700">S</span><span style="padding:14px 6px;color:#5C6A62">98</span><span style="padding:14px 6px;color:#5C6A62">68</span><span style="padding:14px 6px;color:#5C6A62">61</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:15px;border-bottom:1px solid rgba(23,35,29,0.06)">
+                  <span style="padding:14px;font-weight:700">M</span><span style="padding:14px 6px;color:#5C6A62">104</span><span style="padding:14px 6px;color:#5C6A62">70</span><span style="padding:14px 6px;color:#5C6A62">63</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:15px;background:#DCEFE5;border-bottom:1px solid rgba(23,35,29,0.06)">
+                  <span style="padding:14px;font-weight:700;color:#125B45">L · yours</span><span style="padding:14px 6px;color:#125B45">110</span><span style="padding:14px 6px;color:#125B45">72</span><span style="padding:14px 6px;color:#125B45">65</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:15px">
+                  <span style="padding:14px;font-weight:700;color:#A9B2AC">XL</span><span style="padding:14px 6px;color:#A9B2AC">116</span><span style="padding:14px 6px;color:#A9B2AC">74</span><span style="padding:14px 6px;color:#A9B2AC">67</span>
+                </div>
+              </div>
+
+              <div style="margin-top:16px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;gap:12px;align-items:center">
+                <span style="width:36px;height:36px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px;font-weight:700;color:#125B45">SG</span>
+                <span style="flex:1;font-size:15px;line-height:1.5;color:#3B4842">Swastik is 5'11", 74 kg, and wears L over a base layer.</span>
+              </div>
+
+              <div style="position:absolute;left:20px;right:20px;bottom:44px">
+                <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Pick L</div>
+                <div style="text-align:center;margin-top:12px;font-size:13px;font-weight:500;color:#7A8880">Free size exchange within 7 days</div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Your size is pre-highlighted from past orders, and the exchange promise sits under the button — that is where the hesitation is.</div>
+      </div>
+
+      <!-- 14 FIELD REPORTS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">14</span><span>FIELD REPORTS</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Field reports</span>
+            </div>
+
+            <div style="margin:18px 16px 0;background:#FFFFFF;border-radius:20px;padding:18px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:20px">
+              <div style="text-align:center;flex:none">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1">4.9</div>
+                <div style="display:flex;gap:1px;margin-top:4px">
+                  <span style="font-family:'Material Symbols Rounded';font-size:14px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:14px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:14px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:14px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:14px;color:#F0952B;font-variation-settings:'FILL' 1">star</span>
+                </div>
+                <div style="font-size:13px;color:#7A8880;margin-top:5px">128</div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;color:#7A8880;width:44px">FIT</span><span style="flex:1;height:6px;border-radius:999px;background:#EFE7D9;position:relative;overflow:hidden"><span style="position:absolute;inset:0 8% 0 0;background:#16795B;border-radius:999px"></span></span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;color:#7A8880;width:44px">WARMTH</span><span style="flex:1;height:6px;border-radius:999px;background:#EFE7D9;position:relative;overflow:hidden"><span style="position:absolute;inset:0 22% 0 0;background:#16795B;border-radius:999px"></span></span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:700;color:#7A8880;width:44px">DRY</span><span style="flex:1;height:6px;border-radius:999px;background:#EFE7D9;position:relative;overflow:hidden"><span style="position:absolute;inset:0 4% 0 0;background:#16795B;border-radius:999px"></span></span></div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;padding:16px 16px 0;overflow:hidden">
+              <span style="background:#17231D;color:#FBF7EF;border-radius:12px;padding:8px 13px;font-size:13px;font-weight:600;flex:none">All</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:8px 13px;font-size:13px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.05)">Above 4,000 m</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:8px 13px;font-size:13px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.05)">Monsoon</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:8px 13px;font-size:13px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.05)">With photos</span>
+            </div>
+
+            <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:12px">
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:34px;height:34px;border-radius:999px;background:#FDEBD4;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#B4761A">AK</span>
+                  <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:5px;font-size:15px;font-weight:700">Ananya K.<span style="font-family:'Material Symbols Rounded';font-size:16px;color:#16795B;font-variation-settings:'FILL' 1">verified</span></div>
+                    <div style="font-size:13px;color:#7A8880;margin-top:1px">Kedarkantha · Dec 2025 · 3,800 m</div>
+                  </div>
+                </div>
+                <div style="font-size:15px;line-height:1.55;color:#3B4842;margin-top:10px">Survived a whiteout that ruined two other people's gear in our group. By day two I stopped thinking about it entirely, which is exactly the point.</div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <div style="width:70px;height:70px;border-radius:12px;overflow:hidden"><img src="https://images.unsplash.com/photo-1633231610793-a5be285cb418?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="width:70px;height:70px;border-radius:12px;overflow:hidden"><img src="https://images.unsplash.com/photo-1639938794001-bcc9e3770fd4?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                </div>
+              </div>
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:34px;height:34px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#125B45">RM</span>
+                  <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:5px;font-size:15px;font-weight:700">Rohit M.<span style="font-family:'Material Symbols Rounded';font-size:16px;color:#16795B;font-variation-settings:'FILL' 1">verified</span></div>
+                    <div style="font-size:13px;color:#7A8880;margin-top:1px">Kuari Pass · Sep 2025 · 3,600 m</div>
+                  </div>
+                </div>
+                <div style="font-size:15px;line-height:1.55;color:#3B4842;margin-top:10px">Packs down to nothing. Runs a touch long in the sleeve if you are under 5'8".</div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07)">
+              <div style="height:52px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#16795B">edit</span>Write a field report</div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Reviews filtered by altitude and season, because "it works" means nothing without knowing where. Fit/warmth/dry bars answer the three real questions.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW E — BUY ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Buy</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">Weight leads, money follows. Two taps from pack to paid.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 15 PACK -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">15</span><span>PACK</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:flex-end;justify-content:space-between">
+              <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">FOR KEDARKANTHA · 12 DAYS</div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;letter-spacing:-0.03em;margin-top:6px">Your pack</div>
+              </div>
+              <span style="font-size:13px;font-weight:600;color:#16795B">Edit trek</span>
+            </div>
+
+            <div style="margin:18px 16px 0;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:16px">
+              <div style="width:66px;height:66px;border-radius:999px;background:conic-gradient(#16795B 0deg 126deg,#EFE7D9 126deg 360deg);display:flex;align-items:center;justify-content:center;flex:none">
+                <div style="width:50px;height:50px;border-radius:999px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                  <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:15px;line-height:1">4.2</span>
+                  <span style="font-size:10px;font-weight:700;color:#7A8880">KG</span>
+                </div>
+              </div>
+              <div style="flex:1">
+                <div style="font-size:15px;font-weight:700">Comfortable carry</div>
+                <div style="font-size:13px;line-height:1.5;color:#5C6A62;margin-top:3px">7.8 kg under the limit for a 3-day winter trek.</div>
+              </div>
+            </div>
+
+            <div style="padding:4px 16px 0">
+              <div style="display:flex;gap:12px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(23,35,29,0.07)">
+                <div style="width:68px;height:76px;border-radius:16px;overflow:hidden;flex:none;background:#EFE7D9"><img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1">
+                  <div style="display:flex;justify-content:space-between;gap:10px"><span style="font-size:15px;font-weight:700">Dew Windbreaker</span><span style="font-size:15px;font-weight:700">₹3,200</span></div>
+                  <div style="font-size:13px;font-weight:500;color:#7A8880;margin-top:3px">Size L · Moss · 240 g</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                    <span style="display:flex;align-items:center;gap:14px;background:#F1EADD;border-radius:999px;padding:5px 12px">
+                      <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#7A8880">remove</span><span style="font-size:15px;font-weight:600">1</span><span style="font-family:'Material Symbols Rounded';font-size:18px">add</span>
+                    </span>
+                    <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#9AA69F">delete</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(23,35,29,0.07)">
+                <div style="width:68px;height:76px;border-radius:16px;overflow:hidden;flex:none;background:#EFE7D9"><img src="https://images.unsplash.com/photo-1509762774605-f07235a08f1f?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1">
+                  <div style="display:flex;justify-content:space-between;gap:10px"><span style="font-size:15px;font-weight:700">Altitude Pack 40L</span><span style="font-size:15px;font-weight:700">₹2,800</span></div>
+                  <div style="font-size:13px;font-weight:500;color:#7A8880;margin-top:3px">40 L · Basalt · 1.3 kg</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                    <span style="display:flex;align-items:center;gap:14px;background:#F1EADD;border-radius:999px;padding:5px 12px">
+                      <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#7A8880">remove</span><span style="font-size:15px;font-weight:600">1</span><span style="font-family:'Material Symbols Rounded';font-size:18px">add</span>
+                    </span>
+                    <span style="font-family:'Material Symbols Rounded';font-size:20px;color:#9AA69F">delete</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:14px 16px 0;background:#DCEFE5;border-radius:20px;padding:14px;display:flex;align-items:center;gap:12px">
+              <div style="width:44px;height:44px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1648483092137-6e63796c8b06?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+              <div style="flex:1">
+                <div style="font-size:15px;font-weight:700;color:#125B45">Still missing headwear</div>
+                <div style="font-size:13px;color:#3B6E5B;margin-top:2px">Ridge Beanie closes your last gap · 62 g</div>
+              </div>
+              <span style="font-size:15px;font-weight:700;color:#125B45;flex:none">+₹1,100</span>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:16px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07)">
+              <div style="display:flex;justify-content:space-between;font-size:15px"><span style="color:#5C6A62">Subtotal</span><span style="font-weight:600">₹6,000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;margin-top:6px"><span style="color:#5C6A62">Delivery from Dehradun</span><span style="font-weight:700;color:#16795B">Free</span></div>
+              <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 22px;margin-top:14px;box-shadow:0 8px 20px rgba(22,121,91,0.28)">
+                <span style="font-size:17px;font-weight:700">Checkout · ₹6,000</span>
+                <span style="width:38px;height:38px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">arrow_forward</span></span>
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Weight is the headline number. The upsell is a gap in your kit, not "you may also like".</div>
+      </div>
+
+      <!-- 16 EMPTY PACK -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">16</span><span>EMPTY PACK</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;letter-spacing:-0.03em">Your pack</div>
+            </div>
+            <div style="padding:60px 32px 0;text-align:center">
+              <span style="width:96px;height:96px;border-radius:999px;background:#F1EADD;display:flex;align-items:center;justify-content:center;margin:0 auto"><span style="font-family:'Material Symbols Rounded';font-size:44px;color:#B8BEB8">backpack</span></span>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.03em;margin-top:22px">Suspiciously light</div>
+              <div style="font-size:15px;line-height:1.55;color:#5C6A62;margin-top:8px">Nothing in here yet. Start from your trek and we'll show only what it actually needs.</div>
+              <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;margin-top:24px;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Pack for Kedarkantha</div>
+              <div style="font-size:15px;font-weight:600;color:#16795B;margin-top:16px">Browse everything</div>
+            </div>
+
+            <div style="padding:44px 16px 0">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880">SAVED FOR LATER · 2</div>
+              <div style="display:flex;gap:12px;margin-top:12px">
+                <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:10px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;gap:10px;align-items:center">
+                  <div style="width:44px;height:44px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">Summit Flask</div><div style="font-size:13px;color:#16795B;font-weight:700;margin-top:2px">₹1,200</div></div>
+                </div>
+                <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:10px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;gap:10px;align-items:center">
+                  <div style="width:44px;height:44px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1587547131116-a0655a526190?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">Desert Scarf</div><div style="font-size:13px;color:#16795B;font-weight:700;margin-top:2px">₹900</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">home</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">storefront</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">backpack</span></div><span style="font-size:11px;font-weight:700;color:#125B45">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Empty states are where personality is cheapest and most welcome. The primary action is the trek, not the catalogue.</div>
+      </div>
+
+      <!-- 17 CHECKOUT ADDRESS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">17</span><span>CHECKOUT — DELIVERY</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Checkout</span>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;padding:20px 20px 0">
+              <span style="width:26px;height:26px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">1</span>
+              <span style="font-size:13px;font-weight:700">Delivery</span>
+              <span style="flex:1;height:2px;background:#EFE7D9"></span>
+              <span style="width:26px;height:26px;border-radius:999px;background:#EFE7D9;color:#9AA69F;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">2</span>
+              <span style="font-size:13px;font-weight:500;color:#9AA69F">Payment</span>
+              <span style="flex:1;height:2px;background:#EFE7D9"></span>
+              <span style="width:26px;height:26px;border-radius:999px;background:#EFE7D9;color:#9AA69F;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">3</span>
+            </div>
+
+            <div style="padding:22px 16px 0">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880">DELIVER TO</div>
+              <div style="margin-top:10px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);border:2px solid #16795B;display:flex;gap:12px">
+                <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B;font-variation-settings:'FILL' 1">home</span>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;font-weight:700">Home</span><span style="font-size:11px;font-weight:700;color:#125B45;background:#DCEFE5;border-radius:999px;padding:3px 8px">DEFAULT</span></div>
+                  <div style="font-size:15px;line-height:1.5;color:#5C6A62;margin-top:5px">412, Indiranagar 2nd Stage<br>Bengaluru, Karnataka 560038</div>
+                  <div style="font-size:13px;font-weight:500;color:#7A8880;margin-top:6px">+91 98765 43210</div>
+                </div>
+                <span style="font-size:13px;font-weight:600;color:#16795B;flex:none">Change</span>
+              </div>
+
+              <div style="margin-top:12px;border-radius:20px;border:1px dashed rgba(23,35,29,0.18);padding:14px;display:flex;align-items:center;gap:10px">
+                <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">add_location_alt</span>
+                <span style="flex:1;font-size:15px;font-weight:600;color:#5C6A62">Add a new address</span>
+              </div>
+
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880;margin-top:24px">WHEN</div>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+                <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:12px;border:2px solid #16795B">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#16795B">local_shipping</span>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:700">Standard · Thursday 14 Aug</div><div style="font-size:13px;color:#7A8880;margin-top:2px">Well before your trek on the 20th</div></div>
+                  <span style="font-size:15px;font-weight:700;color:#16795B">Free</span>
+                </div>
+                <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:12px">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">bolt</span>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:700">Express · Tuesday 12 Aug</div><div style="font-size:13px;color:#7A8880;margin-top:2px">Ships within 6 hours</div></div>
+                  <span style="font-size:15px;font-weight:700">₹180</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:16px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07)">
+              <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Continue to payment<span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_forward</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Delivery dates are stated against your trek date — the only deadline that actually matters here.</div>
+      </div>
+
+      <!-- 18 CHECKOUT PAYMENT -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">18</span><span>CHECKOUT — PAYMENT</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Payment</span>
+              <span style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#16795B"><span style="font-family:'Material Symbols Rounded';font-size:18px">lock</span>Secure</span>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;padding:20px 20px 0">
+              <span style="width:26px;height:26px;border-radius:999px;background:#DCEFE5;color:#125B45;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:16px">check</span></span>
+              <span style="font-size:13px;font-weight:500;color:#5C6A62">Delivery</span>
+              <span style="flex:1;height:2px;background:#16795B"></span>
+              <span style="width:26px;height:26px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">2</span>
+              <span style="font-size:13px;font-weight:700">Payment</span>
+              <span style="flex:1;height:2px;background:#EFE7D9"></span>
+              <span style="width:26px;height:26px;border-radius:999px;background:#EFE7D9;color:#9AA69F;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">3</span>
+            </div>
+
+            <div style="padding:22px 16px 0;display:flex;flex-direction:column;gap:10px">
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);border:2px solid #16795B">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span style="font-family:'Material Symbols Rounded';font-size:24px;color:#16795B">account_balance</span>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:700">UPI</div><div style="font-size:13px;color:#7A8880;margin-top:2px">GPay, PhonePe, Paytm, any app</div></div>
+                  <span style="width:22px;height:22px;border-radius:999px;background:#16795B;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:15px;color:#FFFFFF">check</span></span>
+                </div>
+                <div style="margin-top:14px;height:48px;border-radius:12px;background:#F7F3EA;display:flex;align-items:center;padding:0 14px;font-size:15px;font-weight:500;color:#5C6A62">ananya@okhdfcbank</div>
+              </div>
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:12px">
+                <span style="font-family:'Material Symbols Rounded';font-size:24px;color:#7A8880">payments</span>
+                <div style="flex:1"><div style="font-size:15px;font-weight:700">Cash on delivery</div><div style="font-size:13px;color:#7A8880;margin-top:2px">₹40 handling · pay the courier</div></div>
+                <span style="width:22px;height:22px;border-radius:999px;border:2px solid #D6DAD5"></span>
+              </div>
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;align-items:center;gap:12px">
+                <span style="font-family:'Material Symbols Rounded';font-size:24px;color:#7A8880">credit_card</span>
+                <div style="flex:1"><div style="font-size:15px;font-weight:700">Card</div><div style="font-size:13px;color:#7A8880;margin-top:2px">Visa, Mastercard, RuPay, Amex</div></div>
+                <span style="width:22px;height:22px;border-radius:999px;border:2px solid #D6DAD5"></span>
+              </div>
+            </div>
+
+            <div style="margin:20px 16px 0;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+              <div style="display:flex;justify-content:space-between;font-size:15px"><span style="color:#5C6A62">2 pieces · 4.2 kg</span><span style="font-weight:600">₹6,000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;margin-top:8px"><span style="color:#5C6A62">Delivery</span><span style="font-weight:700;color:#16795B">Free</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;margin-top:8px;padding-top:12px;border-top:1px solid rgba(23,35,29,0.07)"><span style="font-weight:700">Total</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px">₹6,000</span></div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07)">
+              <div style="height:54px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(22,121,91,0.28)">Pay ₹6,000</div>
+              <div style="text-align:center;margin-top:10px;font-size:13px;font-weight:500;color:#7A8880">7-day returns · ships from Dehradun</div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">UPI first and pre-filled, COD second with its fee stated honestly. Nothing here is a dark pattern.</div>
+      </div>
+
+      <!-- 19 ORDER PLACED -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">19</span><span>ORDER PLACED</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:linear-gradient(180deg,#FFE7C6 0%,#FBF7EF 42%)">
+            <div style="position:absolute;top:-30px;left:-50px;width:220px;height:220px;border-radius:999px;background:radial-gradient(circle,#FFF6E2 0%,rgba(255,246,226,0) 70%)"></div>
+            <div style="padding:92px 24px 0;text-align:center;position:relative">
+              <div style="width:132px;height:132px;border-radius:999px;background:#16795B;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #FFFFFF;box-shadow:0 14px 34px rgba(22,121,91,0.32)">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.18em;color:#9FE0C2">KEDARKANTHA</span>
+                <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;color:#FFFFFF;margin-top:4px">3,800</span>
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.18em;color:#9FE0C2;margin-top:3px">PATCH EARNED</span>
+              </div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em;margin-top:28px">You're packed.</div>
+              <div style="font-size:15px;line-height:1.55;color:#5C6A62;margin-top:10px">Two pieces, 4.2 kg, leaving Dehradun on Tuesday. That's 12 days to break in your boots.</div>
+              <div style="display:inline-flex;align-items:center;gap:8px;background:#FFFFFF;border-radius:999px;padding:9px 16px;margin-top:16px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">
+                <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#16795B">receipt_long</span>
+                <span style="font-size:13px;font-weight:600">Order #DD2841</span>
+              </div>
+            </div>
+
+            <div style="margin:28px 16px 0;background:#FFFFFF;border-radius:20px;padding:18px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:10px;height:10px;border-radius:999px;background:#16795B;flex:none"></span>
+                <span style="flex:1;font-size:15px;font-weight:600">Packed in Dehradun</span>
+                <span style="font-size:13px;color:#7A8880">Today</span>
+              </div>
+              <div style="width:2px;height:16px;background:#EFE7D9;margin:4px 0 4px 4px"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:10px;height:10px;border-radius:999px;background:#EFE7D9;flex:none"></span>
+                <span style="flex:1;font-size:15px;color:#5C6A62">On the road</span>
+                <span style="font-size:13px;color:#7A8880">Tue</span>
+              </div>
+              <div style="width:2px;height:16px;background:#EFE7D9;margin:4px 0 4px 4px"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:10px;height:10px;border-radius:999px;background:#EFE7D9;flex:none"></span>
+                <span style="flex:1;font-size:15px;color:#5C6A62">At your door</span>
+                <span style="font-size:13px;color:#7A8880">Thu</span>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:16px;right:16px;bottom:44px">
+              <div style="height:54px;border-radius:999px;background:#17231D;color:#FBF7EF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:22px">ios_share</span>Share the patch</div>
+              <div style="text-align:center;margin-top:14px;font-size:15px;font-weight:600;color:#16795B">Read the Kedarkantha packing guide</div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Ends on a souvenir, not a receipt. The patch shelf this feeds is the natural on-ramp to Trail Buddy later.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW F — AFTER ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">After</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">Tracking, orders, account. Where retention actually lives.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 20 TRACKING -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">20</span><span>ORDER TRACKING</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Order #DD2841</span>
+              <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">help</span>
+            </div>
+
+            <div style="margin:18px 16px 0;background:#16795B;border-radius:20px;padding:20px;color:#FFFFFF">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#9FE0C2">ARRIVING</div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;letter-spacing:-0.03em;margin-top:6px">Thursday, 14 Aug</div>
+              <div style="font-size:15px;color:rgba(255,255,255,0.82);margin-top:8px">Six days before you leave for Kedarkantha.</div>
+              <div style="display:flex;gap:6px;margin-top:16px">
+                <span style="flex:1;height:5px;border-radius:999px;background:#9FE0C2"></span>
+                <span style="flex:1;height:5px;border-radius:999px;background:#9FE0C2"></span>
+                <span style="flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,0.28)"></span>
+                <span style="flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,0.28)"></span>
+              </div>
+            </div>
+
+            <div style="margin:16px 16px 0;background:#FFFFFF;border-radius:20px;padding:18px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+              <div style="display:flex;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none;padding-top:3px">
+                  <span style="width:12px;height:12px;border-radius:999px;background:#16795B"></span>
+                  <span style="width:2px;flex:1;background:#16795B;min-height:34px"></span>
+                </div>
+                <div style="flex:1;padding-bottom:14px">
+                  <div style="font-size:15px;font-weight:700">Packed in Dehradun</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:2px">Mon 11 Aug, 4:20 pm</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none;padding-top:3px">
+                  <span style="width:12px;height:12px;border-radius:999px;background:#16795B"></span>
+                  <span style="width:2px;flex:1;background:#EFE7D9;min-height:34px"></span>
+                </div>
+                <div style="flex:1;padding-bottom:14px">
+                  <div style="font-size:15px;font-weight:700">Left the facility</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:2px">Tue 12 Aug, 7:05 am · Delhi hub</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none;padding-top:3px">
+                  <span style="width:12px;height:12px;border-radius:999px;background:#EFE7D9"></span>
+                  <span style="width:2px;flex:1;background:#EFE7D9;min-height:34px"></span>
+                </div>
+                <div style="flex:1;padding-bottom:14px">
+                  <div style="font-size:15px;font-weight:600;color:#5C6A62">Out for delivery</div>
+                  <div style="font-size:13px;color:#9AA69F;margin-top:2px">Expected Thu 14 Aug</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px">
+                <div style="flex:none;padding-top:3px"><span style="width:12px;height:12px;border-radius:999px;background:#EFE7D9;display:block"></span></div>
+                <div style="flex:1">
+                  <div style="font-size:15px;font-weight:600;color:#5C6A62">Delivered</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:16px 16px 0;background:#FFFFFF;border-radius:20px;padding:14px;box-shadow:0 2px 8px rgba(23,35,29,0.05);display:flex;gap:12px;align-items:center">
+              <div style="width:48px;height:54px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+              <div style="width:48px;height:54px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1509762774605-f07235a08f1f?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+              <div style="flex:1"><div style="font-size:15px;font-weight:700">2 pieces · 4.2 kg</div><div style="font-size:13px;color:#7A8880;margin-top:2px">Paid ₹6,000 by UPI</div></div>
+              <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#9AA69F">chevron_right</span>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07);display:flex;gap:12px">
+              <span style="flex:1;height:52px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:20px">chat</span>Get help</span>
+              <span style="flex:1;height:52px;border-radius:999px;background:#17231D;color:#FBF7EF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:20px">map</span>Live map</span>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">The arrival date is stated against the trek, not just the calendar. That single line kills most "where is my order" tickets.</div>
+      </div>
+
+      <!-- 21 ORDERS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">21</span><span>ORDERS</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Your orders</span>
+            </div>
+
+            <div style="display:flex;gap:8px;padding:18px 16px 0">
+              <span style="background:#17231D;color:#FBF7EF;border-radius:12px;padding:9px 14px;font-size:15px;font-weight:600">All</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:9px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">On the way</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:9px 14px;font-size:15px;box-shadow:0 2px 8px rgba(23,35,29,0.06)">Delivered</span>
+            </div>
+
+            <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:12px">
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#125B45;background:#DCEFE5;border-radius:999px;padding:5px 10px"><span style="font-family:'Material Symbols Rounded';font-size:15px">local_shipping</span>ON THE ROAD</span>
+                  <span style="font-size:13px;color:#7A8880">#DD2841</span>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+                  <div style="width:52px;height:58px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="width:52px;height:58px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1509762774605-f07235a08f1f?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:700">Arriving Thursday</div>
+                    <div style="font-size:13px;color:#7A8880;margin-top:2px">2 pieces · ₹6,000</div>
+                  </div>
+                </div>
+                <div style="height:44px;border-radius:999px;background:#F7F3EA;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;margin-top:14px">Track</div>
+              </div>
+
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#5C6A62;background:#F1EADD;border-radius:999px;padding:5px 10px"><span style="font-family:'Material Symbols Rounded';font-size:15px">check_circle</span>DELIVERED</span>
+                  <span style="font-size:13px;color:#7A8880">#DD2603</span>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+                  <div style="width:52px;height:58px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:700">Mist Tee</div>
+                    <div style="font-size:13px;color:#7A8880;margin-top:2px">Delivered 22 Jun · ₹1,800</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:14px">
+                  <span style="flex:1;height:44px;border-radius:999px;background:#F7F3EA;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">Buy again</span>
+                  <span style="flex:1;height:44px;border-radius:999px;background:#DCEFE5;color:#125B45;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:19px">edit</span>Report</span>
+                </div>
+              </div>
+
+              <div style="background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#5C6A62;background:#F1EADD;border-radius:999px;padding:5px 10px"><span style="font-family:'Material Symbols Rounded';font-size:15px">check_circle</span>DELIVERED</span>
+                  <span style="font-size:13px;color:#7A8880">#DD2199</span>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+                  <div style="width:52px;height:58px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="flex:1">
+                    <div style="font-size:15px;font-weight:700">Summit Flask</div>
+                    <div style="font-size:13px;color:#7A8880;margin-top:2px">Delivered 3 Mar · ₹1,200</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">"Report" beats "Review" as a verb here — it asks for field intelligence, which is exactly the content the store runs on.</div>
+      </div>
+
+      <!-- 22 ACCOUNT -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">22</span><span>YOU</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="position:relative;height:196px;background:linear-gradient(180deg,#D9E9F2 0%,#EDF3F0 46%,#FBF7EF 100%)">
+              <div style="position:absolute;top:60px;left:16px;right:16px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:17px;font-weight:700">You</span>
+                <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.82);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">settings</span></span>
+              </div>
+              <div style="position:absolute;left:16px;right:16px;bottom:14px;display:flex;align-items:center;gap:14px">
+                <span style="width:64px;height:64px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px;border:3px solid #FFFFFF">AK</span>
+                <div style="flex:1">
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;letter-spacing:-0.025em">Ananya Krishnan</div>
+                  <div style="font-size:13px;font-weight:500;color:#5C6A62;margin-top:2px">Bengaluru · joined 2024</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:6px 16px 0;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880">YOUR PATCHES · 4</span>
+                <span style="font-size:13px;font-weight:600;color:#16795B">See all</span>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:14px">
+                <div style="width:60px;height:60px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #FFFFFF;box-shadow:0 4px 12px rgba(22,121,91,0.25)"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;line-height:1">3,800</span><span style="font-size:8px;font-weight:700;letter-spacing:0.1em;margin-top:2px">KEDAR</span></div>
+                <div style="width:60px;height:60px;border-radius:999px;background:#F0952B;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #FFFFFF;box-shadow:0 4px 12px rgba(240,149,43,0.25)"><span style="font-size:8px;font-weight:700;letter-spacing:0.1em">MONSOON</span><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:12px;line-height:1;margin-top:2px">READY</span></div>
+                <div style="width:60px;height:60px;border-radius:999px;background:#6FB5D6;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #FFFFFF;box-shadow:0 4px 12px rgba(111,181,214,0.25)"><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;line-height:1">4,200</span><span style="font-size:8px;font-weight:700;letter-spacing:0.1em;margin-top:2px">KUARI</span></div>
+                <div style="width:60px;height:60px;border-radius:999px;background:#F1EADD;display:flex;align-items:center;justify-content:center;border:2px dashed #D6DAD5"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#B8BEB8">lock</span></div>
+              </div>
+            </div>
+
+            <div style="margin:12px 16px 0;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+              <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">receipt_long</span><span style="flex:1;font-size:15px;font-weight:600">Orders</span><span style="font-size:13px;color:#7A8880">3</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">favorite</span><span style="flex:1;font-size:15px;font-weight:600">Saved</span><span style="font-size:13px;color:#7A8880">6</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">hiking</span><span style="flex:1;font-size:15px;font-weight:600">Your treks</span><span style="font-size:13px;color:#7A8880">Kedarkantha</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">location_on</span><span style="flex:1;font-size:15px;font-weight:600">Addresses</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">mail</span><span style="flex:1;font-size:15px;font-weight:600">The Dispatch</span><span style="font-size:11px;font-weight:700;color:#125B45;background:#DCEFE5;border-radius:999px;padding:3px 8px">ON</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+            </div>
+
+            <div style="margin:12px 16px 0;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+              <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">help</span><span style="flex:1;font-size:15px;font-weight:600">Help &amp; returns</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">logout</span><span style="flex:1;font-size:15px;font-weight:600">Sign out</span></div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">home</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">storefront</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">explore</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span><span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{ cartCount }}</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">person</span></div><span style="font-size:11px;font-weight:700;color:#125B45">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Patches sit above the settings list because they are the reason to open this tab. One locked slot is visible — the only gamification the app allows itself.</div>
+      </div>
+
+      <!-- 23 SAVED -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">23</span><span>SAVED</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Saved</span>
+              <span style="font-size:13px;font-weight:600;color:#16795B">Add all to pack</span>
+            </div>
+
+            <div style="margin:18px 16px 0;background:#FDEBD4;border-radius:20px;padding:14px;display:flex;align-items:center;gap:12px">
+              <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#B4761A">notifications_active</span>
+              <span style="flex:1;font-size:13px;line-height:1.5;color:#8A5A10">Mist Tee is down to 2 pieces. We'll tell you before it goes.</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;padding:18px 16px 0">
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#16795B;font-variation-settings:'FILL' 1">favorite</span></span>
+                  <span style="position:absolute;top:8px;left:8px;background:#FDEBD4;color:#B4761A;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px">2 LEFT</span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Mist Tee</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">3,000 m</span><span style="font-weight:700;color:#16795B">₹1,800</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#16795B;font-variation-settings:'FILL' 1">favorite</span></span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Summit Flask</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">4,800 m</span><span style="font-weight:700;color:#16795B">₹1,200</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1648483092137-6e63796c8b06?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#16795B;font-variation-settings:'FILL' 1">favorite</span></span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Ridge Beanie</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">5,200 m</span><span style="font-weight:700;color:#16795B">₹1,100</span></div>
+              </div>
+              <div>
+                <div style="position:relative;height:142px;border-radius:20px;overflow:hidden;background:#EFE7D9;box-shadow:0 4px 14px rgba(23,35,29,0.06)">
+                  <img src="https://images.unsplash.com/photo-1587547131116-a0655a526190?w=500&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+                  <span style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#16795B;font-variation-settings:'FILL' 1">favorite</span></span>
+                </div>
+                <div style="font-size:15px;font-weight:600;margin-top:9px">Desert Scarf</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:13px;font-weight:500"><span style="color:#7A8880">2,800 m</span><span style="font-weight:700;color:#16795B">₹900</span></div>
+              </div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Saved items are where stock alerts belong — a genuine service, not a manufactured urgency banner.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FLOW G — TRAILS ══════ -->
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.03em">Trails</span>
+      <span style="font-size:13px;font-weight:500;color:#7A8880">The tab that earns attention between purchases — and the seat Trail Buddy inherits.</span>
+    </div>
+
+    <div style="display:flex;gap:56px;align-items:flex-start">
+
+      <!-- 24 TRAILS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">24</span><span>TRAILS</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">FIELD NOTES FROM THE GUIDES</div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1;letter-spacing:-0.03em;margin-top:6px">Trails</div>
+            </div>
+
+            <div style="margin:16px 16px 0;border-radius:20px;overflow:hidden;position:relative;height:210px">
+              <img src="https://images.unsplash.com/photo-1633231610793-a5be285cb418?w=900&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(23,35,29,0.05) 30%,rgba(23,35,29,0.82) 100%)"></div>
+              <div style="position:absolute;left:16px;right:16px;bottom:16px">
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#9FE0C2">YOUR TREK · 12 DAYS OUT</span>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;line-height:1.05;color:#FFFFFF;margin-top:5px">The Kedarkantha packing list</div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,0.82)">
+                  <span style="display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">schedule</span>7 min</span>
+                  <span style="display:flex;align-items:center;gap:4px"><span style="font-family:'Material Symbols Rounded';font-size:16px">terrain</span>3,800 m</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;padding:16px 16px 0;overflow:hidden">
+              <span style="background:#17231D;color:#FBF7EF;border-radius:12px;padding:8px 13px;font-size:13px;font-weight:600;flex:none">All</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:8px 13px;font-size:13px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.05)">Packing lists</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:8px 13px;font-size:13px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.05)">Routes</span>
+              <span style="background:#FFFFFF;border-radius:12px;padding:8px 13px;font-size:13px;flex:none;box-shadow:0 2px 8px rgba(23,35,29,0.05)">What broke</span>
+            </div>
+
+            <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="width:76px;height:76px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1722410141874-5494d14deeca?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">ROUTES</div>
+                  <div style="font-size:15px;font-weight:700;line-height:1.3;margin-top:3px">Kuari Pass in the shoulder season</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:4px">Swastik · 5 min</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="width:76px;height:76px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1733744237781-6eed02c60b8a?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">WHAT BROKE</div>
+                  <div style="font-size:15px;font-weight:700;line-height:1.3;margin-top:3px">Three seams that failed on Roopkund</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:4px">Field team · 4 min</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;background:#FFFFFF;border-radius:20px;padding:12px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="width:76px;height:76px;border-radius:16px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1758272960205-96258d60ac1f?w=300&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">PACKING LISTS</div>
+                  <div style="font-size:15px;font-weight:700;line-height:1.3;margin-top:3px">Two nights above the treeline</div>
+                  <div style="font-size:13px;color:#7A8880;margin-top:4px">Swastik · 6 min</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FFFFFF;border-top:1px solid rgba(23,35,29,0.07);display:flex;align-items:flex-start;padding:8px 6px 0">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">home</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Home</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">storefront</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Shop</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#125B45;font-variation-settings:'FILL' 1">explore</span></div><span style="font-size:11px;font-weight:700;color:#125B45">Trails</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="position:relative;width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">backpack</span><span style="position:absolute;top:-1px;right:12px;min-width:16px;height:16px;border-radius:999px;background:#F0952B;color:#FFFFFF;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px">{{ cartCount }}</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">Pack</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:58px;height:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#7A8880">person</span></div><span style="font-size:11px;font-weight:500;color:#7A8880">You</span></div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Content is ordered by relevance to your trek, so the tab has a reason to be opened on a day nobody wants to buy anything.</div>
+      </div>
+
+      <!-- 25 ARTICLE -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">25</span><span>ARTICLE</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="position:relative;height:280px;overflow:hidden">
+              <img src="https://images.unsplash.com/photo-1633231610793-a5be285cb418?w=1000&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(23,35,29,0.45) 0%,rgba(23,35,29,0) 45%)"></div>
+              <div style="position:absolute;top:58px;left:16px;right:16px;display:flex;justify-content:space-between">
+                <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+                <div style="display:flex;gap:8px">
+                  <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">bookmark</span></span>
+                  <span style="width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center"><span style="font-family:'Material Symbols Rounded';font-size:22px">ios_share</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div style="position:relative;margin-top:-24px;background:#FBF7EF;border-radius:28px 28px 0 0;padding:24px 20px 0">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#16795B">PACKING LISTS · 7 MIN</div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:34px;line-height:1.02;letter-spacing:-0.03em;margin-top:8px">The Kedarkantha packing list</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+                <span style="width:34px;height:34px;border-radius:999px;background:#DCEFE5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#125B45">SG</span>
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Swastik Ghosh Dastidar</div><div style="font-size:13px;color:#7A8880">Guide · 41 summits · Dehradun</div></div>
+              </div>
+
+              <div style="font-family:'Instrument Serif',serif;font-size:21px;line-height:1.45;color:#3B4842;margin-top:20px;text-wrap:pretty">December on Kedarkantha is not cold until it is. The summit push starts at 4am and the wind finds every gap you left open.</div>
+              <div style="font-size:15px;line-height:1.65;color:#3B4842;margin-top:16px;text-wrap:pretty">Most people over-pack the base layers and under-pack the shell. You will sweat before sunrise on the climb out of Sankri, then stand still for twenty minutes at the ridge while somebody's crampon gets fixed. That twenty minutes is what your kit is actually for.</div>
+
+              <div style="margin-top:20px;background:#FFFFFF;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880">MENTIONED IN THIS GUIDE</div>
+                <div style="display:flex;gap:12px;margin-top:12px;align-items:center">
+                  <div style="width:52px;height:58px;border-radius:12px;overflow:hidden;flex:none"><img src="https://images.unsplash.com/photo-1595174028948-42a4b1786664?w=200&amp;q=75&amp;auto=format&amp;fit=crop" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:700">Dew Windbreaker</div><div style="font-size:13px;color:#7A8880;margin-top:2px">240 g · ₹3,200</div></div>
+                  <span style="height:36px;border-radius:999px;background:#16795B;color:#FFFFFF;display:flex;align-items:center;padding:0 14px;font-size:13px;font-weight:700">Add</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 40px;background:#FBF7EF;border-top:1px solid rgba(23,35,29,0.07)">
+              <div style="height:52px;border-radius:999px;background:#17231D;color:#FBF7EF;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700"><span style="font-family:'Material Symbols Rounded';font-size:20px">backpack</span>Add the full list to my pack</div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Editorial that sells without pretending not to: the products named in the text are addable inline, and the whole list in one tap.</div>
+      </div>
+
+      <!-- 26 SETTINGS -->
+      <div style="display:flex;flex-direction:column;gap:18px;width:402px">
+        <div style="display:flex;align-items:baseline;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.14em"><span style="color:#16795B">26</span><span>SETTINGS</span></div>
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+          <div style="height:874px;position:relative;overflow:hidden;background:#FBF7EF">
+            <div style="padding:62px 16px 0;display:flex;align-items:center;gap:12px">
+              <span style="width:40px;height:40px;border-radius:999px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px">arrow_back</span></span>
+              <span style="flex:1;font-size:17px;font-weight:700">Settings</span>
+            </div>
+
+            <div style="padding:22px 16px 0">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880">NOTIFICATIONS</div>
+              <div style="margin-top:10px;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">local_shipping</span>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:600">Order updates</div><div style="font-size:13px;color:#7A8880;margin-top:1px">Packed, shipped, delivered</div></div>
+                  <span style="width:50px;height:30px;border-radius:999px;background:#16795B;display:flex;align-items:center;justify-content:flex-end;padding:3px"><span style="width:24px;height:24px;border-radius:999px;background:#FFFFFF"></span></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">ac_unit</span>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:600">Weather on your trek</div><div style="font-size:13px;color:#7A8880;margin-top:1px">Only when it affects your kit</div></div>
+                  <span style="width:50px;height:30px;border-radius:999px;background:#16795B;display:flex;align-items:center;justify-content:flex-end;padding:3px"><span style="width:24px;height:24px;border-radius:999px;background:#FFFFFF"></span></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px">
+                  <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">workspace_premium</span>
+                  <div style="flex:1"><div style="font-size:15px;font-weight:600">Drops and restocks</div><div style="font-size:13px;color:#7A8880;margin-top:1px">Small runs, subscribers first</div></div>
+                  <span style="width:50px;height:30px;border-radius:999px;background:#E3DED2;display:flex;align-items:center;padding:3px"><span style="width:24px;height:24px;border-radius:999px;background:#FFFFFF"></span></span>
+                </div>
+              </div>
+
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880;margin-top:24px">PREFERENCES</div>
+              <div style="margin-top:10px;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">straighten</span><span style="flex:1;font-size:15px;font-weight:600">Units</span><span style="font-size:15px;color:#7A8880">Metric</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">translate</span><span style="flex:1;font-size:15px;font-weight:600">Language</span><span style="font-size:15px;color:#7A8880">English</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">dark_mode</span><span style="flex:1;font-size:15px;font-weight:600">Appearance</span><span style="font-size:15px;color:#7A8880">Daylight</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+              </div>
+
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;color:#7A8880;margin-top:24px">ACCOUNT</div>
+              <div style="margin-top:10px;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(23,35,29,0.05)">
+                <div style="display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid rgba(23,35,29,0.06)"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#5C6A62">shield</span><span style="flex:1;font-size:15px;font-weight:600">Privacy</span><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C6CCC7">chevron_right</span></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:16px"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#C25A45">delete</span><span style="flex:1;font-size:15px;font-weight:600;color:#C25A45">Delete account</span></div>
+              </div>
+
+              <div style="text-align:center;margin-top:28px;font-size:13px;color:#9AA69F;line-height:1.6">Dewdropz 1.0.0 (24)<br>Made in Dehradun · 30.3165° N, 78.0322° E</div>
+            </div>
+          </div>
+        </x-import>
+        <div style="font-size:14px;line-height:1.55;color:#5C6A62">Notification toggles are described by what they do for you, not by their category name — the honest version of permission design.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;annotations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Presentation&quot;},&quot;cartCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2,&quot;min&quot;:0,&quot;max&quot;:9,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Presentation&quot;},&quot;firstName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Ananya&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Content&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      annotations: this.props.annotations ?? true,
+      cartCount: this.props.cartCount ?? 2,
+      firstName: this.props.firstName ?? "Ananya",
+    };
+  }
+}
+</script>
+</body>
+</html>

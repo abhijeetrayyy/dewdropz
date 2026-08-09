@@ -86,7 +86,65 @@ export const mobileCheckoutSchema = z.object({
     slug: z.string().min(1),
     size: z.string().optional(),
     quantity: z.number().int().min(1).max(99),
+    // Customized lines carry their exact product/variant plus the saved
+    // design, so syncLocalCartToDbCart can link the design to the order line
+    // instead of re-resolving the product by fuzzy size match.
+    productId: z.string().uuid().optional(),
+    variantId: z.string().uuid().nullish(),
+    customDesignId: z.string().uuid().optional(),
   })).min(1),
+})
+
+// A single design layer as the mobile studio stores it. Positions are in the
+// zone's canonical coordinate space, so the server can rasterize at any DPI
+// without the client knowing the output size.
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+
+const textLayerSchema = z.object({
+  kind: z.literal('text'),
+  text: z.string().min(1).max(280),
+  fontFamily: z.string().max(60),
+  fontSize: z.number().min(1).max(400),
+  color: hexColor,
+  bold: z.boolean(),
+  italic: z.boolean(),
+  x: z.number(),
+  y: z.number(),
+  scale: z.number().min(0.05).max(20),
+  rotation: z.number(),
+})
+
+const imageLayerSchema = z.object({
+  kind: z.literal('image'),
+  // Must already be uploaded — the renderer refuses anything but http(s), so a
+  // client can't point it at a local path or a data: blob.
+  uri: z.string().url(),
+  width: z.number().min(1),
+  height: z.number().min(1),
+  x: z.number(),
+  y: z.number(),
+  scale: z.number().min(0.05).max(20),
+  rotation: z.number(),
+})
+
+const designLayerSchema = z.discriminatedUnion('kind', [textLayerSchema, imageLayerSchema])
+
+export const mobileDesignSchema = z.object({
+  productId: z.string().uuid(),
+  variantId: z.string().uuid().nullish(),
+  colorName: z.string().max(60).optional(),
+  colorHex: hexColor.optional(),
+  front: z.array(designLayerSchema).max(40).optional(),
+  back: z.array(designLayerSchema).max(40).optional(),
+}).refine((v) => (v.front?.length ?? 0) > 0 || (v.back?.length ?? 0) > 0, {
+  message: 'At least one side must carry a design',
+})
+
+// A photo the shopper picked on their phone, sent for storage so the design
+// renderer (and fulfilment) can fetch it by URL.
+export const mobileUploadSchema = z.object({
+  data: z.string().min(1).max(14_000_000),
+  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
 })
 
 export const reviewSchema = z.object({
@@ -135,6 +193,8 @@ export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>
 export type CouponInput = z.infer<typeof couponSchema>
 export type CheckoutInput = z.infer<typeof checkoutSchema>
 export type MobileCheckoutInput = z.infer<typeof mobileCheckoutSchema>
+export type MobileDesignInput = z.infer<typeof mobileDesignSchema>
+export type MobileUploadInput = z.infer<typeof mobileUploadSchema>
 export type ReviewInput = z.infer<typeof reviewSchema>
 export type NewsletterInput = z.infer<typeof newsletterSchema>
 export type ProductInput = z.infer<typeof productSchema>

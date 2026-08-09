@@ -57,7 +57,14 @@ export async function POST(request: NextRequest) {
   }
 
   const { skipped } = await syncLocalCartToDbCart(
-    input.items.map((item) => ({ slug: item.slug, size: item.size ?? '', quantity: item.quantity })),
+    input.items.map((item) => ({
+      slug: item.slug,
+      size: item.size ?? '',
+      quantity: item.quantity,
+      productId: item.productId,
+      variantId: item.variantId ?? null,
+      customDesignId: item.customDesignId,
+    })),
     user.id,
     admin
   )

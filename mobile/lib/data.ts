@@ -1,11 +1,35 @@
 import { supabase } from "./supabase";
 import { PRODUCTS, COLLECTIONS } from "./constants";
+import { resolveAssetUrl } from "./customize/assetUrl";
 
 export type ProductAttribute = {
   attribute?: { name: string } | null;
   value?: { value: string } | null;
   text_value?: string | null;
 };
+
+// A print-safe area on one side of one garment colourway, in the same
+// canonical 800px-wide coordinate space the web studio authors zones in — so
+// a zone drawn once in admin lines up on web and on both mobile platforms.
+export type CustomizationZone = {
+  mockupImage: string;
+  x: number;
+  y: number;
+  widthPx: number;
+  heightPx: number;
+  widthIn: number;
+  heightIn: number;
+};
+
+export type CustomizationColorway = {
+  name: string;
+  hex: string;
+  available: boolean;
+  front?: CustomizationZone;
+  back?: CustomizationZone;
+};
+
+export type CustomizationConfig = { colors: CustomizationColorway[] };
 
 export type Product = {
   id: string; slug: string; name: string; price: number;
@@ -17,18 +41,46 @@ export type Product = {
   care_instructions?: string | null;
   low_stock_threshold?: number;
   inventory_quantity?: number | null;
+  created_at?: string;
   attributes?: ProductAttribute[];
+  is_customizable?: boolean;
+  customization_config?: CustomizationConfig | null;
 };
 
+// `inventory_quantity` and `created_at` are pulled here (not just in the
+// detail select) so the "N LEFT" / "NEW" tags on grid/rail cards have real
+// data to render against — without these, ProductCard's badge logic is
+// silently dead on every list screen even though the JSX is correct.
 const PRODUCT_SELECT =
-  "id,slug,name,price,images,collection:collections(id,slug,name),variants:product_variants(id,name,price_adjustment),description,short_description,compare_at_price";
+  "id,slug,name,price,images,collection:collections(id,slug,name),variants:product_variants(id,name,price_adjustment),description,short_description,compare_at_price,is_customizable,inventory_quantity,created_at";
+
+// Only the customizable blanks, with the colourway config the studio and the
+// home showcase need. Kept separate from PRODUCT_SELECT so ordinary list
+// screens don't pull a JSONB blob per card they'd never render.
+const CUSTOMIZABLE_SELECT =
+  "id,slug,name,price,images,short_description,is_customizable,customization_config,variants:product_variants(id,name,price_adjustment,inventory_quantity),inventory_quantity,created_at";
 
 // Detail view needs the fields the list/grid views don't: highlights, care
 // copy, low-stock threshold, per-variant inventory, and the attribute join
 // that powers the "Specifications" accordion — kept out of PRODUCT_SELECT so
 // list screens (Shop/Home/Collections) don't pull a heavier payload per card.
 const PRODUCT_DETAIL_SELECT =
-  "id,slug,name,price,images,collection:collections(id,slug,name,tagline),variants:product_variants(id,name,price_adjustment,inventory_quantity),description,short_description,compare_at_price,highlights,care_instructions,low_stock_threshold,inventory_quantity,attributes:product_attribute_values(text_value,attribute:attributes(name),value:attribute_values(value))";
+  "id,slug,name,price,images,collection:collections(id,slug,name,tagline),variants:product_variants(id,name,price_adjustment,inventory_quantity),description,short_description,compare_at_price,highlights,care_instructions,low_stock_threshold,inventory_quantity,created_at,is_customizable,customization_config,attributes:product_attribute_values(text_value,attribute:attributes(name),value:attribute_values(value))";
+
+// Product and collection imagery is authored in admin as a mix of absolute
+// URLs (Supabase storage, Unsplash) and site-relative paths (e.g.
+// "/custom/tee/tee-front.png") that only resolve against the web app's own
+// origin. Native has no origin, so a relative path renders as nothing — no
+// error, no broken-image glyph, just an empty box. That's what was blanking
+// the Home hero whenever the newest product happened to be a studio blank.
+//
+// Normalising here rather than at each render site means every screen —
+// cards, rails, galleries, hero, cart thumbnails — is fixed once and can't
+// regress by forgetting the call.
+function resolveImages<T extends { images?: string[] | null }>(row: T): T {
+  if (!row?.images?.length) return row;
+  return { ...row, images: row.images.map(resolveAssetUrl).filter(Boolean) };
+}
 
 // Always loads from Supabase first; falls back to constants data.
 // This means the app shows real products immediately even before DB seed.
@@ -39,9 +91,12 @@ export async function getProducts(): Promise<Product[]> {
     .select(PRODUCT_SELECT)
     .eq("status", "active")
     .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // Without this, embedded variants come back in arbitrary order and size
+    // pickers render as e.g. "L XL M S". `sort_order` exists for exactly this.
+    .order("sort_order", { referencedTable: "product_variants", ascending: true });
 
-  if (data && data.length > 0) return data as unknown as Product[];
+  if (data && data.length > 0) return (data as unknown as Product[]).map(resolveImages);
 
   // Fallback to constants
   return PRODUCTS.map((p) => ({
@@ -65,9 +120,10 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     .eq("slug", slug)
     .eq("status", "active")
     .is("deleted_at", null)
+    .order("sort_order", { referencedTable: "product_variants", ascending: true })
     .single();
 
-  if (data) return data as unknown as Product;
+  if (data) return resolveImages(data as unknown as Product);
 
   // Fallback to constants
   const p = PRODUCTS.find((x) => x.slug === slug);
@@ -86,6 +142,24 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   };
 }
 
+// The customizable blanks, cheapest-first so the showcase reads as an
+// approachable ladder (tee → sweatshirt → hoodie). No constants fallback:
+// customization depends on real per-colourway mockup URLs and print zones
+// that only exist in the DB, so faking it offline would render a studio that
+// can't actually produce a print file.
+export async function getCustomizableProducts(): Promise<Product[]> {
+  const { data } = await supabase
+    .from("products")
+    .select(CUSTOMIZABLE_SELECT)
+    .eq("status", "active")
+    .eq("is_customizable", true)
+    .is("deleted_at", null)
+    .order("price", { ascending: true })
+    .order("sort_order", { referencedTable: "product_variants", ascending: true });
+
+  return ((data as unknown as Product[]) ?? []).map(resolveImages);
+}
+
 // Batch-hydrates a list of product slugs into real product records — used by
 // the wishlist screen, which only ever stores slugs, not full product data.
 // A single `.in(...)` query rather than one request per slug.
@@ -99,7 +173,7 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
     .eq("status", "active")
     .is("deleted_at", null);
 
-  if (data && data.length > 0) return data as unknown as Product[];
+  if (data && data.length > 0) return (data as unknown as Product[]).map(resolveImages);
 
   return PRODUCTS.filter((p) => slugs.includes(p.slug)).map((p) => ({
     id: p.id,
@@ -131,7 +205,7 @@ export async function getCollections() {
     .select("id,slug,name,tagline,image_url")
     .order("created_at", { ascending: true });
 
-  if (data && data.length > 0) return data;
+  if (data && data.length > 0) return data.map((c) => ({ ...c, image_url: resolveAssetUrl(c.image_url) }));
 
   return COLLECTIONS.map((c) => ({
     id: c.id,
@@ -238,7 +312,9 @@ export async function getAddresses(userId: string): Promise<Address[]> {
 export type Order = {
   id: string; order_number: string; status: string; payment_status: string;
   total_amount: number; subtotal: number; shipping_cost: number; created_at: string;
-  items?: { product_name: string; quantity: number; unit_price: number }[];
+  // `product_name`/`unit_price` are only present on the detail query — the
+  // list query joins `quantity` alone, so they're optional per-line.
+  items?: { product_name?: string; quantity: number; unit_price?: number }[];
 };
 
 // Orders never had a `lib/data.ts` wrapper — both order screens queried
@@ -248,11 +324,16 @@ export type Order = {
 export async function getOrders(userId: string): Promise<Order[]> {
   const { data, error } = await supabase
     .from("orders")
-    .select("id,order_number,status,payment_status,total_amount,subtotal,shipping_cost,created_at")
+    // `items` is joined here purely for its length — the orders list shows
+    // "N pieces" per row, and without the join `items` was always undefined,
+    // so every order in the list rendered "0 pieces" regardless of contents.
+    // Only `quantity` is selected: enough to sum, far lighter than pulling
+    // product names and prices for rows that never display them.
+    .select("id,order_number,status,payment_status,total_amount,subtotal,shipping_cost,created_at,items:order_items(quantity)")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as Order[];
 }
 
 export async function getOrderById(id: string): Promise<Order> {
