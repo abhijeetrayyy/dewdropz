@@ -13,6 +13,10 @@ const supabasePatterns = supabaseUrl
   : [];
 
 const nextConfig: NextConfig = {
+  // @napi-rs/canvas loads a platform-specific .node binary at runtime, which
+  // the bundler can't trace or inline — bundling it fails with "Cannot find
+  // native binding". Keeping it external makes the route require it normally.
+  serverExternalPackages: ["@napi-rs/canvas"],
   images: {
     remotePatterns: [
       { protocol: "https" as const, hostname: "images.unsplash.com", pathname: "/**" },

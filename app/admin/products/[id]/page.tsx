@@ -20,7 +20,7 @@ import { ImageUploader } from '@/components/admin/ImageUploader'
 import { MultiCombobox } from '@/components/admin/MultiCombobox'
 import { BulletListEditor } from '@/components/admin/BulletListEditor'
 import { StoryBlockEditor, type StoryBlock } from '@/components/admin/StoryBlockEditor'
-import { ZoneEditor } from '@/components/admin/ZoneEditor'
+import { ColorwaysEditor } from '@/components/admin/ColorwaysEditor'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -28,7 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Save, PackageOpen, Layers, Hash, Sparkles, Boxes, Palette } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Product, CategoryWithChildren, Tag, AttributeWithValues, VariantWithOptions, InventoryMovementWithDetails, CustomizationZone } from '@/types/database'
+import type { Product, CategoryWithChildren, Tag, AttributeWithValues, VariantWithOptions, InventoryMovementWithDetails, CustomizationColorway } from '@/types/database'
 
 function flattenTree(cats: CategoryWithChildren[]): (CategoryWithChildren & { depth: number })[] {
   const r: (CategoryWithChildren & { depth: number })[] = []
@@ -52,8 +52,7 @@ export default function ProductEditor() {
   const [careInstructions, setCareInstructions] = useState('')
   const [storyBlocks, setStoryBlocks] = useState<StoryBlock[]>([])
   const [isCustomizable, setIsCustomizable] = useState(false)
-  const [frontZone, setFrontZone] = useState<CustomizationZone | null>(null)
-  const [backZone, setBackZone] = useState<CustomizationZone | null>(null)
+  const [colorways, setColorways] = useState<CustomizationColorway[]>([])
   const [price, setPrice] = useState('')
   const [comparePrice, setComparePrice] = useState('')
   const [sku, setSku] = useState('')
@@ -92,8 +91,7 @@ export default function ProductEditor() {
     setHighlights(p.highlights ?? []); setCareInstructions(p.care_instructions ?? '')
     setStoryBlocks(p.story_blocks ?? [])
     setIsCustomizable(p.is_customizable ?? false)
-    setFrontZone(p.customization_config?.front ?? null)
-    setBackZone(p.customization_config?.back ?? null)
+    setColorways(p.customization_config?.colors ?? [])
     setPrice(String(p.price / 100)); setComparePrice(p.compare_at_price ? String(p.compare_at_price / 100) : '')
     setSku(p.sku ?? ''); setWeight(p.weight ? String(p.weight) : '')
     setFeatured(p.is_featured); setIsActive(p.is_active)
@@ -156,9 +154,7 @@ export default function ProductEditor() {
     try {
       await updateProduct(productId, {
         is_customizable: isCustomizable,
-        customization_config: isCustomizable
-          ? { front: frontZone ?? undefined, back: backZone ?? undefined }
-          : null,
+        customization_config: isCustomizable ? { colors: colorways } : null,
       })
       toast.success('Customization settings saved')
     } catch { toast.error('Failed to save customization settings') }
@@ -529,9 +525,8 @@ export default function ProductEditor() {
               </label>
 
               {isCustomizable && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2 border-t border-gray-100">
-                  <ZoneEditor label="Front" value={frontZone} onChange={setFrontZone} />
-                  <ZoneEditor label="Back" value={backZone} onChange={setBackZone} />
+                <div className="pt-2 border-t border-gray-100">
+                  <ColorwaysEditor value={colorways} onChange={setColorways} />
                 </div>
               )}
 

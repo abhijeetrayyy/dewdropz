@@ -210,9 +210,21 @@ export interface CustomizationZone {
   heightIn: number
 }
 
-export interface CustomizationConfig {
+// A single sellable colorway of a customizable product. `available` is the
+// switch between "this color can actually be ordered" and "shown as a
+// planned option, disabled until real mockup photos exist" — the studio
+// renders every colorway as a swatch either way, so adding a real color
+// later is just an admin edit, not a code change.
+export interface CustomizationColorway {
+  name: string
+  hex: string
+  available: boolean
   front?: CustomizationZone
   back?: CustomizationZone
+}
+
+export interface CustomizationConfig {
+  colors: CustomizationColorway[]
 }
 
 export interface Product {
@@ -308,6 +320,10 @@ export interface CustomDesign {
   back_preview_url: string | null
   front_print_url: string | null
   back_print_url: string | null
+  // Which garment colorway this was designed against. Null on designs
+  // created before colorways existed.
+  color_name: string | null
+  color_hex: string | null
   created_at: string
 }
 

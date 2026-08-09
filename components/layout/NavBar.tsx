@@ -19,6 +19,7 @@ import {
 const NAV_LINKS = [
   { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
+  { label: 'Customize', href: '/customize' },
   // Treks paused as a business line — restore by uncommenting (and the other
   // "Treks paused" blocks: footer, SummitHero, SeasonKit, TerrainScene, /treks page).
   // { label: 'Treks', href: '/treks' },
