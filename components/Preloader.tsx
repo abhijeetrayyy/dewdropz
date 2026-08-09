@@ -6,27 +6,88 @@ import Image from 'next/image'
 import { gsap } from '@/lib/gsap'
 import { useIntro } from '@/providers/IntroProvider'
 
-const TELEMETRY_PHASES = [
-  { max: 25, text: 'PREPARING DEWDROPZ EXPEDITION' },
-  { max: 55, text: 'MAPPING ALTITUDE CONTOURS' },
-  { max: 80, text: 'ALIGNED TO MOUNTAIN RIDGE' },
-  { max: 100, text: 'TRAIL MAP ACTIVE' },
+// ─────────────────────────────────────────────────────────────────────────────
+// The load is the dawn.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The previous version was a near-black panel (`bg-ink`) with a percentage
+// counter and rotating telemetry strings. It loaded fine and said nothing. Worse,
+// it set up four more screens of darkness behind it — the site's first ~4
+// screen-heights were all dark surfaces, so a visitor's entire first impression
+// was an unlit void.
+//
+// This inverts that. The whole homepage is built as one day on the mountain
+// starting pre-dawn, and the single most valuable moment in that day — first
+// light — was never actually rendered anywhere. So the loading screen becomes
+// it: the sky moves through a real sunrise as progress climbs, a sun clears the
+// ridgeline, and the panel resolves onto warm paper that the hero then inherits.
+//
+// The wait now BUYS something instead of costing something, and the site opens
+// by resolving toward light rather than away from it.
+
+/**
+ * Sky keyframes, sampled from an actual Himalayan dawn rather than picked off a
+ * colour wheel — astronomical night, nautical twilight, civil twilight, the
+ * amber minute before the sun clears the ridge, then full daylight on paper.
+ *
+ * Each stop is [top, bottom]: the sky is always lighter at the horizon, which is
+ * the single cue that makes a two-colour gradient read as "sky" instead of
+ * "gradient".
+ */
+const SKY = [
+  { at: 0.0, top: '#080D14', bottom: '#101A26' }, // astronomical night
+  { at: 0.3, top: '#132033', bottom: '#2A3A55' }, // nautical twilight
+  { at: 0.55, top: '#2B3A5C', bottom: '#7A5C74' }, // civil twilight, violet band
+  { at: 0.78, top: '#5E5A78', bottom: '#C98A63' }, // the amber minute
+  { at: 0.92, top: '#A48B86', bottom: '#E8B583' }, // sun on the ridge
+  { at: 1.0, top: '#E4DCCB', bottom: '#F6F3EA' }, // full day — hero's paper
 ]
+
+function lerpHex(a: string, b: string, t: number) {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16))
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16))
+  const mix = pa.map((v, i) => Math.round(v + (pb[i] - v) * t))
+  return `#${mix.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
+
+/** The sky at a given 0–1 progress, interpolated between the two nearest stops. */
+function skyAt(p: number) {
+  let lo = SKY[0]
+  let hi = SKY[SKY.length - 1]
+  for (let i = 0; i < SKY.length - 1; i++) {
+    if (p >= SKY[i].at && p <= SKY[i + 1].at) {
+      lo = SKY[i]
+      hi = SKY[i + 1]
+      break
+    }
+  }
+  const span = hi.at - lo.at || 1
+  const t = Math.min(1, Math.max(0, (p - lo.at) / span))
+  return { top: lerpHex(lo.top, hi.top, t), bottom: lerpHex(lo.bottom, hi.bottom, t) }
+}
+
+// Same silhouette language as the mobile app's Ridgeline, so the two products
+// share a motif even though they share no layout.
+const RIDGE_FAR =
+  'M0,150 L70,120 L120,138 L190,86 L245,118 L300,96 L360,130 L430,88 L500,124 L560,100 L640,140 L700,112 L780,146 L850,120 L920,150 L1000,128 L1000,220 L0,220 Z'
+const RIDGE_NEAR =
+  'M0,186 L80,168 L160,190 L240,154 L320,180 L400,160 L470,188 L550,158 L630,182 L710,162 L790,190 L870,166 L940,184 L1000,172 L1000,220 L0,220 Z'
 
 export default function Preloader() {
   const { finishIntro } = useIntro()
   // Admin is a working tool, not the brand experience — it never gets the
-  // mountain-loading splash. Captured once on mount (not reactive to later
-  // navigation) since this is a one-time "first load" component, matching
-  // CustomCursor's admin guard elsewhere in this layout.
+  // dawn. Captured once on mount (not reactive to later navigation) since this
+  // is a one-time "first load" component.
   const pathname = usePathname()
   const isAdminRoute = useRef(pathname?.startsWith('/admin') ?? false)
   const [visible, setVisible] = useState(true)
-  const [telemetry, setTelemetry] = useState('CALIBRATING SENSORS')
+
   const panelRef = useRef<HTMLDivElement>(null)
-  const logoRef = useRef<HTMLDivElement>(null)
+  const skyRef = useRef<HTMLDivElement>(null)
+  const sunRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
-  const counterRef = useRef<HTMLSpanElement>(null)
+  const markRef = useRef<HTMLDivElement>(null)
+  const timeRef = useRef<HTMLSpanElement>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const skippedRef = useRef(false)
 
@@ -39,95 +100,75 @@ export default function Preloader() {
 
     document.body.style.overflow = 'hidden'
 
-    // Subtly pulse logo glow during load (soft and glowing, not harsh). Lives on
-    // its own inner element — the entrance tween below also animates `filter`
-    // (for the blur-in), and two tweens writing the same CSS property on the
-    // same node stomp each other every frame instead of composing.
-    if (glowRef.current) {
-      gsap.to(glowRef.current, {
-        filter: 'drop-shadow(0 0 10px rgba(123, 164, 111, 0.28))',
-        duration: 0.8,
-        repeat: -1,
-        yoyo: true,
-        ease: 'power1.inOut',
-      })
-    }
-
-    const hidePreloader = () => {
+    const hide = () => {
       document.body.style.overflow = ''
       finishIntro()
       setVisible(false)
     }
 
-    // Safety timeout: if gsap fails silently, show the page anyway after 5s
-    const safetyTimer = setTimeout(hidePreloader, 5000)
+    // Safety net: if gsap ever fails silently, show the site anyway.
+    const safety = setTimeout(hide, 5000)
 
-    const counter = { value: 0 }
+    const state = { p: 0 }
     const tl = gsap.timeline({
       onComplete: () => {
-        clearTimeout(safetyTimer)
-        hidePreloader()
+        clearTimeout(safety)
+        hide()
       },
     })
     tlRef.current = tl
 
-    // The mark can't stroke-draw like the old hand-coded SVG did (it's a raster
-    // logo now), so the entrance is a soft rise-and-focus instead: starts low,
-    // blurred and translucent, settles into place as the counter climbs.
-    if (logoRef.current) {
+    // The sun climbs and the sky warms off ONE driver, so light and position can
+    // never disagree — the sun is always lowest when the sky is darkest.
+    tl.to(state, {
+      p: 1,
+      duration: 2.4,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        const p = state.p
+        const { top, bottom } = skyAt(p)
+        if (skyRef.current) {
+          skyRef.current.style.background = `linear-gradient(to bottom, ${top} 0%, ${bottom} 100%)`
+        }
+        if (sunRef.current) {
+          // Rises from below the ridge into the sky, and swells slightly as it
+          // clears — the atmospheric magnification everyone has seen at a horizon.
+          sunRef.current.style.transform = `translate(-50%, ${64 - p * 150}px) scale(${0.7 + p * 0.5})`
+          sunRef.current.style.opacity = String(Math.max(0, (p - 0.35) / 0.4))
+        }
+        if (glowRef.current) {
+          glowRef.current.style.opacity = String(Math.max(0, (p - 0.45) / 0.55) * 0.85)
+        }
+        // A clock, not a percentage. "04:12" says pre-dawn; "087%" says nothing.
+        if (timeRef.current) {
+          const mins = Math.round(4 * 60 + 10 + p * 105) // 04:10 → 05:55
+          timeRef.current.textContent = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+        }
+      },
+    })
+
+    if (markRef.current) {
       tl.fromTo(
-        logoRef.current,
-        { autoAlpha: 0, y: 16, scale: 0.92, filter: 'blur(6px)' },
-        { autoAlpha: 1, y: 0, scale: 1, filter: 'blur(0px)', duration: 1.2, ease: 'power2.out' },
-        0
+        markRef.current,
+        { autoAlpha: 0, y: 14, filter: 'blur(7px)' },
+        { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 1.1, ease: 'power2.out' },
+        0.15
       )
     }
 
-    // Animate percentage count smoothly
-    tl.to(
-      counter,
-      {
-        value: 100,
-        duration: 1.6,
-        ease: 'power2.inOut',
-        onUpdate: () => {
-          const rounded = Math.round(counter.value)
-          if (counterRef.current) {
-            counterRef.current.textContent = String(rounded).padStart(3, '0')
-          }
-          
-          // Update telemetry messages based on current value
-          const phase = TELEMETRY_PHASES.find(p => rounded <= p.max)
-          if (phase) {
-            setTelemetry(phase.text)
-          }
-        },
-      },
-      0
-    )
-    
-    tl.add(() => finishIntro(), 1.7)
-
-    // Custom liquid shrinking wipeout using CSS clip-path ellipse (slower and softer easing)
-    tl.to(
-      panelRef.current,
-      {
-        clipPath: 'ellipse(160% 0% at 50% 0%)',
-        y: -60,
-        duration: 1.1,
-        ease: 'power4.inOut',
-      },
-      1.7
-    )
+    // Let the finished dawn hold for a beat before it lifts — the payoff needs a
+    // moment to land or the whole sequence reads as a flicker.
+    tl.add(() => finishIntro(), 2.5)
+    tl.to(panelRef.current, { autoAlpha: 0, duration: 0.75, ease: 'power2.inOut' }, 2.55)
 
     return () => {
-      clearTimeout(safetyTimer)
+      clearTimeout(safety)
       tl.kill()
       document.body.style.overflow = ''
     }
   }, [finishIntro])
 
-  const handleSkip = () => {
+  const skip = () => {
     if (skippedRef.current) return
     skippedRef.current = true
     tlRef.current?.progress(1)
@@ -138,29 +179,56 @@ export default function Preloader() {
   return (
     <div
       ref={panelRef}
-      onClick={handleSkip}
-      className="fixed inset-0 z-[100] bg-ink flex flex-col items-center justify-center gap-8 cursor-pointer overflow-hidden"
-      style={{
-        clipPath: 'ellipse(160% 100% at 50% 50%)',
-      }}
+      onClick={skip}
+      className="fixed inset-0 z-[100] cursor-pointer overflow-hidden"
+      aria-label="Loading DEWDROPZ"
     >
-      <div ref={logoRef} className="flex flex-col items-center gap-4 select-none invisible">
-        <div ref={glowRef} className="flex flex-col items-center gap-4">
-          <Image src="/logo/mountain-mark.png" alt="" width={168} height={97} priority className="h-16 w-auto md:h-20" />
-          <span className="font-display text-lg tracking-[0.3em] text-paper/90">DEWDROPZ</span>
+      {/* Sky — the only thing that actually animates colour. */}
+      <div ref={skyRef} className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #080D14, #101A26)' }} />
+
+      {/* Warm bloom on the horizon once the sun is up. Sits under the ridges so
+          the peaks stay silhouetted against it, which is what sells the depth. */}
+      <div
+        ref={glowRef}
+        className="absolute inset-x-0 bottom-0 h-[55%] opacity-0"
+        style={{ background: 'radial-gradient(ellipse 70% 100% at 50% 100%, rgba(255,186,120,0.55), transparent 70%)' }}
+      />
+
+      {/* The sun */}
+      <div
+        ref={sunRef}
+        className="absolute left-1/2 bottom-[26%] h-24 w-24 rounded-full opacity-0"
+        style={{
+          background: 'radial-gradient(circle, #FFF3DA 0%, #FFD79A 45%, rgba(255,180,110,0) 72%)',
+          transform: 'translate(-50%, 64px) scale(0.7)',
+        }}
+      />
+
+      {/* Ridgelines */}
+      <svg
+        className="absolute inset-x-0 bottom-0 h-[38%] w-full"
+        viewBox="0 0 1000 220"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <path d={RIDGE_FAR} fill="#0C1219" opacity={0.55} />
+        <path d={RIDGE_NEAR} fill="#080D12" />
+      </svg>
+
+      {/* Mark + clock */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+        <div ref={markRef} className="invisible flex flex-col items-center gap-4 select-none">
+          <Image src="/logo/mountain-mark.png" alt="" width={168} height={97} priority className="h-14 w-auto md:h-16" />
+          <span className="font-display text-lg tracking-[0.3em] text-paper/95">DEWDROPZ</span>
+          <span ref={timeRef} className="font-body text-[10px] tracking-[0.3em] text-paper/55 tabular-nums">
+            04:10
+          </span>
         </div>
-        <span ref={counterRef} className="mt-2 font-mono text-xl tracking-[0.2em] text-paper/90 tabular-nums">
-          000
-        </span>
       </div>
 
-      <div className="absolute bottom-16 flex flex-col items-center gap-2">
-        <span className="font-body text-[9px] tracking-[0.25em] text-sage font-medium uppercase transition-all duration-300">
-          {telemetry}
-        </span>
-        <span className="font-body text-[9px] tracking-[0.1em] text-paper/20 uppercase mt-1">
-          Click anywhere to skip
-        </span>
+      <div className="absolute inset-x-0 bottom-10 flex flex-col items-center gap-1.5">
+        <span className="font-body text-[9px] tracking-[0.25em] text-paper/70 uppercase">First light · 30.3165° N</span>
+        <span className="font-body text-[9px] tracking-[0.1em] text-paper/30 uppercase">Click anywhere to skip</span>
       </div>
     </div>
   )

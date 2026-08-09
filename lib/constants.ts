@@ -12,6 +12,37 @@ export const TRAIL_MAP_AERIAL_IMAGE = 'https://images.unsplash.com/photo-1454496
 // Volcanic peak above a cloud sea at dawn — backdrop for the stats band.
 export const STATS_BG_IMAGE = 'https://images.unsplash.com/photo-1761566333643-bf7d2c94f0ed'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// The day arc — imagery for the homepage story
+// ─────────────────────────────────────────────────────────────────────────────
+// Each URL carries explicit Unsplash transform params. Without them Unsplash
+// returns the full-size original (frequently 5000px+ and several MB) and
+// next/image dutifully requests w=3840 of it — which made the hero's LCP a
+// multi-megabyte decode. `w=2400` is still retina-sharp on a 1440 display.
+//
+// Grouped in one place, and referenced by name everywhere, so swapping in a
+// real DEWDROPZ shoot later is a one-line change per slot rather than a hunt
+// through ten section components.
+//
+// Every one of these has PEOPLE in it, deliberately. The page previously ran on
+// 23 images of empty landscapes and flat-lay product, which is precisely why it
+// looked expensive and felt like nothing — there was nobody in the frame to
+// feel it with.
+export const DAY_ARC = {
+  /** 04:40 — two figures leaving the treeline by headlamp. The hero. */
+  theStart: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=2400&q=80&auto=format&fit=crop',
+  /** 05:55 — first light breaking over a ridge. The emotional peak. */
+  firstLight: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2400&q=80&auto=format&fit=crop',
+  /** 05:55 detail — a second pair of eyes on the same sunrise. */
+  firstLightPair: 'https://images.unsplash.com/photo-1454372182658-c712e4c5a1db?w=2400&q=80&auto=format&fit=crop',
+  /** 11:00 — the ridge walk, two on the line. */
+  theRidge: 'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=2400&q=80&auto=format&fit=crop',
+  /** 16:30 — coming down, together. */
+  theWayDown: 'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=2400&q=80&auto=format&fit=crop',
+  /** 19:30 — camp, headtorches, the day retold. */
+  basecamp: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=2400&q=80&auto=format&fit=crop',
+} as const
+
 export const COLLECTIONS = [
   {
     id: 'mist-and-morning',
