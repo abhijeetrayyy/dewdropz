@@ -185,6 +185,6 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.md },
   rowLabel: { flex: 1, fontFamily: F.bodyBold, fontSize: 16, letterSpacing: -0.1 },
   toggle: { width: 46, height: 26, borderRadius: 999, backgroundColor: C.disabledBg, padding: 3, justifyContent: "center" },
-  toggleOn: { backgroundColor: C.meadow },
+  toggleOn: { backgroundColor: C.forest },
   knob: { width: 20, height: 20, borderRadius: 999, backgroundColor: C.white },
 });

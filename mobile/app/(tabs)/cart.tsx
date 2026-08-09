@@ -168,13 +168,13 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
       {/* ── Summary ─────────────────────────────────────────────────────── */}
       <View style={[s.summary, { paddingBottom: insets.bottom + 14 }]}>
         <View style={s.shipRow}>
-          <Mono color={qualifies ? C.meadow : C.textMuted}>
+          <Mono color={qualifies ? C.forest : C.textMuted}>
             {qualifies ? "FREE SHIPPING UNLOCKED" : `${formatPrice(remaining)} TO FREE SHIPPING`}
           </Mono>
-          {qualifies ? <Icon name="check_circle" size={14} color={C.meadow} filled /> : null}
+          {qualifies ? <Icon name="check_circle" size={14} color={C.forest} filled /> : null}
         </View>
         <View style={s.track}>
-          <View style={[s.trackFill, { width: `${pct}%`, backgroundColor: qualifies ? C.meadow : C.ink }]} />
+          <View style={[s.trackFill, { width: `${pct}%`, backgroundColor: qualifies ? C.forest : C.ink }]} />
         </View>
 
         <View style={s.totals}>
@@ -184,7 +184,7 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
           </View>
           <View style={s.totalRow}>
             <Body color={C.textMid}>Delivery</Body>
-            <Numeric color={qualifies ? C.meadow : C.ink}>{qualifies ? "FREE" : formatPrice(ship)}</Numeric>
+            <Numeric color={qualifies ? C.forest : C.ink}>{qualifies ? "FREE" : formatPrice(ship)}</Numeric>
           </View>
         </View>
 
@@ -297,7 +297,7 @@ const s = StyleSheet.create({
     marginTop: S.md,
     height: 54,
     borderRadius: R.pill,
-    backgroundColor: C.ember,
+    backgroundColor: C.forest,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

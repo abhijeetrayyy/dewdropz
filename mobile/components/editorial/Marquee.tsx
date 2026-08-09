@@ -20,9 +20,9 @@ type Props = {
 };
 
 const TONES = {
-  ink: { bg: C.ink, fg: C.paper, dot: C.marigold },
-  paper: { bg: C.paperDeep, fg: C.ink, dot: C.ember },
-  meadow: { bg: C.meadow, fg: C.paper, dot: C.marigold },
+  ink: { bg: C.ink, fg: C.paper, dot: C.clay },
+  paper: { bg: C.paperDeep, fg: C.ink, dot: C.clay },
+  meadow: { bg: C.forest, fg: C.paper, dot: C.clay },
 } as const;
 
 export function Marquee({ items, tone = "ink", speed = 34, style }: Props) {

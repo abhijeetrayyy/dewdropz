@@ -67,7 +67,7 @@ export default function SignUpScreen() {
           <View style={s.mailMark}>
             <Icon name="mail" size={26} color={C.paper} />
           </View>
-          <Eyebrow color={C.meadow} style={{ marginTop: S.xl }}>
+          <Eyebrow color={C.forest} style={{ marginTop: S.xl }}>
             Almost there
           </Eyebrow>
           <Rule weight="strong" style={{ marginTop: 9 }} />
@@ -176,5 +176,5 @@ const s = StyleSheet.create({
   switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: S.xl },
   switchT: { fontFamily: F.body, fontSize: 15, color: C.textMid },
   successBody: { flex: 1, justifyContent: "center", paddingHorizontal: S.gutter, paddingBottom: 60 },
-  mailMark: { width: 64, height: 64, borderRadius: 999, backgroundColor: C.meadow, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" },
+  mailMark: { width: 64, height: 64, borderRadius: 999, backgroundColor: C.forest, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" },
 });

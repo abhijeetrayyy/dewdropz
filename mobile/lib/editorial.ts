@@ -72,6 +72,118 @@ export const JOURNAL: JournalArticle[] = [
   },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Season windows
+// ─────────────────────────────────────────────────────────────────────────────
+// Ported from the web's SEASON_KITS. `months` are 1-12 and the component picks
+// by calendar month, so the front page re-merchandises itself four times a year
+// with no code change and no CMS.
+//
+// `products` holds REAL catalogue slugs (verified against the products table),
+// not the web file's older ids — the web copy still says `altitude-pack` where
+// this store actually ships `altitude-pack-40l`, and a mismatched slug here
+// fails silently as a missing card rather than an error.
+export type SeasonKit = {
+  id: string;
+  months: number[];
+  seasonLabel: string;
+  headline: string;
+  line: string;
+  collectionSlug: string;
+  products: string[];
+  /** Shown as mono field data under the headline. */
+  conditions: { label: string; value: string }[];
+};
+
+export const SEASON_KITS: SeasonKit[] = [
+  {
+    id: "winter",
+    months: [12, 1, 2],
+    seasonLabel: "Winter window",
+    headline: "Snow on Kedarkantha.",
+    line: "Minus-eight nights, blue-sky summit mornings. This is the kit that keeps you out there.",
+    collectionSlug: "silent-altitude",
+    products: ["summit-shell", "altitude-pack-40l", "summit-flask", "o-merino-tee"],
+    conditions: [
+      { label: "Temp", value: "−8°C – 6°C" },
+      { label: "Terrain", value: "Snow, ridge" },
+      { label: "Nights", value: "4" },
+    ],
+  },
+  {
+    id: "pre-monsoon",
+    months: [3, 4, 5, 6],
+    seasonLabel: "Pre-monsoon window",
+    headline: "Roopkund before the rains.",
+    line: "The high routes open for eight short weeks. Wind-sealed and insulated, or turned back at the ridge.",
+    collectionSlug: "silent-altitude",
+    products: ["altitude-pack-40l", "summit-shell", "summit-flask", "trail-cap"],
+    conditions: [
+      { label: "Temp", value: "2°C – 18°C" },
+      { label: "Terrain", value: "Scree, snowfield" },
+      { label: "Nights", value: "6" },
+    ],
+  },
+  {
+    id: "monsoon",
+    months: [7, 8, 9],
+    seasonLabel: "Monsoon window",
+    headline: "The valley is blooming.",
+    line: "Valley of Flowers only happens in the rain. Welded seams and fast-dry layers make it worth it.",
+    collectionSlug: "mist-and-morning",
+    products: ["altitude-pack-40l", "mist-tee", "dawn-jogger", "trail-cap"],
+    conditions: [
+      { label: "Temp", value: "8°C – 22°C" },
+      { label: "Terrain", value: "Wet pine" },
+      { label: "Nights", value: "3" },
+    ],
+  },
+  {
+    id: "post-monsoon",
+    months: [10, 11],
+    seasonLabel: "Post-monsoon window",
+    headline: "Har Ki Dun, washed clean.",
+    line: "The clearest air of the year. Cold mornings, warm miles — layer for both.",
+    collectionSlug: "mist-and-morning",
+    products: ["mist-tee", "o-field-shirt", "trail-cap", "altitude-pack-40l"],
+    conditions: [
+      { label: "Temp", value: "1°C – 16°C" },
+      { label: "Terrain", value: "Meadow, pine" },
+      { label: "Nights", value: "5" },
+    ],
+  },
+];
+
+/** The kit for the month we're actually in. Never returns undefined. */
+export function currentSeasonKit(now = new Date()): SeasonKit {
+  const m = now.getMonth() + 1;
+  return SEASON_KITS.find((k) => k.months.includes(m)) ?? SEASON_KITS[0];
+}
+
+// Per-collection field conditions, keyed by the collection's real slug. Shown
+// as a spec table on the collection screen — this data has existed in
+// lib/constants.ts since launch and has never been rendered on mobile.
+export const COLLECTION_CONDITIONS: Record<string, { key: string; value: string }[]> = {
+  "mist-and-morning": [
+    { key: "Temperature", value: "8°C – 22°C" },
+    { key: "Terrain", value: "Wet pine, switchbacks" },
+    { key: "Best season", value: "Spring & post-monsoon" },
+    { key: "Tested on", value: "Nag Tibba ridge" },
+  ],
+  "silent-altitude": [
+    { key: "Temperature", value: "−15°C – 5°C" },
+    { key: "Terrain", value: "Alpine, scree, summit ridge" },
+    { key: "Best season", value: "Pre-monsoon & autumn" },
+    { key: "Tested on", value: "Above 4,500 m" },
+  ],
+  "o-collection": [
+    { key: "Temperature", value: "18°C – 40°C" },
+    { key: "Terrain", value: "Desert ridge, long hauls" },
+    { key: "Best season", value: "Winter & early spring" },
+    { key: "Tested on", value: "Thar crossing" },
+  ],
+};
+
 export const STATS = [
   { value: "12,000+", label: "Trekkers geared up" },
   { value: "40+", label: "Trails mapped" },

@@ -12,8 +12,8 @@ import { toast } from "@/components/ui/Toast";
 import { C, F, R, S } from "@/lib/theme";
 
 const AVATAR_TONES = [
-  { bg: C.meadow12, fg: C.meadowDeep },
-  { bg: C.marigold12, fg: C.marigoldDeep },
+  { bg: C.forest12, fg: C.forestDeep },
+  { bg: C.clay12, fg: C.clayDeep },
   { bg: C.cream, fg: C.textMid },
 ];
 
@@ -98,7 +98,7 @@ export function ProductReviews({ productId }: { productId: string }) {
                 <View style={{ flex: 1 }}>
                   <View style={s.nameRow}>
                     <Title>{name}</Title>
-                    {r.is_verified ? <Icon name="verified" size={15} color={C.meadow} filled /> : null}
+                    {r.is_verified ? <Icon name="verified" size={15} color={C.forest} filled /> : null}
                   </View>
                   <View style={{ marginTop: 4 }}>
                     <RatingStars value={r.rating} size={12} />
@@ -128,7 +128,7 @@ export function ProductReviews({ productId }: { productId: string }) {
               value={title}
               onChangeText={setTitle}
               style={s.input}
-              selectionColor={C.ember}
+              selectionColor={C.forest}
             />
             <TextInput
               placeholder="How did it hold up? Where did you take it?"
@@ -137,7 +137,7 @@ export function ProductReviews({ productId }: { productId: string }) {
               onChangeText={setContent}
               multiline
               style={[s.input, s.inputMulti]}
-              selectionColor={C.ember}
+              selectionColor={C.forest}
             />
             <View style={{ flexDirection: "row", gap: S.sm }}>
               <Button title="Cancel" variant="quiet" onPress={() => setShowForm(false)} style={{ flex: 1 }} />

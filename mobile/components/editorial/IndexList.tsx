@@ -58,11 +58,11 @@ export function IndexList({ items, startAt = 1, numbered = true, tone = "default
               style={s.row}
             >
               {numbered ? (
-                <Mono color={onDark ? C.marigold : C.meadow} style={s.num}>
+                <Mono color={onDark ? C.clay : C.forest} style={s.num}>
                   {String(startAt + i).padStart(2, "0")}
                 </Mono>
               ) : (
-                <View style={[s.bullet, onDark && { backgroundColor: C.marigold }]} />
+                <View style={[s.bullet, onDark && { backgroundColor: C.clay }]} />
               )}
               <View style={{ flex: 1 }}>
                 <Title color={onDark ? C.paper : C.ink}>{item.title}</Title>
@@ -87,5 +87,5 @@ const s = StyleSheet.create({
   // Fixed width so every title in the list starts on the same optical margin,
   // regardless of whether the numeral is "01" or "12".
   num: { width: 20, marginTop: 4 },
-  bullet: { width: 5, height: 5, borderRadius: 999, backgroundColor: C.meadow, marginTop: 9, marginLeft: 7, marginRight: 8 },
+  bullet: { width: 5, height: 5, borderRadius: 999, backgroundColor: C.forest, marginTop: 9, marginLeft: 7, marginRight: 8 },
 });

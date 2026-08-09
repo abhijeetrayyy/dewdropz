@@ -36,7 +36,7 @@ export const Meta = ({ style, color = C.textMuted, ...p }: Props) => <Text style
 export const Micro = ({ style, color = C.textMuted, ...p }: Props) => <Text style={[T.micro, { color }, style]} {...p} />;
 
 /** Mono eyebrow — sits above section headlines. The editorial signature. */
-export const Eyebrow = ({ style, color = C.meadow, ...p }: Props) => <Text style={[T.eyebrow, { color }, style]} {...p} />;
+export const Eyebrow = ({ style, color = C.forest, ...p }: Props) => <Text style={[T.eyebrow, { color }, style]} {...p} />;
 /** Mono margin note — indices, timestamps, order numbers, figure credits. */
 export const Mono = ({ style, color = C.textMuted, ...p }: Props) => <Text style={[T.mono, { color }, style]} {...p} />;
 /** Mono numerals that need to align in a column — prices, totals, specs. */
@@ -46,6 +46,6 @@ export const Numeric = ({ style, color = C.ink, ...p }: Props) => <Text style={[
  * Legacy uppercase Archivo label. Superseded by `Eyebrow` — kept so screens
  * that haven't been migrated keep rendering while the redesign lands.
  */
-export const Label = ({ style, color = C.meadow, ...p }: Props) => <Text style={[T.label, { color }, style]} {...p} />;
+export const Label = ({ style, color = C.forest, ...p }: Props) => <Text style={[T.label, { color }, style]} {...p} />;
 /** @deprecated use `Quote` */
 export const SerifQuote = Quote;

@@ -159,7 +159,7 @@ export default function ProductScreen() {
             {p.collection ? <Eyebrow style={{ flex: 1 }}>{p.collection.name}</Eyebrow> : <View style={{ flex: 1 }} />}
             {rating && rating.count > 0 ? (
               <View style={s.ratingRow}>
-                <Icon name="star" size={15} color={C.marigold} filled />
+                <Icon name="star" size={15} color={C.clay} filled />
                 <Mono color={C.textMid}>
                   {rating.average.toFixed(1)} · {rating.count}
                 </Mono>
@@ -175,8 +175,8 @@ export default function ProductScreen() {
             <View style={{ flex: 1 }} />
             {inStock ? (
               <View style={s.stockRow}>
-                <View style={[s.stockDot, lowStock && { backgroundColor: C.marigold }]} />
-                <Mono color={lowStock ? C.marigoldDeep : C.meadow}>
+                <View style={[s.stockDot, lowStock && { backgroundColor: C.clay }]} />
+                <Mono color={lowStock ? C.clayDeep : C.forest}>
                   {lowStock ? `ONLY ${stockQty} LEFT` : "IN STOCK"}
                 </Mono>
               </View>
@@ -326,7 +326,7 @@ export default function ProductScreen() {
             <IconButton
               name="favorite"
               tone={tone}
-              color={saved ? C.ember : undefined}
+              color={saved ? C.clay : undefined}
               filled={saved}
               onPress={() => {
                 haptics.tap();
@@ -399,7 +399,7 @@ const s = StyleSheet.create({
   price: { fontFamily: F.monoBold, fontSize: 22, letterSpacing: 0.2, color: C.ink },
   strike: { fontFamily: F.mono, fontSize: 13, color: C.textFaint, textDecorationLine: "line-through" },
   stockRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  stockDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.meadow },
+  stockDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.forest },
 
   sizeHead: { flexDirection: "row", alignItems: "center", gap: S.sm },
   guideLink: { flexDirection: "row", alignItems: "center", gap: 5 },
@@ -440,7 +440,7 @@ const s = StyleSheet.create({
   cta: {
     flexDirection: "row",
     gap: 9,
-    backgroundColor: C.ember,
+    backgroundColor: C.forest,
     borderRadius: R.pill,
     height: 54,
     paddingHorizontal: 24,

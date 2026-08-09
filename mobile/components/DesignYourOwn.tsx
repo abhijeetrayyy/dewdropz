@@ -98,7 +98,7 @@ const s = StyleSheet.create({
   swatchNote: { fontFamily: F.body, fontSize: 11, color: C.textFaint, marginLeft: 3 },
   cta: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: C.ember, borderRadius: R.pill, height: 54,
+    backgroundColor: C.forest, borderRadius: R.pill, height: 54,
     marginHorizontal: S.md, marginTop: S.lg, ...SHADOW_CTA,
   },
   ctaT: { fontFamily: F.bodyBold, fontSize: 15, color: C.white },

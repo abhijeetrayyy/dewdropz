@@ -106,7 +106,7 @@ const s = StyleSheet.create({
   toggleRow: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.lg },
   toggleSub: { fontFamily: F.body, fontSize: 13, color: C.textMuted, marginTop: 3 },
   toggle: { width: 48, height: 28, borderRadius: 999, backgroundColor: C.disabledBg, padding: 3, justifyContent: "center" },
-  toggleOn: { backgroundColor: C.meadow, alignItems: "flex-end" },
+  toggleOn: { backgroundColor: C.forest, alignItems: "flex-end" },
   knob: { width: 22, height: 22, borderRadius: 999, backgroundColor: C.white },
   actions: { flexDirection: "row", gap: S.sm, marginTop: S.xl },
 });

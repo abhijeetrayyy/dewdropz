@@ -12,6 +12,9 @@ import { Button } from "@/components/Button";
 import { Masthead } from "@/components/editorial/Masthead";
 import { SectionHead } from "@/components/editorial/SectionHead";
 import { Marquee } from "@/components/editorial/Marquee";
+import { Ridgeline } from "@/components/editorial/Ridgeline";
+import { Topography } from "@/components/editorial/Topography";
+import { SeasonWindow } from "@/components/home/SeasonWindow";
 import { PullQuote } from "@/components/editorial/PullQuote";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
@@ -152,10 +155,13 @@ export default function HomeScreen() {
 
         <Marquee items={TRUST_POINTS} tone="ink" />
 
-        {/* ── 01 · New this week ─────────────────────────────────────────── */}
+        {/* ── 01 · The season window ───────────────────────────────────── */}
+        <SeasonWindow />
+
+        {/* ── 02 · New this week ─────────────────────────────────────────── */}
         <View style={s.section}>
           <SectionHead
-            index="01"
+            index="02"
             eyebrow="New this week"
             title="Fresh off the bench."
             lede="Restocks and first runs, listed the day they clear the workshop."
@@ -206,7 +212,7 @@ export default function HomeScreen() {
         {collections.length > 0 ? (
           <View style={s.section}>
             <SectionHead
-              index="02"
+              index="03"
               eyebrow="The collections"
               title="Three kinds of weather."
               lede="Each collection is built around one set of conditions, and tested in them."
@@ -259,7 +265,7 @@ export default function HomeScreen() {
         {blanks.length > 0 ? (
           <View style={[s.section, s.band]}>
             <SectionHead
-              index="03"
+              index="04"
               eyebrow="The workbench"
               title="Put your own mark on it."
               lede="Heavyweight blanks in an oversized unisex fit. Drop in artwork or set type — front, back, or both — and see it on the garment before you order."
@@ -316,7 +322,7 @@ export default function HomeScreen() {
         {/* ── 04 · From the journal ──────────────────────────────────────── */}
         <View style={s.section}>
           <SectionHead
-            index="04"
+            index="05"
             eyebrow="From the journal"
             title="Notes from the ridge."
             actionLabel="All stories"
@@ -366,10 +372,15 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── 05 · Voices ────────────────────────────────────────────────── */}
+        {/* ── 06 · Voices ────────────────────────────────────────────────── */}
+        {/* Silhouette hand-off: the ridge is drawn in the colour of the
+            section BELOW it, so the light page appears to end at a skyline
+            rather than at a straight edge. */}
+        <Ridgeline height={72} color={C.ink} style={{ marginTop: S.section }} />
         <View style={s.inkBand}>
+          <Topography width={SCREEN_W} height={420} color={C.sage} opacity={0.13} seed={9.1} originX={0.24} originY={0.6} />
           <SectionHead
-            index="05"
+            index="06"
             eyebrow="Voices"
             title="From people who took it up."
             tone="onDark"
@@ -394,9 +405,9 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* ── 06 · Colophon ──────────────────────────────────────────────── */}
+        {/* ── 07 · Colophon ──────────────────────────────────────────────── */}
         <View style={[s.section, { paddingHorizontal: S.gutter }]}>
-          <SectionHead index="06" eyebrow="Colophon" title="Made where it's tested." />
+          <SectionHead index="07" eyebrow="Colophon" title="Made where it's tested." />
           <Body color={C.textMid} style={{ marginTop: 12 }}>
             Designed, sewn and shipped from Rajpur Road, Dehradun — a two-hour drive from the trailheads everything here
             was built for.
@@ -436,7 +447,7 @@ const s = StyleSheet.create({
   heroTop: { position: "absolute", top: S.md, left: S.gutter },
   heroBody: { padding: S.gutter, paddingBottom: S.xl },
   heroTagRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  heroTag: { backgroundColor: C.ember, borderRadius: R.tag, paddingHorizontal: 7, paddingVertical: 3.5 },
+  heroTag: { backgroundColor: C.clay, borderRadius: R.tag, paddingHorizontal: 7, paddingVertical: 3.5 },
   heroTagT: { fontFamily: F.monoBold, fontSize: 9, letterSpacing: 1.2, color: C.paper },
   heroActions: { flexDirection: "row", alignItems: "center", gap: S.md, marginTop: S.lg },
   heroAlt: { flexDirection: "row", alignItems: "center", gap: 5 },
@@ -464,7 +475,7 @@ const s = StyleSheet.create({
   articleRow: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.md },
   articleThumb: { width: 76, height: 76, borderRadius: R.card, backgroundColor: C.sand },
 
-  inkBand: { backgroundColor: C.ink, paddingVertical: S.band, marginTop: S.section },
+  inkBand: { backgroundColor: C.ink, paddingTop: S.block, paddingBottom: S.band, overflow: "hidden" },
 
   colophonLinks: { marginTop: S.xl },
   colophonRow: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.md },

@@ -160,8 +160,8 @@ export default function CheckoutScreen() {
           <Mono color={C.textMuted}>CHECKOUT</Mono>
         </View>
         <View style={s.secure}>
-          <Icon name="lock" size={13} color={C.meadow} />
-          <Micro color={C.meadow}>Secure</Micro>
+          <Icon name="lock" size={13} color={C.forest} />
+          <Micro color={C.forest}>Secure</Micro>
         </View>
       </View>
 
@@ -259,7 +259,7 @@ export default function CheckoutScreen() {
                     Ships within 2 working days from Dehradun
                   </Body>
                 </View>
-                <Numeric color={ship === 0 ? C.meadow : C.ink}>{ship === 0 ? "FREE" : formatPrice(ship)}</Numeric>
+                <Numeric color={ship === 0 ? C.forest : C.ink}>{ship === 0 ? "FREE" : formatPrice(ship)}</Numeric>
               </View>
               <Rule weight="soft" />
               <View style={[s.optRow, { opacity: 0.45 }]}>
@@ -383,8 +383,8 @@ const s = StyleSheet.create({
 
   addrRow: { flexDirection: "row", alignItems: "flex-start", gap: S.md, paddingVertical: S.md },
   addrTop: { flexDirection: "row", alignItems: "center", gap: 8 },
-  defaultTag: { backgroundColor: C.meadow12, borderRadius: R.tag, paddingHorizontal: 6, paddingVertical: 2 },
-  defaultTagT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 1, color: C.meadowDeep },
+  defaultTag: { backgroundColor: C.forest12, borderRadius: R.tag, paddingHorizontal: 6, paddingVertical: 2 },
+  defaultTagT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 1, color: C.forestDeep },
 
   optRow: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.md },
   radio: { width: 20, height: 20, borderRadius: 999, borderWidth: 1.5, borderColor: C.ruleStrong, alignItems: "center", justifyContent: "center", marginTop: 2 },

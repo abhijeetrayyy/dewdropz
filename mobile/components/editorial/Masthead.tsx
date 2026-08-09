@@ -5,6 +5,7 @@ import { Rule } from "./Rule";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
 import { useCartStore } from "@/stores/cart";
+import { useWishlistStore } from "@/stores/wishlist";
 import { C, F, S } from "@/lib/theme";
 
 // A newspaper masthead, which is what the top of an editorial home screen
@@ -27,7 +28,7 @@ function dateline() {
 }
 
 type Props = {
-  /** Right-hand slot override. Defaults to search + notifications. */
+  /** Right-hand slot override. Defaults to search + saved + notifications. */
   showCart?: boolean;
   unread?: boolean;
 };
@@ -35,6 +36,7 @@ type Props = {
 export function Masthead({ showCart, unread = true }: Props) {
   const insets = useSafeAreaInsets();
   const cartCount = useCartStore((s) => s.itemCount());
+  const savedCount = useWishlistStore((s) => s.count());
 
   return (
     <View style={[s.wrap, { paddingTop: insets.top + 10 }]}>
@@ -44,6 +46,21 @@ export function Masthead({ showCart, unread = true }: Props) {
           <TouchableOpacity onPress={() => router.push("/search")} hitSlop={10} accessibilityLabel="Search">
             <Icon name="search" size={22} color={C.ink} />
           </TouchableOpacity>
+
+          {/* Saved lived only behind You → Saved, which meant the heart on
+              every product card wrote to a list with no visible destination —
+              you could save things and never find them again. It belongs in
+              the masthead: same rank as search, and the filled/clay state
+              doubles as proof the tap registered. */}
+          <TouchableOpacity onPress={() => router.push("/saved")} hitSlop={10} accessibilityLabel="Saved">
+            <Icon
+              name="favorite"
+              size={22}
+              color={savedCount > 0 ? C.clay : C.ink}
+              filled={savedCount > 0}
+            />
+          </TouchableOpacity>
+
           {showCart ? (
             <TouchableOpacity onPress={() => router.push("/(tabs)/cart")} hitSlop={10} accessibilityLabel="Pack">
               <View>
@@ -81,8 +98,8 @@ const s = StyleSheet.create({
   // logo — it's the one place in the app where letterspacing goes positive on
   // display type.
   wordmark: { fontFamily: F.display, fontSize: 22, letterSpacing: 3.5, color: C.ink },
-  actions: { flexDirection: "row", alignItems: "center", gap: 20 },
-  dot: { position: "absolute", top: -1, right: -2, width: 7, height: 7, borderRadius: 999, backgroundColor: C.ember, borderWidth: 1.5, borderColor: C.paper },
+  actions: { flexDirection: "row", alignItems: "center", gap: 18 },
+  dot: { position: "absolute", top: -1, right: -2, width: 7, height: 7, borderRadius: 999, backgroundColor: C.clay, borderWidth: 1.5, borderColor: C.paper },
   dateRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 7 },
   dateT: { fontFamily: F.mono, fontSize: 9, letterSpacing: 1.3, color: C.textMuted },
 });

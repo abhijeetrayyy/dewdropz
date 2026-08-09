@@ -75,8 +75,20 @@ function ZoomableImage({ uri }: { uri: string }) {
 
   return (
     <GestureDetector gesture={Gesture.Race(doubleTap, Gesture.Simultaneous(pinch, pan))}>
-      <View style={{ width: W, height: W, alignItems: "center", justifyContent: "center" }}>
-        <AnimatedImage source={{ uri }} style={[{ width: W, height: W }, style]} contentFit="contain" alt="" />
+      {/* Full-SCREEN page, not a W×W square. The square version pinned every
+          photo to the top of the lightbox: a horizontal ScrollView stretches
+          to fill its parent's height, so a square child sits at the top of it
+          and the parent's `justifyContent: center` never applied to the image
+          at all. Sizing the page to the viewport also lets tall product shots
+          (4:5, 3:4) use the whole screen instead of being letterboxed into a
+          square that wasted a third of the height. */}
+      <View style={{ width: W, height: SCREEN_H, alignItems: "center", justifyContent: "center" }}>
+        <AnimatedImage
+          source={{ uri }}
+          style={[{ width: W, height: SCREEN_H }, style]}
+          contentFit="contain"
+          alt=""
+        />
       </View>
     </GestureDetector>
   );
@@ -104,7 +116,7 @@ export function ProductGallery({ images, discountPct, isNew }: Props) {
     scrollX.value = e.contentOffset.x;
   });
 
-  const badge = discountPct ? { label: `−${discountPct}%`, bg: C.ember, fg: C.paper } : isNew ? { label: "NEW", bg: C.ink, fg: C.paper } : null;
+  const badge = discountPct ? { label: `−${discountPct}%`, bg: C.rust, fg: C.paper } : isNew ? { label: "NEW", bg: C.ink, fg: C.paper } : null;
 
   return (
     <View style={s.wrap}>

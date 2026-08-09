@@ -56,7 +56,7 @@ export function Button({
   const v = (ALIASES[variant] ?? variant) as Variant;
 
   const bg =
-    v === "primary" ? C.ember : v === "dark" ? C.ink : v === "quiet" ? C.creamDeep : "transparent";
+    v === "primary" ? C.forest : v === "dark" ? C.ink : v === "quiet" ? C.creamDeep : "transparent";
   const fg = v === "primary" || v === "dark" ? C.white : C.ink;
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));

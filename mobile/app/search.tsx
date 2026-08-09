@@ -68,7 +68,7 @@ export default function SearchScreen() {
             placeholder="Search gear, collections, materials"
             placeholderTextColor={C.textFaint}
             style={s.input}
-            selectionColor={C.ember}
+            selectionColor={C.forest}
             returnKeyType="search"
           />
           {query.length > 0 ? (

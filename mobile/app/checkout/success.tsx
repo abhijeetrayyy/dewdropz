@@ -55,7 +55,7 @@ export default function OrderPlacedScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeIn.delay(260).duration(M.slow)}>
-          <Eyebrow color={C.meadow} style={{ marginTop: S.xl }}>
+          <Eyebrow color={C.forest} style={{ marginTop: S.xl }}>
             Order confirmed
           </Eyebrow>
           <Rule weight="strong" style={{ marginTop: 9 }} />
@@ -115,7 +115,7 @@ const s = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 999,
-    backgroundColor: C.meadow,
+    backgroundColor: C.forest,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-start",

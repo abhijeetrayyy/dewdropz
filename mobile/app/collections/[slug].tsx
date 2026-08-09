@@ -12,6 +12,8 @@ import { OverlayHeader } from "@/components/editorial/OverlayHeader";
 import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
 import { SectionHead } from "@/components/editorial/SectionHead";
+import { SpecTable } from "@/components/editorial/SpecTable";
+import { Topography } from "@/components/editorial/Topography";
 import { Body, Display3, Mono, Serif } from "@/components/ui/Type";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -19,12 +21,13 @@ import { SkeletonProductGrid } from "@/components/ui/Skeleton";
 import { useCollectionsQuery, useProductsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { formatPrice } from "@/lib/utils";
+import { COLLECTION_CONDITIONS } from "@/lib/editorial";
 import { useCartStore } from "@/stores/cart";
 import { toast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { C, F, S } from "@/lib/theme";
 
-const { height: SCREEN_H } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const HERO_H = Math.round(SCREEN_H * 0.46);
 
 // A collection is a curated argument, not a filtered list, so the screen leads
@@ -63,6 +66,7 @@ export default function CollectionScreen() {
   const minPrice = products.length ? Math.min(...products.map((p: any) => p.price)) : 0;
   const kitTotal = products.reduce((sum: number, p: any) => sum + p.price, 0);
   const kitSave = Math.round(kitTotal * 0.1);
+  const conditions = slug ? COLLECTION_CONDITIONS[slug] : undefined;
 
   function addWholeKit() {
     haptics.tap();
@@ -165,7 +169,7 @@ export default function CollectionScreen() {
                 <>
                   <TouchableOpacity activeOpacity={0.85} style={s.kit} onPress={addWholeKit}>
                     <View style={{ flex: 1 }}>
-                      <Mono color={C.meadow}>THE COMPLETE KIT</Mono>
+                      <Mono color={C.forest}>THE COMPLETE KIT</Mono>
                       <Display3 style={{ marginTop: 6 }}>Take all {products.length}.</Display3>
                       <Body color={C.textMid} style={{ marginTop: 6 }}>
                         {formatPrice(kitTotal)} — about {formatPrice(kitSave)} less than buying them one at a time.
@@ -177,6 +181,26 @@ export default function CollectionScreen() {
                   </TouchableOpacity>
                   <Rule weight="soft" />
                 </>
+              ) : null}
+
+              {/* Field conditions — the data that makes a collection an
+                  argument rather than a mood board. It has lived in
+                  lib/constants.ts since launch and has never been rendered
+                  on mobile until now. */}
+              {conditions ? (
+                <View style={s.conditions}>
+                  <Topography
+                    width={SCREEN_W - S.gutter * 2}
+                    height={260}
+                    color={C.forest}
+                    opacity={0.07}
+                    seed={3.3}
+                    originX={0.85}
+                    originY={0.25}
+                  />
+                  <SectionHead eyebrow="Field conditions" title="What it was built for." size="d3" />
+                  <SpecTable rows={conditions} style={{ marginTop: S.md }} />
+                </View>
               ) : null}
 
               <View style={{ marginTop: S.block }}>
@@ -243,6 +267,7 @@ const s = StyleSheet.create({
   sortBtnT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.ink },
   kit: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.lg },
   kitGo: { width: 46, height: 46, borderRadius: 999, backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
+  conditions: { marginTop: S.block, paddingVertical: S.lg, overflow: "hidden" },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: S.xl, marginTop: S.xl },
   cell: { width: "48%" },
 });

@@ -66,7 +66,7 @@ export function Input({
           maxLength={maxLength}
           multiline={multiline}
           style={[s.fld, multiline && s.fldMulti]}
-          selectionColor={C.ember}
+          selectionColor={C.forest}
         />
         {secureTextEntry ? (
           <TouchableOpacity onPress={() => setReveal((r) => !r)} hitSlop={12} style={s.reveal}>

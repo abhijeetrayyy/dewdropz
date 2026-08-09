@@ -22,9 +22,9 @@ const ON_THE_WAY = new Set(["pending", "confirmed", "processing", "shipped"]);
 // "delivered" from "everything else", so an order that had been cancelled
 // still rendered as "ON THE ROAD" with a truck icon.
 const STATUS_TONE: Record<string, { label: string; fg: string; bg: string }> = {
-  delivered: { label: "DELIVERED", fg: C.meadowDeep, bg: C.meadow12 },
-  shipped: { label: "ON THE ROAD", fg: C.marigoldDeep, bg: C.marigold12 },
-  processing: { label: "PACKING", fg: C.marigoldDeep, bg: C.marigold12 },
+  delivered: { label: "DELIVERED", fg: C.forestDeep, bg: C.forest12 },
+  shipped: { label: "ON THE ROAD", fg: C.clayDeep, bg: C.clay12 },
+  processing: { label: "PACKING", fg: C.clayDeep, bg: C.clay12 },
   confirmed: { label: "CONFIRMED", fg: C.textMid, bg: C.cream },
   pending: { label: "PENDING", fg: C.textMid, bg: C.cream },
   cancelled: { label: "CANCELLED", fg: C.danger, bg: C.danger12 },

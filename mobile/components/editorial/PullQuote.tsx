@@ -20,7 +20,7 @@ type Props = {
 export function PullQuote({ quote, attribution, role, tone = "default", style }: Props) {
   const onDark = tone === "onDark";
   return (
-    <View style={[s.wrap, { borderLeftColor: onDark ? C.marigold : C.ink }, style]}>
+    <View style={[s.wrap, { borderLeftColor: onDark ? C.clay : C.ink }, style]}>
       <Quote color={onDark ? C.paper : C.ink}>{quote}</Quote>
       {attribution ? (
         <View style={s.attr}>

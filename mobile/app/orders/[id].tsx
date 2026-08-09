@@ -71,7 +71,7 @@ export default function OrderDetailScreen() {
           <>
             {/* ── Status ─────────────────────────────────────────────────── */}
             <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg }}>
-              <Eyebrow color={delivered ? C.meadow : C.marigoldDeep}>
+              <Eyebrow color={delivered ? C.forest : C.clayDeep}>
                 {delivered ? "Complete" : "In transit"}
               </Eyebrow>
               <Display1 style={{ marginTop: 8 }}>{headline}</Display1>

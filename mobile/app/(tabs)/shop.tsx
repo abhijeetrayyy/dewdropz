@@ -273,7 +273,7 @@ const s = StyleSheet.create({
   stateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: S.md },
   sortBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
   sortBtnT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.ink },
-  sortDot: { width: 5, height: 5, borderRadius: 999, backgroundColor: C.ember },
+  sortDot: { width: 5, height: 5, borderRadius: 999, backgroundColor: C.forest },
 
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: S.xl },
   cell: { width: "48%" },

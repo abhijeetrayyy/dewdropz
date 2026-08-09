@@ -24,7 +24,7 @@ const s = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 999,
-    backgroundColor: C.marigold,
+    backgroundColor: C.clay,
     borderWidth: 1.5,
     borderColor: C.paper,
     alignItems: "center",

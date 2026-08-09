@@ -67,7 +67,7 @@ export const SizeGuideSheet = forwardRef<BottomSheetModal, Props>(({ currentSize
       <Rule weight="soft" />
 
       <View style={s.note}>
-        <Icon name="info" size={18} color={C.meadow} />
+        <Icon name="info" size={18} color={C.forest} />
         <Body color={C.textMid} style={{ flex: 1 }}>
           Runs true to size. Between two? Size up — everything here is cut for a relaxed fit.
         </Body>
@@ -93,9 +93,9 @@ const s = StyleSheet.create({
   col: { flex: 1, textAlign: "right" },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: S.md },
   size: { fontFamily: F.bodyBold, fontSize: 16, color: C.ink },
-  sizeOn: { color: C.meadowDeep },
-  yours: { backgroundColor: C.meadow12, borderRadius: R.tag, paddingHorizontal: 5, paddingVertical: 2 },
-  yoursT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 0.8, color: C.meadowDeep },
+  sizeOn: { color: C.forestDeep },
+  yours: { backgroundColor: C.forest12, borderRadius: R.tag, paddingHorizontal: 5, paddingVertical: 2 },
+  yoursT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 0.8, color: C.forestDeep },
   cell: { flex: 1, fontFamily: F.mono, fontSize: 13, color: C.textMid, textAlign: "right" },
   cellOn: { fontFamily: F.monoBold, color: C.ink },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginTop: S.lg },

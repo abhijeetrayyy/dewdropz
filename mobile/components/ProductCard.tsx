@@ -44,8 +44,8 @@ type Props = {
 
 const TAG_TONES = {
   neutral: { bg: C.ink, fg: C.paper },
-  scarcity: { bg: C.marigold, fg: C.ink },
-  discount: { bg: C.ember, fg: C.paper },
+  scarcity: { bg: C.clay, fg: C.ink },
+  discount: { bg: C.rust, fg: C.paper },
   new: { bg: C.ink, fg: C.paper },
 } as const;
 
@@ -110,7 +110,7 @@ export function ProductCard({
               style={s.heart}
               hitSlop={10}
             >
-              <Icon name="favorite" size={16} color={saved ? C.ember : C.ink} filled={saved} />
+              <Icon name="favorite" size={16} color={saved ? C.clay : C.ink} filled={saved} />
             </TouchableOpacity>
           ) : null}
 

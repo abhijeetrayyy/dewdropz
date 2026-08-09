@@ -70,9 +70,9 @@ export default function SavedScreen() {
         <View style={{ paddingHorizontal: S.gutter }}>
           {lowStock.length > 0 ? (
             <View style={s.alert}>
-              <Icon name="notifications_active" size={19} color={C.marigoldDeep} />
+              <Icon name="notifications_active" size={19} color={C.clayDeep} />
               <View style={{ flex: 1 }}>
-                <Mono color={C.marigoldDeep}>RUNNING LOW</Mono>
+                <Mono color={C.clayDeep}>RUNNING LOW</Mono>
                 <Body color={C.textMid} style={{ marginTop: 4 }}>
                   {lowStock.length === 1
                     ? `${lowStock[0].name} is down to ${lowStock[0].inventory_quantity} pieces.`
@@ -146,7 +146,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     gap: S.md,
     alignItems: "flex-start",
-    backgroundColor: C.marigold12,
+    backgroundColor: C.clay12,
     borderRadius: R.panel,
     padding: S.md,
     marginBottom: S.xl,

@@ -70,9 +70,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {items.map((t) => (
           <Animated.View key={t.id} entering={FadeInUp.springify().damping(17)} exiting={FadeOutDown.duration(180)} style={s.toast}>
             {t.variant === "success" ? (
-              <Icon name="check_circle" size={16} color={C.meadow12} filled />
+              <Icon name="check_circle" size={16} color={C.forest12} filled />
             ) : t.variant === "error" ? (
-              <Icon name="error" size={16} color={C.ember} filled />
+              <Icon name="error" size={16} color={C.clay} filled />
             ) : null}
             <Text style={s.text} numberOfLines={2}>
               {t.message}

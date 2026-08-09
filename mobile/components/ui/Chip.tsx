@@ -19,7 +19,7 @@ type Props = {
 
 export function Chip({ label, selected, tone = "ink", count, onPress, style }: Props) {
   const on = !!selected;
-  const fill = tone === "meadow" ? C.meadow : C.ink;
+  const fill = tone === "meadow" ? C.forest : C.ink;
 
   return (
     <TouchableOpacity

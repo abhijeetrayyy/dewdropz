@@ -61,7 +61,7 @@ export function SectionHead({
             <View style={[s.tick, onDark && { backgroundColor: "rgba(255,255,255,0.28)" }]} />
           </>
         ) : null}
-        <Eyebrow color={onDark ? C.marigold : C.meadow} style={{ flex: 1 }} numberOfLines={1}>
+        <Eyebrow color={onDark ? C.clay : C.forest} style={{ flex: 1 }} numberOfLines={1}>
           {eyebrow}
         </Eyebrow>
         {actionLabel && onAction ? (
