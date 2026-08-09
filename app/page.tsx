@@ -1,8 +1,10 @@
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrailSpine from '@/components/TrailSpine'
-import DawnHero from '@/components/sections/DawnHero'
-import FirstLight from '@/components/sections/FirstLight'
+// DawnHero / FirstLight: unplugged per request — parked, not deleted. Both
+// still typecheck and lint clean; re-add the two <div data-trail-*> blocks
+// below (and drop SummitHero's h1 back to the h2 descent copy) to bring them
+// back.
 import SummitHero from '@/components/sections/SummitHero'
 import TrustBand from '@/components/sections/TrustBand'
 import SeasonKit from '@/components/sections/SeasonKit'
@@ -37,28 +39,14 @@ export default async function Home() {
       <NavBar />
       <TrailSpine />
       <main>
-        {/* 04:40 — one photograph, two people, the moment before a walk. */}
-        <DawnHero />
-        {/* 05:55 — the pivot. Everything above this is night; everything below
-            it is day. The page used to go dark → dark → dark → dark → paper,
-            four screen-heights of it, before any light arrived. */}
-        <div data-trail-time="05:55" data-trail-alt="4,200M" data-trail-label="First light">
-          <FirstLight />
-        </div>
-        <div data-trail-time="06:20" data-trail-alt="4,980M" data-trail-label="The brief">
+        <SummitHero />
+        <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="The brief">
           <TrustBand />
         </div>
-        <div data-trail-time="07:10" data-trail-alt="4,600M" data-trail-label="Season window">
+        <div data-trail-time="06:10" data-trail-alt="4,980M" data-trail-label="First light">
           <SeasonKit allProducts={products} collections={collections} />
         </div>
-        {/* The 3D range lives here now, not at the front door. Scroll actually
-            drives the camera through the terrain in this section, which is the
-            only place the descent has ever looked like anything — at progress 0
-            the range sits beyond the fog plane and renders as a flat rectangle. */}
-        <div data-trail-time="08:30" data-trail-alt="4,200M" data-trail-label="The descent">
-          <SummitHero />
-        </div>
-        <div data-trail-time="09:40" data-trail-alt="4,000M" data-trail-label="The climb">
+        <div data-trail-time="08:30" data-trail-alt="4,200M" data-trail-label="The climb">
           <TheClimb products={products} />
         </div>
         <div data-trail-time="11:00" data-trail-alt="4,500M" data-trail-label="The ridge">

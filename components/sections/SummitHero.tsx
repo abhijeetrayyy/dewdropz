@@ -236,7 +236,7 @@ export default function SummitHero() {
       >
         <div className="absolute left-6 top-24 md:left-10 pointer-events-none">
           <p data-summit-reveal className="invisible font-mono text-[9px] uppercase leading-relaxed tracking-[0.24em] text-paper/55">
-            08:30 — The descent
+            04:30 — The start
             <br />
             30.3165° N, 78.0322° E
           </p>
@@ -253,19 +253,35 @@ export default function SummitHero() {
         />
 
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          {/* h2, not h1 — DawnHero owns the page's only h1 now. This section
-              used to BE the hero and still carried a duplicate "Go where you
-              feel alive." headline plus the same two CTAs, so after the
-              re-sequence the page shipped the same headline twice, ~4 screens
-              apart. This is the descent's own title. */}
-          <h2 className="font-display font-light uppercase leading-[0.86] tracking-[-0.04em] text-[clamp(38px,6.4vw,88px)] text-paper">
-            <span data-summit-reveal className="invisible block">Walk the</span>
-            <span data-summit-reveal className="invisible block italic text-sage">whole range.</span>
-          </h2>
+          {/* Back to h1 — DawnHero/FirstLight are unplugged (see app/page.tsx),
+              so this is the page's hero again. */}
+          <h1 className="font-display font-light uppercase leading-[0.86] tracking-[-0.04em] text-[clamp(46px,8vw,116px)] text-paper">
+            <span data-summit-reveal className="invisible block">Go where</span>
+            <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
+          </h1>
           <p data-summit-reveal className="invisible mt-6 font-body text-sm md:text-base text-paper/70 leading-relaxed max-w-md">
-            Every piece we make, placed at the altitude it was built for. Scroll to descend from the summit to the
-            treeline.
+            Gear built by the guides who live at 3,800 metres.
           </p>
+          <div data-summit-reveal className="invisible mt-9 flex flex-col sm:flex-row items-center gap-5">
+            <Link
+              href="/shop"
+              data-cursor="magnetic"
+              data-cursor-text="Shop"
+              className="inline-flex items-center gap-3 rounded-full bg-paper px-8 py-4 font-body text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-sage"
+            >
+              Shop the Gear
+              <span aria-hidden="true">↗</span>
+            </Link>
+            {/* Treks paused — the quiet door pointed to /treks ("or find your trek"). */}
+            <Link
+              href="/collections"
+              data-cursor="view"
+              data-cursor-text="Explore"
+              className="font-body text-[10px] uppercase tracking-[0.16em] text-paper/60 border-b border-paper/25 pb-1 transition-colors duration-300 hover:text-paper hover:border-sage"
+            >
+              or explore the collections
+            </Link>
+          </div>
         </div>
 
         {/* "Scroll to descend" is only true where the pin exists; on mobile the
