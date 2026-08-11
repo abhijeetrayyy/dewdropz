@@ -44,8 +44,6 @@ export default function CartView({
             </p>
             <Link
               href="/collections"
-              data-cursor="view"
-              data-cursor-text="Shop"
               className="mt-8 inline-block bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300"
             >
               Explore Collections
@@ -63,8 +61,6 @@ export default function CartView({
                 <Link
                   key={c.id}
                   href={`/collections/${c.slug}`}
-                  data-cursor="view"
-                  data-cursor-text="View"
                   className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
                 >
                   {c.image_url && (
@@ -117,9 +113,9 @@ export default function CartView({
                   initial={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="flex items-center gap-4 md:gap-6 border-b border-rule py-6 overflow-hidden"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-3 md:flex-nowrap md:gap-6 border-b border-rule py-6 overflow-hidden"
                 >
-                  <Link href={`/products/${item.slug}`} className="relative w-20 h-24 md:w-24 md:h-28 rounded-sm overflow-hidden flex-shrink-0 bg-rule/40">
+                  <Link href={`/products/${item.slug}`} className="group relative w-20 h-24 md:w-24 md:h-28 rounded-sm overflow-hidden flex-shrink-0 bg-rule/40">
                     {item.image && (
                       <Image
                         src={item.image}
@@ -128,12 +124,12 @@ export default function CartView({
                         sizes="96px"
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
-                        className="object-cover"
+                        className="object-cover transition-transform duration-500 ease-[var(--ease-out)] group-hover:scale-105"
                       />
                     )}
                   </Link>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-[140px] flex-1 md:min-w-0">
                     <Link href={`/products/${item.slug}`} className="font-display text-lg text-text hover:text-forest transition-colors">
                       {item.name}
                     </Link>
@@ -147,38 +143,49 @@ export default function CartView({
                     </div>
                   </div>
 
-                  <div className="flex items-center border border-rule rounded-sm">
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.slug, item.size, item.quantity - 1, item.customDesignId)}
-                      className="w-8 h-8 flex items-center justify-center text-mid hover:text-forest transition-colors"
-                      aria-label="Decrease quantity"
-                    >
-                      −
-                    </button>
-                    <span className="w-7 text-center font-body text-sm tabular-nums">{item.quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.slug, item.size, item.quantity + 1, item.customDesignId)}
-                      className="w-8 h-8 flex items-center justify-center text-mid hover:text-forest transition-colors"
-                      aria-label="Increase quantity"
-                    >
-                      +
-                    </button>
-                  </div>
+                  {/* Quantity/price/remove used to be three more direct
+                      children of the row above — five fixed-width-ish items
+                      fighting for one line left the name column's flex-1
+                      resolving to 0 width below md, and its un-clipped text
+                      spilled out over the quantity control. This group now
+                      wraps onto its own line on mobile (indented to sit under
+                      the name, not the thumbnail) and sits inline again at md+. */}
+                  <div className="flex w-full items-center justify-between pl-[96px] md:w-auto md:justify-start md:gap-6 md:pl-0">
+                    <div className="flex items-center border border-rule rounded-sm">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.slug, item.size, item.quantity - 1, item.customDesignId)}
+                        className="w-8 h-8 flex items-center justify-center text-mid hover:text-forest transition-colors"
+                        aria-label="Decrease quantity"
+                      >
+                        −
+                      </button>
+                      <span className="w-7 text-center font-body text-sm tabular-nums">{item.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.slug, item.size, item.quantity + 1, item.customDesignId)}
+                        className="w-8 h-8 flex items-center justify-center text-mid hover:text-forest transition-colors"
+                        aria-label="Increase quantity"
+                      >
+                        +
+                      </button>
+                    </div>
 
-                  <div className="w-20 md:w-24 text-right font-body text-sm font-medium text-forest tabular-nums">
-                    {formatPrice(item.price * item.quantity)}
-                  </div>
+                    <div className="flex items-center gap-3 md:gap-6">
+                      <div className="w-20 md:w-24 text-right font-body text-sm font-medium text-forest tabular-nums">
+                        {formatPrice(item.price * item.quantity)}
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.slug, item.size, item.customDesignId)}
-                    aria-label="Remove item"
-                    className="text-mid hover:text-clay transition-colors text-lg leading-none"
-                  >
-                    ×
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.slug, item.size, item.customDesignId)}
+                        aria-label="Remove item"
+                        className="text-mid hover:text-clay transition-colors text-lg leading-none"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -224,8 +231,6 @@ export default function CartView({
                 onMouseMove={checkoutBtn.onMouseMove}
                 onMouseLeave={checkoutBtn.onMouseLeave}
                 style={{ x: checkoutBtn.x, y: checkoutBtn.y }}
-                data-cursor="view"
-                data-cursor-text="Checkout"
                 href="/checkout"
                 onClick={() => {
                   import('@/lib/analytics').then(({ trackEvent }) => {
@@ -250,7 +255,7 @@ export default function CartView({
       {suggestions.length > 0 && (
         <div className="max-w-6xl mx-auto mt-24">
           <div className="mb-10 font-body text-xs tracking-[0.18em] text-forest uppercase">Complete the Kit</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
             {suggestions.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}

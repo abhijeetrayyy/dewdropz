@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'motion/react'
 import { signup } from '@/actions/auth'
+import { GoogleSignInButton } from './GoogleSignInButton'
 
 export default function SignupForm() {
   const [name, setName] = useState('')
@@ -124,7 +125,6 @@ export default function SignupForm() {
               <button
                 type="submit"
                 disabled={loading}
-                data-cursor="view"
                 className="w-full bg-forest text-paper font-body text-xs tracking-[0.15em] uppercase py-4 rounded-sm hover:bg-forest-mid transition-colors disabled:opacity-50 mt-4"
               >
                 {loading ? 'Creating...' : 'Create Account'}
@@ -134,12 +134,22 @@ export default function SignupForm() {
         </AnimatePresence>
 
         {!success && (
-          <div className="mt-10 text-center font-body text-xs text-mid">
-            Already geared up?{' '}
-            <Link href="/auth/login" className="text-forest hover:underline">
-              Sign in
-            </Link>
-          </div>
+          <>
+            <div className="flex items-center gap-4 my-8">
+              <span className="h-px flex-1 bg-rule" />
+              <span className="font-body text-[10px] tracking-[0.15em] text-light uppercase">Or</span>
+              <span className="h-px flex-1 bg-rule" />
+            </div>
+
+            <GoogleSignInButton label="Continue with Google" />
+
+            <div className="mt-10 text-center font-body text-xs text-mid">
+              Already geared up?{' '}
+              <Link href="/auth/login" className="text-forest hover:underline">
+                Sign in
+              </Link>
+            </div>
+          </>
         )}
       </motion.div>
     </main>

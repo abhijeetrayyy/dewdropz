@@ -36,6 +36,7 @@ export default function Preloader() {
   const panelRef = useRef<HTMLDivElement>(null)
   const markRef = useRef<HTMLDivElement>(null)
   const lineFillRef = useRef<HTMLDivElement>(null)
+  const countRef = useRef<HTMLSpanElement>(null)
   const tlRef = useRef<gsap.core.Timeline | null>(null)
   const skippedRef = useRef(false)
 
@@ -81,6 +82,23 @@ export default function Preloader() {
       0.15
     )
 
+    // Same start time, duration and easing as the line fill, so the number
+    // and the bar always agree — a counter that raced ahead of (or lagged)
+    // the thing it's supposedly counting would read as a bug, not a detail.
+    const counter = { value: 0 }
+    tl.to(
+      counter,
+      {
+        value: 100,
+        duration: 1.3,
+        ease: 'power1.inOut',
+        onUpdate: () => {
+          if (countRef.current) countRef.current.textContent = String(Math.round(counter.value)).padStart(3, '0')
+        },
+      },
+      0.15
+    )
+
     // A short, still hold once the line completes — long enough to register as
     // a deliberate beat, short enough to never feel like a stall.
     tl.add(() => finishIntro(), 1.55)
@@ -113,8 +131,18 @@ export default function Preloader() {
         <span className="font-display text-base tracking-[0.32em] text-paper">DEWDROPZ</span>
       </div>
 
-      <div className="h-px w-40 overflow-hidden bg-paper/12">
-        <div ref={lineFillRef} className="h-full w-0 bg-sage" />
+      <div className="flex w-40 flex-col items-center gap-2.5">
+        <div className="h-px w-full overflow-hidden bg-paper/12">
+          <div ref={lineFillRef} className="h-full w-0 bg-sage" />
+        </div>
+        {/* Same telemetry voice as the hero's "04:30 — THE START" readout —
+            a number counting up reads as instrumentation here, not a spinner. */}
+        <span className="font-mono text-[10px] tabular-nums tracking-[0.25em] text-paper/40">
+          <span ref={countRef} className="text-sage/80">
+            000
+          </span>
+          {' / 100'}
+        </span>
       </div>
     </div>
   )

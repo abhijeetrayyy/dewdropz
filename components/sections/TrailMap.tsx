@@ -167,8 +167,6 @@ export default function TrailMap() {
                   onHoverStart={() => setHovered(i)}
                   onHoverEnd={() => setHovered((v) => (v === i ? null : v))}
                   aria-label={p.name}
-                  data-cursor="view"
-                  data-cursor-text="Explore"
                   className="relative flex items-center justify-center p-3 -m-3"
                   whileHover={{ scale: 1.25 }}
                   whileTap={{ scale: 0.9 }}
@@ -218,8 +216,6 @@ export default function TrailMap() {
               </div>
               <Link
                 href={`/collections/${collectionForAltitude(point.altitude)}`}
-                data-cursor="view"
-                data-cursor-text="Shop"
                 className="mt-3 inline-flex items-center gap-1.5 font-body text-[10px] tracking-[0.1em] text-sage uppercase hover:text-paper transition-colors duration-300"
               >
                 Gear up for this trail →

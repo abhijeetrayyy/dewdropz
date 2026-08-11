@@ -22,7 +22,7 @@ export default async function DesignsPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
           {designs.map((design) => {
             const previews = [design.front_preview_url, design.back_preview_url].filter(Boolean) as string[]
             return (

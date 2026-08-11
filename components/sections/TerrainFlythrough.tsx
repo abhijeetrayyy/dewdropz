@@ -143,8 +143,6 @@ export default function TerrainFlythrough() {
   return (
     <section
       ref={sectionRef}
-      data-cursor="drag"
-      data-cursor-text="Scroll"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -175,8 +173,6 @@ export default function TerrainFlythrough() {
             waypointLabelRefs.current[w.id] = el
           }}
           href={w.href}
-          data-cursor="view"
-          data-cursor-text={w.kind === 'trek' ? 'Trek' : 'Explore'}
           className="group absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 opacity-0 transition-opacity duration-300"
         >
           <span className="relative flex h-2.5 w-2.5">

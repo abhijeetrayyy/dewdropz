@@ -31,8 +31,6 @@ export default function ShopByCategory({
           </div>
           <Link
             href="/shop"
-            data-cursor="view"
-            data-cursor-text="Shop"
             className="hidden md:inline-block font-body text-xs tracking-[0.1em] text-forest uppercase hover:text-text transition-colors duration-300"
           >
             Browse Everything →
@@ -46,8 +44,6 @@ export default function ShopByCategory({
               <Link
                 key={tile.id}
                 href={`/shop?category=${tile.slug}`}
-                data-cursor="view"
-                data-cursor-text="Shop"
                 className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
               >
                 {tile.image_url && (
@@ -64,7 +60,7 @@ export default function ShopByCategory({
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
                   <div className="font-body text-[9px] tracking-[0.2em] text-sage uppercase">
-                    {count} {count === 1 ? 'piece' : 'pieces'}
+                    {count === 0 ? 'Coming soon' : `${count} ${count === 1 ? 'piece' : 'pieces'}`}
                   </div>
                   <h3 className="font-display text-xl md:text-2xl text-paper mt-1 leading-tight">
                     {tile.name}

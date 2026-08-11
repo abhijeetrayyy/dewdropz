@@ -85,8 +85,6 @@ export default function WhoGoes() {
             <div key={tag.label} className="flex items-center gap-3">
               <Link
                 href={`/collections/${tag.collectionId}`}
-                data-cursor="view"
-                data-cursor-text="Shop"
                 className="manifesto-tag font-body text-[10px] tracking-[0.15em] text-paper/75 uppercase border border-paper/15 rounded-full px-4 py-2 hover:bg-paper/5 hover:text-paper hover:border-sage/40 transition-all duration-300"
               >
                 {tag.label}

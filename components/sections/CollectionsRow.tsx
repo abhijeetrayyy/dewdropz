@@ -7,7 +7,24 @@ import type { Collection } from '@/types/database'
 // this compact row is where that journey lands — all three kits side by side
 // (including O Collection's desert range, which doesn't belong on that terrain)
 // in half a screen instead of the three full pinned slides it used to take.
-export default function CollectionsRow({ collections }: { collections: Collection[] }) {
+//
+// `featuredSlugs` is admin-editable (store_settings.home_config) — empty
+// means "show every active collection", so this behaves exactly as it always
+// did until someone actually picks a subset from /admin/settings.
+export default function CollectionsRow({
+  collections,
+  featuredSlugs = [],
+}: {
+  collections: Collection[]
+  featuredSlugs?: string[]
+}) {
+  const shown =
+    featuredSlugs.length > 0
+      ? (featuredSlugs.map((slug) => collections.find((c) => c.slug === slug)).filter(Boolean) as Collection[])
+      : collections
+
+  if (shown.length === 0) return null
+
   return (
     // Midday on the page's clock — the brightest stop of the day arc.
     <section className="bg-paper px-6 md:px-10 py-20 md:py-24">
@@ -21,8 +38,6 @@ export default function CollectionsRow({ collections }: { collections: Collectio
           </div>
           <Link
             href="/collections"
-            data-cursor="view"
-            data-cursor-text="View"
             className="hidden md:inline-block font-body text-xs tracking-[0.1em] text-forest uppercase hover:text-text transition-colors duration-300"
           >
             View All →
@@ -30,12 +45,10 @@ export default function CollectionsRow({ collections }: { collections: Collectio
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {collections.map((c) => (
+          {shown.map((c) => (
             <Link
               key={c.id}
               href={`/collections/${c.slug}`}
-              data-cursor="view"
-              data-cursor-text="Explore"
               className="group relative aspect-[4/3] md:aspect-[3/4] lg:aspect-[4/3] rounded-sm overflow-hidden bg-ink"
             >
               {c.image_url && (

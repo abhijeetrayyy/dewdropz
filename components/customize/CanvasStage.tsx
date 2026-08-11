@@ -15,24 +15,20 @@ const CANONICAL_WIDTH = 800
 // *are* the print boundary — objects dragged past them are simply clipped,
 // so there's no separate "you've gone outside the zone" warning to build.
 //
-// Desktop shows both sides at once (side-by-side), so `isActiveOnMobile`
-// only controls the show/hide toggle on narrow screens where there isn't
-// room for two — `lg:!block` always wins above that breakpoint. `focused`
-// is a separate, purely visual concern: which side the Toolbar is currently
-// pointed at, so a two-canvas layout doesn't feel ambiguous about where
-// "Add Text" will land.
+// Only the active side is shown, at every breakpoint. Showing front and back
+// side by side halved the garment's width, and since the print zone is only
+// ~27% of that, it left a ~130px box to actually design in. The inactive side
+// stays mounted (just hidden) so its Fabric canvas keeps the work on it.
 export default function CanvasStage({
   zone,
   side,
-  isActiveOnMobile,
-  focused,
+  isActive,
   onFocus,
   onReady,
 }: {
   zone: CustomizationZone
   side: 'front' | 'back'
-  isActiveOnMobile: boolean
-  focused: boolean
+  isActive: boolean
   onFocus: () => void
   onReady: (canvas: Canvas) => void
 }) {
@@ -96,11 +92,11 @@ export default function CanvasStage({
   return (
     <div
       onPointerDownCapture={onFocus}
-      className={`relative w-full max-w-[800px] mx-auto rounded-md transition-shadow ${
-        isActiveOnMobile ? 'block' : 'hidden'
-      } lg:!block ${focused ? 'ring-2 ring-forest ring-offset-2 ring-offset-paper' : ''}`}
+      className={`relative mx-auto w-full overflow-hidden rounded-md ring-1 ring-paper/10 ${
+        isActive ? 'block' : 'hidden'
+      }`}
     >
-      <div className="absolute left-3 top-3 z-10 rounded-sm bg-ink/70 px-2.5 py-1 text-[10px] font-body uppercase tracking-[0.15em] text-paper">
+      <div className="absolute left-3 top-3 z-10 rounded-sm bg-ink/70 px-2.5 py-1 font-body text-[9px] uppercase tracking-[0.18em] text-paper backdrop-blur-sm">
         {side === 'front' ? 'Front' : 'Back'}
       </div>
       <div ref={containerRef} className="relative">
@@ -108,11 +104,14 @@ export default function CanvasStage({
         <img
           src={zone.mockupImage}
           alt=""
-          className="w-full h-auto block select-none pointer-events-none rounded-md"
+          className="block h-auto w-full select-none pointer-events-none"
           draggable={false}
         />
+        {/* The dashed rule *is* the print boundary — anything dragged past it
+            is clipped in the preview and in the print file, so it needs to
+            read clearly against a mid-grey garment shot. */}
         <div
-          className="absolute border border-dashed border-forest/50"
+          className="absolute border border-dashed border-sage/70"
           style={{
             left: zone.x * scale,
             top: zone.y * scale,

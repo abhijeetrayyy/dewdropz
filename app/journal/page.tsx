@@ -28,8 +28,6 @@ export default function JournalPage() {
             {/* Featured article */}
             <Link
               href={`/journal/${JOURNAL[0].id}`}
-              data-cursor="view"
-              data-cursor-text="Read"
               className="group grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center mb-20 pb-20 border-b border-rule"
             >
               <div className="relative h-[60vw] max-h-[420px] md:h-[52vh] rounded-lg overflow-hidden order-1 md:order-none">
@@ -71,8 +69,6 @@ export default function JournalPage() {
                 <Link
                   key={entry.id}
                   href={`/journal/${entry.id}`}
-                  data-cursor="view"
-                  data-cursor-text="Read"
                   className="group"
                 >
                   <div className="relative h-[50vw] max-h-[320px] md:h-[38vh] rounded-lg overflow-hidden">

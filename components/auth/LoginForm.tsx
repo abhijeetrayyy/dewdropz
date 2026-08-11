@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { login } from '@/actions/auth'
+import { GoogleSignInButton } from './GoogleSignInButton'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -86,12 +87,19 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            data-cursor="view"
             className="w-full bg-forest text-paper font-body text-xs tracking-[0.15em] uppercase py-4 rounded-sm hover:bg-forest-mid transition-colors disabled:opacity-50"
           >
             {loading ? 'Entering...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="flex items-center gap-4 my-8">
+          <span className="h-px flex-1 bg-rule" />
+          <span className="font-body text-[10px] tracking-[0.15em] text-light uppercase">Or</span>
+          <span className="h-px flex-1 bg-rule" />
+        </div>
+
+        <GoogleSignInButton label="Continue with Google" />
 
         <div className="mt-10 text-center font-body text-xs text-mid">
           Don&apos;t have an account?{' '}

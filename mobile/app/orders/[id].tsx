@@ -1,4 +1,5 @@
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatPrice } from "@/lib/utils";
@@ -126,6 +127,9 @@ export default function OrderDetailScreen() {
                 <View key={i}>
                   {i > 0 ? <Rule weight="hair" /> : null}
                   <View style={s.itemRow}>
+                    <View style={s.thumb}>
+                      {item.image ? <Image source={{ uri: item.image }} style={s.thumbImg} contentFit="cover" alt="" /> : null}
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Title>{item.product_name}</Title>
                       <Mono color={C.textMuted} style={{ marginTop: 4 }}>
@@ -189,6 +193,8 @@ const s = StyleSheet.create({
   connectorDone: { backgroundColor: C.ink },
 
   itemRow: { flexDirection: "row", alignItems: "flex-start", gap: S.md, paddingVertical: S.md },
+  thumb: { width: 52, height: 64, borderRadius: R.card, overflow: "hidden", backgroundColor: C.sand },
+  thumbImg: { width: "100%", height: "100%" },
 
   bar: {
     position: "absolute",

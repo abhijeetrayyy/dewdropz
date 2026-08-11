@@ -79,7 +79,7 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
 
         <div className="space-y-4">
           {order.items?.map((item) => {
-            const preview = item.design?.front_preview_url ?? item.design?.back_preview_url
+            const preview = item.design?.front_preview_url ?? item.design?.back_preview_url ?? item.product?.images?.[0]
             return (
               <div key={item.id} className="flex items-center gap-4">
                 {preview && (

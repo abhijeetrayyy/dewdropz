@@ -312,9 +312,12 @@ export async function getAddresses(userId: string): Promise<Address[]> {
 export type Order = {
   id: string; order_number: string; status: string; payment_status: string;
   total_amount: number; subtotal: number; shipping_cost: number; created_at: string;
-  // `product_name`/`unit_price` are only present on the detail query — the
-  // list query joins `quantity` alone, so they're optional per-line.
-  items?: { product_name?: string; quantity: number; unit_price?: number }[];
+  // `product_name`/`unit_price`/image fields are only present on the detail
+  // query — the list query joins `quantity` alone, so they're optional per-line.
+  // `image` is resolved server-side from whichever of design preview / product
+  // photo is available (see getOrderById) so screens don't need to know the
+  // fallback order themselves.
+  items?: { product_name?: string; quantity: number; unit_price?: number; image?: string | null }[];
 };
 
 // Orders never had a `lib/data.ts` wrapper — both order screens queried
@@ -339,11 +342,29 @@ export async function getOrders(userId: string): Promise<Order[]> {
 export async function getOrderById(id: string): Promise<Order> {
   const { data, error } = await supabase
     .from("orders")
-    .select("*,items:order_items(product_name,quantity,unit_price)")
+    .select(
+      "*,items:order_items(product_name,quantity,unit_price,design:custom_designs(front_preview_url,back_preview_url),product:products(images))"
+    )
     .eq("id", id)
     .single();
   if (error || !data) throw error ?? new Error("Order not found");
-  return data as unknown as Order;
+  // Web's order detail resolves the same design-preview-then-product-photo
+  // fallback (see actions/orders.ts) — mirrored here so mobile order history
+  // isn't the one surface showing no image at all for what was ordered.
+  const raw = data as unknown as {
+    items?: {
+      product_name?: string; quantity: number; unit_price?: number;
+      design?: { front_preview_url?: string | null; back_preview_url?: string | null } | null;
+      product?: { images?: string[] } | null;
+    }[];
+  } & Record<string, unknown>;
+  const items = raw.items?.map((item) => ({
+    product_name: item.product_name,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    image: item.design?.front_preview_url ?? item.design?.back_preview_url ?? item.product?.images?.[0] ?? null,
+  }));
+  return { ...raw, items } as unknown as Order;
 }
 
 export type Review = {
@@ -390,5 +411,53 @@ export async function createReview(input: { product_id: string; user_id: string;
     title: input.title || null,
     content: input.content || null,
   });
+  if (error) throw error;
+}
+
+export type AppNotification = {
+  id: string;
+  type: "order_update" | "promotion" | "back_in_stock";
+  title: string;
+  body: string | null;
+  order_id: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
+export async function getNotifications(userId: string): Promise<AppNotification[]> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id,type,title,body,order_id,read_at,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function markNotificationRead(id: string) {
+  const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id).is("read_at", null);
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead(userId: string) {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .is("read_at", null);
+  if (error) throw error;
+}
+
+export type NotificationPreferences = { order_updates: boolean; promotions: boolean; back_in_stock: boolean };
+
+export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+  const { data, error } = await supabase.from("profiles").select("notification_preferences").eq("id", userId).single();
+  if (error) throw error;
+  return (data?.notification_preferences as NotificationPreferences) ?? { order_updates: true, promotions: true, back_in_stock: true };
+}
+
+export async function updateNotificationPreferences(userId: string, prefs: NotificationPreferences) {
+  const { error } = await supabase.from("profiles").update({ notification_preferences: prefs }).eq("id", userId);
   if (error) throw error;
 }

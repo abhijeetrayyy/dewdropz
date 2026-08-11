@@ -56,8 +56,6 @@ export default async function CollectionsPage() {
               <Link
                 key={c.id}
                 href={`/collections/${c.slug}`}
-                data-cursor="view"
-                data-cursor-text="Explore"
                 className="group relative h-[70vh] min-h-[440px] rounded-lg overflow-hidden bg-ink"
               >
                 {c.image_url && (

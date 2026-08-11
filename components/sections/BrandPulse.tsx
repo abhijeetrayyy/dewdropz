@@ -110,8 +110,6 @@ export default function BrandPulse() {
         </div>
         <Link
           href="/about"
-          data-cursor="view"
-          data-cursor-text="Story"
           className="mt-6 inline-block font-body text-xs tracking-[0.12em] uppercase text-sage hover:text-paper transition-colors duration-300 border-b border-sage/40 pb-0.5"
         >
           Read Our Story →

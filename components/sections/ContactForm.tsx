@@ -143,8 +143,6 @@ export default function ContactForm() {
                   onMouseMove={submitBtn.onMouseMove}
                   onMouseLeave={submitBtn.onMouseLeave}
                   style={{ x: submitBtn.x, y: submitBtn.y }}
-                  data-cursor="view"
-                  data-cursor-text="Send"
                   type="submit"
                   disabled={sending}
                   className="mt-2 bg-sage text-ink font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 w-fit rounded-sm hover:bg-white transition-colors duration-300 disabled:opacity-50"

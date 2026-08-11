@@ -48,12 +48,33 @@ export default function ProductDetail({ product, collection, related, collection
   // Gate on this component's own mount, not the provider's localStorage load, so
   // the first client render always matches the server (same fix as ProductCard).
   const mounted = useHasMounted()
-  const images = product.images?.length ? product.images : []
   const [activeImage, setActiveImage] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [variantId, setVariantId] = useState(product.variants?.[0]?.id ?? '')
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
+
+  // Customizable blanks (hoodie/sweatshirt/tee) carry their colourways in
+  // customization_config, not as ordinary variant attributes — this page used
+  // to render Size only and never surfaced them at all, so a shopper had no
+  // idea a colour choice existed before clicking into the studio.
+  const colorways = product.customization_config?.colors ?? []
+  const [colorName, setColorName] = useState(colorways.find((c) => c.available)?.name ?? '')
+  const selectedColor = colorways.find((c) => c.name === colorName)
+
+  // The gallery reflects whichever colour is selected — reusing the same
+  // front/back mockup photos the studio itself uses, so picking a colour here
+  // isn't just a swatch with no visible effect. Falls back to the product's
+  // own photos for non-customizable products or a colourway with no mockups.
+  const colorImages = selectedColor
+    ? [selectedColor.front?.mockupImage, selectedColor.back?.mockupImage].filter((u): u is string => !!u)
+    : []
+  const images = colorImages.length > 0 ? colorImages : product.images?.length ? product.images : []
+
+  function selectColor(name: string) {
+    setColorName(name)
+    setActiveImage(0)
+  }
 
   const variant = product.variants?.find((v) => v.id === variantId)
   const price = product.price + (variant?.price_adjustment ?? 0)
@@ -143,9 +164,9 @@ export default function ProductDetail({ product, collection, related, collection
     }
   }, [])
 
-  // Related-products grid reveal — identical pattern to FeaturedGear.tsx,
-  // reusing the same .product-card/.product-image class hooks ProductCard
-  // already renders, so no new markup is needed on ProductCard's side.
+  // Related-products grid reveal, reusing the same .product-card/.product-image
+  // class hooks ProductCard already renders, so no new markup is needed on
+  // ProductCard's side.
   useEffect(() => {
     if (!relatedGridRef.current || related.length === 0) return
     const ctx = gsap.context(() => {
@@ -181,8 +202,6 @@ export default function ProductDetail({ product, collection, related, collection
               <Link
                 key={c.slug}
                 href={`/collections/${c.slug}`}
-                data-cursor="view"
-                data-cursor-text="Shop"
                 className="group flex items-center gap-3 min-w-0"
               >
                 <div className="relative h-11 w-11 md:h-12 md:w-12 rounded-sm overflow-hidden flex-shrink-0">
@@ -234,7 +253,7 @@ export default function ProductDetail({ product, collection, related, collection
                 onMouseLeave={handleMouseLeave}
                 onClick={() => images[activeImage] && setLightboxOpen(true)}
                 style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 900 }}
-                className="aspect-[3/4] rounded-sm overflow-hidden relative bg-rule/40 cursor-zoom-in"
+                className="group aspect-[3/4] rounded-sm overflow-hidden relative bg-rule/40 cursor-zoom-in"
               >
                 {images[activeImage] ? (
                   <Image
@@ -245,7 +264,7 @@ export default function ProductDetail({ product, collection, related, collection
                     sizes="(max-width: 768px) 100vw, 50vw"
                     placeholder="blur"
                     blurDataURL={BLUR_DATA_URL}
-                    className="object-cover"
+                    className="object-cover transition-transform duration-500 ease-[var(--ease-out)] group-hover:scale-105"
                   />
                 ) : null}
                 {discountPct ? (
@@ -273,11 +292,17 @@ export default function ProductDetail({ product, collection, related, collection
                       key={img}
                       type="button"
                       onClick={() => setActiveImage(i)}
-                      className={`flex-1 aspect-square rounded-sm overflow-hidden relative border transition-colors duration-300 ${
+                      className={`group flex-1 aspect-square rounded-sm overflow-hidden relative border transition-colors duration-300 ${
                         activeImage === i ? 'border-forest' : 'border-rule hover:border-mid'
                       }`}
                     >
-                      <Image src={img} alt={`${product.name} view ${i + 1}`} fill sizes="120px" className="object-cover" />
+                      <Image
+                        src={img}
+                        alt={`${product.name} view ${i + 1}`}
+                        fill
+                        sizes="120px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
                     </button>
                   ))}
                 </div>
@@ -347,6 +372,48 @@ export default function ProductDetail({ product, collection, related, collection
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ duration: 0.6, delay: 0.24 }}
               >
+              {colorways.length > 0 && (
+                <div className="mt-8">
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <div className="font-body text-[10px] tracking-[0.15em] text-text uppercase">Colour</div>
+                    {selectedColor && <span className="font-body text-xs text-mid">{selectedColor.name}</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {colorways.map((c) => {
+                      const selectable = c.available && !!(c.front || c.back)
+                      const selected = colorName === c.name
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          disabled={!selectable}
+                          onClick={() => selectColor(c.name)}
+                          title={selectable ? c.name : `${c.name} — coming soon`}
+                          aria-label={selectable ? c.name : `${c.name}, coming soon`}
+                          aria-pressed={selected}
+                          className={`relative h-8 w-8 rounded-full border transition-all duration-300 ${
+                            selected
+                              ? 'border-forest ring-2 ring-forest ring-offset-2 ring-offset-paper'
+                              : selectable
+                              ? 'border-rule hover:border-forest'
+                              : 'cursor-not-allowed border-rule opacity-40'
+                          }`}
+                          style={{ backgroundColor: c.hex }}
+                        >
+                          {/* A diagonal bar reads as "not orderable yet" without
+                              relying on colour alone — on a colour control. */}
+                          {!selectable && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <span className="block h-px w-full rotate-45 bg-mid/70" />
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {product.variants && product.variants.length > 0 && (
                 <div className="mt-8">
                   <div className="flex items-center mb-3">
@@ -401,7 +468,10 @@ export default function ProductDetail({ product, collection, related, collection
 
                 {product.is_customizable ? (
                   <Link
-                    href={`/products/${product.slug}/customize${variantId ? `?variant=${variantId}` : ''}`}
+                    href={`/products/${product.slug}/customize?${new URLSearchParams({
+                      ...(variantId ? { variant: variantId } : {}),
+                      ...(colorName ? { color: colorName } : {}),
+                    })}`}
                     data-cursor="magnetic"
                     data-cursor-text="Design"
                     className="flex-1 bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 text-center"
@@ -430,7 +500,7 @@ export default function ProductDetail({ product, collection, related, collection
                   onClick={() => toggleItem(product.slug)}
                   aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'}
                   aria-pressed={saved}
-                  data-cursor="view"
+                  data-cursor="magnetic"
                   data-cursor-text={saved ? 'Saved' : 'Save'}
                   className="w-[52px] h-[52px] flex-shrink-0 flex items-center justify-center border border-rule rounded-sm hover:border-forest transition-colors duration-300"
                 >
@@ -577,7 +647,7 @@ export default function ProductDetail({ product, collection, related, collection
         <section className="bg-paper px-6 md:px-10 pb-24">
           <div className="max-w-7xl mx-auto">
             <div className="mb-10 font-body text-xs tracking-[0.18em] text-forest uppercase">You Might Also Like</div>
-            <div ref={relatedGridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+            <div ref={relatedGridRef} className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
               {related.map((p) => (
                 <ProductCard key={p.slug} product={p} />
               ))}

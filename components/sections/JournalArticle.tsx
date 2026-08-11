@@ -94,7 +94,7 @@ export default function JournalArticle({ entry, related }: JournalArticleProps) 
             <div className="mb-10 font-body text-xs tracking-[0.18em] text-sage uppercase">More From the Trail</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {related.map((r) => (
-                <Link key={r.id} href={`/journal/${r.id}`} data-cursor="view" data-cursor-text="Read" className="group flex gap-5">
+                <Link key={r.id} href={`/journal/${r.id}`} className="group flex gap-5">
                   <div className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden">
                     <Image
                       src={r.image}

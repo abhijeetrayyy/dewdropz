@@ -103,8 +103,6 @@ export default function NewsletterBar() {
                       className="flex-1 bg-transparent border-b border-paper/25 pb-3 font-body text-base text-paper placeholder:text-paper/30 focus:outline-none focus:border-sage transition-colors"
                     />
                     <button
-                      data-cursor="view"
-                      data-cursor-text="Join"
                       type="submit"
                       disabled={loading}
                       className="bg-paper text-forest font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 rounded-sm hover:bg-sage hover:text-ink transition-colors duration-300 disabled:opacity-50"

@@ -12,6 +12,7 @@ import { Loader2, Save } from 'lucide-react'
 import { getStoreSettings, updateStoreSettings } from '@/actions/settings'
 import type { StoreSettings } from '@/types/database'
 import { ShippingEngine } from './shipping-engine'
+import { HomepageEngine } from './homepage-engine'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -74,6 +75,7 @@ export default function SettingsPage() {
           <TabsTrigger value="general" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">General</TabsTrigger>
           <TabsTrigger value="shipping" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Shipping & Delivery</TabsTrigger>
           <TabsTrigger value="taxes" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Taxes</TabsTrigger>
+          <TabsTrigger value="homepage" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Homepage</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-0">
@@ -147,6 +149,10 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="homepage" className="mt-0">
+          <HomepageEngine />
         </TabsContent>
       </Tabs>
     </div>

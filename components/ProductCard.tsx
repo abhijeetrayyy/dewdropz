@@ -19,9 +19,6 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
   const springRotateX = useSpring(rotateX, { stiffness: 200, damping: 20 })
   const springRotateY = useSpring(rotateY, { stiffness: 200, damping: 20 })
 
-  const [holoX, setHoloX] = useState(50)
-  const [holoY, setHoloY] = useState(50)
-  const [holoOpacity, setHoloOpacity] = useState(0)
   const [added, setAdded] = useState(false)
   // hasItem() reads localStorage via WishlistProvider, which the server can never
   // see — rendering it immediately risks a hydration mismatch if the provider's
@@ -40,18 +37,11 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
     const py = (e.clientY - rect.top) / rect.height - 0.5
     rotateY.set(px * 14)
     rotateX.set(py * -14)
-
-    const xPercent = ((e.clientX - rect.left) / rect.width) * 100
-    const yPercent = ((e.clientY - rect.top) / rect.height) * 100
-    setHoloX(xPercent)
-    setHoloY(yPercent)
-    setHoloOpacity(0.48)
   }
 
   const handleMouseLeave = () => {
     rotateX.set(0)
     rotateY.set(0)
-    setHoloOpacity(0)
   }
 
   const handleAddToCart = () => {
@@ -87,7 +77,8 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
     <div className="product-card group relative">
       <button
         onClick={handleWishlist}
-        className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-paper"
+        aria-label={mounted && hasItem(product.slug) ? 'Remove from wishlist' : 'Save to wishlist'}
+        className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-20 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-paper"
       >
         <svg
           width="16" height="16" viewBox="0 0 24 24"
@@ -100,16 +91,16 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
       </button>
 
       {(discountPct || soldOut || lowStock) && (
-        <div className="absolute top-4 left-4 z-20 flex flex-col gap-1 items-start">
+        <div className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-20 flex flex-col gap-1 items-start">
           {discountPct ? (
-            <span className="bg-forest text-paper text-[11px] font-medium px-2 py-1 rounded-sm">
+            <span className="bg-forest text-paper text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-sm">
               {discountPct}% OFF
             </span>
           ) : null}
           {soldOut ? (
-            <span className="bg-mid text-paper text-[11px] font-medium px-2 py-1 rounded-sm">Sold out</span>
+            <span className="bg-mid text-paper text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-sm">Sold out</span>
           ) : lowStock ? (
-            <span className="bg-paper/90 text-clay text-[11px] font-medium pl-1.5 pr-2 py-1 rounded-sm backdrop-blur-sm flex items-center gap-1.5">
+            <span className="bg-paper/90 text-clay text-[10px] sm:text-[11px] font-medium pl-1.5 pr-2 py-0.5 sm:py-1 rounded-sm backdrop-blur-sm flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-clay animate-pulse flex-shrink-0" />
               Only {stock} left
             </span>
@@ -117,7 +108,7 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
         </div>
       )}
 
-      <Link href={`/products/${product.slug}`} data-cursor="image" data-cursor-text="View">
+      <Link href={`/products/${product.slug}`}>
         <motion.div
           ref={ref}
           onMouseMove={handleMouseMove}
@@ -134,7 +125,7 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
                 sizes="(max-width: 640px) 50vw, 25vw"
                 placeholder="blur"
                 blurDataURL={BLUR_DATA_URL}
-                className={`object-cover transition-opacity duration-300 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
+                className={`object-cover transition-[opacity,scale] duration-500 ease-[var(--ease-out)] group-hover:scale-105 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
               />
             ) : null}
             {product.images?.[1] ? (
@@ -143,53 +134,31 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
                 alt=""
                 fill
                 sizes="(max-width: 640px) 50vw, 25vw"
-                className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                className="object-cover opacity-0 transition-[opacity,scale] duration-500 ease-[var(--ease-out)] group-hover:scale-105 group-hover:opacity-100"
               />
             ) : null}
           </div>
-
-          <div
-            className="absolute inset-0 pointer-events-none mix-blend-color-dodge transition-opacity duration-300 z-10"
-            style={{
-              opacity: holoOpacity,
-              background: `
-                radial-gradient(
-                  circle at ${holoX}% ${holoY}%,
-                  rgba(255, 255, 255, 0.35) 0%,
-                  rgba(123, 164, 111, 0.12) 30%,
-                  rgba(246, 243, 230, 0.08) 60%,
-                  rgba(0, 0, 0, 0) 90%
-                ),
-                linear-gradient(
-                  ${holoX + holoY}deg,
-                  rgba(255, 255, 255, 0) 0%,
-                  rgba(123, 164, 111, 0.08) 35%,
-                  rgba(184, 130, 107, 0.08) 65%,
-                  rgba(255, 255, 255, 0) 100%
-                )
-              `,
-            }}
-          />
 
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none mix-blend-overlay bg-[radial-gradient(ellipse_at_center,_var(--paper)_1px,_transparent_1px)] bg-[size:12px_12px]" />
         </motion.div>
       </Link>
 
       <Link href={`/products/${product.slug}`}>
-        <h3 className="font-display text-xl mt-4 mb-1 hover:text-forest transition-colors duration-300">
+        <h3 className="font-display text-base sm:text-xl mt-3 sm:mt-4 mb-1 hover:text-forest transition-colors duration-300 leading-snug">
           {product.name}
         </h3>
       </Link>
-      <p className="font-body text-sm text-mid">{product.short_description}</p>
-      <div className="mt-2 overflow-hidden relative h-6">
-        {/* The wrapper below stacks two h-6 rows (price, then the button) inside
-            itself, so it's 48px tall — -translate-y-full moves it by 100% of its
-            OWN height (48px), clearing both rows out of this 24px window instead
-            of swapping between them. -translate-y-1/2 (24px, one row) is correct. */}
+      <p className="font-body text-xs sm:text-sm text-mid line-clamp-1 sm:line-clamp-none">{product.short_description}</p>
+      {/* Hover-swap (price -> "Add to cart") only makes sense where hover exists.
+          Clipped to a 24px window and revealed via translate on md+; on touch
+          screens that clip made "Add to cart" permanently unreachable, since
+          nothing ever triggers the hover that would have scrolled it into view —
+          below md both rows just stack and stay visible instead. */}
+      <div className="mt-1.5 sm:mt-2 relative h-auto md:h-6 md:overflow-hidden">
         <div
-          className={`transition-transform duration-300 ${added ? '-translate-y-1/2' : 'group-hover:-translate-y-1/2'}`}
+          className={`md:transition-transform md:duration-300 ${added ? 'md:-translate-y-1/2' : 'md:group-hover:-translate-y-1/2'}`}
         >
-          <span className="font-body text-sm font-medium text-forest h-6 flex items-center gap-1.5">
+          <span className="font-body text-xs sm:text-sm font-medium text-forest md:h-6 flex items-center gap-1.5">
             {formatPrice(product.price)}
             {discountPct ? (
               <span className="text-mid line-through font-normal">{formatPrice(product.compare_at_price!)}</span>
@@ -200,7 +169,7 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
             onClick={handleAddToCart}
             disabled={soldOut}
             data-cursor="magnetic"
-            className="font-body text-sm font-medium text-forest block h-6 cursor-pointer hover:underline text-left disabled:text-mid disabled:cursor-not-allowed disabled:no-underline"
+            className="font-body text-xs sm:text-sm font-medium text-forest block md:h-6 cursor-pointer hover:underline text-left disabled:text-mid disabled:cursor-not-allowed disabled:no-underline"
           >
             {soldOut ? 'Sold out' : added ? 'Added ✓' : 'Add to cart'}
           </button>

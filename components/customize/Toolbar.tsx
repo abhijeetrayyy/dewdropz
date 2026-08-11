@@ -3,14 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Canvas, FabricObject } from 'fabric'
 import { Textbox, FabricImage } from 'fabric'
-import { Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic, FlipHorizontal2 } from 'lucide-react'
+import {
+  Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic,
+  FlipHorizontal2, Layers as LayersIcon, ChevronUp, ArrowUp, ArrowDown, Loader2,
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { uploadCustomerImage } from '@/actions/media'
 import { useCanvasHistory } from '@/hooks/useCanvasHistory'
+import type { CustomizationZone } from '@/types/database'
 
 const FONTS = ['Inter', 'Fraunces', 'Georgia', 'Arial', 'Courier New']
+
+// A few inks that actually look good on a garment, so nobody has to fight a
+// native colour picker to get a decent result. The picker is still there.
+const SWATCHES = ['#FFFFFF', '#1A1A1A', '#7BA46F', '#B8826B', '#D7A96A', '#5A7A96', '#B23B3B', '#E8DFC8']
 
 // Ink that will actually be legible on the chosen blank. Without this, new
 // text defaults to near-black and lands invisibly on the black garment —
@@ -28,12 +34,20 @@ function defaultInkFor(garmentHex: string | undefined): string {
 
 export default function Toolbar({
   canvas,
+  zone,
   activeSide,
   twoSided,
   garmentHex,
   onCopyToOtherSide,
 }: {
   canvas: Canvas | null
+  // New objects are positioned against the zone's canonical size, never
+  // against canvas.getWidth() — that reports the *CSS* width, which is
+  // whatever the viewport happens to make it (94px on a phone, 162px on a
+  // laptop). Centring off it put new text at a negative x on small screens,
+  // so the first characters fell outside the print area and were clipped out
+  // of the exported print file.
+  zone: CustomizationZone | undefined
   activeSide: 'front' | 'back'
   twoSided: boolean
   garmentHex?: string
@@ -42,6 +56,7 @@ export default function Toolbar({
   const [selected, setSelected] = useState<FabricObject | null>(null)
   const [layers, setLayers] = useState<FabricObject[]>([])
   const [uploading, setUploading] = useState(false)
+  const [mobilePanel, setMobilePanel] = useState<'none' | 'layers'>('none')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { undo, redo, canUndo, canRedo } = useCanvasHistory(canvas)
   const [, bump] = useState(0)
@@ -52,9 +67,9 @@ export default function Toolbar({
     const onClear = () => setSelected(null)
     const refreshLayers = () => setLayers([...canvas.getObjects()].reverse())
     // With two canvases sharing one Toolbar, `canvas` swaps identity whenever
-    // the Toolbar's focus moves between front and back — without this,
-    // `selected` would keep pointing at an object on the canvas we just left,
-    // silently editing the wrong side's design.
+    // focus moves between front and back — without this, `selected` would keep
+    // pointing at an object on the canvas we just left, silently editing the
+    // wrong side's design.
     onSelect()
     refreshLayers()
     canvas.on('selection:created', onSelect)
@@ -64,8 +79,7 @@ export default function Toolbar({
     canvas.on('object:removed', refreshLayers)
     canvas.on('object:modified', refreshLayers)
     // object:modified doesn't fire per keystroke while editing a Textbox's
-    // content — text:changed does, which is what keeps the layer label
-    // (and the font-size input, etc.) live while typing.
+    // content — text:changed does, which keeps the layer label live.
     canvas.on('text:changed', refreshLayers)
     return () => {
       canvas.off('selection:created', onSelect)
@@ -79,38 +93,41 @@ export default function Toolbar({
   }, [canvas])
 
   const addText = useCallback(() => {
-    if (!canvas) return
+    if (!canvas || !zone) return
+    // Fabric v6 defaults originX/originY to 'center', so left/top ARE the
+    // centre point — the old code subtracted half the box on top of that and
+    // pushed roughly half of every new text object outside the print area,
+    // where it was silently clipped out of the exported print file.
+    const boxWidth = Math.min(160, zone.widthPx * 0.8)
     const text = new Textbox('Your text', {
-      left: canvas.getWidth() / 2 - 60,
-      top: canvas.getHeight() / 2 - 15,
+      left: zone.widthPx / 2,
+      top: zone.heightPx / 2,
       fontFamily: 'Inter',
       fontSize: 24,
       fill: defaultInkFor(garmentHex),
-      width: 160,
+      width: boxWidth,
+      textAlign: 'center',
     })
     canvas.add(text)
     canvas.setActiveObject(text)
     canvas.renderAll()
-  }, [canvas, garmentHex])
-
-  const handleImagePick = useCallback(() => fileInputRef.current?.click(), [])
+  }, [canvas, zone, garmentHex])
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       e.target.value = ''
-      if (!file || !canvas) return
+      if (!file || !canvas || !zone) return
       setUploading(true)
       try {
         const url = await uploadCustomerImage(file)
         const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
-        const maxDim = Math.min(canvas.getWidth(), canvas.getHeight()) * 0.7
+        // Same origin rule as addText: left/top are the centre point in
+        // Fabric v6, so this is just the middle of the print area.
+        const maxDim = Math.min(zone.widthPx, zone.heightPx) * 0.7
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
         img.scale(scale)
-        img.set({
-          left: (canvas.getWidth() - img.getScaledWidth()) / 2,
-          top: (canvas.getHeight() - img.getScaledHeight()) / 2,
-        })
+        img.set({ left: zone.widthPx / 2, top: zone.heightPx / 2 })
         canvas.add(img)
         canvas.setActiveObject(img)
         canvas.renderAll()
@@ -120,7 +137,7 @@ export default function Toolbar({
         setUploading(false)
       }
     },
-    [canvas]
+    [canvas, zone]
   )
 
   const deleteSelected = useCallback(() => {
@@ -139,23 +156,27 @@ export default function Toolbar({
     canvas.renderAll()
   }, [canvas, selected])
 
-  const bringForward = useCallback(() => {
-    if (!canvas || !selected) return
-    canvas.bringObjectForward(selected)
-    canvas.renderAll()
-  }, [canvas, selected])
-
-  const sendBackward = useCallback(() => {
-    if (!canvas || !selected) return
-    canvas.sendObjectBackwards(selected)
-    canvas.renderAll()
-  }, [canvas, selected])
+  const reorder = useCallback(
+    (dir: 'forward' | 'backward') => {
+      if (!canvas || !selected) return
+      if (dir === 'forward') canvas.bringObjectForward(selected)
+      else canvas.sendObjectBackwards(selected)
+      canvas.renderAll()
+      // Stacking order is part of the design, so it belongs in undo history —
+      // Fabric doesn't emit object:modified for a z-order change on its own.
+      canvas.fire('object:modified', { target: selected })
+    },
+    [canvas, selected]
+  )
 
   const updateText = useCallback(
     (patch: Partial<Textbox>) => {
       if (!canvas || !selected) return
       selected.set(patch)
       canvas.renderAll()
+      // .set() is silent, so without this a font/size/colour change was
+      // invisible to undo — you could never take a styling change back.
+      canvas.fire('object:modified', { target: selected })
       bump((n) => n + 1)
     },
     [canvas, selected]
@@ -173,141 +194,263 @@ export default function Toolbar({
   const isText = selected?.type === 'textbox'
   const textbox = isText ? (selected as Textbox) : null
 
-  return (
-    <div className="border-l border-rule p-5 space-y-6 overflow-y-auto">
+  // ── Shared pieces, rendered into both the desktop rail and the mobile sheet ──
+
+  const addActions = (
+    <div className="flex gap-2">
+      <ToolButton onClick={addText} className="flex-1">
+        <Type className="h-3.5 w-3.5" /> Text
+      </ToolButton>
+      <ToolButton onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex-1">
+        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+        {uploading ? 'Uploading…' : 'Image'}
+      </ToolButton>
+    </div>
+  )
+
+  const historyActions = (
+    <div className="flex gap-1.5">
+      <IconButton onClick={undo} disabled={!canUndo} label="Undo">
+        <Undo2 className="h-3.5 w-3.5" />
+      </IconButton>
+      <IconButton onClick={redo} disabled={!canRedo} label="Redo">
+        <Redo2 className="h-3.5 w-3.5" />
+      </IconButton>
       {twoSided && (
-        <div className="flex items-center justify-between gap-2 -mt-1 -mx-1 px-2 py-1.5 rounded-sm bg-forest/5">
-          <span className="font-body text-[11px] text-mid">
-            Editing <span className="font-medium text-forest capitalize">{activeSide}</span>
-          </span>
-          <button
-            type="button"
-            onClick={onCopyToOtherSide}
-            className="flex items-center gap-1 font-body text-[11px] text-mid hover:text-forest transition-colors"
-          >
-            <FlipHorizontal2 className="h-3 w-3" />
-            Copy to {activeSide === 'front' ? 'back' : 'front'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onCopyToOtherSide}
+          className="ml-auto flex items-center gap-1.5 rounded-sm border border-paper/15 px-2.5 py-1.5 font-body text-[10px] text-paper/50 transition-colors hover:border-paper/40 hover:text-paper"
+        >
+          <FlipHorizontal2 className="h-3 w-3" />
+          Copy to {activeSide === 'front' ? 'back' : 'front'}
+        </button>
       )}
+    </div>
+  )
 
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={addText} className="flex-1">
-          <Type className="h-4 w-4 mr-1.5" /> Text
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleImagePick} disabled={uploading} className="flex-1">
-          <ImagePlus className="h-4 w-4 mr-1.5" /> {uploading ? 'Uploading…' : 'Image'}
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
+  const inspector = selected && (
+    <div className="space-y-3">
+      <SectionLabel>{isText ? 'Text' : 'Image'}</SectionLabel>
 
-      <div className="flex gap-2">
-        <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo} aria-label="Undo">
-          <Undo2 className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo} aria-label="Redo">
-          <Redo2 className="h-4 w-4" />
-        </Button>
-      </div>
+      {textbox && (
+        <>
+          <select
+            value={textbox.fontFamily ?? 'Inter'}
+            onChange={(e) => updateText({ fontFamily: e.target.value })}
+            className="w-full rounded-sm border border-paper/15 bg-[#0B0F0C] p-2 font-body text-xs text-paper outline-none transition-colors focus:border-sage"
+          >
+            {FONTS.map((f) => (
+              <option key={f} value={f} className="bg-[#0B0F0C]">
+                {f}
+              </option>
+            ))}
+          </select>
 
-      {selected && (
-        <div className="space-y-3 border-t border-rule pt-4">
-          <div className="text-xs uppercase tracking-wide text-mid">Selected</div>
+          <div className="flex items-center gap-2">
+            <label className="flex flex-1 items-center gap-2 rounded-sm border border-paper/15 px-2 py-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-paper/35">Size</span>
+              <input
+                type="number"
+                min={8}
+                max={200}
+                value={Math.round(textbox.fontSize ?? 24)}
+                onChange={(e) => updateText({ fontSize: Number(e.target.value) })}
+                className="w-full bg-transparent font-body text-xs text-paper outline-none tabular-nums"
+              />
+            </label>
+            <IconButton
+              onClick={() => updateText({ fontWeight: textbox.fontWeight === 'bold' ? 'normal' : 'bold' })}
+              label="Bold"
+              active={textbox.fontWeight === 'bold'}
+            >
+              <Bold className="h-3.5 w-3.5" />
+            </IconButton>
+            <IconButton
+              onClick={() => updateText({ fontStyle: textbox.fontStyle === 'italic' ? 'normal' : 'italic' })}
+              label="Italic"
+              active={textbox.fontStyle === 'italic'}
+            >
+              <Italic className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
 
-          {textbox && (
-            <>
-              <select
-                value={textbox.fontFamily ?? 'Inter'}
-                onChange={(e) => updateText({ fontFamily: e.target.value })}
-                className="w-full border border-rule rounded-sm text-sm p-2 bg-paper"
-              >
-                {FONTS.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={8}
-                  max={200}
-                  value={textbox.fontSize ?? 24}
-                  onChange={(e) => updateText({ fontSize: Number(e.target.value) })}
-                  className="w-16"
+          <div>
+            <div className="mb-1.5 font-mono text-[9px] uppercase tracking-wider text-paper/35">Ink</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {SWATCHES.map((hex) => (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => updateText({ fill: hex })}
+                  aria-label={`Ink ${hex}`}
+                  className={`h-5 w-5 rounded-full border transition-all ${
+                    (textbox.fill as string)?.toUpperCase() === hex
+                      ? 'border-sage ring-1 ring-sage ring-offset-1 ring-offset-[#131A15]'
+                      : 'border-paper/20 hover:border-paper/50'
+                  }`}
+                  style={{ backgroundColor: hex }}
+                />
+              ))}
+              <label className="relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-paper/20 hover:border-paper/50">
+                <span
+                  aria-hidden
+                  className="absolute inset-0"
+                  style={{ background: 'conic-gradient(red,yellow,lime,aqua,blue,magenta,red)' }}
                 />
                 <input
                   type="color"
                   value={(textbox.fill as string) ?? '#000000'}
                   onChange={(e) => updateText({ fill: e.target.value })}
-                  className="h-9 w-9 rounded border border-rule cursor-pointer"
-                  aria-label="Text color"
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  aria-label="Custom ink colour"
                 />
-                <Button
-                  variant={textbox.fontWeight === 'bold' ? 'default' : 'outline'}
-                  size="icon"
-                  onClick={() => updateText({ fontWeight: textbox.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                  aria-label="Bold"
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={textbox.fontStyle === 'italic' ? 'default' : 'outline'}
-                  size="icon"
-                  onClick={() => updateText({ fontStyle: textbox.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                  aria-label="Italic"
-                >
-                  <Italic className="h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={bringForward} className="flex-1">
-              Forward
-            </Button>
-            <Button variant="outline" size="sm" onClick={sendBackward} className="flex-1">
-              Backward
-            </Button>
+              </label>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={duplicateSelected} className="flex-1">
-              <Copy className="h-4 w-4 mr-1.5" /> Duplicate
-            </Button>
-            <Button variant="outline" size="sm" onClick={deleteSelected} className="flex-1 text-red-600 hover:text-red-700">
-              <Trash2 className="h-4 w-4 mr-1.5" /> Delete
-            </Button>
-          </div>
-        </div>
+        </>
       )}
 
-      <div className="border-t border-rule pt-4">
-        <div className="text-xs uppercase tracking-wide text-mid mb-2">Layers</div>
-        {layers.length === 0 ? (
-          <p className="text-sm text-mid">Nothing here yet — add text or an image.</p>
-        ) : (
-          <ul className="space-y-1">
-            {layers.map((obj, i) => (
-              <li
-                key={i}
-                onClick={() => selectLayer(obj)}
-                className={`truncate text-sm px-2 py-1.5 rounded-sm cursor-pointer transition-colors ${
-                  selected === obj ? 'bg-forest/10 text-forest' : 'hover:bg-rule/40 text-text'
-                }`}
-              >
-                {obj.type === 'textbox' ? `Text: ${(obj as Textbox).text?.slice(0, 24) || '(empty)'}` : 'Image'}
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="grid grid-cols-2 gap-1.5">
+        <ToolButton onClick={() => reorder('forward')}>
+          <ArrowUp className="h-3.5 w-3.5" /> Forward
+        </ToolButton>
+        <ToolButton onClick={() => reorder('backward')}>
+          <ArrowDown className="h-3.5 w-3.5" /> Back
+        </ToolButton>
+        <ToolButton onClick={duplicateSelected}>
+          <Copy className="h-3.5 w-3.5" /> Duplicate
+        </ToolButton>
+        <ToolButton onClick={deleteSelected} danger>
+          <Trash2 className="h-3.5 w-3.5" /> Delete
+        </ToolButton>
       </div>
     </div>
+  )
+
+  const layerList = (
+    <div>
+      <SectionLabel>Layers</SectionLabel>
+      {layers.length === 0 ? (
+        <p className="mt-2 font-body text-[11px] leading-relaxed text-paper/35">
+          Nothing here yet — add some text or an image and it&apos;ll stack up here.
+        </p>
+      ) : (
+        <ul className="mt-2 space-y-1">
+          {layers.map((obj, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => selectLayer(obj)}
+                className={`flex w-full items-center gap-2 truncate rounded-sm px-2 py-1.5 text-left font-body text-[11px] transition-colors ${
+                  selected === obj ? 'bg-sage/15 text-paper' : 'text-paper/50 hover:bg-paper/5 hover:text-paper/80'
+                }`}
+              >
+                {obj.type === 'textbox' ? <Type className="h-3 w-3 flex-shrink-0" /> : <ImagePlus className="h-3 w-3 flex-shrink-0" />}
+                <span className="truncate">
+                  {obj.type === 'textbox' ? (obj as Textbox).text?.slice(0, 24) || '(empty)' : 'Image'}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* ── Desktop rail ───────────────────────────────────────────────── */}
+      <aside className="hidden w-72 flex-shrink-0 space-y-5 overflow-y-auto border-l border-paper/10 p-5 lg:block">
+        {addActions}
+        {historyActions}
+        {inspector && <div className="border-t border-paper/10 pt-5">{inspector}</div>}
+        <div className="border-t border-paper/10 pt-5">{layerList}</div>
+      </aside>
+
+      {/* ── Mobile: sticky tool bar with a slide-up panel. The old layout put
+          the entire toolbar below a full-height canvas, so on a phone every
+          tool was a long scroll away from the thing it edited. ───────────── */}
+      <div className="sticky bottom-0 z-20 border-t border-paper/10 bg-[#131A15]/95 backdrop-blur-sm lg:hidden">
+        {(selected || mobilePanel === 'layers') && (
+          <div className="max-h-[45vh] space-y-4 overflow-y-auto border-b border-paper/10 p-4">
+            {selected && inspector}
+            {mobilePanel === 'layers' && layerList}
+          </div>
+        )}
+        <div className="space-y-2 p-3">
+          {addActions}
+          <div className="flex items-center gap-1.5">
+            {historyActions}
+            <button
+              type="button"
+              onClick={() => setMobilePanel((p) => (p === 'layers' ? 'none' : 'layers'))}
+              aria-expanded={mobilePanel === 'layers'}
+              className="ml-auto flex items-center gap-1.5 rounded-sm border border-paper/15 px-2.5 py-1.5 font-body text-[10px] text-paper/50 transition-colors hover:text-paper"
+            >
+              <LayersIcon className="h-3 w-3" />
+              {layers.length}
+              <ChevronUp className={`h-3 w-3 transition-transform ${mobilePanel === 'layers' ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-sage">{children}</div>
+}
+
+function ToolButton({
+  children, onClick, disabled, className = '', danger,
+}: {
+  children: React.ReactNode; onClick: () => void; disabled?: boolean; className?: string; danger?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center justify-center gap-1.5 rounded-sm border px-3 py-2 font-body text-[11px] transition-colors duration-200 disabled:opacity-40 ${
+        danger
+          ? 'border-paper/15 text-[#D98A8A] hover:border-[#D98A8A]/50 hover:bg-[#D98A8A]/10'
+          : 'border-paper/15 text-paper/70 hover:border-paper/40 hover:bg-paper/5 hover:text-paper'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function IconButton({
+  children, onClick, disabled, label, active,
+}: {
+  children: React.ReactNode; onClick: () => void; disabled?: boolean; label: string; active?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex h-8 w-8 items-center justify-center rounded-sm border transition-colors duration-200 disabled:opacity-30 ${
+        active
+          ? 'border-sage bg-sage/15 text-paper'
+          : 'border-paper/15 text-paper/60 hover:border-paper/40 hover:text-paper'
+      }`}
+    >
+      {children}
+    </button>
   )
 }

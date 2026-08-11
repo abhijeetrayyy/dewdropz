@@ -12,8 +12,6 @@ export default function AboutSustainabilityLink() {
         </div>
         <Link
           href="/sustainability"
-          data-cursor="view"
-          data-cursor-text="Read"
           className="shrink-0 font-body text-xs tracking-[0.1em] text-forest uppercase hover:text-forest-mid transition-colors duration-300 border-b border-forest/40 pb-0.5 whitespace-nowrap"
         >
           Read Our Commitment →

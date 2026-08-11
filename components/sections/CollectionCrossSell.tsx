@@ -17,8 +17,6 @@ export default function CollectionCrossSell({ others }: { others: Collection[] }
             <Link
               key={c.id}
               href={`/collections/${c.slug}`}
-              data-cursor="view"
-              data-cursor-text="Explore"
               className="group relative h-[42vh] min-h-[280px] rounded-lg overflow-hidden bg-ink/60"
             >
               {c.image_url && (

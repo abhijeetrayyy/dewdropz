@@ -87,6 +87,14 @@ export async function signInWithProvider(provider: 'google' | 'github') {
   redirect(data.url)
 }
 
+// Thin wrapper around signInWithProvider('google') with a `(formData) => void`
+// signature — the shape a <form action={...}> requires — so the Google button
+// can be a plain form post (works with JS disabled, and is the pattern Next.js
+// expects for actions that call redirect()) instead of a client onClick handler.
+export async function signInWithGoogle() {
+  await signInWithProvider('google')
+}
+
 export async function updateProfile(input: ProfileUpdateInput) {
   const parsed = profileUpdateSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }

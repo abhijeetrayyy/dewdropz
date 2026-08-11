@@ -10,6 +10,7 @@ import { calculateShippingCost } from './shipping'
 import { sendOrderConfirmationEmail, sendShipmentNotificationEmail, sendOrderCancellationEmail, sendRefundEmail } from '@/lib/email'
 import { sendSlackAlert } from '@/lib/slack'
 import { setPaymentStatusInternal, restoreOrderStock, cancelOrderInternal, issueGatewayRefund, releaseCouponUsage } from '@/lib/orders-internal'
+import { notifyUser } from '@/lib/notifications'
 import type { OrderWithItems, Order } from '@/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -220,7 +221,7 @@ export async function getOrder(orderId: string, userId: string) {
   const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('orders')
-    .select('*, items:order_items(*, design:custom_designs(front_preview_url, back_preview_url))')
+    .select('*, items:order_items(*, design:custom_designs(front_preview_url, back_preview_url), product:products(images))')
     .eq('id', orderId)
     .eq('user_id', userId)
     .single()
@@ -269,10 +270,38 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
   if (status === 'confirmed') updates.confirmed_at = new Date().toISOString()
   if (status === 'shipped') updates.shipped_at = new Date().toISOString()
   if (status === 'delivered') updates.delivered_at = new Date().toISOString()
-  const { error } = await supabase.from('orders').update(updates).eq('id', orderId)
+  const { data: order, error } = await supabase
+    .from('orders')
+    .update(updates)
+    .eq('id', orderId)
+    .select('user_id, order_number')
+    .single()
   if (error) throw new Error(error.message)
   revalidatePath(`/admin/orders/${orderId}`)
   revalidatePath(`/orders/${orderId}`)
+  await notifyOrderStatus(orderId, order?.user_id, order?.order_number, status)
+}
+
+const ORDER_STATUS_NOTIFICATION: Partial<Record<Order['status'], string>> = {
+  confirmed: 'has been confirmed',
+  processing: 'is being processed',
+  shipped: 'is on its way',
+  delivered: 'has been delivered',
+}
+
+// Shared by updateOrderStatus and addTrackingInfo — both can independently
+// transition an order to 'shipped', so the notification copy lives in one
+// place rather than being duplicated (and drifting) at each call site.
+async function notifyOrderStatus(orderId: string, userId: string | null | undefined, orderNumber: string | undefined, status: Order['status']) {
+  const phrase = ORDER_STATUS_NOTIFICATION[status]
+  if (!userId || !orderNumber || !phrase) return
+  await notifyUser({
+    userId,
+    type: 'order_update',
+    title: `Order ${orderNumber} ${phrase}`,
+    orderId,
+    data: { orderNumber },
+  }).catch(() => {})
 }
 
 // Dedicated admin-facing cancel action (distinct from the generic
@@ -376,7 +405,7 @@ export async function addTrackingInfo(orderId: string, carrier: string, tracking
     .from('orders')
     .update({ carrier, tracking_number: trackingNumber, tracking_url: trackingUrl ?? null, status: 'shipped', shipped_at: new Date().toISOString() })
     .eq('id', orderId)
-    .select('email, order_number')
+    .select('email, order_number, user_id')
     .single()
   if (error) throw new Error(error.message)
   revalidatePath(`/admin/orders/${orderId}`)
@@ -389,6 +418,7 @@ export async function addTrackingInfo(orderId: string, carrier: string, tracking
       trackingNumber,
       trackingUrl,
     }).catch(() => {})
+    await notifyOrderStatus(orderId, order.user_id, order.order_number, 'shipped')
   }
 }
 

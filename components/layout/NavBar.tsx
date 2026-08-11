@@ -102,12 +102,16 @@ export default function NavBar() {
         ))}
       </nav>
 
-      <div className="flex items-center gap-6">
+      {/* gap-6 (24px x 3 gaps = 72px) left nothing for the header's own
+          justify-between to place between the wordmark and this cluster below
+          lg — the nav's own links are hidden there, so this and the logo are
+          the only two flex children, and their combined width already
+          exceeded the available space. Tighter below sm, back to the
+          original spacing once the row has room to breathe. */}
+      <div className="flex items-center gap-2.5 sm:gap-6">
         <Link
           href="/wishlist"
           aria-label="Wishlist"
-          data-cursor="view"
-          data-cursor-text="Saved"
           className="flex items-center gap-2 text-paper/80 hover:text-paper transition-colors duration-300"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill={wishlistItems.length > 0 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
@@ -119,8 +123,6 @@ export default function NavBar() {
         <Link
           href="/cart"
           aria-label="Cart"
-          data-cursor="view"
-          data-cursor-text="Cart"
           className="flex items-center gap-2 text-paper/80 hover:text-paper transition-colors duration-300"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -134,8 +136,6 @@ export default function NavBar() {
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="Account"
-              data-cursor="view"
-              data-cursor-text="Account"
               className="relative flex items-center text-paper/80 hover:text-paper transition-colors duration-300"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -160,8 +160,6 @@ export default function NavBar() {
           <Link
             href="/auth/login"
             aria-label="Sign in"
-            data-cursor="view"
-            data-cursor-text="Sign In"
             className="flex items-center text-paper/80 hover:text-paper transition-colors duration-300"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

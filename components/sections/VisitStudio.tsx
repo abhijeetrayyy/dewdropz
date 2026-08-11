@@ -21,8 +21,6 @@ export default function VisitStudio() {
             href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}
             target="_blank"
             rel="noopener noreferrer"
-            data-cursor="view"
-            data-cursor-text="Map"
             className="mt-6 inline-block font-body text-xs text-forest tracking-[0.1em] uppercase hover:text-forest-mid transition-colors duration-300 border-b border-forest/40 pb-0.5"
           >
             Get Directions →

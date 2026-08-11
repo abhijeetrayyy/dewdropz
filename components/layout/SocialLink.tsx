@@ -19,7 +19,6 @@ export function SocialLink({
       onMouseMove={magnetic.onMouseMove}
       onMouseLeave={magnetic.onMouseLeave}
       style={{ x: magnetic.x, y: magnetic.y }}
-      data-cursor="view"
       href={href}
       aria-label={label}
       className="hover:text-white transition-colors"

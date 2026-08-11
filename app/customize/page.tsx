@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import BlankCard from '@/components/customize/BlankCard'
+import { ContourLines } from '@/components/ui/ContourLines'
 import { getProducts } from '@/actions/products'
 
 export const metadata: Metadata = {
@@ -10,9 +11,15 @@ export const metadata: Metadata = {
     'Print your own artwork on heavyweight DEWDROPZ blanks — tee, sweatshirt and hoodie in an oversized unisex fit. Design front and back in the studio.',
 }
 
-// Landing page for the customization studio: the destination for the "Customize"
-// nav link and the homepage showcase CTA. Lists every blank actually flagged
-// customizable, so it stays in step with the catalogue.
+const STEPS = [
+  ['01', 'Pick your blank', 'Tee, sweatshirt or hoodie. All oversized unisex fits, sizes S to XL.'],
+  ['02', 'Make the design', 'Upload an image or set type. Position it on the front, the back, or both.'],
+  ['03', 'It goes to print', 'Your preview goes into the cart exactly as it’ll be printed. COD across India.'],
+] as const
+
+// Landing page for the customization studio: the destination for the
+// "Customize" nav link and the homepage showcase CTA. Lists every blank
+// actually flagged customizable, so it stays in step with the catalogue.
 export default async function CustomizeIndexPage() {
   const products = await getProducts()
   const blanks = products.filter((p) => p.is_customizable && (p.customization_config?.colors?.length ?? 0) > 0)
@@ -20,50 +27,53 @@ export default async function CustomizeIndexPage() {
   return (
     <>
       <NavBar />
-      <main className="bg-paper min-h-screen pt-28 md:pt-32 pb-24">
-        <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <div className="max-w-2xl">
-            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">The Workbench</div>
-            <h1 className="font-display text-[clamp(34px,5vw,54px)] text-text mt-3 leading-[1.05]">
-              Design your own.
-            </h1>
-            <p className="font-body text-sm md:text-base text-mid mt-5 leading-relaxed">
-              Pick a blank, choose a colour and size, then add your artwork or type in the studio. You get a live preview
-              on the garment — front and back — before anything goes to print.
-            </p>
-          </div>
+      <main className="min-h-screen bg-[linear-gradient(170deg,#F6F0E2_0%,#F2E8D2_45%,#EFE2C6_100%)]">
+        {/* Same warm-daylight-plus-contours surface the homepage teaser uses —
+            this page is the other door into the same room, not a different one. */}
+        <div className="relative overflow-hidden px-6 pb-16 pt-28 md:px-10 md:pb-20 md:pt-36">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-1/4 top-0 h-[70%] w-[70%] rounded-full bg-[radial-gradient(circle,rgba(215,169,106,0.20)_0%,transparent_70%)]"
+          />
+          <ContourLines className="opacity-[0.13]" />
 
+          <div className="relative mx-auto max-w-7xl">
+            <div className="max-w-2xl">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">The Workbench</div>
+              <h1 className="mt-3 font-display text-[clamp(36px,5.5vw,58px)] leading-[1.03] text-text">
+                Design your own.
+              </h1>
+              <p className="mt-5 max-w-xl font-body text-sm leading-relaxed text-mid md:text-base">
+                Pick a blank, choose a colour and size, then throw your artwork on it in the studio. You get a live
+                preview on the garment — front and back —{' '}
+                <span className="text-text">before anything goes to print.</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-6 pb-24 md:px-10">
           {blanks.length === 0 ? (
-            <p className="font-body text-sm text-mid mt-14">
+            <p className="mt-4 font-body text-sm text-mid">
               Nothing is set up for customization right now. Check back shortly.
             </p>
           ) : (
-            <div className="mt-12 md:mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3">
               {blanks.map((p) => (
                 <BlankCard key={p.id} product={p} />
               ))}
             </div>
           )}
 
-          <div className="mt-16 border-t border-rule pt-10 grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div>
-              <div className="font-body text-[10px] tracking-[0.18em] text-forest uppercase">01 · Pick your blank</div>
-              <p className="font-body text-sm text-mid mt-2.5 leading-relaxed">
-                Tee, sweatshirt or hoodie. All oversized unisex fits, sizes S to XL.
-              </p>
-            </div>
-            <div>
-              <div className="font-body text-[10px] tracking-[0.18em] text-forest uppercase">02 · Make the design</div>
-              <p className="font-body text-sm text-mid mt-2.5 leading-relaxed">
-                Upload an image or set type. Position it inside the print area on the front, the back, or both.
-              </p>
-            </div>
-            <div>
-              <div className="font-body text-[10px] tracking-[0.18em] text-forest uppercase">03 · Order it</div>
-              <p className="font-body text-sm text-mid mt-2.5 leading-relaxed">
-                Your preview goes into the cart exactly as it&apos;ll be printed. COD available across India.
-              </p>
-            </div>
+          <div className="mt-16 grid grid-cols-1 gap-8 border-t border-forest/15 pt-10 sm:grid-cols-3">
+            {STEPS.map(([n, title, body]) => (
+              <div key={n}>
+                <div className="font-body text-[11px] uppercase tracking-[0.16em] text-forest">
+                  <span className="text-clay">{n}</span> — {title}
+                </div>
+                <p className="mt-2 font-body text-[13px] leading-relaxed text-mid">{body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </main>

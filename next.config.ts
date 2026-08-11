@@ -17,6 +17,15 @@ const nextConfig: NextConfig = {
   // the bundler can't trace or inline — bundling it fails with "Cannot find
   // native binding". Keeping it external makes the route require it normally.
   serverExternalPackages: ["@napi-rs/canvas"],
+  experimental: {
+    // Every customer upload goes through a Server Action (uploadCustomerImage),
+    // and Server Actions default to a 1MB request body. That silently capped
+    // the studio far below the 10MB the upload validation itself advertises:
+    // any photo over 1MB — and every print-resolution export — died with a raw
+    // "Body exceeded 1 MB limit" instead of ever reaching our own checks.
+    // 12MB leaves room for the 8.5MB print budget plus multipart overhead.
+    serverActions: { bodySizeLimit: "12mb" },
+  },
   images: {
     remotePatterns: [
       { protocol: "https" as const, hostname: "images.unsplash.com", pathname: "/**" },

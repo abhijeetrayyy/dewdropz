@@ -17,6 +17,7 @@ import BrandPulse from '@/components/sections/BrandPulse'
 import NewsletterBar from '@/components/sections/NewsletterBar'
 import { getProducts, getCollections } from '@/actions/products'
 import { getCategories } from '@/actions/categories'
+import { getStoreSettings } from '@/actions/settings'
 
 // The homepage is one day on the mountain, lived by scrolling: pre-dawn start on
 // the summit, first light, the climb, the ridge at midday, pack check, stories on
@@ -24,15 +25,15 @@ import { getCategories } from '@/actions/categories'
 // TrailSpine reads the data-trail-* wrappers below and keeps a small fixed HUD
 // ticking time and altitude — the thread that makes eleven sections one journey.
 // The light follows the clock: dawn dark → blue hour → bright paper at midday →
-// warm afternoon paper → night ink. FeaturedGear and GearSpotlight were merged
-// into TheClimb (each product now appears exactly once, at its altitude); their
-// files remain in the repo, unplugged.
+// warm afternoon paper → night ink.
 export default async function Home() {
-  const [products, collections, categories] = await Promise.all([
+  const [products, collections, categories, settings] = await Promise.all([
     getProducts(),
     getCollections(),
     getCategories({ parentId: null }),
+    getStoreSettings(),
   ])
+  const { season_kit, climb, featured_collection_slugs } = settings.home_config
 
   return (
     <>
@@ -44,13 +45,13 @@ export default async function Home() {
           <TrustBand />
         </div>
         <div data-trail-time="06:10" data-trail-alt="4,980M" data-trail-label="First light">
-          <SeasonKit allProducts={products} collections={collections} />
+          <SeasonKit config={season_kit} allProducts={products} collections={collections} />
         </div>
         <div data-trail-time="08:30" data-trail-alt="4,200M" data-trail-label="The climb">
-          <TheClimb products={products} />
+          <TheClimb config={climb} products={products} />
         </div>
         <div data-trail-time="11:00" data-trail-alt="4,500M" data-trail-label="The ridge">
-          <CollectionsRow collections={collections} />
+          <CollectionsRow collections={collections} featuredSlugs={featured_collection_slugs} />
         </div>
         <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
           <ShopByCategory categories={categories} products={products} />

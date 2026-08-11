@@ -105,8 +105,6 @@ export default function CollectionScroll() {
   return (
     <section
       ref={sectionRef}
-      data-cursor="drag"
-      data-cursor-text="Scroll"
       className="relative h-screen bg-ink overflow-hidden"
     >
       {/* Background WebGL canvas performing liquid texture transitions, synced to scroll every frame */}

@@ -18,6 +18,8 @@ export const qk = {
   reviews: (productId: string) => ["reviews", productId] as const,
   rating: (productId: string) => ["reviews", "rating", productId] as const,
   addresses: (userId: string) => ["addresses", userId] as const,
+  notifications: (userId: string) => ["notifications", userId] as const,
+  notificationPreferences: (userId: string) => ["notifications", "preferences", userId] as const,
 };
 
 export function useProductsQuery() {
@@ -106,6 +108,52 @@ export function useAddressesQuery(userId: string | undefined) {
     queryKey: qk.addresses(userId ?? ""),
     queryFn: () => Data.getAddresses(userId!),
     enabled: !!userId,
+  });
+}
+
+export function useNotificationsQuery(userId: string | undefined) {
+  return useQuery({
+    queryKey: qk.notifications(userId ?? ""),
+    queryFn: () => Data.getNotifications(userId!),
+    enabled: !!userId,
+  });
+}
+
+export function useMarkNotificationReadMutation(userId: string | undefined) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: Data.markNotificationRead,
+    onSuccess: () => {
+      if (userId) client.invalidateQueries({ queryKey: qk.notifications(userId) });
+    },
+  });
+}
+
+export function useMarkAllNotificationsReadMutation(userId: string | undefined) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => Data.markAllNotificationsRead(userId!),
+    onSuccess: () => {
+      if (userId) client.invalidateQueries({ queryKey: qk.notifications(userId) });
+    },
+  });
+}
+
+export function useNotificationPreferencesQuery(userId: string | undefined) {
+  return useQuery({
+    queryKey: qk.notificationPreferences(userId ?? ""),
+    queryFn: () => Data.getNotificationPreferences(userId!),
+    enabled: !!userId,
+  });
+}
+
+export function useUpdateNotificationPreferencesMutation(userId: string | undefined) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (prefs: Data.NotificationPreferences) => Data.updateNotificationPreferences(userId!, prefs),
+    onSuccess: (_, prefs) => {
+      if (userId) client.setQueryData(qk.notificationPreferences(userId), prefs);
+    },
   });
 }
 

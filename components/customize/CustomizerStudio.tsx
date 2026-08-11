@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Check } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 import type { Canvas } from 'fabric'
 import { toast } from 'sonner'
 import CanvasStage from './CanvasStage'
@@ -12,16 +13,25 @@ import { useCart } from '@/providers/CartProvider'
 import { uploadCustomerImage } from '@/actions/media'
 import { saveCustomDesign } from '@/actions/designs'
 import { compositePreview, dataUrlToFile } from '@/lib/customize/compositePreview'
+import { exportPrintArtwork, PREVIEW_MULTIPLIER } from '@/lib/customize/printExport'
+import { formatPrice } from '@/lib/utils'
 import type { ProductWithCollection, Json } from '@/types/database'
 
 type Side = 'front' | 'back'
 
+// The studio is laid out like the design tools people already know: a setup
+// rail on the left (what garment am I making), the stage in the middle, and
+// tools on the right (what am I putting on it). Dark chrome throughout, so the
+// garment and the artwork are the only bright things on screen — the same
+// reason every serious editor is dark.
 export default function CustomizerStudio({
   product,
   initialVariantId,
+  initialColorName,
 }: {
   product: ProductWithCollection
   initialVariantId?: string
+  initialColorName?: string
 }) {
   const router = useRouter()
   const { addItem } = useCart()
@@ -29,11 +39,12 @@ export default function CustomizerStudio({
   const colorways = config?.colors ?? []
   const orderableColors = colorways.filter((c) => c.available && (c.front || c.back))
 
-  const [colorName, setColorName] = useState(orderableColors[0]?.name ?? '')
-  // `activeSide` drives two different things depending on viewport: on
-  // mobile it's which single canvas is shown (the old toggle behavior);
-  // on desktop, where both canvases are always visible side by side, it's
-  // just which one the Toolbar is currently pointed at.
+  const [colorName, setColorName] = useState(
+    (initialColorName && orderableColors.find((c) => c.name === initialColorName)?.name) || orderableColors[0]?.name || ''
+  )
+  // `activeSide` drives two different things depending on viewport: on narrow
+  // screens it's which single canvas is shown; on desktop, where both are
+  // visible side by side, it's just which one the tools are pointed at.
   const [activeSide, setActiveSide] = useState<Side>('front')
   const [frontCanvas, setFrontCanvas] = useState<Canvas | null>(null)
   const [backCanvas, setBackCanvas] = useState<Canvas | null>(null)
@@ -42,9 +53,8 @@ export default function CustomizerStudio({
   const color = colorways.find((c) => c.name === colorName) ?? orderableColors[0] ?? null
   const sides = (['front', 'back'] as Side[]).filter((s) => color?.[s])
   const twoSided = sides.length > 1
-  // Colorways can in principle differ in which sides they support, so never
-  // trust `activeSide` blindly after a colour switch — fall back to a side
-  // this colourway actually has.
+  // Colourways can differ in which sides they support, so never trust
+  // `activeSide` blindly after a colour switch.
   const effectiveSide: Side = sides.includes(activeSide) ? activeSide : sides[0] ?? 'front'
 
   const variants = product.variants ?? []
@@ -55,6 +65,7 @@ export default function CustomizerStudio({
   const price = product.price + (variant?.price_adjustment ?? 0)
 
   const activeCanvas = effectiveSide === 'front' ? frontCanvas : backCanvas
+  const zone = color?.[effectiveSide]
 
   function copyActiveDesignToOtherSide() {
     if (!twoSided) return
@@ -71,8 +82,8 @@ export default function CustomizerStudio({
 
   if (sides.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-paper px-6 text-center">
-        <p className="font-body text-mid">
+      <div className="flex min-h-screen items-center justify-center bg-[#0B0F0C] px-6 text-center">
+        <p className="font-body text-paper/60">
           {colorways.length > 0
             ? 'None of this product’s colours are available to customize right now.'
             : 'This product isn’t set up for customization yet.'}
@@ -103,17 +114,25 @@ export default function CustomizerStudio({
         back_print_url?: string
       } = {}
       let cartImage = product.images?.[0] ?? ''
+      let lowestDpi = Infinity
 
       for (const side of sides) {
         const canvas = side === 'front' ? frontCanvas : backCanvas
-        const zone = color?.[side]
-        if (!canvas || !zone || canvas.getObjects().length === 0) continue
+        const sideZone = color?.[side]
+        if (!canvas || !sideZone || canvas.getObjects().length === 0) continue
 
-        const designDataUrl = canvas.toDataURL({ format: 'png', multiplier: 1 })
-        const previewDataUrl = await compositePreview(zone, designDataUrl)
+        // Two different exports on purpose: a print-resolution file derived
+        // from the zone's real inches, and a light composite for the cart
+        // thumbnail. Exporting one file for both jobs is what left every
+        // print at 18 DPI.
+        const print = exportPrintArtwork(canvas, sideZone)
+        lowestDpi = Math.min(lowestDpi, print.dpi)
+
+        const previewArtwork = canvas.toDataURL({ format: 'png', multiplier: PREVIEW_MULTIPLIER })
+        const previewDataUrl = await compositePreview(sideZone, previewArtwork)
 
         const [printUrl, previewUrl] = await Promise.all([
-          uploadCustomerImage(dataUrlToFile(designDataUrl, `${side}-print.png`)),
+          uploadCustomerImage(dataUrlToFile(print.dataUrl, `${side}-print.png`)),
           uploadCustomerImage(dataUrlToFile(previewDataUrl, `${side}-preview.png`)),
         ])
 
@@ -142,8 +161,7 @@ export default function CustomizerStudio({
           price,
           image: cartImage,
           // Display label only — customized lines are matched by
-          // customDesignId, so folding the colour in here is safe and saves
-          // the shopper from guessing which blank they picked.
+          // customDesignId, so folding the colour in here is safe.
           size: [variant?.name, color?.name].filter(Boolean).join(' · '),
           productId: product.id,
           variantId: variantId || null,
@@ -152,7 +170,13 @@ export default function CustomizerStudio({
         1
       )
 
-      toast.success('Added your design to the cart')
+      // A design that had to be exported below print standard is worth saying
+      // out loud rather than discovering on the finished garment.
+      if (lowestDpi < 150) {
+        toast.warning(`Added — but your artwork exports at ${lowestDpi} DPI. A larger source image will print sharper.`)
+      } else {
+        toast.success('Added your design to the bag')
+      }
       router.push('/cart')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save your design')
@@ -162,147 +186,224 @@ export default function CustomizerStudio({
   }
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
-      <header className="border-b border-rule px-4 sm:px-6 py-4 flex items-center justify-between gap-3 flex-shrink-0">
-        <Link
-          href={`/products/${product.slug}`}
-          className="flex items-center gap-1.5 font-body text-xs text-mid hover:text-forest transition-colors flex-shrink-0"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
-        </Link>
-        <h1 className="font-display font-light text-base sm:text-lg text-text truncate text-center">
-          Customize {product.name}
-        </h1>
-        <button
-          type="button"
-          onClick={handleContinue}
-          disabled={saving}
-          className="flex-shrink-0 flex items-center gap-1.5 bg-forest text-paper px-4 sm:px-5 py-2 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 disabled:opacity-60"
-        >
-          {saving && <Loader2 className="h-3 w-3 animate-spin" />}
-          {saving ? 'Saving…' : 'Continue'}
-        </button>
+    <div className="flex min-h-screen flex-col bg-[#0B0F0C]">
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* This is the one screen in the app that could be mistaken for a
+          bolted-on third-party widget — full-bleed dark chrome, no nav, no
+          footer. The mark anchors it as ours, the same way a browser tab
+          favicon does; without it there's nothing on screen saying DEWDROPZ
+          made this tool. */}
+      <header className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-3 border-b border-paper/10 bg-[#0B0F0C]/95 px-4 py-3 backdrop-blur-sm sm:px-6">
+        <div className="flex min-w-0 flex-shrink-0 items-center gap-3 sm:gap-4">
+          <Logo
+            markHeight={20}
+            wordmarkClassName="hidden sm:inline-block font-display text-xs tracking-[0.28em] text-paper"
+          />
+          <span className="hidden h-5 w-px bg-paper/15 sm:block" aria-hidden />
+          <Link
+            href={`/products/${product.slug}`}
+            className="flex flex-shrink-0 items-center gap-1.5 font-body text-xs text-paper/50 transition-colors hover:text-paper"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Back</span>
+          </Link>
+        </div>
+
+        <div className="min-w-0 text-center">
+          <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-sage">The Studio</div>
+          <h1 className="truncate font-display text-sm leading-tight text-paper sm:text-base">{product.name}</h1>
+        </div>
+
+        <div className="flex flex-shrink-0 items-center gap-3">
+          <span className="hidden font-body text-sm text-paper/70 tabular-nums sm:block">{formatPrice(price)}</span>
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={saving}
+            className="flex items-center gap-1.5 rounded-sm bg-sage px-4 py-2.5 font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-paper disabled:opacity-60 sm:px-5"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            {saving ? 'Saving…' : 'Add to bag'}
+          </button>
+        </div>
       </header>
 
-      <div className="flex flex-col items-center gap-3 py-4 flex-shrink-0">
-        {/* Desktop shows front and back side by side, so this toggle only
-            matters on screens too narrow for both — hidden at lg and up. */}
-        {twoSided && (
-          <div className="flex justify-center gap-2 lg:hidden">
-            {sides.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setActiveSide(s)}
-                className={`px-5 py-2 text-xs font-body tracking-[0.08em] uppercase rounded-sm border transition-colors duration-300 ${
-                  effectiveSide === s
-                    ? 'bg-forest text-paper border-forest'
-                    : 'border-rule text-mid hover:border-forest hover:text-forest'
-                }`}
-              >
-                {s === 'front' ? 'Front' : 'Back'}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="flex flex-1 flex-col lg:flex-row">
+        {/* ── Setup rail ───────────────────────────────────────────────── */}
+        <aside className="flex-shrink-0 border-b border-paper/10 px-4 py-4 lg:w-60 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
+          <div className="flex flex-row gap-6 lg:flex-col lg:gap-7">
+            {colorways.length > 0 && (
+              <section className="min-w-0">
+                <RailLabel n="01" label="Colour" value={color?.name} />
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {colorways.map((c) => {
+                    const selectable = c.available && !!(c.front || c.back)
+                    const selected = color?.name === c.name
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        disabled={!selectable}
+                        onClick={() => setColorName(c.name)}
+                        title={selectable ? c.name : `${c.name} — coming soon`}
+                        aria-label={selectable ? c.name : `${c.name}, coming soon`}
+                        aria-pressed={selected}
+                        className={`relative h-7 w-7 rounded-full border transition-all duration-300 ${
+                          selected
+                            ? 'border-sage ring-2 ring-sage ring-offset-2 ring-offset-[#0B0F0C]'
+                            : selectable
+                            ? 'border-paper/25 hover:border-paper/60'
+                            : 'cursor-not-allowed border-paper/10 opacity-30'
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                      >
+                        {/* A diagonal bar reads as "not orderable yet" without
+                            relying on colour alone — on a colour control. */}
+                        {!selectable && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="block h-px w-full rotate-45 bg-paper/50" />
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
 
-        {colorways.length > 0 && (
-          <div className="flex items-center gap-2.5 flex-wrap justify-center">
-            <span className="font-body text-[10px] tracking-[0.15em] text-mid uppercase">Colour</span>
-            {colorways.map((c) => {
-              const selectable = c.available && !!(c.front || c.back)
-              const selected = color?.name === c.name
-              return (
-                <button
-                  key={c.name}
-                  type="button"
-                  disabled={!selectable}
-                  onClick={() => setColorName(c.name)}
-                  title={selectable ? c.name : `${c.name} — coming soon`}
-                  aria-label={selectable ? c.name : `${c.name}, coming soon`}
-                  aria-pressed={selected}
-                  className={`relative h-7 w-7 rounded-full border transition-all duration-300 ${
-                    selected
-                      ? 'border-forest ring-2 ring-forest ring-offset-2 ring-offset-paper'
-                      : selectable
-                      ? 'border-rule hover:border-forest'
-                      : 'border-rule opacity-40 cursor-not-allowed'
-                  }`}
-                  style={{ backgroundColor: c.hex }}
-                >
-                  {/* A diagonal bar reads as "not orderable" without relying
-                      on colour alone, which matters on a control that *is* a
-                      colour swatch. */}
-                  {!selectable && (
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <span className="block h-[1px] w-full rotate-45 bg-mid/70" />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-            <span className="font-body text-xs text-mid ml-0.5">{color?.name}</span>
-          </div>
-        )}
+            {variants.length > 0 && (
+              <section className="min-w-0">
+                <RailLabel n="02" label="Size" value={variant?.name} />
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {variants.map((v) => {
+                    const oos = (v.inventory_quantity ?? 0) <= 0
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        disabled={oos}
+                        onClick={() => setVariantId(v.id)}
+                        className={`min-w-[40px] rounded-sm border px-2.5 py-1.5 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 ${
+                          variantId === v.id
+                            ? 'border-sage bg-sage/15 text-paper'
+                            : oos
+                            ? 'cursor-not-allowed border-paper/10 text-paper/20 line-through'
+                            : 'border-paper/20 text-paper/60 hover:border-paper/50 hover:text-paper'
+                        }`}
+                      >
+                        {v.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
 
-        {variants.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="font-body text-[10px] tracking-[0.15em] text-mid uppercase">Size</span>
-            {variants.map((v) => {
-              const oos = (v.inventory_quantity ?? 0) <= 0
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  disabled={oos}
-                  onClick={() => setVariantId(v.id)}
-                  className={`px-3 py-1.5 text-xs font-body tracking-[0.05em] uppercase rounded-sm border transition-colors duration-300 ${
-                    variantId === v.id
-                      ? 'bg-forest text-paper border-forest'
-                      : oos
-                      ? 'border-rule text-light/50 cursor-not-allowed line-through'
-                      : 'border-rule text-mid hover:border-forest hover:text-forest'
-                  }`}
-                >
-                  {v.name}
-                </button>
-              )
-            })}
+            {/* The print spec is the honest bit people can't see by looking —
+                what area they're actually designing into, and at what quality
+                it goes to the printer. */}
+            {zone && (
+              <section className="hidden lg:block">
+                <RailLabel n="03" label="Print area" />
+                <dl className="mt-3 space-y-1.5">
+                  <SpecRow k="Size" v={`${zone.widthIn} × ${zone.heightIn} in`} />
+                  <SpecRow k="Output" v="300 DPI PNG" />
+                  <SpecRow k="Sides" v={twoSided ? 'Front & back' : 'Front only'} />
+                </dl>
+                <p className="mt-3 font-body text-[10px] leading-relaxed text-paper/30">
+                  Anything past the dashed edge is trimmed off the print.
+                </p>
+              </section>
+            )}
           </div>
-        )}
-      </div>
+        </aside>
 
-      <div className="flex-1 grid md:grid-cols-[1fr_320px]">
-        <div className="p-6 min-h-[50vh] grid grid-cols-1 lg:grid-cols-2 gap-8 content-center">
-          {color?.front && (
-            <CanvasStage
-              zone={color.front}
-              side="front"
-              isActiveOnMobile={effectiveSide === 'front'}
-              focused={twoSided && effectiveSide === 'front'}
-              onFocus={() => setActiveSide('front')}
-              onReady={setFrontCanvas}
-            />
+        {/* ── Stage ────────────────────────────────────────────────────── */}
+        <main className="flex min-w-0 flex-1 flex-col">
+          {twoSided && (
+            <div className="flex flex-shrink-0 justify-center gap-1 border-b border-paper/10 px-4 py-2.5">
+              {sides.map((s) => {
+                const filled = (s === 'front' ? frontCanvas : backCanvas)?.getObjects().length ?? 0
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setActiveSide(s)}
+                    aria-pressed={effectiveSide === s}
+                    className={`flex items-center gap-2 rounded-sm px-5 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] transition-colors duration-300 ${
+                      effectiveSide === s ? 'bg-sage text-ink' : 'text-paper/50 hover:text-paper'
+                    }`}
+                  >
+                    {s}
+                    {/* A dot on the side you're not looking at is the only cue
+                        that there's work over there — without it, a design on
+                        the back is invisible from the front. */}
+                    {filled > 0 && (
+                      <span className={`h-1.5 w-1.5 rounded-full ${effectiveSide === s ? 'bg-ink/40' : 'bg-sage'}`} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           )}
-          {color?.back && (
-            <CanvasStage
-              zone={color.back}
-              side="back"
-              isActiveOnMobile={effectiveSide === 'back'}
-              focused={twoSided && effectiveSide === 'back'}
-              onFocus={() => setActiveSide('back')}
-              onReady={setBackCanvas}
-            />
-          )}
-        </div>
+
+          <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
+            {/* Sized off the viewport height, not just width: the mockups are
+                4:5, so on a short laptop screen a width-only cap would push the
+                garment past the fold. */}
+            <div className="w-full max-w-[min(680px,calc((100vh-11rem)*0.8))]">
+              {color?.front && (
+                <CanvasStage
+                  zone={color.front}
+                  side="front"
+                  isActive={effectiveSide === 'front'}
+                  onFocus={() => setActiveSide('front')}
+                  onReady={setFrontCanvas}
+                />
+              )}
+              {color?.back && (
+                <CanvasStage
+                  zone={color.back}
+                  side="back"
+                  isActive={effectiveSide === 'back'}
+                  onFocus={() => setActiveSide('back')}
+                  onReady={setBackCanvas}
+                />
+              )}
+            </div>
+          </div>
+        </main>
+
+        {/* ── Tools rail ───────────────────────────────────────────────── */}
         <Toolbar
           canvas={activeCanvas}
+          zone={zone}
           activeSide={effectiveSide}
           twoSided={twoSided}
           garmentHex={color?.hex}
           onCopyToOtherSide={copyActiveDesignToOtherSide}
         />
       </div>
+    </div>
+  )
+}
+
+function RailLabel({ n, label, value }: { n: string; label: string; value?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 border-b border-paper/10 pb-1.5">
+      <span className="font-body text-[10px] uppercase tracking-[0.18em] text-paper/40">
+        <span className="text-sage">{n}</span> {label}
+      </span>
+      {value && <span className="truncate font-body text-[11px] text-paper/70">{value}</span>}
+    </div>
+  )
+}
+
+function SpecRow({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="font-body text-[11px] text-paper/35">{k}</dt>
+      <dd className="font-mono text-[10px] text-paper/60">{v}</dd>
     </div>
   )
 }

@@ -120,8 +120,6 @@ export default function DawnHero() {
           <div data-dawn-reveal className="invisible mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Link
               href="/shop"
-              data-cursor="view"
-              data-cursor-text="Shop"
               className="inline-flex items-center gap-2 rounded-full bg-paper px-8 py-4 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
             >
               Shop the gear ↗

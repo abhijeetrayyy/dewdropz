@@ -53,7 +53,7 @@ export default async function CollectionDetailPage({ params }: { params: Promise
             </div>
 
             {allProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
                 {allProducts.map((p) => (
                   <ProductCard key={p.slug} product={p} />
                 ))}

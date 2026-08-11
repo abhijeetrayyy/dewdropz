@@ -41,8 +41,6 @@ export default function JournalStrip() {
           </div>
           <Link
             href="/journal"
-            data-cursor="view"
-            data-cursor-text="Read"
             className="hidden md:inline-block font-body text-xs tracking-[0.1em] text-forest uppercase hover:text-text transition-colors duration-300"
           >
             Visit the Journal →
@@ -54,8 +52,6 @@ export default function JournalStrip() {
             <Link
               key={entry.id}
               href={`/journal/${entry.id}`}
-              data-cursor="view"
-              data-cursor-text="Read"
               className="journal-card group relative h-[60vw] max-h-[480px] md:h-[65vh] flex-1 rounded-lg overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-[1.02] block"
             >
               <Image

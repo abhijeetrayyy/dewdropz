@@ -15,12 +15,12 @@ export default async function CustomizeProductPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ variant?: string }>
+  searchParams: Promise<{ variant?: string; color?: string }>
 }) {
   const { slug } = await params
-  const { variant } = await searchParams
+  const { variant, color } = await searchParams
   const product = await getProductBySlug(slug)
   if (!product || !product.is_customizable) notFound()
 
-  return <CustomizerStudio product={product} initialVariantId={variant} />
+  return <CustomizerStudio product={product} initialVariantId={variant} initialColorName={color} />
 }

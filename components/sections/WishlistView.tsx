@@ -59,8 +59,6 @@ export default function WishlistView({
             </p>
             <Link
               href="/shop"
-              data-cursor="view"
-              data-cursor-text="Shop"
               className="mt-8 inline-block bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300"
             >
               Explore Collections
@@ -78,8 +76,6 @@ export default function WishlistView({
                 <Link
                   key={c.id}
                   href={`/collections/${c.slug}`}
-                  data-cursor="view"
-                  data-cursor-text="View"
                   className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
                 >
                   {c.image_url && (
@@ -139,7 +135,7 @@ export default function WishlistView({
                   <h2 className="font-display text-xl text-text">{collection.name}</h2>
                   <span className="font-body text-xs text-mid italic">{collection.tagline}</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
                   {products.map((p) => (
                     <ProductCard key={p.slug} product={p} />
                   ))}
@@ -148,7 +144,7 @@ export default function WishlistView({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
             {saved.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}
@@ -159,7 +155,7 @@ export default function WishlistView({
       {recommendations.length > 0 && (
         <div className="max-w-6xl mx-auto mt-24">
           <div className="mb-10 font-body text-xs tracking-[0.18em] text-forest uppercase">Complete the Kit</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
             {recommendations.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}

@@ -1,12 +1,13 @@
-import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Body, Eyebrow, Mono, Title } from "@/components/ui/Type";
 import { useAuthStore } from "@/stores/auth";
+import { useNotificationPreferencesQuery, useUpdateNotificationPreferencesMutation } from "@/lib/queries";
 import { haptics } from "@/lib/haptics";
 import { SITE } from "@/lib/editorial";
 import { C, F, M, S } from "@/lib/theme";
@@ -15,11 +16,19 @@ import { C, F, M, S } from "@/lib/theme";
 // feel like moving between two apps. The toggle knob is animated now — v4
 // swapped `alignItems` between flex-start and flex-end, which teleported the
 // knob with no transition.
+//
+// The three notification toggles below used to be local useState only —
+// flipping them didn't persist anywhere, so they silently reset every time
+// the app reopened. They now read from and write to profiles.notification_preferences.
 export default function SettingsScreen() {
-  const { signOut } = useAuthStore();
-  const [orderUpdates, setOrderUpdates] = useState(true);
-  const [promotions, setPromotions] = useState(true);
-  const [drops, setDrops] = useState(false);
+  const { user, signOut } = useAuthStore();
+  const { data: prefs, isLoading } = useNotificationPreferencesQuery(user?.id);
+  const updatePrefs = useUpdateNotificationPreferencesMutation(user?.id);
+
+  function setPref(key: "order_updates" | "promotions" | "back_in_stock", value: boolean) {
+    if (!prefs) return;
+    updatePrefs.mutate({ ...prefs, [key]: value });
+  }
 
   return (
     <View style={s.root}>
@@ -28,28 +37,38 @@ export default function SettingsScreen() {
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Group eyebrow="Notifications">
-            <ToggleRow
-              icon="local_shipping"
-              label="Order updates"
-              sub="Packed, shipped, delivered"
-              value={orderUpdates}
-              onChange={setOrderUpdates}
-            />
-            <ToggleRow
-              icon="local_offer"
-              label="Promotions & offers"
-              sub="Sales, coupons, new drops"
-              value={promotions}
-              onChange={setPromotions}
-            />
-            <ToggleRow
-              icon="inventory_2"
-              label="Back in stock"
-              sub="When something you saved returns"
-              value={drops}
-              onChange={setDrops}
-              last
-            />
+            {isLoading || !prefs ? (
+              <View style={{ gap: S.md, paddingVertical: S.md }}>
+                <Skeleton height={40} />
+                <Skeleton height={40} />
+                <Skeleton height={40} />
+              </View>
+            ) : (
+              <>
+                <ToggleRow
+                  icon="local_shipping"
+                  label="Order updates"
+                  sub="Packed, shipped, delivered"
+                  value={prefs.order_updates}
+                  onChange={(v) => setPref("order_updates", v)}
+                />
+                <ToggleRow
+                  icon="local_offer"
+                  label="Promotions & offers"
+                  sub="Sales, coupons, new drops"
+                  value={prefs.promotions}
+                  onChange={(v) => setPref("promotions", v)}
+                />
+                <ToggleRow
+                  icon="inventory_2"
+                  label="Back in stock"
+                  sub="When something you saved returns"
+                  value={prefs.back_in_stock}
+                  onChange={(v) => setPref("back_in_stock", v)}
+                  last
+                />
+              </>
+            )}
           </Group>
 
           <Group eyebrow="Preferences">

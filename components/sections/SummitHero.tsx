@@ -214,8 +214,6 @@ export default function SummitHero() {
             waypointLabelRefs.current[w.id] = el
           }}
           href={w.href}
-          data-cursor="view"
-          data-cursor-text={w.kind === 'trek' ? 'Trek' : 'Explore'}
           className="group absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 opacity-0 transition-opacity duration-300"
         >
           <span className="relative flex h-2.5 w-2.5">
@@ -275,8 +273,6 @@ export default function SummitHero() {
             {/* Treks paused — the quiet door pointed to /treks ("or find your trek"). */}
             <Link
               href="/collections"
-              data-cursor="view"
-              data-cursor-text="Explore"
               className="font-body text-[10px] uppercase tracking-[0.16em] text-paper/60 border-b border-paper/25 pb-1 transition-colors duration-300 hover:text-paper hover:border-sage"
             >
               or explore the collections

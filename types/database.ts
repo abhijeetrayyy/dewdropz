@@ -79,6 +79,11 @@ export interface Database {
         Insert: Omit<WebhookEvent, 'id' | 'created_at'>
         Update: Partial<Omit<WebhookEvent, 'id'>>
       }
+      notifications: {
+        Row: AppNotification
+        Insert: Omit<AppNotification, 'id' | 'created_at'>
+        Update: Partial<Pick<AppNotification, 'read_at'>>
+      }
       // Phase 1 new tables
       categories: {
         Row: Category
@@ -170,6 +175,12 @@ export interface Database {
   }
 }
 
+export interface NotificationPreferences {
+  order_updates: boolean
+  promotions: boolean
+  back_in_stock: boolean
+}
+
 export interface Profile {
   id: string
   email: string
@@ -177,8 +188,23 @@ export interface Profile {
   phone: string | null
   avatar_url: string | null
   role: 'customer' | 'admin'
+  notification_preferences: NotificationPreferences
   created_at: string
   updated_at: string
+}
+
+export type NotificationType = 'order_update' | 'promotion' | 'back_in_stock'
+
+export interface AppNotification {
+  id: string
+  user_id: string
+  type: NotificationType
+  title: string
+  body: string | null
+  data: Json | null
+  order_id: string | null
+  read_at: string | null
+  created_at: string
 }
 
 export interface Collection {
@@ -376,6 +402,10 @@ export interface OrderItem {
   // Only populated by admin queries that explicitly join it (getAllOrders) —
   // the customer-facing order preview URLs, for fulfillment.
   design?: Pick<CustomDesign, 'front_preview_url' | 'back_preview_url' | 'front_print_url' | 'back_print_url'> | null
+  // Only populated by queries that explicitly join it — the product's own
+  // photos, used as the order-line thumbnail when the item isn't a custom
+  // design (which has no `design` preview to fall back to).
+  product?: Pick<Product, 'images'> | null
 }
 
 export interface Coupon {
@@ -573,6 +603,34 @@ export interface InventoryMovementWithDetails extends InventoryMovement {
   admin: Profile | null
 }
 
+// The homepage's two product-showcase sections (Season Kit, The Climb) read
+// their copy and product picks from here instead of a hardcoded catalogue
+// snapshot — see migration 025_home_config.sql for the full rationale.
+export interface HomeClimbStation {
+  product_slug: string
+  label: string
+  line: string
+}
+
+export interface HomeConfig {
+  season_kit: {
+    enabled: boolean
+    eyebrow: string
+    headline: string
+    line: string
+    collection_slug: string | null
+    product_slugs: string[]
+  }
+  climb: {
+    enabled: boolean
+    headline: string
+    intro: string
+    stations: HomeClimbStation[]
+  }
+  // Empty array means "show all" — CollectionsRow's original behaviour.
+  featured_collection_slugs: string[]
+}
+
 export interface StoreSettings {
   id: number
   store_name: string
@@ -583,6 +641,7 @@ export interface StoreSettings {
   gst_percentage: number
   currency: string
   timezone: string
+  home_config: HomeConfig
   updated_at: string
 }
 
