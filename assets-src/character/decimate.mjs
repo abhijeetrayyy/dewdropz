@@ -1,11 +1,16 @@
 import { NodeIO } from '@gltf-transform/core'
-import { simplify, weld, prune, dedup, resample, quantize, compactPrimitive } from '@gltf-transform/functions'
+import { KHRMeshQuantization } from '@gltf-transform/extensions'
+import { simplify, weld, prune, dedup, resample, quantize, compactPrimitive, join, joinPrimitives } from '@gltf-transform/functions'
 import { MeshoptSimplifier } from 'meshoptimizer'
 
 const [,, IN, OUT, RATIO] = process.argv
 const KEEP = new Set(['CharacterArmature|Wave', 'CharacterArmature|Idle'])
 
-const io = new NodeIO()
+// The quantization extension MUST be registered, or quantize() writes int16
+// positions while extensionsUsed stays empty — a file that is not valid glTF.
+// three.js happens to read it anyway (it infers the compensating node scale), so
+// this shipped once without anyone noticing; a stricter loader would reject it.
+const io = new NodeIO().registerExtensions([KHRMeshQuantization])
 const doc = await io.read(IN)
 const root = doc.getRoot()
 const count = () => root.listMeshes().flatMap(m => m.listPrimitives())
@@ -38,6 +43,20 @@ for (const mesh of root.listMeshes()) {
   }
 }
 
+// Each material is its own primitive, and every primitive is its own draw call —
+// 15 per character, 30 for the pair, which was the single largest block of draw
+// calls in the scene. At the size these are rendered (~100px tall) the eyebrow,
+// eye and hair-vs-black distinctions are invisible, so near-duplicates are folded
+// together and the primitives that shared a material can then be joined.
+const MERGE = { Brown2: 'Brown', LightGreen: 'Green', Eyebrows: 'Black', Hair: 'Black', Eye: 'Black', Gold: 'Grey' }
+const byName = new Map(root.listMaterials().map((m) => [m.getName(), m]))
+for (const mesh of root.listMeshes()) {
+  for (const prim of mesh.listPrimitives()) {
+    const target = MERGE[prim.getMaterial()?.getName()]
+    if (target && byName.get(target)) prim.setMaterial(byName.get(target))
+  }
+}
+
 await MeshoptSimplifier.ready
 await doc.transform(
   resample(),
@@ -52,7 +71,26 @@ for (const mesh of root.listMeshes()) {
   for (const prim of mesh.listPrimitives()) compactPrimitive(prim)
 }
 
+// join() merges whole meshes, not the primitives inside one — after folding the
+// materials down, each mesh still held several primitives that now share a
+// material. Merge those explicitly; every primitive is a draw call.
+for (const mesh of root.listMeshes()) {
+  const groups = new Map()
+  for (const prim of mesh.listPrimitives()) {
+    const key = prim.getMaterial()?.getName() ?? '_'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(prim)
+  }
+  for (const group of groups.values()) {
+    if (group.length < 2) continue
+    const merged = joinPrimitives(group)
+    for (const prim of group) { mesh.removePrimitive(prim); prim.dispose() }
+    mesh.addPrimitive(merged)
+  }
+}
+
 await doc.transform(
+  join({ keepNamed: false }),
   prune(),
   dedup(),
   // Positions to int16, joints to uint8, weights to uint8. KHR_mesh_quantization
@@ -60,4 +98,5 @@ await doc.transform(
   quantize({ pattern: /.*/ }),
 )
 await io.write(OUT, doc)
-console.log(`  triangles ${Math.round(beforeTris)} -> ${Math.round(count())}   clips ${root.listAnimations().length}`)
+const prims = root.listMeshes().reduce((n, m) => n + m.listPrimitives().length, 0)
+console.log(`  triangles ${Math.round(beforeTris)} -> ${Math.round(count())}   clips ${root.listAnimations().length}   primitives(=draw calls) ${prims}   materials ${root.listMaterials().length}`)

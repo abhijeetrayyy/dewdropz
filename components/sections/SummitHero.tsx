@@ -75,6 +75,8 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
   const [segments, setSegments] = useState(90)
   const [treeCount, setTreeCount] = useState(90)
   const [sceneReady, setSceneReady] = useState(false)
+  // Whether the hero is on screen at all. Drives the WebGL render loop.
+  const [inView, setInView] = useState(true)
   const [mounted, setMounted] = useState(false)
   // The weather layer is the one effect a mid-range phone would actually feel,
   // and phones already get the ambient hero rather than the scrubbed descent —
@@ -83,6 +85,19 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
   const [weather, setWeather] = useState(false)
   const [season, setSeason] = useState<Season>('clear')
   const [liveSeason, setLiveSeason] = useState<Season>('clear')
+
+  // Stop rendering the moment the hero leaves the viewport, and pick it up again
+  // on the way back. A generous margin means the loop is already running before
+  // any of the scene is actually visible, so there is never a stalled first frame.
+  useEffect(() => {
+    const section = sectionRef.current
+    if (!section || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver((entries) => setInView(entries[0]?.isIntersecting ?? true), {
+      rootMargin: '200px 0px',
+    })
+    io.observe(section)
+    return () => io.disconnect()
+  }, [])
 
   useEffect(() => {
     setReduceMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -215,6 +230,7 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
             ambient={ambientMobile && !reduceMotion}
             segments={segments}
             treeCount={treeCount}
+            active={inView}
             season={season}
             weather={weather}
             dragRef={dragRef}

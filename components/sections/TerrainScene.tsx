@@ -1796,6 +1796,7 @@ export default function TerrainScene({
   season,
   weather,
   dragRef,
+  active,
   onWaypointProject,
   onReady,
 }: {
@@ -1811,12 +1812,23 @@ export default function TerrainScene({
   /** Capability gate for the weather layer (off on touch/coarse pointer). */
   weather: boolean
   dragRef: RefObject<DragState>
+  /** False once the hero has scrolled out of view — the render loop stops. */
+  active: boolean
   onWaypointProject: (states: Record<string, WaypointScreenState>) => void
   onReady?: () => void
 }) {
   return (
     <Canvas
-      dpr={[1, 1.6]}
+      // Off-screen, nothing renders at all. The hero is pinned for 260% of
+      // scroll and then done with; before this the scene kept drawing the full
+      // camp at ~77 draw calls the whole time a visitor read the rest of the
+      // page, which is most of the time they spend on it.
+      frameloop={active ? 'always' : 'never'}
+      // 1.6 was costing 2.6x the fragments of DPR 1 on a retina display, and MSAA
+      // on top of that. At 1.3 the terrain is still clean — it is flat-shaded
+      // low-poly with no fine detail to alias — and the fragment bill drops by
+      // about 40%.
+      dpr={[1, 1.3]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       // Far plane must clear the sky dome's far side (r=88 sphere seen from a
       // camera ~38 units off-centre), or the dawn sky gets clipped to void.
