@@ -1,0 +1,4 @@
+adventurer.glb — "Adventurer" by Quaternius (https://quaternius.com)
+Licensed CC0 / public domain. Rigged, 10,198 triangles, 24 animation clips.
+Used in the homepage hero's arrival scene (components/sections/TerrainScene.tsx).
+Original archive kept out of the served bundle at assets-src/character/.

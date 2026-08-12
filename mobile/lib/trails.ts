@@ -93,7 +93,7 @@ export const TRAILS: Trail[] = [
     duration: '5–7 days',
     bestMonths: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Sep', 'Oct', 'Nov'],
     season: 'Walkable most of the year — snow-bound and quiet in winter, wide open in autumn.',
-    image: 'https://images.unsplash.com/photo-1454822759023-fed622ff2c3b',
+    image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
     why: 'Often called the Curzon Trail. It buys you one of the closest, most unobstructed views of Nanda Devi available to a walker, and the meadows on the way up are enormous.',
     sights: [
       { name: 'Gorson Bugyal', note: 'High meadow above Auli, endless in every direction.' },

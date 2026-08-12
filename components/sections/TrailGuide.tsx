@@ -15,7 +15,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 // faster than a sentence ever does.
 export default function TrailGuide() {
   return (
-    <section className="relative overflow-hidden bg-[#F6F0E2] px-6 py-20 md:px-10 md:py-24">
+    <section className="relative overflow-hidden bg-paper-warm px-6 py-20 md:px-10 md:py-24">
       <ContourLines className="opacity-[0.10]" />
 
       <div className="relative mx-auto max-w-6xl space-y-14 md:space-y-20">
@@ -26,7 +26,7 @@ export default function TrailGuide() {
           >
             {/* Plate */}
             <div className="relative">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-[#E4DAC4] md:aspect-[3/4]">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-paper-deep md:aspect-[3/4]">
                 <Image
                   src={trail.image}
                   alt=""

@@ -13,6 +13,7 @@ import CollectionsRow from '@/components/sections/CollectionsRow'
 import ShopByCategory from '@/components/sections/ShopByCategory'
 import ShowcaseRails from '@/components/sections/ShowcaseRails'
 import DesignYourOwn from '@/components/sections/DesignYourOwn'
+import HomeTrails from '@/components/sections/HomeTrails'
 import Community from '@/components/sections/Community'
 import BrandPulse from '@/components/sections/BrandPulse'
 import NewsletterBar from '@/components/sections/NewsletterBar'
@@ -46,10 +47,10 @@ export default async function Home() {
       <TrailSpine />
       <main>
         <SummitHero collections={collections} />
-        <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="The brief">
+        <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="First light">
           <TrustBand />
         </div>
-        <div data-trail-time="06:10" data-trail-alt="4,980M" data-trail-label="First light">
+        <div data-trail-time="06:10" data-trail-alt="4,980M" data-trail-label="The blue hour">
           <SeasonKit config={season_kit} allProducts={products} collections={collections} />
         </div>
         <div data-trail-time="08:30" data-trail-alt="4,200M" data-trail-label="The climb">
@@ -64,6 +65,9 @@ export default async function Home() {
         <ShowcaseRails rails={rails} />
         <div data-trail-time="14:30" data-trail-alt="3,800M" data-trail-label="The workbench">
           <DesignYourOwn products={products} />
+        </div>
+        <div data-trail-time="15:30" data-trail-alt="3,600M" data-trail-label="Golden hour">
+          <HomeTrails />
         </div>
         <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
           <Community reviews={reviews} />

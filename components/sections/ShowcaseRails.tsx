@@ -15,7 +15,7 @@ export default function ShowcaseRails({ rails }: { rails: ResolvedRail[] }) {
   if (rails.length === 0) return null
 
   return (
-    <section className="bg-[#F6F0E2] px-6 md:px-10 py-20 md:py-24">
+    <section className="bg-paper px-6 md:px-10 py-20 md:py-24">
       <div className="mx-auto max-w-7xl space-y-16">
         {rails.map((rail) => (
           <div key={rail.id}>
@@ -35,7 +35,7 @@ export default function ShowcaseRails({ rails }: { rails: ResolvedRail[] }) {
               {rail.products.map((p) => (
                 <li key={p.id} className="w-[42vw] flex-shrink-0 snap-start sm:w-auto">
                   <Link href={`/products/${p.slug}`} className="group block">
-                    <div className="relative aspect-[3/4] overflow-hidden rounded-sm bg-[#E4DAC4]">
+                    <div className="relative aspect-[3/4] overflow-hidden rounded-sm bg-paper-deep">
                       {p.images?.[0] && (
                         <Image
                           src={p.images[0]}

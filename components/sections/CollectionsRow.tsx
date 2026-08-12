@@ -27,7 +27,12 @@ export default function CollectionsRow({
 
   return (
     // Midday on the page's clock — the brightest stop of the day arc.
-    <section className="bg-paper px-6 md:px-10 py-20 md:py-24">
+    // 11:00 · the ridge. Takes `paper-deep` rather than `paper`: The Climb sits
+    // directly above on the same ground, and two adjacent sections at identical
+    // value read as one long block with a heading dropped in the middle of it.
+    // The deeper ground also suits the collection photography, which is the
+    // heaviest imagery in the light half of the page.
+    <section className="bg-paper-deep px-6 md:px-10 py-20 md:py-24">
       <div className="max-w-7xl mx-auto">
         <div className="mb-10 flex items-end justify-between">
           <div>

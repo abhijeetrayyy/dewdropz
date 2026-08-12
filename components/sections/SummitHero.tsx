@@ -12,6 +12,7 @@ import { gsap, ScrollTrigger } from '@/lib/gsap'
 import { useIntro } from '@/providers/IntroProvider'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import type { Collection } from '@/types/database'
+import { resolveSeason, seasonForDate, type Season } from './HeroWeather'
 import type { DragState, WaypointScreenState } from './TerrainScene'
 import { WAYPOINTS } from './TerrainScene'
 
@@ -28,6 +29,15 @@ const TerrainScene = dynamic(() => import('./TerrainScene'), { ssr: false })
 // in the catalogue, in their admin-set sort order, and shows the real tagline —
 // so a renamed or removed collection can never leave a ghost on the front door.
 // With no collections configured the card simply doesn't render.
+
+// Four moods the range actually has. Order runs clear → socked in, so the row
+// reads as a scale rather than an arbitrary menu.
+const SEASON_CHOICES: { value: Season; label: string; hint: string }[] = [
+  { value: 'clear', label: 'Clear', hint: 'Post-monsoon: the clearest air of the year' },
+  { value: 'fog', label: 'Fog', hint: 'Valley cloud, sitting in the pines until mid-morning' },
+  { value: 'rain', label: 'Rain', hint: 'Monsoon, July to September' },
+  { value: 'snow', label: 'Snow', hint: 'Deep winter, December to February' },
+]
 
 const PEAK_ALTITUDE = 5200
 const VALLEY_ALTITUDE = 3200
@@ -66,6 +76,13 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
   const [treeCount, setTreeCount] = useState(90)
   const [sceneReady, setSceneReady] = useState(false)
   const [mounted, setMounted] = useState(false)
+  // The weather layer is the one effect a mid-range phone would actually feel,
+  // and phones already get the ambient hero rather than the scrubbed descent —
+  // so it is desktop/laptop only. Season is read on the client so the hero
+  // shows whatever is genuinely happening on the range today.
+  const [weather, setWeather] = useState(false)
+  const [season, setSeason] = useState<Season>('clear')
+  const [liveSeason, setLiveSeason] = useState<Season>('clear')
 
   useEffect(() => {
     setReduceMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -73,6 +90,10 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
     setAmbientMobile(mobile)
     setSegments(mobile ? 48 : 90)
     setTreeCount(mobile ? 40 : 90)
+    setWeather(!mobile)
+    const live = seasonForDate()
+    setLiveSeason(live)
+    setSeason(resolveSeason(window.location.search, 'clear'))
     setMounted(true)
   }, [])
 
@@ -194,6 +215,8 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
             ambient={ambientMobile && !reduceMotion}
             segments={segments}
             treeCount={treeCount}
+            season={season}
+            weather={weather}
             dragRef={dragRef}
             onWaypointProject={handleWaypointProject}
             onReady={() => setSceneReady(true)}
@@ -229,12 +252,66 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
         className="absolute inset-0 z-10"
         style={{ opacity: introOpacity, pointerEvents: introOpacity < 0.15 ? 'none' : undefined }}
       >
-        <div className="absolute left-6 top-24 md:left-10 pointer-events-none">
-          <p data-summit-reveal className="invisible font-mono text-[9px] uppercase leading-relaxed tracking-[0.24em] text-paper/55">
+        <div className="absolute left-6 top-24 md:left-10">
+          <p data-summit-reveal className="invisible pointer-events-none font-mono text-[9px] uppercase leading-relaxed tracking-[0.24em] text-paper/55">
             04:30 — The start
             <br />
             30.3165° N, 78.0322° E
           </p>
+
+          {/* Conditions — a readout you can argue with.
+              It opens on whatever is genuinely happening on the range today, so
+              the default is information, not a toggle. But the range has four
+              distinct moods and most visitors will only ever see one, so the
+              row underneath lets them look at the others. Written as a field
+              instrument reporting a reading, not as a settings control. */}
+          {weather && !reduceMotion && (
+            // NOT tagged data-summit-reveal. That attribute ships with an
+            // `invisible` class which GSAP only clears when the intro reveal
+            // runs — so this control was permanently visibility:hidden while
+            // still occupying its box, and every click fell straight through to
+            // the layer behind it. Decorative reveals must never gate a control.
+            <div className="mt-6">
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-paper/70">
+                  Conditions
+                </span>
+                <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-dawn/80">
+                  {season === liveSeason ? 'live' : 'simulated'}
+                </span>
+              </div>
+              <p className="mt-1 font-body text-[11px] leading-relaxed text-paper/45">
+                Change the weather on the range →
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {SEASON_CHOICES.map((c) => {
+                  const on = season === c.value
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setSeason(c.value)}
+                      aria-pressed={on}
+                      title={c.hint}
+                      className={`rounded-sm border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] backdrop-blur-sm transition-colors duration-300 ${
+                        on
+                          ? // Solid amber: at 9px on a dark photograph, a tinted
+                            // border and 20% fill did not read as "selected" at all.
+                            'border-dawn bg-dawn text-forest-deep'
+                          : 'border-paper/30 bg-ink/55 text-paper/70 hover:border-dawn/60 hover:text-paper'
+                      }`}
+                    >
+                      {c.label}
+                      {c.value === liveSeason && <span className="ml-1.5 text-dawn" aria-hidden>•</span>}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="mt-2 font-mono text-[9px] uppercase tracking-[0.16em] text-paper/35">
+                <span className="text-dawn">•</span> on the range today
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Soft scrim so the type never fights the ridgeline behind it */}
@@ -247,7 +324,7 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
           }}
         />
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
           {/* Back to h1 — DawnHero/FirstLight are unplugged (see app/page.tsx),
               so this is the page's hero again. */}
           <h1 className="font-display font-light uppercase leading-[0.86] tracking-[-0.04em] text-[clamp(46px,8vw,116px)] text-paper">
@@ -257,7 +334,7 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
           <p data-summit-reveal className="invisible mt-6 font-body text-sm md:text-base text-paper/70 leading-relaxed max-w-md">
             Gear built by the guides who live at 3,800 metres.
           </p>
-          <div data-summit-reveal className="invisible mt-9 flex flex-col sm:flex-row items-center gap-5">
+          <div data-summit-reveal className="invisible pointer-events-auto mt-9 flex flex-col items-center gap-5 sm:flex-row">
             <Link
               href="/shop"
               data-cursor="magnetic"

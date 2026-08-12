@@ -1,17 +1,50 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   The palette is a day's light on a mountain.
+   ─────────────────────────────────────────────────────────────────────────────
+   The homepage has always *claimed* this — the HUD ticks 04:30 → 21:00 and the
+   copy is written as a descent — but until now the colour didn't do it. Eight
+   different one-off creams were hardcoded across the section components
+   (#F6F0E2, #F4EBD7, #F2E8D2, #EFE2C6, #E4DAC4 …), close enough in value that
+   five consecutive sections read as one undifferentiated beige slab, yet
+   inconsistent enough to look accidental rather than composed. And there was
+   no warm accent at all: a brand about first light, rendered entirely in green,
+   navy and cream, which is why the page read as tasteful but cold.
+
+   So: the paper is now a real three-step ladder, and `dawn` exists. Sections
+   are assigned a time of day and take the ground that belongs to it. The joy
+   isn't decoration — it's the page behaving like the day it describes.
+   ───────────────────────────────────────────────────────────────────────── */
 :root {
-  --paper:       #F6F3EA;
+  /* ── Ground: the paper ladder, brightest at midday → warmest at golden hour.
+     Real steps (≈4% lightness apart) so adjacent sections separate, instead of
+     the ~1% drift the old ad-hoc hexes had. */
+  --paper:       #F8F5ED; /* midday — the brightest ground */
+  --paper-warm:  #F1E9D7; /* afternoon */
+  --paper-deep:  #E7D9BE; /* golden hour */
+
+  /* ── Greens */
   --forest:      #27481F;
   --forest-mid:  #3C6A33;
-  --altitude:    #142536;
+  --forest-deep: #16290F; /* for layering dark-on-dark without going to ink */
   --sage:        #7BA46F;
+
+  /* ── First light. The colour the brand was missing.
+     Warm, saturated, unmistakably sunrise — used where the narrative says the
+     light arrives, and nowhere else. It is the page's one loud note. */
+  --dawn:        #E39B3F;
+  --dawn-soft:   #F6DCA8;
+  --ember:       #C2662A; /* dawn's shadow side — for text on dawn grounds */
+
+  --altitude:    #142536; /* blue hour / dusk */
   --clay:        #B8826B;
-  --ink:         #0C100D;
+  --ink:         #0C100D; /* night */
   --text:        #15150F;
   --mid:         #52504A;
   --light:       #94917F;
   --rule:        #DDD7C6;
+  --rule-warm:   #D2C4A4; /* rules that sit on paper-warm / paper-deep */
 
   --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
@@ -57,12 +90,19 @@
 }
 
 @theme inline {
-  --color-paper:      var(--paper);
-  --color-forest:     var(--forest);
-  --color-forest-mid: var(--forest-mid);
-  --color-altitude:   var(--altitude);
-  --color-sage:       var(--sage);
-  --color-clay:       var(--clay);
+  --color-paper:       var(--paper);
+  --color-paper-warm:  var(--paper-warm);
+  --color-paper-deep:  var(--paper-deep);
+  --color-forest:      var(--forest);
+  --color-forest-mid:  var(--forest-mid);
+  --color-forest-deep: var(--forest-deep);
+  --color-altitude:    var(--altitude);
+  --color-sage:        var(--sage);
+  --color-clay:        var(--clay);
+  --color-dawn:        var(--dawn);
+  --color-dawn-soft:   var(--dawn-soft);
+  --color-ember:       var(--ember);
+  --color-rule-warm:   var(--rule-warm);
   --color-ink:        var(--ink);
   --color-text:       var(--text);
   --color-mid:        var(--mid);
@@ -171,4 +211,5 @@
     }
   }
 }
+
 

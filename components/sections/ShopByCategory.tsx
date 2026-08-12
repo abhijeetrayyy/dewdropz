@@ -25,7 +25,7 @@ export default function ShopByCategory({
 
   return (
     // Early afternoon on the page's clock — paper warms a step past midday.
-    <section className="bg-[#F6F0E2] px-6 md:px-10 pt-20 pb-24 md:pt-24">
+    <section className="bg-paper-warm px-6 md:px-10 pt-20 pb-24 md:pt-24">
       <div className="max-w-7xl mx-auto">
         <div className="mb-12 flex items-end justify-between">
           <div>

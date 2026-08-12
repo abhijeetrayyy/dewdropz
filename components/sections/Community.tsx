@@ -46,7 +46,7 @@ export default function Community({ reviews }: { reviews: FeaturedReview[] }) {
   return (
     // Late afternoon on the page's clock — the warmest paper of the day, before
     // the final sections go to night.
-    <section className="bg-[#F4EBD7] px-6 md:px-10 py-24 md:py-32 overflow-hidden">
+    <section className="bg-paper-warm px-6 md:px-10 py-24 md:py-32 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="mb-14 md:mb-16 flex items-end justify-between">
           <div>
@@ -146,7 +146,7 @@ export default function Community({ reviews }: { reviews: FeaturedReview[] }) {
               to a flat panel when the product has no photo yet, rather than
               borrowing a stock trek shot to stand in for it. */}
           <div className="order-1 lg:order-2 relative">
-            <div className="relative aspect-[4/5] max-h-[520px] w-full rounded-sm overflow-hidden bg-[#E4DAC4]">
+            <div className="relative aspect-[4/5] max-h-[520px] w-full rounded-sm overflow-hidden bg-paper-deep">
               <AnimatePresence mode="popLayout">
                 <motion.div
                   key={report.id}
