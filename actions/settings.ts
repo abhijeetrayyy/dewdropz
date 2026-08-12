@@ -16,21 +16,38 @@ const DEFAULT_HOME_CONFIG: HomeConfig = {
     enabled: true,
     eyebrow: 'Now shipping',
     headline: 'Made once. Made yours.',
-    line: 'Three heavyweight blanks, printed to order in Dehradun. Pick a colour, add your artwork, and it ships in 8-10 days.',
+    line: 'Pick a colour, add your artwork, and it ships in 8-10 days.',
     collection_slug: null,
-    product_slugs: ['custom-hoodie', 'custom-sweatshirt', 'custom-print-tee'],
+    product_slugs: [],
   },
   climb: {
     enabled: true,
     headline: 'Every blank, made to order.',
     intro: 'No stock sitting in a warehouse — each piece is cut and printed only once someone actually wants it.',
-    stations: [
-      { product_slug: 'custom-hoodie', label: '01', line: '380 GSM French terry, your design front and back.' },
-      { product_slug: 'custom-sweatshirt', label: '02', line: 'Heavyweight and boxy, built for a full-chest print.' },
-      { product_slug: 'custom-print-tee', label: '03', line: 'The one you reach for when the idea cannot wait.' },
-    ],
+    stations: [],
   },
   featured_collection_slugs: [],
+  featured_category_slugs: [],
+  stats: [],
+  showcase: [
+    { id: 'recent', kind: 'recent', title: 'Just added', category_slug: null, collection_slug: null, limit: 8, enabled: true },
+    { id: 'best', kind: 'best_sellers', title: 'Most ordered', category_slug: null, collection_slug: null, limit: 8, enabled: true },
+  ],
+}
+
+// A row written before migration 027 has home_config without the newer keys.
+// Reading those as `undefined` would crash `.map()` in the sections, so every
+// read is normalised against the defaults rather than trusted wholesale.
+function normalizeHomeConfig(raw: Partial<HomeConfig> | null | undefined): HomeConfig {
+  if (!raw) return DEFAULT_HOME_CONFIG
+  return {
+    season_kit: raw.season_kit ?? DEFAULT_HOME_CONFIG.season_kit,
+    climb: raw.climb ?? DEFAULT_HOME_CONFIG.climb,
+    featured_collection_slugs: raw.featured_collection_slugs ?? [],
+    featured_category_slugs: raw.featured_category_slugs ?? [],
+    stats: raw.stats ?? [],
+    showcase: raw.showcase ?? DEFAULT_HOME_CONFIG.showcase,
+  }
 }
 
 export async function getStoreSettings() {
@@ -52,7 +69,7 @@ export async function getStoreSettings() {
     } as StoreSettings
   }
 
-  return { ...data, home_config: data.home_config ?? DEFAULT_HOME_CONFIG } as StoreSettings
+  return { ...data, home_config: normalizeHomeConfig(data.home_config) } as StoreSettings
 }
 
 export async function updateStoreSettings(input: Partial<Omit<StoreSettings, 'id' | 'updated_at'>>) {

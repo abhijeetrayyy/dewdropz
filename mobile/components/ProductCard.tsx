@@ -181,7 +181,10 @@ const s = StyleSheet.create({
   },
   caption: { marginTop: 11, gap: 3 },
   eyebrow: { fontFamily: F.mono, fontSize: 9, letterSpacing: 1.2, color: C.textMuted },
-  name: { fontFamily: F.bodySemiBold, fontSize: 15, lineHeight: 19, color: C.ink, letterSpacing: -0.15 },
+  // Fraunces regular — matches web's ProductCard.tsx exactly
+  // (`<h3 className="font-display ...">`), which sets every product name in
+  // this same non-light cut, never Inter.
+  name: { fontFamily: F.displayRegular, fontSize: 16, lineHeight: 20, color: C.ink, letterSpacing: 0 },
   priceRow: { flexDirection: "row", alignItems: "center", gap: S.xs, marginTop: 2 },
   price: { fontFamily: F.monoBold, fontSize: 12, letterSpacing: 0.2, color: C.ink },
   strike: { fontFamily: F.mono, fontSize: 11, color: C.textFaint, textDecorationLine: "line-through" },

@@ -8,11 +8,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as SplashScreen from "expo-splash-screen";
 import * as Font from "expo-font";
 import {
-  useFonts as useBricolage,
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-} from "@expo-google-fonts/bricolage-grotesque";
+  useFonts as useFraunces,
+  Fraunces_300Light,
+  Fraunces_300Light_Italic,
+  Fraunces_400Regular,
+  Fraunces_400Regular_Italic,
+} from "@expo-google-fonts/fraunces";
 import {
   useFonts as useArchivo,
   Archivo_400Regular,
@@ -22,15 +23,15 @@ import {
   Archivo_700Bold,
 } from "@expo-google-fonts/archivo";
 import {
-  useFonts as useInstrumentSerif,
-  InstrumentSerif_400Regular,
-  InstrumentSerif_400Regular_Italic,
-} from "@expo-google-fonts/instrument-serif";
-import {
   useFonts as useSpaceMono,
   SpaceMono_400Regular,
   SpaceMono_700Bold,
 } from "@expo-google-fonts/space-mono";
+// Inter is still loaded, but ONLY as the "Sans" option a shopper can apply to
+// their own artwork in the customize studio's print canvas (StudioToolbar's
+// FONTS list) — that is user-authored garment content, deliberately not tied
+// to the brand system. It is not used for any app chrome.
+import { useFonts as useInter, Inter_400Regular } from "@expo-google-fonts/inter";
 import { useAuthStore } from "@/stores/auth";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AppSplash } from "@/components/AppSplash";
@@ -45,7 +46,10 @@ const queryClient = new QueryClient({
 const stackScreenHeader = {
   headerStyle: { backgroundColor: C.paper },
   headerTintColor: C.ink,
-  headerTitleStyle: { fontFamily: F.bodyBold, fontSize: 16, color: C.ink },
+  // Fraunces, matching every screen's own title (ScreenHeader's compact bar
+  // title uses the same face) — a native stack header showing a different
+  // typeface from the page it titles would read as two apps stitched together.
+  headerTitleStyle: { fontFamily: F.displayRegular, fontSize: 17, color: C.ink },
   // `headerBackTitleVisible: false` is the old React Navigation v6 prop and
   // is a no-op on the v7 stack this project runs — it was silently falling
   // back to the previous route's raw segment name as the back-button label,
@@ -57,10 +61,11 @@ const stackScreenHeader = {
 };
 
 export default function RootLayout() {
-  const [bricolageLoaded] = useBricolage({
-    BricolageGrotesque_500Medium,
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
+  const [frauncesLoaded] = useFraunces({
+    Fraunces_300Light,
+    Fraunces_300Light_Italic,
+    Fraunces_400Regular,
+    Fraunces_400Regular_Italic,
   });
   const [archivoLoaded] = useArchivo({
     Archivo_400Regular,
@@ -69,11 +74,8 @@ export default function RootLayout() {
     Archivo_600SemiBold,
     Archivo_700Bold,
   });
-  const [serifLoaded] = useInstrumentSerif({
-    InstrumentSerif_400Regular,
-    InstrumentSerif_400Regular_Italic,
-  });
   const [monoLoaded] = useSpaceMono({ SpaceMono_400Regular, SpaceMono_700Bold });
+  const [interLoaded] = useInter({ Inter_400Regular });
   // The two Material Symbols Rounded cuts (FILL 0 / FILL 1) aren't Google-Fonts
   // packages — they're pre-instanced static TTFs pulled directly from the
   // fonts.gstatic.com CSS endpoint (see components/ui/Icon.tsx for why: RN
@@ -95,7 +97,7 @@ export default function RootLayout() {
     initialize().finally(() => setAuthReady(true));
   }, [initialize]);
 
-  const fontsReady = bricolageLoaded && archivoLoaded && serifLoaded && monoLoaded && iconFontsLoaded;
+  const fontsReady = frauncesLoaded && archivoLoaded && monoLoaded && interLoaded && iconFontsLoaded;
   const ready = fontsReady && authReady;
 
   useEffect(() => {
@@ -146,6 +148,8 @@ export default function RootLayout() {
                     editorial surface at all. */}
                 <Stack.Screen name="journal/index" options={{ headerShown: false }} />
                 <Stack.Screen name="journal/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="trails/index" options={{ headerShown: false }} />
+                <Stack.Screen name="trails/[slug]" options={{ headerShown: false }} />
                 <Stack.Screen name="about" options={{ headerShown: false }} />
                 <Stack.Screen name="sustainability" options={{ headerShown: false }} />
                 <Stack.Screen name="checkout/index" options={{ headerShown: false, presentation: "modal" }} />

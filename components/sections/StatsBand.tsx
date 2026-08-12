@@ -4,9 +4,12 @@ import { useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
-import { BLUR_DATA_URL, STATS, STATS_BG_IMAGE } from '@/lib/constants'
+import { BLUR_DATA_URL, STATS_BG_IMAGE } from '@/lib/constants'
+import type { HomeStat } from '@/types/database'
 
-export default function StatsBand() {
+// Numbers come from store_settings.home_config (see BrandPulse) — empty by
+// default, because the figures that used to be hardcoded here were invented.
+export default function StatsBand({ stats = [] }: { stats?: HomeStat[] }) {
   const sectionRef = useRef<HTMLElement>(null)
   const numberRefs = useRef<(HTMLSpanElement | null)[]>([])
 
@@ -14,7 +17,7 @@ export default function StatsBand() {
     const section = sectionRef.current
     if (!section) return
 
-    const tweens = STATS.map((stat, i) => {
+    const tweens = stats.map((stat, i) => {
       const el = numberRefs.current[i]
       if (!el) return null
       const counter = { value: 0 }
@@ -36,7 +39,10 @@ export default function StatsBand() {
         t?.kill()
       })
     }
-  }, [])
+  }, [stats])
+
+  // After the hooks, never before them.
+  if (stats.length === 0) return null
 
   return (
     <section ref={sectionRef} className="relative bg-ink px-6 md:px-10 py-28 md:py-36 overflow-hidden">
@@ -66,7 +72,7 @@ export default function StatsBand() {
       </div>
 
       <div className="relative max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6 text-center">
-        {STATS.map((stat, i) => (
+        {stats.map((stat, i) => (
           <div key={stat.label}>
             <div className="font-display font-light text-[clamp(32px,5vw,56px)] text-paper tabular-nums">
               <span

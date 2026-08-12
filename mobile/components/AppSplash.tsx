@@ -33,7 +33,9 @@ const s = StyleSheet.create({
   glow: { position: "absolute", top: 70, right: -50, width: 210, height: 210, borderRadius: 999, backgroundColor: "#FFF6E2", opacity: 0.6 },
   center: { alignItems: "center", gap: 22 },
   word: { fontFamily: F.display, fontSize: 26, letterSpacing: 5, color: "#17231D" },
-  tag: { fontFamily: "InstrumentSerif_400Regular_Italic", fontSize: 21, color: "#5C6A62", marginTop: -6 },
+  // Fraunces light italic — matches web's own site title, "DEWDROPZ — Feel
+  // Alive", and the italic treatment every pull-quote/tagline gets there.
+  tag: { fontFamily: F.displayItalic, fontSize: 22, color: "#5C6A62", marginTop: -4 },
   dots: { position: "absolute", bottom: 120, flexDirection: "row", gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 999, backgroundColor: "rgba(22,121,91,0.3)" },
   dotActive: { backgroundColor: "#16795B" },

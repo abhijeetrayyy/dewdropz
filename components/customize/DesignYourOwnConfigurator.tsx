@@ -20,7 +20,7 @@ export default function DesignYourOwnConfigurator({ products }: { products: Prod
       {/* Garment tabs, thumbnail-led — reads as picking up a garment off the
           bench rather than clicking a text tab. Driven off the real catalogue,
           so a fourth blank flagged customizable in admin appears here too. */}
-      <div className="flex flex-wrap gap-2 sm:gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
         {products.map((p, i) => {
           const thumb = p.customization_config?.colors?.find((c) => c.available)?.front?.mockupImage ?? p.images?.[0]
           const active = i === activeIndex
@@ -30,7 +30,7 @@ export default function DesignYourOwnConfigurator({ products }: { products: Prod
               type="button"
               onClick={() => setActiveIndex(i)}
               aria-pressed={active}
-              className={`group flex items-center gap-3 rounded-md border py-2 pl-2 pr-4 transition-all duration-300 ${
+              className={`group flex w-full items-center gap-3 rounded-md border py-2 pl-2 pr-4 transition-all duration-300 sm:w-auto ${
                 active
                   ? 'border-sage/70 bg-sage/10'
                   : 'border-paper/10 hover:border-paper/30 hover:bg-paper/[0.04]'

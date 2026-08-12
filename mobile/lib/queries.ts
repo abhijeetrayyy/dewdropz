@@ -13,6 +13,7 @@ export const qk = {
   customizable: ["products", "customizable"] as const,
   productsBySlugs: (slugs: string[]) => ["products", "by-slugs", [...slugs].sort()] as const,
   collections: ["collections"] as const,
+  home: ["home-config"] as const,
   orders: (userId: string) => ["orders", userId] as const,
   order: (id: string) => ["orders", "detail", id] as const,
   reviews: (productId: string) => ["reviews", productId] as const,
@@ -49,6 +50,13 @@ export function useProductsBySlugsQuery(slugs: string[]) {
     queryFn: () => Data.getProductsBySlugs(slugs),
     staleTime: 30_000,
   });
+}
+
+// The admin's homepage configuration (which rails, which collections and
+// categories lead). Cached for five minutes like collections — merchandising
+// config changes on a human timescale, not a per-scroll one.
+export function useHomeQuery() {
+  return useQuery({ queryKey: qk.home, queryFn: Data.getHomeData, staleTime: 5 * 60_000 });
 }
 
 export function useCollectionsQuery() {

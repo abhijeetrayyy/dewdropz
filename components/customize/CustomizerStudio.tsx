@@ -185,8 +185,104 @@ export default function CustomizerStudio({
     }
   }
 
+  // Colour / size / print spec. Rendered once, placed twice: the left rail on
+  // desktop, the "Blank" tab of the bottom sheet on a phone. A phone has no
+  // room for a permanent setup rail — it was costing ~200px of vertical space
+  // above the garment for controls you touch once at the start.
+  const setupContent = (
+    <div className="flex flex-col gap-6 lg:gap-7">
+      {colorways.length > 0 && (
+        <section className="min-w-0">
+          <RailLabel n="01" label="Colour" value={color?.name} />
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            {colorways.map((c) => {
+              const selectable = c.available && !!(c.front || c.back)
+              const selected = color?.name === c.name
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  disabled={!selectable}
+                  onClick={() => setColorName(c.name)}
+                  title={selectable ? c.name : `${c.name} — coming soon`}
+                  aria-label={selectable ? c.name : `${c.name}, coming soon`}
+                  aria-pressed={selected}
+                  className={`relative h-8 w-8 rounded-full border transition-all duration-300 lg:h-7 lg:w-7 ${
+                    selected
+                      ? 'border-sage ring-2 ring-sage ring-offset-2 ring-offset-[#0B0F0C]'
+                      : selectable
+                      ? 'border-paper/25 hover:border-paper/60'
+                      : 'cursor-not-allowed border-paper/10 opacity-30'
+                  }`}
+                  style={{ backgroundColor: c.hex }}
+                >
+                  {/* A diagonal bar reads as "not orderable yet" without
+                      relying on colour alone — on a colour control. */}
+                  {!selectable && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <span className="block h-px w-full rotate-45 bg-paper/50" />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {variants.length > 0 && (
+        <section className="min-w-0">
+          <RailLabel n="02" label="Size" value={variant?.name} />
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {variants.map((v) => {
+              const oos = (v.inventory_quantity ?? 0) <= 0
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  disabled={oos}
+                  onClick={() => setVariantId(v.id)}
+                  className={`min-w-[44px] rounded-sm border px-3 py-2 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 lg:min-w-[40px] lg:px-2.5 lg:py-1.5 ${
+                    variantId === v.id
+                      ? 'border-sage bg-sage/15 text-paper'
+                      : oos
+                      ? 'cursor-not-allowed border-paper/10 text-paper/20 line-through'
+                      : 'border-paper/20 text-paper/60 hover:border-paper/50 hover:text-paper'
+                  }`}
+                >
+                  {v.name}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* The print spec is the honest bit people can't see by looking —
+          what area they're actually designing into, and at what quality
+          it goes to the printer. */}
+      {zone && (
+        <section>
+          <RailLabel n="03" label="Print area" />
+          <dl className="mt-3 space-y-1.5">
+            <SpecRow k="Size" v={`${zone.widthIn} × ${zone.heightIn} in`} />
+            <SpecRow k="Output" v="300 DPI PNG" />
+            <SpecRow k="Sides" v={twoSided ? 'Front & back' : 'Front only'} />
+          </dl>
+          <p className="mt-3 font-body text-[10px] leading-relaxed text-paper/30">
+            Anything past the dashed edge is trimmed off the print.
+          </p>
+        </section>
+      )}
+    </div>
+  )
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#0B0F0C]">
+    // Fixed to the viewport rather than min-h-screen: this is an editor, and
+    // the page itself must never scroll — every panel manages its own overflow
+    // so the garment can't be scrolled out from under the tools. 100dvh (not
+    // vh) so mobile browser chrome collapsing doesn't leave the tab bar cut off.
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#0B0F0C]">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       {/* This is the one screen in the app that could be mistaken for a
           bolted-on third-party widget — full-bleed dark chrome, no nav, no
@@ -228,100 +324,19 @@ export default function CustomizerStudio({
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col lg:flex-row">
-        {/* ── Setup rail ───────────────────────────────────────────────── */}
-        <aside className="flex-shrink-0 border-b border-paper/10 px-4 py-4 lg:w-60 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
-          <div className="flex flex-row gap-6 lg:flex-col lg:gap-7">
-            {colorways.length > 0 && (
-              <section className="min-w-0">
-                <RailLabel n="01" label="Colour" value={color?.name} />
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {colorways.map((c) => {
-                    const selectable = c.available && !!(c.front || c.back)
-                    const selected = color?.name === c.name
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        disabled={!selectable}
-                        onClick={() => setColorName(c.name)}
-                        title={selectable ? c.name : `${c.name} — coming soon`}
-                        aria-label={selectable ? c.name : `${c.name}, coming soon`}
-                        aria-pressed={selected}
-                        className={`relative h-7 w-7 rounded-full border transition-all duration-300 ${
-                          selected
-                            ? 'border-sage ring-2 ring-sage ring-offset-2 ring-offset-[#0B0F0C]'
-                            : selectable
-                            ? 'border-paper/25 hover:border-paper/60'
-                            : 'cursor-not-allowed border-paper/10 opacity-30'
-                        }`}
-                        style={{ backgroundColor: c.hex }}
-                      >
-                        {/* A diagonal bar reads as "not orderable yet" without
-                            relying on colour alone — on a colour control. */}
-                        {!selectable && (
-                          <span className="absolute inset-0 flex items-center justify-center">
-                            <span className="block h-px w-full rotate-45 bg-paper/50" />
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            )}
-
-            {variants.length > 0 && (
-              <section className="min-w-0">
-                <RailLabel n="02" label="Size" value={variant?.name} />
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {variants.map((v) => {
-                    const oos = (v.inventory_quantity ?? 0) <= 0
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        disabled={oos}
-                        onClick={() => setVariantId(v.id)}
-                        className={`min-w-[40px] rounded-sm border px-2.5 py-1.5 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 ${
-                          variantId === v.id
-                            ? 'border-sage bg-sage/15 text-paper'
-                            : oos
-                            ? 'cursor-not-allowed border-paper/10 text-paper/20 line-through'
-                            : 'border-paper/20 text-paper/60 hover:border-paper/50 hover:text-paper'
-                        }`}
-                      >
-                        {v.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* The print spec is the honest bit people can't see by looking —
-                what area they're actually designing into, and at what quality
-                it goes to the printer. */}
-            {zone && (
-              <section className="hidden lg:block">
-                <RailLabel n="03" label="Print area" />
-                <dl className="mt-3 space-y-1.5">
-                  <SpecRow k="Size" v={`${zone.widthIn} × ${zone.heightIn} in`} />
-                  <SpecRow k="Output" v="300 DPI PNG" />
-                  <SpecRow k="Sides" v={twoSided ? 'Front & back' : 'Front only'} />
-                </dl>
-                <p className="mt-3 font-body text-[10px] leading-relaxed text-paper/30">
-                  Anything past the dashed edge is trimmed off the print.
-                </p>
-              </section>
-            )}
-          </div>
+      {/* min-h-0 on every flex level: without it a flex child refuses to
+          shrink below its content height, which is exactly what let the
+          garment overflow the viewport instead of scaling down. */}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        {/* ── Setup rail — desktop only ────────────────────────────────── */}
+        <aside className="hidden flex-shrink-0 overflow-y-auto border-paper/10 lg:block lg:w-60 lg:border-r lg:px-5 lg:py-6">
+          {setupContent}
         </aside>
 
         {/* ── Stage ────────────────────────────────────────────────────── */}
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {twoSided && (
-            <div className="flex flex-shrink-0 justify-center gap-1 border-b border-paper/10 px-4 py-2.5">
+            <div className="flex flex-shrink-0 justify-center gap-1 border-b border-paper/10 px-4 py-2">
               {sides.map((s) => {
                 const filled = (s === 'front' ? frontCanvas : backCanvas)?.getObjects().length ?? 0
                 return (
@@ -347,34 +362,32 @@ export default function CustomizerStudio({
             </div>
           )}
 
-          <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
-            {/* Sized off the viewport height, not just width: the mockups are
-                4:5, so on a short laptop screen a width-only cap would push the
-                garment past the fold. */}
-            <div className="w-full max-w-[min(680px,calc((100vh-11rem)*0.8))]">
-              {color?.front && (
-                <CanvasStage
-                  zone={color.front}
-                  side="front"
-                  isActive={effectiveSide === 'front'}
-                  onFocus={() => setActiveSide('front')}
-                  onReady={setFrontCanvas}
-                />
-              )}
-              {color?.back && (
-                <CanvasStage
-                  zone={color.back}
-                  side="back"
-                  isActive={effectiveSide === 'back'}
-                  onFocus={() => setActiveSide('back')}
-                  onReady={setBackCanvas}
-                />
-              )}
-            </div>
+          {/* The stage is just a box; CanvasStage fits the garment into
+              whatever it measures here. Open a tool panel and this box gets
+              shorter, so the garment scales down and stays wholly visible. */}
+          <div className="min-h-0 flex-1 overflow-hidden p-3 sm:p-5 lg:p-6">
+            {color?.front && (
+              <CanvasStage
+                zone={color.front}
+                side="front"
+                isActive={effectiveSide === 'front'}
+                onFocus={() => setActiveSide('front')}
+                onReady={setFrontCanvas}
+              />
+            )}
+            {color?.back && (
+              <CanvasStage
+                zone={color.back}
+                side="back"
+                isActive={effectiveSide === 'back'}
+                onFocus={() => setActiveSide('back')}
+                onReady={setBackCanvas}
+              />
+            )}
           </div>
         </main>
 
-        {/* ── Tools rail ───────────────────────────────────────────────── */}
+        {/* ── Tools ────────────────────────────────────────────────────── */}
         <Toolbar
           canvas={activeCanvas}
           zone={zone}
@@ -382,6 +395,7 @@ export default function CustomizerStudio({
           twoSided={twoSided}
           garmentHex={color?.hex}
           onCopyToOtherSide={copyActiveDesignToOtherSide}
+          setupPanel={setupContent}
         />
       </div>
     </div>

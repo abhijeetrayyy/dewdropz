@@ -629,6 +629,34 @@ export interface HomeConfig {
   }
   // Empty array means "show all" — CollectionsRow's original behaviour.
   featured_collection_slugs: string[]
+  // Same convention: empty means every active top-level category.
+  featured_category_slugs: string[]
+  // Empty means the numbers band hides itself. Deliberately not seeded with
+  // defaults — the previous hardcoded figures were invented.
+  stats: HomeStat[]
+  showcase: HomeShowcaseRail[]
+}
+
+export interface HomeStat {
+  value: number
+  suffix: string
+  label: string
+  /** Render the number bare (e.g. a year) instead of locale-grouped. */
+  plain: boolean
+}
+
+/** How a rail picks its products. All are evaluated against live catalogue
+ *  data, so a rail fills up on its own once real products/orders exist. */
+export type HomeShowcaseKind = 'recent' | 'best_sellers' | 'category' | 'collection'
+
+export interface HomeShowcaseRail {
+  id: string
+  kind: HomeShowcaseKind
+  title: string
+  category_slug: string | null
+  collection_slug: string | null
+  limit: number
+  enabled: boolean
 }
 
 export interface StoreSettings {

@@ -30,8 +30,7 @@ export default async function FooterSection() {
     {
       heading: 'Explore',
       links: [
-        // Treks paused — restore by uncommenting.
-        // { label: 'Treks', href: '/treks' },
+        { label: 'Trail Guide', href: '/treks' },
         { label: 'Journal', href: '/journal' },
         { label: 'About', href: '/about' },
         { label: 'Sustainability', href: '/sustainability' },

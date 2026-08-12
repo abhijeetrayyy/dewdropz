@@ -14,7 +14,12 @@ const FONTS: { label: string; family: string }[] = [
 
 const INKS = ["#FFFFFF", "#1A1A1A", "#27481F", "#7BA46F", "#B8826B", "#142536"];
 
+// Renders exactly ONE panel, chosen by `mode`. The screen owns the tab bar and
+// decides which is showing, mirroring the web studio: on a phone the canvas is
+// the thing that must never be covered, so tools take turns instead of all
+// stacking under the garment in a single scroll.
 export function StudioToolbar({
+  mode,
   selected,
   twoSided,
   activeSide,
@@ -31,6 +36,7 @@ export function StudioToolbar({
   onReorder,
   onCopyToOtherSide,
 }: {
+  mode: "add" | "edit";
   selected: DesignLayer | null;
   twoSided: boolean;
   activeSide: "front" | "back";
@@ -51,6 +57,7 @@ export function StudioToolbar({
 
   return (
     <View style={s.root}>
+      {mode === "add" && (
       <View style={s.addRow}>
         <TouchableOpacity style={s.addBtn} onPress={onAddText} activeOpacity={0.85}>
           <Type size={16} strokeWidth={1.75} color={C.forest} />
@@ -67,19 +74,26 @@ export function StudioToolbar({
           <Redo2 size={16} strokeWidth={1.75} color={canRedo ? C.text : C.light} />
         </TouchableOpacity>
       </View>
+      )}
 
-      {twoSided && (
+      {mode === "add" && twoSided && (
         <TouchableOpacity style={s.copyRow} onPress={onCopyToOtherSide} activeOpacity={0.7}>
           <FlipHorizontal2 size={13} strokeWidth={1.75} color={C.mid} />
           <Text style={s.copyT}>Copy {activeSide} to {activeSide === "front" ? "back" : "front"}</Text>
         </TouchableOpacity>
       )}
 
-      {!selected ? (
+      {mode === "add" && !selected ? (
         <Text style={s.hint}>
           Tap Text or Image to start. Drag to move, pinch to resize, twist to rotate.
         </Text>
-      ) : (
+      ) : null}
+
+      {mode === "edit" && !selected ? (
+        <Text style={s.hint}>Tap something on the garment to edit it.</Text>
+      ) : null}
+
+      {mode === "edit" && selected ? (
         <View style={s.panel}>
           {text ? (
             <>
@@ -171,7 +185,7 @@ export function StudioToolbar({
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }

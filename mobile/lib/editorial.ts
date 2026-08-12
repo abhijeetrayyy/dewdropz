@@ -184,13 +184,6 @@ export const COLLECTION_CONDITIONS: Record<string, { key: string; value: string 
   ],
 };
 
-export const STATS = [
-  { value: "12,000+", label: "Trekkers geared up" },
-  { value: "40+", label: "Trails mapped" },
-  { value: "5,200m", label: "Highest tested" },
-  { value: "2019", label: "Est. in Dehradun" },
-];
-
 export const TRUST_POINTS = [
   "COD available across India",
   "Free shipping over ₹2,000",
@@ -253,27 +246,6 @@ export const SUSTAINABILITY_COMMITMENTS = [
   },
 ];
 
-export const TESTIMONIALS = [
-  {
-    quote:
-      "The Altitude Pack survived a five-day crossing in sideways rain and didn't let a single drop through. I've never trusted a piece of gear more.",
-    name: "Karan M.",
-    trail: "Roopkund Ridge, 2025",
-  },
-  {
-    quote:
-      "Wore the Mist Tee through 18km of wet pine switchbacks above Mussoorie. It dried faster than my boots. That's not an exaggeration.",
-    name: "Priya S.",
-    trail: "Nag Tibba Trail, 2025",
-  },
-  {
-    quote:
-      "I packed the Trail Cap flat for a week in the Thar, pulled it out, and the brim held its shape perfectly. Desert gear that actually works.",
-    name: "Rohan D.",
-    trail: "Thar Crossing, 2026",
-  },
-];
-
 export const SITE = {
   email: "hello@dewdropz.shop",
   phone: "+91 98765 43210",
@@ -282,6 +254,13 @@ export const SITE = {
 };
 
 export const STORY_IMAGE = "https://images.unsplash.com/photo-1501555088652-021faa106b9b";
+
+// The home hero. Deliberately NOT product photography: two figures leaving the
+// treeline by headlamp before dawn. The app's first screen should sell the
+// reason someone buys trekking gear — the morning itself — not the garment.
+// A hoodie on a white background can be seen anywhere; this can't.
+export const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1551632811-561732d1e306?w=1400&q=80&auto=format&fit=crop";
 export const SUSTAINABILITY_IMAGE = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b";
 
 export function journalById(id: string) {

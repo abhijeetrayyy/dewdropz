@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { useCollectionsQuery, useCustomizableProductsQuery, useProductsQuery } from "@/lib/queries";
+import { useCollectionsQuery, useCustomizableProductsQuery, useHomeQuery, useProductsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { useAuthStore } from "@/stores/auth";
 import { ProductCard } from "@/components/ProductCard";
@@ -15,15 +15,16 @@ import { Marquee } from "@/components/editorial/Marquee";
 import { Ridgeline } from "@/components/editorial/Ridgeline";
 import { Topography } from "@/components/editorial/Topography";
 import { SeasonWindow } from "@/components/home/SeasonWindow";
-import { PullQuote } from "@/components/editorial/PullQuote";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
-import { Body, Display3, Editorial, Hero, Meta, Mono, Serif, Title } from "@/components/ui/Type";
+import { Body, Display3, Editorial, Meta, Mono, Serif, Title } from "@/components/ui/Type";
 import { SkeletonProductGrid } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { formatPrice } from "@/lib/utils";
 import { resolveAssetUrl } from "@/lib/customize/assetUrl";
-import { JOURNAL, TESTIMONIALS, TRUST_POINTS, formatArticleDate } from "@/lib/editorial";
+import { HERO_IMAGE, JOURNAL, TRUST_POINTS, formatArticleDate } from "@/lib/editorial";
+import { TRAILS } from "@/lib/trails";
+import type { CollectionRow } from "@/lib/data";
 import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
 
@@ -45,7 +46,7 @@ const RAIL_CARD_W = Math.round(CONTENT_W * 0.52);
 //   02 THE COLLECTIONS — serif-titled full-bleed blocks
 //   03 THE WORKBENCH   — design-your-own, the store's actual core feature
 //   04 FROM THE JOURNAL— long-form, previously mobile-only-missing
-//   05 VOICES          — testimonials on an ink band
+//   05 THE TRAILS      — the trail guide, on an ink band
 //   06 colophon        — where it's made, links to About/Sustainability
 //
 // Every section opens with the same SectionHead furniture, which is what makes
@@ -62,6 +63,7 @@ export default function HomeScreen() {
   const { data: products = [], isLoading, isError, refetch } = useProductsQuery();
   const { data: collections = [] } = useCollectionsQuery();
   const { data: blanks = [] } = useCustomizableProductsQuery();
+  const { data: home } = useHomeQuery();
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
   const user = useAuthStore((s) => s.user);
 
@@ -77,11 +79,17 @@ export default function HomeScreen() {
     [products],
   );
 
-  // The hero needs a photograph, so it takes the first arrival that actually
-  // has one and falls back to a collection shot rather than rendering an
-  // empty ink block.
-  const hero = newArrivals.find((p: any) => p.images?.[0]) ?? newArrivals[0];
-  const heroImage = hero?.images?.[0] ?? (collections[0] as any)?.image_url;
+  // Which collections lead, and in which order, is the admin's call — the same
+  // `featured_collection_slugs` the website reads. Empty means "show them all",
+  // matching the web behaviour rather than rendering nothing.
+  const featuredCollections = useMemo<CollectionRow[]>(() => {
+    const picks = home?.featuredCollectionSlugs ?? [];
+    if (picks.length === 0) return collections.slice(0, 3);
+    return picks
+      .map((slug) => collections.find((c) => c.slug === slug))
+      .filter((c): c is CollectionRow => Boolean(c));
+  }, [collections, home?.featuredCollectionSlugs]);
+
   const featuredArticle = JOURNAL[0];
 
   return (
@@ -93,18 +101,19 @@ export default function HomeScreen() {
       >
         <Masthead />
 
-        {/* ── Hero ───────────────────────────────────────────────────────── */}
-        <TouchableOpacity
-          activeOpacity={0.96}
-          disabled={!hero}
-          onPress={() => hero && router.push(`/product/${hero.slug}`)}
-          style={[s.hero, { height: HERO_H }]}
-        >
-          {heroImage ? (
-            <Image source={{ uri: heroImage }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} alt="" />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: C.sand }]} />
-          )}
+        {/* ── Hero ───────────────────────────────────────────────────────────
+            Not a product shot, and not a link to a product. A phone home
+            screen that opens on a garment on white is a catalogue; this opens
+            on two people leaving the treeline by headlamp, which is the thing
+            anyone is actually buying gear in order to go and do.
+
+            The photograph is fixed brand imagery rather than "whatever product
+            happened to be added last" — the old version pulled the newest
+            arrival's image, so the emotional opening beat of the whole app
+            changed silently every time the catalogue did, and rendered a grey
+            box whenever the shop was empty. ──────────────────────────────── */}
+        <View style={[s.hero, { height: HERO_H }]}>
+          <Image source={{ uri: HERO_IMAGE }} style={StyleSheet.absoluteFill} contentFit="cover" transition={400} alt="" />
           {/* Four stops, not three. A single transparent midpoint left the
               eyebrow row and the top of the headline sitting on whatever the
               photograph happened to be — on a light studio shot that's white
@@ -128,30 +137,27 @@ export default function HomeScreen() {
             </Mono>
           </View>
 
-          <Animated.View entering={FadeIn.duration(500)} style={s.heroBody}>
-            <View style={s.heroTagRow}>
-              <View style={s.heroTag}>
-                <Text style={s.heroTagT}>THIS WEEK</Text>
-              </View>
-              {hero?.collection?.name ? (
-                <Mono color="rgba(255,255,255,0.88)">{hero.collection.name.toUpperCase()}</Mono>
-              ) : null}
-            </View>
-            <Hero color={C.paper} style={{ marginTop: 14 }}>
-              Made to{"\n"}order.
-            </Hero>
-            <Body color="rgba(255,255,255,0.82)" style={{ marginTop: 12, maxWidth: 300 }}>
-              Small-batch gear from Dehradun — or bring your own artwork and we&apos;ll print it.
+          <Animated.View entering={FadeIn.duration(600)} style={s.heroBody}>
+            <View style={s.heroRule} />
+            {/* Serif, not the 800-weight display. The line is a thought, not a
+                announcement — setting it in the brand's quiet voice is what
+                keeps it from reading as ad copy. */}
+            <Serif color={C.paper} style={{ marginTop: 16 }}>
+              Nobody remembers{"\n"}the jacket.
+            </Serif>
+            <Body color="rgba(255,255,255,0.84)" style={{ marginTop: 14, maxWidth: 310 }}>
+              They remember the cold, the dark, and the light coming over the ridge. We just make sure the gear never
+              becomes the story.
             </Body>
             <View style={s.heroActions}>
-              <Button title="Shop the drop" variant="primary" size="md" onPress={() => router.push("/(tabs)/shop")} />
-              <TouchableOpacity style={s.heroAlt} onPress={() => router.push("/(tabs)/design")} activeOpacity={0.7}>
-                <Text style={s.heroAltT}>Design your own</Text>
+              <Button title="Find your trail" variant="primary" size="md" onPress={() => router.push("/trails")} />
+              <TouchableOpacity style={s.heroAlt} onPress={() => router.push("/(tabs)/shop")} activeOpacity={0.7}>
+                <Text style={s.heroAltT}>The gear</Text>
                 <Icon name="arrow_outward" size={16} color={C.paper} />
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </TouchableOpacity>
+        </View>
 
         <Marquee items={TRUST_POINTS} tone="ink" />
 
@@ -208,8 +214,49 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* ── CMS rails ──────────────────────────────────────────────────────
+            Defined in the web admin (Settings → Product rails) and resolved
+            live against the catalogue, so "Just added" and "Most ordered" fill
+            themselves in as real products and orders arrive. A rail with
+            nothing in it never reaches here, which is why an almost-empty shop
+            shows fewer sections rather than empty headings. ───────────────── */}
+        {(home?.rails ?? []).map((rail) => (
+          <View key={rail.id} style={s.section}>
+            <SectionHead
+              eyebrow={rail.kind === "best_sellers" ? "Most ordered" : "Fresh"}
+              title={rail.title}
+              size="d3"
+              actionLabel="All gear"
+              onAction={() => router.push("/(tabs)/shop")}
+              style={{ paddingHorizontal: S.gutter }}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              snapToInterval={RAIL_CARD_W + S.md}
+              contentContainerStyle={s.rail}
+            >
+              {rail.products.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  width={RAIL_CARD_W}
+                  productId={p.id}
+                  slug={p.slug}
+                  name={p.name}
+                  price={p.price}
+                  imageUri={p.images?.[0] ?? ""}
+                  meta={p.collection?.name}
+                  compareAtPrice={p.compare_at_price}
+                  createdAt={p.created_at}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        ))}
+
         {/* ── 02 · The collections ───────────────────────────────────────── */}
-        {collections.length > 0 ? (
+        {featuredCollections.length > 0 ? (
           <View style={s.section}>
             <SectionHead
               index="03"
@@ -221,7 +268,7 @@ export default function HomeScreen() {
               style={{ paddingHorizontal: S.gutter }}
             />
             <View style={{ marginTop: S.xl }}>
-              {(collections as any[]).slice(0, 3).map((c, i) => (
+              {featuredCollections.map((c, i) => (
                 <TouchableOpacity
                   key={c.id}
                   activeOpacity={0.94}
@@ -242,9 +289,10 @@ export default function HomeScreen() {
                     />
                     <View style={s.collectionBody}>
                       <Mono color="rgba(255,255,255,0.65)">{String(i + 1).padStart(2, "0")}</Mono>
-                      {/* Instrument Serif here, not Bricolage: the collection
-                          names are the one place the brand speaks in its own
-                          voice rather than shouting a product claim. */}
+                      {/* Serif, not Display: the collection names are the one
+                          place the brand speaks in its own voice rather than
+                          shouting a product claim — same weight web uses for
+                          collection names (CollectionsRow.tsx). */}
                       <Serif color={C.paper} style={{ marginTop: 4 }}>
                         {c.name}
                       </Serif>
@@ -381,28 +429,58 @@ export default function HomeScreen() {
           <Topography width={SCREEN_W} height={420} color={C.sage} opacity={0.13} seed={9.1} originX={0.24} originY={0.6} />
           <SectionHead
             index="06"
-            eyebrow="Voices"
-            title="From people who took it up."
+            eyebrow="The trails"
+            title="Where all of this is for."
+            lede="Real routes across Uttarakhand — how high, how hard, and the season that makes them worth it."
             tone="onDark"
             style={{ paddingHorizontal: S.gutter }}
           />
-          {/* Each page is exactly one screen wide with the gutter INSIDE it.
-              Sizing pages to the content width instead (screen − 2×gutter)
-              desynchronises them from `pagingEnabled`'s stride, which is
-              always the scroll view's own width — so every page settled a
-              gutter short and the next quote bled in at the right edge. */}
+          {/* Was a carousel of four invented customers ("Karan M.", "Priya S.")
+              quoting products that no longer exist in the catalogue — fake
+              social proof, and stale fake social proof at that. Replaced with
+              the trail guide: real places, real seasons, and the actual reason
+              this brand exists. When real reviews land, they belong here. */}
           <ScrollView
             horizontal
-            pagingEnabled
             showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={RAIL_CARD_W + S.md}
+            contentContainerStyle={s.rail}
             style={{ marginTop: S.xl }}
           >
-            {TESTIMONIALS.map((t) => (
-              <View key={t.name} style={{ width: SCREEN_W, paddingHorizontal: S.gutter }}>
-                <PullQuote quote={t.quote} attribution={t.name} role={t.trail} tone="onDark" />
-              </View>
+            {TRAILS.slice(0, 5).map((t) => (
+              <TouchableOpacity
+                key={t.slug}
+                activeOpacity={0.9}
+                onPress={() => router.push(`/trails/${t.slug}`)}
+                style={{ width: RAIL_CARD_W }}
+              >
+                <View style={s.trailPlate}>
+                  <Image source={{ uri: t.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={260} alt="" />
+                  <LinearGradient
+                    colors={["rgba(12,18,15,0.05)", "rgba(12,18,15,0.82)"]}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <View style={s.trailFoot}>
+                    <Mono color="rgba(255,255,255,0.72)">{t.altitude.toUpperCase()}</Mono>
+                    <Title color={C.paper} style={{ marginTop: 3 }}>{t.name}</Title>
+                  </View>
+                </View>
+                <Meta color="rgba(255,255,255,0.55)" style={{ marginTop: 10 }} numberOfLines={2}>
+                  {t.season}
+                </Meta>
+              </TouchableOpacity>
             ))}
           </ScrollView>
+
+          <TouchableOpacity
+            onPress={() => router.push("/trails")}
+            activeOpacity={0.7}
+            style={[s.guideLink, { marginHorizontal: S.gutter }]}
+          >
+            <Text style={s.guideLinkT}>Open the full trail guide</Text>
+            <Icon name="arrow_forward" size={16} color={C.sage} />
+          </TouchableOpacity>
         </View>
 
         {/* ── 07 · Colophon ──────────────────────────────────────────────── */}
@@ -441,6 +519,11 @@ function ColophonLink({ label, onPress, last }: { label: string; onPress: () => 
 }
 
 const s = StyleSheet.create({
+  trailPlate: { height: Math.round(RAIL_CARD_W * 1.25), borderRadius: R.card, overflow: "hidden", backgroundColor: C.sand },
+  trailFoot: { position: "absolute", left: 12, right: 12, bottom: 12 },
+  guideLink: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: S.xl },
+  guideLinkT: { fontFamily: F.bodyBold, fontSize: 13, letterSpacing: 0.2, color: C.sage },
+  heroRule: { width: 46, height: 2, backgroundColor: C.sage },
   root: { flex: 1, backgroundColor: C.paper },
 
   hero: { justifyContent: "flex-end", backgroundColor: C.ink },

@@ -43,69 +43,6 @@ export const DAY_ARC = {
   basecamp: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=2400&q=80&auto=format&fit=crop',
 } as const
 
-export const COLLECTIONS = [
-  {
-    id: 'mist-and-morning',
-    name: 'Mist & Morning',
-    tagline: 'Fog, dew, first light.',
-    bestFor: '3-season forest treks',
-    signature: 'Mist Tee',
-    image: 'https://images.unsplash.com/photo-1758642882005-447873fd2d29',
-    secondaryImage: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a',
-    gradient: 'linear-gradient(165deg, #4A5D52 0%, #9AAE9C 40%, #E8EAE4 100%)',
-    description:
-      'Built for the hours between 5 and 7 a.m., when the forest is still deciding whether to wake up. Lightweight, breathable layers cut for switchbacks through wet pine and low cloud.',
-    narrative:
-      'Every piece in Mist & Morning was tested on the same pre-dawn starts we guide on — the Roopkund approach, the Nag Tibba ridge, the wet pine switchbacks above Mussoorie. The brief was simple: nothing that traps moisture, nothing that takes more than a minute to dry, nothing that fights you when the fog rolls in at 5am and doesn\'t lift until 8.',
-    conditions: [
-      { label: 'Temperature Range', value: '8°C – 22°C' },
-      { label: 'Terrain', value: 'Wet pine, switchbacks' },
-      { label: 'Best Season', value: 'Spring & post-monsoon' },
-      { label: 'Pairs Well With', value: 'Silent Altitude shells' },
-    ],
-  },
-  {
-    id: 'silent-altitude',
-    name: 'Silent Altitude',
-    tagline: 'Alpine stillness. Deep quiet.',
-    bestFor: 'High-altitude alpine climbs',
-    signature: 'Altitude Pack 40L',
-    image: 'https://images.unsplash.com/photo-1769631417306-a1da09f42b20',
-    secondaryImage: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
-    gradient: 'linear-gradient(165deg, #0B1520 0%, #1E3347 40%, #5A7A96 100%)',
-    description:
-      'Above 4,000m the noise of the world finally drops away. This collection is engineered for that thin, quiet air — wind-sealed, insulated, built to survive a summit push and the long descent after.',
-    narrative:
-      'We field-test Silent Altitude above 4,500 metres, where wind is a constant and a torn seam is a real problem, not an inconvenience. Every welded seam, every insulation panel, every zip pull was chosen for what happens when your hands are too cold to be precise and the only thing that matters is whether the gear does its job without being asked twice.',
-    conditions: [
-      { label: 'Temperature Range', value: '-15°C – 5°C' },
-      { label: 'Terrain', value: 'Alpine, scree, summit ridge' },
-      { label: 'Best Season', value: 'Pre-monsoon & autumn' },
-      { label: 'Pairs Well With', value: 'O Collection base layers' },
-    ],
-  },
-  {
-    id: 'o-collection',
-    name: 'O Collection',
-    tagline: 'Where the trail becomes a way of life.',
-    bestFor: 'Desert ridges & long hauls',
-    signature: 'Trail Cap',
-    image: 'https://images.unsplash.com/photo-1766933366411-7a921aebe181',
-    secondaryImage: 'https://images.unsplash.com/photo-1501555088652-021faa106b9b',
-    gradient: 'linear-gradient(165deg, #2E1F16 0%, #6B3F28 50%, #C8906A 100%)',
-    description:
-      'For the multi-day hauls across dry ridgelines, where the sun is the only companion that never leaves. Earth-toned, sun-hardened, and built to carry water, heat, and distance without complaint.',
-    narrative:
-      'O Collection came out of a five-day crossing where three of us ran out of good options for sun cover by day two. Everything here is built around heat management over distance — brims that hold shape after being packed flat for a week, fabric that breathes at 40°C, and a flask that still has cold water in it on day three.',
-    conditions: [
-      { label: 'Temperature Range', value: '18°C – 40°C' },
-      { label: 'Terrain', value: 'Desert ridge, long hauls' },
-      { label: 'Best Season', value: 'Winter & early spring' },
-      { label: 'Pairs Well With', value: 'Mist & Morning base layers' },
-    ],
-  },
-]
-
 export const STATS = [
   { value: 12000, suffix: '+', label: 'Trekkers geared up', plain: false },
   { value: 40, suffix: '+', label: 'Trails mapped across the Himalaya', plain: false },
@@ -163,142 +100,6 @@ export const JOURNAL = [
   },
 ]
 
-export const PRODUCTS = [
-  {
-    slug: 'mist-tee',
-    name: 'Mist Tee',
-    desc: 'Cotton trekking t-shirt',
-    price: 1800,
-    gradient: 'linear-gradient(135deg, #4A5D52, #9AAE9C)',
-    image: 'https://images.unsplash.com/photo-1629185752193-0d25bb978c04',
-    collectionId: 'mist-and-morning',
-    category: 'layers',
-    materials: 'Merino-cotton blend, 180gsm',
-    sizes: ['S', 'M', 'L', 'XL'],
-    longDescription:
-      'A lightweight base layer built for humid forest switchbacks. Merino keeps you warm when wet, cotton keeps it soft against the skin on 12-hour days.',
-    care: 'Cold wash. Hang dry. Avoid fabric softener — it breaks down the merino fibres.',
-  },
-  {
-    slug: 'dew-windbreaker',
-    name: 'Dew Windbreaker',
-    desc: 'Packable shell for damp mornings',
-    price: 3200,
-    gradient: 'linear-gradient(135deg, #6B8068, #C7D3C2)',
-    image: 'https://images.unsplash.com/photo-1595174028948-42a4b1786664',
-    collectionId: 'mist-and-morning',
-    category: 'layers',
-    materials: 'Ripstop nylon, DWR coating',
-    sizes: ['S', 'M', 'L', 'XL'],
-    longDescription:
-      'Packs down to fist size and cuts the chill off a foggy ridge without trapping heat. The shell we reach for first, every single time.',
-    care: 'Machine wash cold, no bleach. Re-apply DWR spray every 15–20 washes.',
-  },
-  {
-    slug: 'altitude-pack',
-    name: 'Altitude Pack 40L',
-    desc: 'Waterproof trail backpack',
-    price: 2800,
-    gradient: 'linear-gradient(135deg, #1E3347, #5A7A96)',
-    image: 'https://images.unsplash.com/photo-1509762774605-f07235a08f1f',
-    collectionId: 'silent-altitude',
-    category: 'packs',
-    materials: 'Welded-seam TPU shell, 40L capacity',
-    sizes: ['One Size'],
-    longDescription:
-      'Redesigned twice to survive monsoon and high-altitude wind alike. Welded seams, a dropped roll-top, and a frame that carries weight on your hips, not your shoulders.',
-    care: 'Wipe down with a damp cloth. Do not machine wash. Air dry fully before storage.',
-  },
-  {
-    slug: 'ridge-beanie',
-    name: 'Ridge Beanie',
-    desc: 'Merino wool summit beanie',
-    price: 1100,
-    gradient: 'linear-gradient(135deg, #2A3B4D, #7F97AC)',
-    image: 'https://images.unsplash.com/photo-1648483092137-6e63796c8b06',
-    collectionId: 'silent-altitude',
-    category: 'headwear',
-    materials: '100% merino wool',
-    sizes: ['One Size'],
-    longDescription:
-      'Tested above 5,000 metres where the wind never really stops. Thin enough to fit under a hood, warm enough to sleep in.',
-    care: 'Hand wash cold. Lay flat to dry.',
-  },
-  {
-    slug: 'trail-cap',
-    name: 'Trail Cap',
-    desc: 'Merino wool cap',
-    price: 1500,
-    gradient: 'linear-gradient(135deg, #2E1F16, #7A4F35)',
-    image: 'https://images.unsplash.com/photo-1780758841669-c961af1a5a7e',
-    collectionId: 'o-collection',
-    category: 'headwear',
-    materials: 'Merino wool crown, cotton twill brim',
-    sizes: ['One Size'],
-    longDescription:
-      'Sun-hardened for multi-day desert-ridge hauls. The brim is stiff enough to hold shape after being packed flat for a week straight.',
-    care: 'Spot clean only. Reshape brim while damp.',
-  },
-  {
-    slug: 'desert-scarf',
-    name: 'Desert Scarf',
-    desc: 'Dust-shield trail scarf',
-    price: 900,
-    gradient: 'linear-gradient(135deg, #7A4F35, #D9B08C)',
-    image: 'https://images.unsplash.com/photo-1706206086774-0017933e52e2',
-    collectionId: 'o-collection',
-    category: 'headwear',
-    materials: 'Brushed cotton-linen blend',
-    sizes: ['One Size'],
-    longDescription:
-      'Doubles as dust shield, sun guard, and impromptu pillow. Long enough to wrap twice, breathable enough to forget you\'re wearing it.',
-    care: 'Machine wash cold. Tumble dry low.',
-  },
-  {
-    slug: 'summit-flask',
-    name: 'Summit Flask',
-    desc: 'Insulated steel bottle',
-    price: 1200,
-    gradient: 'linear-gradient(135deg, #27481F, #7BA46F)',
-    image: 'https://images.unsplash.com/photo-1605539582747-ce302b9afca2',
-    collectionId: 'o-collection',
-    category: 'hydration',
-    materials: '18/8 stainless steel, double-wall vacuum insulation',
-    sizes: ['750ml'],
-    longDescription:
-      'Keeps water cold for 24 hours and tea hot for 12 — tested in the field, not just in a lab, across three-day desert-ridge crossings.',
-    care: 'Hand wash. Do not microwave or freeze.',
-  },
-]
-
-// The packer's entry point — for the visitor with a trek booked and a checklist,
-// not a mood. Tiles link into /shop pre-filtered by category.
-export const CATEGORY_TILES = [
-  {
-    id: 'layers',
-    name: 'Layers & Shells',
-    blurb: 'Base layers to windproof shells',
-    image: 'https://images.unsplash.com/photo-1595174028948-42a4b1786664',
-  },
-  {
-    id: 'packs',
-    name: 'Packs & Carry',
-    blurb: 'Welded-seam packs that shrug off monsoon',
-    image: 'https://images.unsplash.com/photo-1509762774605-f07235a08f1f',
-  },
-  {
-    id: 'headwear',
-    name: 'Head & Sun',
-    blurb: 'Caps, beanies, and dust shields',
-    image: 'https://images.unsplash.com/photo-1780758841669-c961af1a5a7e',
-  },
-  {
-    id: 'hydration',
-    name: 'Bottles & Extras',
-    blurb: 'Cold water on day three, hot tea at the summit',
-    image: 'https://images.unsplash.com/photo-1605539582747-ce302b9afca2',
-  },
-]
 
 // Real logistics facts (see CONTACT_FAQS + store settings) surfaced as a single
 // trust strip — the "will it arrive, can I return it" anxieties answered up front.
@@ -309,16 +110,6 @@ export const TRUST_POINTS = [
   'Field-tested at 5,200m',
 ]
 
-// The hero's live "drop card" — small-batch scarcity is this brand's one honest
-// urgency signal (runs of 200–500 that sell out in days), so it lives on the
-// front door. Structured so it can later be fed from real inventory instead.
-export const CURRENT_DROP = {
-  productSlug: 'altitude-pack',
-  name: 'Altitude Pack 40L',
-  batchLabel: 'Batch 06 — welded in Dehradun',
-  batchSize: 300,
-  remaining: 41,
-}
 
 export const FOUNDER_QUOTE = {
   quote:
@@ -380,130 +171,168 @@ export const CONTACT_FAQS = [
   },
 ]
 
-// Each report pairs a voice with the photo and altitude of the trek it happened
-// on — the quote and the image are one artifact (a field report), not two
-// separate "testimonials" and "gallery" sections.
-export const TESTIMONIALS = [
+// ─────────────────────────────────────────────────────────────────────────────
+// The trail guide — reference, not a booking product
+// ─────────────────────────────────────────────────────────────────────────────
+// This replaced a list of four "guided treks" carrying invented departure
+// dates, prices and live "spots left" counters — a booking funnel for a
+// business line that doesn't run. Everything below is instead public,
+// verifiable information about real Uttarakhand trails: where they are, how
+// high they go, when they're worth walking, and what you actually pass on the
+// way. No dates, no prices, no scarcity.
+//
+// `access` exists because some of these are genuinely restricted, and a guide
+// that quietly omits that is worse than no guide.
+//
+// Imagery is representative Himalayan photography, not claimed to be the exact
+// trail — captions never assert otherwise.
+export const TRAILS = [
   {
-    name: 'Ananya Krishnan',
-    initials: 'AK',
-    location: 'Bengaluru',
-    trek: 'Kedarkantha, Dec 2025',
+    slug: 'kedarkantha',
+    name: 'Kedarkantha',
+    region: 'Uttarkashi, Uttarakhand',
+    base: 'Sankri',
     altitude: '3,800m',
-    gear: 'Altitude Pack 40L',
-    image: 'https://images.unsplash.com/photo-1633231610793-a5be285cb418',
-    quote:
-      "The Altitude Pack survived a whiteout at 3,800m that ruined two other people's gear in our group. I stopped thinking about my pack entirely by day two, which is exactly the point.",
-    gradient: 'linear-gradient(135deg, #1E3347, #7BA46F)',
-  },
-  {
-    name: 'Vikram Nair',
-    initials: 'VN',
-    location: 'Pune',
-    trek: 'Har Ki Dun, Oct 2025',
-    altitude: '3,566m',
-    gear: 'Dew Windbreaker',
-    image: 'https://images.unsplash.com/photo-1689825422854-8e3083c2fb82',
-    quote:
-      "I've bought three 'waterproof' shells from other brands that all soaked through by hour four. The Dew Windbreaker is the first one that actually held up through a full monsoon crossing.",
-    gradient: 'linear-gradient(135deg, #4A5D52, #C8906A)',
-  },
-  {
-    name: 'Ritika Sharma',
-    initials: 'RS',
-    location: 'Delhi',
-    trek: 'Roopkund, May 2026',
-    altitude: '5,029m',
-    gear: 'Trail Cap',
-    image: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a',
-    quote:
-      'Small thing, but the Trail Cap brim held its shape after being crushed in my pack for six days straight. Sounds minor until you\'re the one person on the trek whose hat still looks like a hat.',
-    gradient: 'linear-gradient(135deg, #2E1F16, #9AAE9C)',
-  },
-  {
-    name: 'Devansh Rao',
-    initials: 'DR',
-    location: 'Hyderabad',
-    trek: 'Valley of Flowers, Jul 2025',
-    altitude: '3,658m',
-    gear: 'Altitude Pack 40L',
-    image: 'https://images.unsplash.com/photo-1587547131116-a0655a526190',
-    quote:
-      "What got me was the reply when I emailed about a strap issue — an actual person who'd clearly worn the pack themselves wrote back with a fix in twenty minutes. Never happened with any bigger brand.",
-    gradient: 'linear-gradient(135deg, #142536, #5A7A96)',
-  },
-]
-
-export const COMMUNITY_PHOTOS = [
-  { image: 'https://images.unsplash.com/photo-1633231610793-a5be285cb418', caption: 'Kedarkantha summit push' },
-  { image: 'https://images.unsplash.com/photo-1522506209496-4536d9020ec4', caption: 'Chandrashila Peak, dawn' },
-  { image: 'https://images.unsplash.com/photo-1758272960205-96258d60ac1f', caption: 'Basecamp, night before summit' },
-  { image: 'https://images.unsplash.com/photo-1689825422854-8e3083c2fb82', caption: 'Group push above tree line' },
-  { image: 'https://images.unsplash.com/photo-1639938794001-bcc9e3770fd4', caption: 'Chandrashila, summit moment' },
-  { image: 'https://images.unsplash.com/photo-1722410141874-5494d14deeca', caption: 'Kuari Pass crossing, day two' },
-  { image: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a', caption: 'Roopkund ridge, fog window' },
-  { image: 'https://images.unsplash.com/photo-1587547131116-a0655a526190', caption: 'Trailhead, first light' },
-]
-
-export const TRAIL_MAP_POINTS = [
-  { name: 'Har Ki Dun', x: 22, y: 28, altitude: '3,566m', difficulty: 'Moderate', story: 'The valley of gods — quiet enough to hear your own doubt leave.' },
-  { name: 'Kedarkantha', x: 30, y: 42, altitude: '3,800m', difficulty: 'Moderate', story: 'A summit built for sunrise, and a reason to remember why you climbed.' },
-  { name: 'Kuari Pass', x: 46, y: 22, altitude: '4,268m', difficulty: 'Moderate–Hard', story: 'The ridge Nehru walked for one view of Nanda Devi. Still worth the lungs it costs.' },
-  { name: 'Roopkund', x: 55, y: 35, altitude: '5,029m', difficulty: 'Hard', story: 'A mystery lake and a trail that earns the story you\'ll tell for years.' },
-  { name: 'Chandrashila', x: 40, y: 55, altitude: '3,690m', difficulty: 'Easy–Moderate', story: 'The easiest hard thing you\'ll do before breakfast.' },
-  { name: 'Valley of Flowers', x: 62, y: 48, altitude: '3,658m', difficulty: 'Moderate', story: 'Blooms once a year. Forgives nothing twice.' },
-  { name: 'Brahmatal', x: 35, y: 65, altitude: '3,734m', difficulty: 'Moderate', story: 'A frozen lake and the kind of cold that feels like clarity.' },
-  { name: 'Nag Tibba', x: 15, y: 60, altitude: '3,022m', difficulty: 'Easy', story: 'The weekend trek that talks you into booking the harder one.' },
-]
-
-export const TREKS = [
-  {
-    slug: 'kedarkantha-winter',
-    name: 'Kedarkantha Winter Trek',
-    region: 'Uttarakhand Himalaya',
-    image: 'https://images.unsplash.com/photo-1769631417306-a1da09f42b20',
-    date: 'Jan 10–15, 2027',
-    duration: '6 days',
     difficulty: 'Moderate',
-    altitude: '3,800m',
-    spotsLeft: 4,
-    price: 12500,
+    duration: '4–6 days',
+    bestMonths: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+    season: 'A winter trail first and foremost — deep snow from late December through March.',
+    image: 'https://images.unsplash.com/photo-1769631417306-a1da09f42b20',
+    why: 'The one most people in India walk first. It gives you a genuine snow summit without needing technical skill, and the treeline sits low enough that you camp among pines rather than on bare rock.',
+    sights: [
+      { name: 'Juda ka Talab', note: 'A small lake that freezes solid in deep winter, ringed by pine.' },
+      { name: 'Kedarkantha summit', note: 'Sunrise from the top opens onto Swargarohini and Bandarpoonch.' },
+      { name: 'Sankri', note: 'The base village, and the last place with a proper shop.' },
+    ],
   },
   {
     slug: 'har-ki-dun',
-    name: 'Har Ki Dun Valley',
-    region: 'Garhwal Himalaya',
-    image: 'https://images.unsplash.com/photo-1689825422854-8e3083c2fb82',
-    date: 'Oct 3–9, 2026',
-    duration: '7 days',
-    difficulty: 'Moderate',
+    name: 'Har Ki Dun',
+    region: 'Govind Pashu Vihar, Uttarkashi',
+    base: 'Sankri',
     altitude: '3,566m',
-    spotsLeft: 7,
-    price: 14000,
-  },
-  {
-    slug: 'roopkund-expedition',
-    name: 'Roopkund Expedition',
-    region: 'Chamoli, Uttarakhand',
-    image: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a',
-    date: 'May 18–26, 2027',
-    duration: '9 days',
-    difficulty: 'Hard',
-    altitude: '5,029m',
-    spotsLeft: 2,
-    price: 21000,
+    difficulty: 'Moderate',
+    duration: '6–8 days',
+    bestMonths: ['Apr', 'May', 'Jun', 'Sep', 'Oct', 'Nov'],
+    season: 'Green and full of water after the snow melts; crisp and clear post-monsoon.',
+    image: 'https://images.unsplash.com/photo-1689825422854-8e3083c2fb82',
+    why: 'A cradle-shaped valley walk rather than a summit push, following the Supin through some of the oldest continuously inhabited villages in the range.',
+    sights: [
+      { name: 'Osla & Seema', note: 'Villages built in traditional Garhwali wood-and-stone.' },
+      { name: 'Swargarohini', note: 'The peak that closes the head of the valley.' },
+      { name: 'Supin river', note: 'The trail follows it almost the whole way in.' },
+    ],
   },
   {
     slug: 'valley-of-flowers',
     name: 'Valley of Flowers',
     region: 'Chamoli, Uttarakhand',
-    image: 'https://images.unsplash.com/photo-1722410141874-5494d14deeca',
-    date: 'Jul 12–17, 2027',
-    duration: '6 days',
-    difficulty: 'Moderate',
+    base: 'Govindghat / Ghangaria',
     altitude: '3,658m',
-    spotsLeft: 9,
-    price: 13500,
+    difficulty: 'Easy–Moderate',
+    duration: '4–6 days',
+    bestMonths: ['Jul', 'Aug'],
+    season: 'The park opens roughly June to October; the bloom peaks through July and August.',
+    image: 'https://images.unsplash.com/photo-1722410141874-5494d14deeca',
+    why: 'A UNESCO World Heritage site and a national park, carpeted with hundreds of alpine flowering species for a few weeks a year. It is the rare Himalayan walk where the reason to go is underfoot rather than on the horizon.',
+    sights: [
+      { name: 'The valley floor', note: 'Several hundred flowering species recorded here.' },
+      { name: 'Hemkund Sahib', note: 'A glacial lake and gurudwara at 4,300m, a day trip from Ghangaria.' },
+      { name: 'Pushpawati river', note: 'Runs the length of the valley.' },
+    ],
+    access: 'National park entry fee and permit required; camping inside the valley is not allowed — you stay at Ghangaria.',
+  },
+  {
+    slug: 'kuari-pass',
+    name: 'Kuari Pass',
+    region: 'Chamoli, Uttarakhand',
+    base: 'Joshimath / Auli',
+    altitude: '4,264m',
+    difficulty: 'Moderate',
+    duration: '5–7 days',
+    bestMonths: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Sep', 'Oct', 'Nov'],
+    season: 'Walkable most of the year — snow-bound and quiet in winter, wide open in autumn.',
+    image: 'https://images.unsplash.com/photo-1454822759023-fed622ff2c3b',
+    why: 'Often called the Curzon Trail. It buys you one of the closest, most unobstructed views of Nanda Devi available to a walker, and the meadows on the way up are enormous.',
+    sights: [
+      { name: 'Gorson Bugyal', note: 'High meadow above Auli, endless in every direction.' },
+      { name: 'Nanda Devi', note: "India's second-highest peak, in full view from the pass." },
+      { name: 'Auli', note: 'Ski slopes and a cable car, at the trailhead.' },
+    ],
+  },
+  {
+    slug: 'brahmatal',
+    name: 'Brahmatal',
+    region: 'Chamoli, Uttarakhand',
+    base: 'Lohajung',
+    altitude: '3,734m',
+    difficulty: 'Easy–Moderate',
+    duration: '4–6 days',
+    bestMonths: ['Dec', 'Jan', 'Feb', 'Mar'],
+    season: 'A winter trail — the draw is snow and frozen lakes.',
+    image: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a',
+    image_alt: 'Snow-covered ridge under cloud',
+    why: 'A gentler winter alternative to Kedarkantha, through oak and rhododendron forest, with two lakes and a ridge that looks straight across at Trishul.',
+    sights: [
+      { name: 'Bekaltal', note: 'The lower of the two lakes, in dense forest.' },
+      { name: 'Brahmatal', note: 'Frozen through most of the winter season.' },
+      { name: 'Trishul & Nanda Ghunti', note: 'Both visible from the ridge for much of the walk.' },
+    ],
+  },
+  {
+    slug: 'chandrashila',
+    name: 'Chandrashila & Tungnath',
+    region: 'Rudraprayag, Uttarakhand',
+    base: 'Chopta',
+    altitude: '3,690m',
+    difficulty: 'Easy',
+    duration: '2–3 days',
+    bestMonths: ['Mar', 'Apr', 'May', 'Jun', 'Sep', 'Oct', 'Nov', 'Dec'],
+    season: 'Rhododendrons in spring, clearest skies after the monsoon.',
+    image: 'https://images.unsplash.com/photo-1501555088652-021faa106b9b',
+    why: 'The shortest way to a genuine Himalayan summit view. You can start after breakfast and be on top for sunrise the next morning, which makes it the usual first trek for anyone testing whether they like this at all.',
+    sights: [
+      { name: 'Tungnath', note: 'The highest Shiva temple in the world, on the way up.' },
+      { name: 'Chandrashila summit', note: 'Panorama from Chaukhamba across to Nanda Devi.' },
+      { name: 'Deoriatal', note: 'A lake that mirrors Chaukhamba on a still morning.' },
+    ],
+  },
+  {
+    slug: 'nag-tibba',
+    name: 'Nag Tibba',
+    region: 'Tehri Garhwal, Uttarakhand',
+    base: 'Pantwari',
+    altitude: '3,022m',
+    difficulty: 'Easy',
+    duration: '2 days',
+    bestMonths: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+    season: 'Walkable nearly year-round; a light dusting of snow in deep winter.',
+    image: 'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd',
+    why: "The closest real trek to Dehradun and Mussoorie — a weekend that ends with Bandarpoonch on the skyline. It's the trail that talks people into booking a harder one.",
+    sights: [
+      { name: 'Nag Tibba summit', note: "The 'Serpent's Peak', with a small shrine below the top." },
+      { name: 'Bandarpoonch', note: 'Fills the northern skyline from the ridge.' },
+      { name: 'Pantwari', note: 'Roadhead village, a few hours from Dehradun.' },
+    ],
+  },
+  {
+    slug: 'roopkund',
+    name: 'Roopkund',
+    region: 'Chamoli, Uttarakhand',
+    base: 'Lohajung',
+    altitude: '5,029m',
+    difficulty: 'Hard',
+    duration: '7–9 days',
+    bestMonths: ['May', 'Jun', 'Sep', 'Oct'],
+    season: 'Pre-monsoon and post-monsoon only; the approach is snow-bound otherwise.',
+    image: 'https://images.unsplash.com/photo-1454372182658-c712e4c5a1db',
+    why: 'The glacial lake known for the human skeletal remains found at its edge, reached across two of the largest high meadows in the Indian Himalaya.',
+    sights: [
+      { name: 'Ali & Bedni Bugyal', note: 'Vast alpine meadows above 3,300m.' },
+      { name: 'Trishul & Nanda Ghunti', note: 'Both directly overhead for the upper half.' },
+      { name: 'Roopkund lake', note: 'Small, shallow, and frozen for much of the year.' },
+    ],
+    access: 'Access to the lake has been restricted by order of the Uttarakhand High Court to protect the site. Check the current position with the forest department before planning anything.',
   },
 ]
 

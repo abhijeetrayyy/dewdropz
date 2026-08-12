@@ -100,6 +100,11 @@
 
   --font-display: var(--font-display), Georgia, serif;
   --font-body:    var(--font-body), system-ui, sans-serif;
+  /* Without this, the 41 `font-mono` elements in the storefront — the day-arc
+     clock times, altitudes, coordinates, ratings and section indices — fell
+     through to Tailwind's default system stack and rendered in a different
+     typeface on every operating system. */
+  --font-mono:    var(--font-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {

@@ -5,7 +5,8 @@ import type { Canvas, FabricObject } from 'fabric'
 import { Textbox, FabricImage } from 'fabric'
 import {
   Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic,
-  FlipHorizontal2, Layers as LayersIcon, ChevronUp, ArrowUp, ArrowDown, Loader2,
+  FlipHorizontal2, Layers as LayersIcon, ChevronDown, ArrowUp, ArrowDown, Loader2,
+  Plus, SlidersHorizontal, Shirt,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadCustomerImage } from '@/actions/media'
@@ -32,6 +33,11 @@ function defaultInkFor(garmentHex: string | undefined): string {
   return lum > 0.5 ? '#1A1A1A' : '#FFFFFF'
 }
 
+// Which single panel the phone layout is showing. Exactly one is open at a
+// time, and `none` is a legitimate resting state — that's the whole point of
+// the mobile redesign: the stage is the default, tools are transient.
+type MobileTab = 'none' | 'add' | 'edit' | 'layers' | 'setup'
+
 export default function Toolbar({
   canvas,
   zone,
@@ -39,6 +45,7 @@ export default function Toolbar({
   twoSided,
   garmentHex,
   onCopyToOtherSide,
+  setupPanel,
 }: {
   canvas: Canvas | null
   // New objects are positioned against the zone's canonical size, never
@@ -52,19 +59,43 @@ export default function Toolbar({
   twoSided: boolean
   garmentHex?: string
   onCopyToOtherSide: () => void
+  // Colour / size / print-spec markup, owned by CustomizerStudio. On desktop
+  // it lives in the left rail; on a phone there is no room for a permanent
+  // rail, so it becomes the "Blank" tab of this one shared sheet. Passing it
+  // in keeps a single sheet with a single open/closed state, instead of two
+  // components each trying to own the bottom of the screen.
+  setupPanel?: React.ReactNode
 }) {
   const [selected, setSelected] = useState<FabricObject | null>(null)
   const [layers, setLayers] = useState<FabricObject[]>([])
   const [uploading, setUploading] = useState(false)
-  const [mobilePanel, setMobilePanel] = useState<'none' | 'layers'>('none')
+  const [mobileTab, setMobileTab] = useState<MobileTab>('none')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { undo, redo, canUndo, canRedo } = useCanvasHistory(canvas)
   const [, bump] = useState(0)
 
   useEffect(() => {
     if (!canvas) return
-    const onSelect = () => setSelected(canvas.getActiveObject() ?? null)
-    const onClear = () => setSelected(null)
+    // Selection drives the phone sheet too: picking something up points the
+    // sheet at Edit (tapping an object then hunting for its controls is the
+    // studio's most common action), and dropping it retires Edit rather than
+    // leaving an empty inspector holding a third of the screen. Done here, in
+    // the Fabric event callbacks, rather than in an effect on `selected` —
+    // this is an external system telling React what changed.
+    const syncTabToSelection = (obj: FabricObject | null) =>
+      setMobileTab((t) => {
+        if (obj) return t === 'none' || t === 'add' ? 'edit' : t
+        return t === 'edit' ? 'none' : t
+      })
+    const onSelect = () => {
+      const obj = canvas.getActiveObject() ?? null
+      setSelected(obj)
+      syncTabToSelection(obj)
+    }
+    const onClear = () => {
+      setSelected(null)
+      syncTabToSelection(null)
+    }
     const refreshLayers = () => setLayers([...canvas.getObjects()].reverse())
     // With two canvases sharing one Toolbar, `canvas` swaps identity whenever
     // focus moves between front and back — without this, `selected` would keep
@@ -376,34 +407,131 @@ export default function Toolbar({
         <div className="border-t border-paper/10 pt-5">{layerList}</div>
       </aside>
 
-      {/* ── Mobile: sticky tool bar with a slide-up panel. The old layout put
-          the entire toolbar below a full-height canvas, so on a phone every
-          tool was a long scroll away from the thing it edited. ───────────── */}
-      <div className="sticky bottom-0 z-20 border-t border-paper/10 bg-[#131A15]/95 backdrop-blur-sm lg:hidden">
-        {(selected || mobilePanel === 'layers') && (
-          <div className="max-h-[45vh] space-y-4 overflow-y-auto border-b border-paper/10 p-4">
-            {selected && inspector}
-            {mobilePanel === 'layers' && layerList}
+      {/* ── Mobile: one tool at a time ──────────────────────────────────────
+          The previous layout dumped the whole inspector plus the add/history
+          rows into a permanently-open block pinned over the canvas. On a phone
+          that ate ~45% of the screen and clipped the print zone off the bottom
+          edge — you were editing artwork you could no longer see, and the
+          keyboard made it worse.
+
+          Now: a tab bar picks exactly one panel, the panel is capped and
+          scrolls internally, and — because this whole element is a normal
+          flex-shrink-0 sibling of the stage rather than an overlay — opening
+          one SHRINKS the garment to fit the space that's left instead of
+          covering it. Tapping the open tab again returns the stage to full
+          height. Nothing the studio can do ever hides the artwork. ────────── */}
+      <div className="flex-shrink-0 border-t border-paper/10 bg-[#131A15] lg:hidden">
+        {mobileTab !== 'none' && (
+          <div className="max-h-[38vh] overflow-y-auto border-b border-paper/10 p-4">
+            {mobileTab === 'add' && (
+              <div className="space-y-3">
+                <SectionLabel>Add to your design</SectionLabel>
+                {addActions}
+                {twoSided && (
+                  <button
+                    type="button"
+                    onClick={onCopyToOtherSide}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-sm border border-paper/15 px-3 py-2 font-body text-[11px] text-paper/60 transition-colors hover:border-paper/40 hover:text-paper"
+                  >
+                    <FlipHorizontal2 className="h-3.5 w-3.5" />
+                    Copy this side to the {activeSide === 'front' ? 'back' : 'front'}
+                  </button>
+                )}
+              </div>
+            )}
+            {mobileTab === 'edit' &&
+              (inspector ?? (
+                <p className="font-body text-[11px] leading-relaxed text-paper/35">
+                  Tap something on the garment to edit it.
+                </p>
+              ))}
+            {mobileTab === 'layers' && layerList}
+            {mobileTab === 'setup' && setupPanel}
           </div>
         )}
-        <div className="space-y-2 p-3">
-          {addActions}
-          <div className="flex items-center gap-1.5">
-            {historyActions}
-            <button
-              type="button"
-              onClick={() => setMobilePanel((p) => (p === 'layers' ? 'none' : 'layers'))}
-              aria-expanded={mobilePanel === 'layers'}
-              className="ml-auto flex items-center gap-1.5 rounded-sm border border-paper/15 px-2.5 py-1.5 font-body text-[10px] text-paper/50 transition-colors hover:text-paper"
-            >
-              <LayersIcon className="h-3 w-3" />
-              {layers.length}
-              <ChevronUp className={`h-3 w-3 transition-transform ${mobilePanel === 'layers' ? 'rotate-180' : ''}`} />
-            </button>
+
+        <div className="flex items-stretch gap-1 p-2">
+          <MobileTabButton
+            tab="setup"
+            current={mobileTab}
+            onSelect={setMobileTab}
+            icon={<Shirt className="h-4 w-4" />}
+            label="Blank"
+          />
+          <MobileTabButton
+            tab="add"
+            current={mobileTab}
+            onSelect={setMobileTab}
+            icon={<Plus className="h-4 w-4" />}
+            label="Add"
+          />
+          <MobileTabButton
+            tab="edit"
+            current={mobileTab}
+            onSelect={setMobileTab}
+            icon={<SlidersHorizontal className="h-4 w-4" />}
+            label="Edit"
+            dimmed={!selected}
+          />
+          <MobileTabButton
+            tab="layers"
+            current={mobileTab}
+            onSelect={setMobileTab}
+            icon={<LayersIcon className="h-4 w-4" />}
+            label={layers.length > 0 ? `Layers ${layers.length}` : 'Layers'}
+          />
+
+          {/* Undo/redo stay out of the panels on purpose — they're the one pair
+              you reach for mid-gesture, and burying them behind a tab would
+              mean opening a panel (and shrinking the garment) just to undo. */}
+          <div className="ml-1 flex items-center gap-1 border-l border-paper/10 pl-2">
+            <IconButton onClick={undo} disabled={!canUndo} label="Undo">
+              <Undo2 className="h-4 w-4" />
+            </IconButton>
+            <IconButton onClick={redo} disabled={!canRedo} label="Redo">
+              <Redo2 className="h-4 w-4" />
+            </IconButton>
           </div>
         </div>
       </div>
     </>
+  )
+}
+
+// Tab targets are 56px tall — comfortably past the 44px minimum, because this
+// bar is the studio's primary navigation on a phone and sits in the thumb zone.
+function MobileTabButton({
+  tab, current, onSelect, icon, label, dimmed,
+}: {
+  tab: MobileTab
+  current: MobileTab
+  onSelect: (updater: (t: MobileTab) => MobileTab) => void
+  icon: React.ReactNode
+  label: string
+  dimmed?: boolean
+}) {
+  const active = current === tab
+  return (
+    <button
+      type="button"
+      // Toggling: tapping the open tab closes it and hands the height back to
+      // the garment.
+      onClick={() => onSelect((t) => (t === tab ? 'none' : tab))}
+      aria-pressed={active}
+      className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-sm transition-colors duration-200 ${
+        active
+          ? 'bg-sage/15 text-sage'
+          : dimmed
+          ? 'text-paper/25 hover:text-paper/50'
+          : 'text-paper/55 hover:bg-paper/5 hover:text-paper'
+      }`}
+    >
+      {icon}
+      <span className="flex items-center gap-0.5 truncate font-body text-[9px] uppercase tracking-[0.1em]">
+        {label}
+        <ChevronDown className={`h-2.5 w-2.5 transition-transform ${active ? '' : 'rotate-180'}`} />
+      </span>
+    </button>
   )
 }
 

@@ -14,7 +14,6 @@ import {
   FOUNDER_QUOTE,
   PHILOSOPHY_VALUES,
   SITE,
-  STATS,
   STORY_IMAGE,
   TIMELINE,
 } from "@/lib/editorial";
@@ -55,13 +54,13 @@ export default function AboutScreen() {
             one of them on the same routes we were already walking.
           </BodyLarge>
 
-          {/* ── By the numbers ────────────────────────────────────────────── */}
-          <View style={{ marginTop: S.section }}>
-            <SectionHead index="01" eyebrow="By the numbers" title="Seven years in." size="d3" />
-            <Rule weight="soft" />
-            <StatBand stats={STATS} />
-            <Rule weight="soft" />
-          </View>
+          {/* The "By the numbers" band lived here. Its four figures ("12,000+
+              trekkers geared up", "40+ trails mapped") were invented, and an
+              about page is the last place a brand should be guessing about
+              itself — so it's gone rather than rounded down. The web app now
+              takes these from store_settings.home_config; when real figures
+              are entered there, this block comes back reading from the same
+              source. */}
 
           {/* ── Founder ───────────────────────────────────────────────────── */}
           <View style={{ marginTop: S.section }}>

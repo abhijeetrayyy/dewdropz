@@ -10,7 +10,8 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { gsap, ScrollTrigger } from '@/lib/gsap'
 import { useIntro } from '@/providers/IntroProvider'
-import { BLUR_DATA_URL, COLLECTIONS } from '@/lib/constants'
+import { BLUR_DATA_URL } from '@/lib/constants'
+import type { Collection } from '@/types/database'
 import type { DragState, WaypointScreenState } from './TerrainScene'
 import { WAYPOINTS } from './TerrainScene'
 
@@ -21,21 +22,12 @@ const TerrainScene = dynamic(() => import('./TerrainScene'), { ssr: false })
 // one line, one door — and scrolling doesn't play a video, it descends the
 // mountain, revealing the trail and its waypoints as the journey's reward.
 // One world, one motion, one thing at a time.
-const SILENT_ALTITUDE = COLLECTIONS.find((c) => c.id === 'silent-altitude')!
-const MIST_AND_MORNING = COLLECTIONS.find((c) => c.id === 'mist-and-morning')!
-
-const ZONES = [
-  {
-    collection: SILENT_ALTITUDE,
-    altitudeLabel: '4,500m+',
-    blurb: 'Above the treeline, wind never stops asking questions. Wind-sealed shells, real insulation.',
-  },
-  {
-    collection: MIST_AND_MORNING,
-    altitudeLabel: '3,200–3,800m',
-    blurb: 'Lower down, the fog sits in the pines until mid-morning. Lightweight layers that dry fast.',
-  },
-]
+//
+// The descent card used to name two hardcoded collections with invented
+// altitude bands and blurbs. It now reads whatever collections actually exist
+// in the catalogue, in their admin-set sort order, and shows the real tagline —
+// so a renamed or removed collection can never leave a ghost on the front door.
+// With no collections configured the card simply doesn't render.
 
 const PEAK_ALTITUDE = 5200
 const VALLEY_ALTITUDE = 3200
@@ -60,7 +52,7 @@ function clampRange(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-export default function SummitHero() {
+export default function SummitHero({ collections = [] }: { collections?: Collection[] }) {
   const { introDone } = useIntro()
   const sectionRef = useRef<HTMLElement>(null)
   const progressRef = useRef(0)
@@ -165,8 +157,13 @@ export default function SummitHero() {
 
   const introOpacity = reduceMotion || ambientMobile ? 1 : 1 - clamp01(progress / INTRO_FADE_END)
   const descentOpacity = reduceMotion || ambientMobile ? 0 : clamp01((progress - DESCENT_UI_START) / 0.15)
-  const zoneIndex = progress < ZONE_SWITCH ? 0 : 1
-  const zone = ZONES[zoneIndex]
+  // The descent walks through the real collections: the first one holds the
+  // high ground, and crossing ZONE_SWITCH hands over to the next. Clamped, so a
+  // catalogue with a single collection (or none) degrades instead of indexing
+  // off the end.
+  const zone = collections.length
+    ? collections[Math.min(progress < ZONE_SWITCH ? 0 : 1, collections.length - 1)]
+    : null
   const altitude = Math.round(PEAK_ALTITUDE - progress * (PEAK_ALTITUDE - VALLEY_ALTITUDE))
 
   return (
@@ -309,52 +306,64 @@ export default function SummitHero() {
           <span className="font-mono text-[8px] tracking-[0.1em] text-paper/40">3,200M</span>
         </div>
 
-        <div className="absolute bottom-8 left-6 right-6 md:bottom-10 md:left-10 md:right-10" style={{ pointerEvents: descentOpacity > 0.5 ? 'auto' : 'none' }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={zone.collection.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6"
-            >
-              <div className="flex items-center gap-4 max-w-lg">
-                <div className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 rounded-sm overflow-hidden flex-shrink-0 border border-paper/15">
-                  <Image
-                    src={zone.collection.image}
-                    alt={zone.collection.name}
-                    fill
-                    sizes="80px"
-                    placeholder="blur"
-                    blurDataURL={BLUR_DATA_URL}
-                    className="object-cover"
-                  />
-                </div>
-                <div>
-                  <div className="font-body text-[9px] tracking-[0.15em] text-sage uppercase">
-                    {zone.altitudeLabel}
-                  </div>
-                  <div className="font-display text-lg md:text-xl text-paper leading-tight mt-0.5">
-                    {zone.collection.name}
-                  </div>
-                  <p className="font-body text-xs text-paper/60 leading-relaxed mt-1 max-w-xs sm:max-w-sm">
-                    {zone.blurb}
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                href={`/collections/${zone.collection.id}`}
-                data-cursor="magnetic"
-                data-cursor-text="Explore"
-                className="inline-flex items-center gap-2 font-body text-[10px] tracking-[0.12em] uppercase text-paper border border-paper/25 rounded-sm px-5 py-3 whitespace-nowrap hover:bg-paper/10 transition-colors duration-300 flex-shrink-0 w-fit"
+        {zone && (
+          <div className="absolute bottom-8 left-6 right-6 md:bottom-10 md:left-10 md:right-10" style={{ pointerEvents: descentOpacity > 0.5 ? 'auto' : 'none' }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={zone.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6"
               >
-                Shop {zone.collection.name} →
-              </Link>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+                <div className="flex items-center gap-4 max-w-lg">
+                  {/* Collections have no image until an admin uploads one — fall
+                      back to the collection's own gradient rather than a broken
+                      <Image> or a stock photo standing in for real work. */}
+                  <div
+                    className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 rounded-sm overflow-hidden flex-shrink-0 border border-paper/15"
+                    style={zone.image_url ? undefined : { background: zone.gradient ?? '#2A3B31' }}
+                  >
+                    {zone.image_url && (
+                      <Image
+                        src={zone.image_url}
+                        alt={zone.name}
+                        fill
+                        sizes="80px"
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-body text-[9px] tracking-[0.15em] text-sage uppercase tabular-nums">
+                      {altitude.toLocaleString()}M
+                    </div>
+                    <div className="font-display text-lg md:text-xl text-paper leading-tight mt-0.5">
+                      {zone.name}
+                    </div>
+                    {zone.tagline && (
+                      <p className="font-body text-xs text-paper/60 leading-relaxed mt-1 max-w-xs sm:max-w-sm">
+                        {zone.tagline}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Link
+                  href={`/collections/${zone.slug}`}
+                  data-cursor="magnetic"
+                  data-cursor-text="Explore"
+                  className="inline-flex items-center gap-2 font-body text-[10px] tracking-[0.12em] uppercase text-paper border border-paper/25 rounded-sm px-5 py-3 whitespace-nowrap hover:bg-paper/10 transition-colors duration-300 flex-shrink-0 w-fit"
+                >
+                  Shop {zone.name} →
+                </Link>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </section>
   )

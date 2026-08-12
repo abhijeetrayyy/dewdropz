@@ -9,13 +9,16 @@ import AboutValues from '@/components/sections/AboutValues'
 import AboutTimeline from '@/components/sections/AboutTimeline'
 import AboutSustainabilityLink from '@/components/sections/AboutSustainabilityLink'
 import NewsletterBar from '@/components/sections/NewsletterBar'
+import { getStoreSettings } from '@/actions/settings'
 
 export const metadata: Metadata = {
   title: 'Our Story — DEWDROPZ',
   description: 'Founded by trekking guides in Dehradun, DEWDROPZ builds gear tested above 4,000 metres before it reaches a cart.',
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const settings = await getStoreSettings()
+
   return (
     <>
       <NavBar />
@@ -27,7 +30,7 @@ export default function AboutPage() {
           variant="altitude"
         />
         <AboutStory />
-        <StatsBand />
+        <StatsBand stats={settings.home_config.stats} />
         <FounderNote />
         <AboutValues />
         <AboutTimeline />

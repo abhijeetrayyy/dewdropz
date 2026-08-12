@@ -5,7 +5,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Rule } from "./Rule";
 import { IconButton } from "@/components/ui/IconButton";
 import { Meta } from "@/components/ui/Type";
-import { C, M, S } from "@/lib/theme";
+import { C, F, M, S } from "@/lib/theme";
 
 // The controls that sit over a full-bleed hero (product, collection, article).
 //
@@ -75,6 +75,6 @@ const s = StyleSheet.create({
   // Centred independently of the controls so the title doesn't shift when the
   // right-hand side gains or loses a button.
   title: { position: "absolute", left: 0, right: 0, top: 0, bottom: 8, alignItems: "center", justifyContent: "center" },
-  titleText: { fontFamily: "Archivo_700Bold", fontSize: 15, maxWidth: "60%" },
+  titleText: { fontFamily: F.displayRegular, fontSize: 16, maxWidth: "60%" },
   right: { flexDirection: "row", gap: 8 },
 });

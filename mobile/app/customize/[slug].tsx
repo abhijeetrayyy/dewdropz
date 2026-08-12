@@ -4,8 +4,8 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { ArrowRight } from "lucide-react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { ArrowRight, Layers, Plus, Shirt, SlidersHorizontal } from "lucide-react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useProductQuery } from "@/lib/queries";
 import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/lib/utils";
@@ -13,7 +13,7 @@ import { haptics } from "@/lib/haptics";
 import { toast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CustomizeStage } from "@/components/customize/CustomizeStage";
+import { CustomizeStage, MOCKUP_ASPECT } from "@/components/customize/CustomizeStage";
 import { StudioToolbar } from "@/components/customize/StudioToolbar";
 import { saveDesign, uploadPickedImage } from "@/lib/customize/save";
 import {
@@ -22,7 +22,11 @@ import {
 import type { CustomizationColorway } from "@/lib/data";
 import { C, F, R } from "@/lib/theme";
 
-const { width: W } = Dimensions.get("window");
+const { height: SCREEN_H } = Dimensions.get("window");
+/** Panels never take more than this, so the garment always keeps the majority. */
+const SHEET_MAX = Math.round(SCREEN_H * 0.34);
+
+type StudioTab_ = "none" | "blank" | "add" | "edit" | "layers";
 
 export default function CustomizeScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -47,6 +51,11 @@ export default function CustomizeScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Exactly one tool panel open at a time; "none" is a resting state that
+  // hands the whole screen back to the garment.
+  const [tab, setTab] = useState<StudioTab_>("add");
+  const [stageBox, setStageBox] = useState({ w: 0, h: 0 });
 
   // Undo/redo over whole-design snapshots. Every mutation goes through
   // `commit`, so history is one entry per user action — not per frame of a drag.
@@ -155,6 +164,17 @@ export default function CustomizeScreen() {
     }
   }
 
+  // Picking a layer up points the sheet at Edit and dropping it retires Edit —
+  // same rule as the web studio, so the panel on screen always matches what is
+  // actually selected.
+  function selectLayer(id: string | null) {
+    setSelectedId(id);
+    setTab((t) => {
+      if (id) return t === "none" || t === "add" ? "edit" : t;
+      return t === "edit" ? "add" : t;
+    });
+  }
+
   function patchSelected(patch: Partial<DesignLayer>) {
     if (!selectedId) return;
     patchSide(effectiveSide, (l) =>
@@ -240,7 +260,7 @@ export default function CustomizeScreen() {
       <View style={s.root}>
         <View style={{ padding: 20, gap: 12 }}>
           <Skeleton height={16} width="40%" />
-          <Skeleton height={W - 40} radius={R.md} />
+          <Skeleton height={Math.round(SCREEN_H * 0.32)} radius={R.md} />
         </View>
       </View>
     );
@@ -265,83 +285,50 @@ export default function CustomizeScreen() {
     );
   }
 
-  const stageWidth = twoSided ? Math.min(W - 40, 420) : Math.min(W - 40, 460);
   const hasAnything = design.front.length > 0 || design.back.length > 0;
+
+  // The stage is sized from the box actually left over, both axes, so opening
+  // a tool panel scales the garment down instead of pushing it off-screen —
+  // the same rule as the web studio. Width-only sizing inside a page-level
+  // ScrollView (what this screen used to do) meant the tool you tapped and the
+  // artwork it edited could never be on screen at the same time.
+  const stageWidth = Math.max(
+    120,
+    Math.min(stageBox.w - 24, (stageBox.h - 40) / MOCKUP_ASPECT, 520)
+  );
 
   return (
     <View style={s.root}>
-      <ScrollView
-        // Opaque on purpose: it's what hides the capture layer sitting behind
-        // it. A transparent scroll view would let those surfaces show through.
-        style={s.scroll}
-        contentContainerStyle={{ paddingBottom: 140 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={s.pickers}>
-          <Text style={s.lbl}>Colour</Text>
-          <View style={s.swatchRow}>
-            {colors.map((c, i) => (
-              <TouchableOpacity
-                key={c.name}
-                disabled={!c.available}
-                onPress={() => { haptics.select(); setColorIndex(i); setSelectedId(null); }}
-                accessibilityLabel={c.available ? c.name : `${c.name}, coming soon`}
-                style={[
-                  s.swatch,
-                  { backgroundColor: c.hex },
-                  colorIndex === i && s.swatchOn,
-                  !c.available && s.swatchOff,
-                ]}
-              />
-            ))}
-            <Text style={s.colorName}>
-              {color?.name}
-              {color && !color.available ? " · coming soon" : ""}
-            </Text>
-          </View>
-
-          {variants.length > 0 && (
-            <>
-              <Text style={[s.lbl, { marginTop: 14 }]}>Size</Text>
-              <View style={s.swatchRow}>
-                {variants.map((v) => {
-                  const oos = (v.inventory_quantity ?? 1) <= 0;
-                  const on = (variant?.id ?? "") === v.id;
-                  return (
-                    <TouchableOpacity
-                      key={v.id}
-                      disabled={oos}
-                      onPress={() => { haptics.select(); setVariantId(v.id); }}
-                      style={[s.size, on && s.sizeOn, oos && s.sizeOff]}
-                    >
-                      <Text style={[s.sizeT, on && s.sizeTOn]}>{v.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
-          )}
+      {/* Side switch stays pinned above the stage — it's a mode, not a tool. */}
+      {twoSided && (
+        <View style={s.sideTabs}>
+          {sides.map((sd) => (
+            <TouchableOpacity
+              key={sd}
+              onPress={() => { haptics.select(); setActiveSide(sd); setSelectedId(null); }}
+              style={[s.sideTab, effectiveSide === sd && s.sideTabOn]}
+            >
+              <Text style={[s.sideTabT, effectiveSide === sd && s.sideTabTOn]}>
+                {sd === "front" ? "Front" : "Back"}
+              </Text>
+              {design[sd].length > 0 && (
+                <View style={[s.sideDot, effectiveSide === sd && s.sideDotOn]} />
+              )}
+            </TouchableOpacity>
+          ))}
         </View>
+      )}
 
-        {twoSided && (
-          <View style={s.sideTabs}>
-            {sides.map((sd) => (
-              <TouchableOpacity
-                key={sd}
-                onPress={() => { haptics.select(); setActiveSide(sd); setSelectedId(null); }}
-                style={[s.sideTab, effectiveSide === sd && s.sideTabOn]}
-              >
-                <Text style={[s.sideTabT, effectiveSide === sd && s.sideTabTOn]}>
-                  {sd === "front" ? "Front" : "Back"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        <Animated.View entering={FadeInDown.springify().damping(18)} style={s.stageWrap}>
-          {color?.[effectiveSide] ? (
+      {/* Stage — flex:1, so it absorbs whatever the panels leave behind. */}
+      <View
+        style={s.stageArea}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setStageBox({ w: width, h: height });
+        }}
+      >
+        {color?.[effectiveSide] && stageBox.w > 0 ? (
+          <Animated.View entering={FadeIn.duration(260)} style={{ alignItems: "center" }}>
             <CustomizeStage
               zone={color[effectiveSide]!}
               side={effectiveSide}
@@ -350,49 +337,133 @@ export default function CustomizeScreen() {
               selectedId={selectedId}
               focused={false}
               onFocus={() => {}}
-              onSelect={setSelectedId}
+              onSelect={selectLayer}
               onCommit={(id, patch) =>
                 patchSide(effectiveSide, (l) =>
                   l.map((x) => (x.id === id ? ({ ...x, ...patch } as DesignLayer) : x))
                 )
               }
             />
-          ) : null}
-          <TouchableOpacity style={s.deselect} onPress={() => setSelectedId(null)} activeOpacity={1}>
-            <Text style={s.deselectT}>
-              {selected ? "Tap here to deselect" : `${layers.length} layer${layers.length === 1 ? "" : "s"}`}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
+          </Animated.View>
+        ) : null}
+      </View>
 
-        <StudioToolbar
-          selected={selected}
-          twoSided={twoSided}
-          activeSide={effectiveSide}
-          uploading={uploading}
-          canUndo={cursor > 0}
-          canRedo={cursor < history.length - 1}
-          onAddText={addText}
-          onAddImage={addImage}
-          onUndo={() => { haptics.select(); setCursor((c) => Math.max(0, c - 1)); setSelectedId(null); }}
-          onRedo={() => { haptics.select(); setCursor((c) => Math.min(history.length - 1, c + 1)); setSelectedId(null); }}
-          onPatch={patchSelected}
-          onDelete={() => {
-            haptics.warning();
-            patchSide(effectiveSide, (l) => l.filter((x) => x.id !== selectedId));
-            setSelectedId(null);
-          }}
-          onDuplicate={() => {
-            if (!selected) return;
-            haptics.tap();
-            const clone = { ...selected, id: newId(), x: selected.x + 12, y: selected.y + 12 };
-            patchSide(effectiveSide, (l) => [...l, clone]);
-            setSelectedId(clone.id);
-          }}
-          onReorder={reorder}
-          onCopyToOtherSide={copyToOtherSide}
-        />
-      </ScrollView>
+      {/* Panel — capped and scrolls internally, never taller than the garment. */}
+      {tab !== "none" && (
+        <View style={s.sheet}>
+          <ScrollView
+            style={{ maxHeight: SHEET_MAX }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {tab === "blank" ? (
+              <View style={s.pickers}>
+                <Text style={s.lbl}>Colour</Text>
+                <View style={s.swatchRow}>
+                  {colors.map((c, i) => (
+                    <TouchableOpacity
+                      key={c.name}
+                      disabled={!c.available}
+                      onPress={() => { haptics.select(); setColorIndex(i); setSelectedId(null); }}
+                      accessibilityLabel={c.available ? c.name : `${c.name}, coming soon`}
+                      style={[
+                        s.swatch,
+                        { backgroundColor: c.hex },
+                        colorIndex === i && s.swatchOn,
+                        !c.available && s.swatchOff,
+                      ]}
+                    />
+                  ))}
+                  <Text style={s.colorName}>
+                    {color?.name}
+                    {color && !color.available ? " · coming soon" : ""}
+                  </Text>
+                </View>
+
+                {variants.length > 0 && (
+                  <>
+                    <Text style={[s.lbl, { marginTop: 16 }]}>Size</Text>
+                    <View style={s.swatchRow}>
+                      {variants.map((v) => {
+                        const oos = (v.inventory_quantity ?? 1) <= 0;
+                        const on = (variant?.id ?? "") === v.id;
+                        return (
+                          <TouchableOpacity
+                            key={v.id}
+                            disabled={oos}
+                            onPress={() => { haptics.select(); setVariantId(v.id); }}
+                            style={[s.size, on && s.sizeOn, oos && s.sizeOff]}
+                          >
+                            <Text style={[s.sizeT, on && s.sizeTOn]}>{v.name}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+              </View>
+            ) : tab === "layers" ? (
+              <View style={s.pickers}>
+                <Text style={s.lbl}>Layers on the {effectiveSide}</Text>
+                {layers.length === 0 ? (
+                  <Text style={s.hintT}>Nothing here yet — add text or an image.</Text>
+                ) : (
+                  [...layers].reverse().map((l) => (
+                    <TouchableOpacity
+                      key={l.id}
+                      onPress={() => { haptics.select(); setSelectedId(l.id); setTab("edit"); }}
+                      style={[s.layerRow, selectedId === l.id && s.layerRowOn]}
+                    >
+                      <Text style={s.layerT} numberOfLines={1}>
+                        {l.kind === "text" ? (l.text || "(empty)") : "Image"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            ) : (
+              <StudioToolbar
+                mode={tab === "add" ? "add" : "edit"}
+                selected={selected}
+                twoSided={twoSided}
+                activeSide={effectiveSide}
+                uploading={uploading}
+                canUndo={cursor > 0}
+                canRedo={cursor < history.length - 1}
+                onAddText={() => { addText(); setTab("edit"); }}
+                onAddImage={async () => { await addImage(); setTab("edit"); }}
+                onUndo={() => { haptics.select(); setCursor((c) => Math.max(0, c - 1)); setSelectedId(null); }}
+                onRedo={() => { haptics.select(); setCursor((c) => Math.min(history.length - 1, c + 1)); setSelectedId(null); }}
+                onPatch={patchSelected}
+                onDelete={() => {
+                  haptics.warning();
+                  patchSide(effectiveSide, (l) => l.filter((x) => x.id !== selectedId));
+                  setSelectedId(null);
+                  setTab("add");
+                }}
+                onDuplicate={() => {
+                  if (!selected) return;
+                  haptics.tap();
+                  const clone = { ...selected, id: newId(), x: selected.x + 12, y: selected.y + 12 };
+                  patchSide(effectiveSide, (l) => [...l, clone]);
+                  setSelectedId(clone.id);
+                }}
+                onReorder={reorder}
+                onCopyToOtherSide={copyToOtherSide}
+              />
+            )}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Tab bar — one tool at a time; tapping the open tab hands the height
+          back to the garment. */}
+      <View style={s.tabs}>
+        <StudioTab label="Blank" icon={Shirt} tab="blank" current={tab} onSelect={setTab} />
+        <StudioTab label="Add" icon={Plus} tab="add" current={tab} onSelect={setTab} />
+        <StudioTab label="Edit" icon={SlidersHorizontal} tab="edit" current={tab} onSelect={setTab} dimmed={!selected} />
+        <StudioTab label={layers.length ? `Layers ${layers.length}` : "Layers"} icon={Layers} tab="layers" current={tab} onSelect={setTab} />
+      </View>
 
       <View style={s.footer}>
         <View>
@@ -419,10 +490,36 @@ export default function CustomizeScreen() {
   );
 }
 
+function StudioTab({
+  label, icon: IconCmp, tab, current, onSelect, dimmed,
+}: {
+  label: string;
+  icon: typeof Plus;
+  tab: StudioTab_;
+  current: StudioTab_;
+  onSelect: (updater: (t: StudioTab_) => StudioTab_) => void;
+  dimmed?: boolean;
+}) {
+  const on = current === tab;
+  const fg = on ? C.forest : dimmed ? C.light : C.mid;
+  return (
+    <TouchableOpacity
+      onPress={() => { haptics.select(); onSelect((t) => (t === tab ? "none" : tab)); }}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: on }}
+      style={[s.tab, on && s.tabOn]}
+      activeOpacity={0.8}
+    >
+      <IconCmp size={18} strokeWidth={1.75} color={fg} />
+      <Text style={[s.tabT, { color: fg }]} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
   scroll: { flex: 1, backgroundColor: C.paper },
-  pickers: { paddingHorizontal: 20, paddingTop: 12 },
+  pickers: { paddingHorizontal: 20, paddingVertical: 14 },
   lbl: { fontFamily: F.mono, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: C.mid, marginBottom: 8 },
   swatchRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   swatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: C.rule },
@@ -437,7 +534,7 @@ const s = StyleSheet.create({
   sizeOff: { opacity: 0.4 },
   sizeT: { fontFamily: F.body, fontSize: 13, color: C.text },
   sizeTOn: { color: "#FFFFFF", fontWeight: "700" },
-  sideTabs: { flexDirection: "row", gap: 8, paddingHorizontal: 20, marginTop: 16 },
+  sideTabs: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4 },
   sideTab: {
     flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: R.md,
     borderWidth: 1, borderColor: C.rule, backgroundColor: C.surface,
@@ -445,17 +542,36 @@ const s = StyleSheet.create({
   sideTabOn: { backgroundColor: C.forest, borderColor: C.forest },
   sideTabT: { fontFamily: F.bodyBold, fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", color: C.mid },
   sideTabTOn: { color: "#FFFFFF" },
-  stageWrap: { alignItems: "center", paddingTop: 16 },
+  stageArea: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
+  sheet: { borderTopWidth: 1, borderTopColor: C.rule, backgroundColor: C.paper },
+  tabs: {
+    flexDirection: "row", gap: 4, paddingHorizontal: 8, paddingVertical: 6,
+    borderTopWidth: 1, borderTopColor: C.rule, backgroundColor: C.paper,
+  },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3, height: 54, borderRadius: R.md },
+  tabOn: { backgroundColor: C.sage12 },
+  tabT: { fontFamily: F.bodyBold, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
+  sideDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.forest, marginTop: 4 },
+  sideDotOn: { backgroundColor: "#FFFFFF" },
+  hintT: { fontFamily: F.body, fontSize: 12, color: C.light, paddingVertical: 6 },
+  layerRow: { paddingVertical: 10, paddingHorizontal: 10, borderRadius: R.sm, marginTop: 4 },
+  layerRowOn: { backgroundColor: C.sage12 },
+  layerT: { fontFamily: F.body, fontSize: 13, color: C.text },
   deselect: { paddingTop: 8, paddingBottom: 2 },
   deselectT: { fontFamily: F.body, fontSize: 11, color: C.light },
   footer: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
+    // In-flow, not absolute. It was pinned to the bottom back when the whole
+    // screen was one ScrollView; in the flex column it would sit on top of the
+    // tool tabs and swallow them.
     flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14,
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28,
     backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.rule,
   },
   fLbl: { fontFamily: F.body, fontSize: 12, color: C.mid },
-  fPrice: { fontFamily: F.display, fontSize: 20, color: C.text },
+  // Inter, not Fraunces — web's price treatment is always font-body
+  // (DesignYourOwnConfigurator.tsx: `font-body text-lg tabular-nums`), never
+  // the display serif, even next to a product name that IS in Fraunces.
+  fPrice: { fontFamily: F.bodyBold, fontSize: 20, color: C.text },
   cta: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     backgroundColor: C.forest, borderRadius: R.md, paddingVertical: 15, paddingHorizontal: 26, minWidth: 168,

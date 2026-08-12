@@ -1,7 +1,7 @@
 import { StyleSheet, View, ViewStyle } from "react-native";
 import { Rule } from "./Rule";
 import { Body, Mono } from "@/components/ui/Type";
-import { C, S } from "@/lib/theme";
+import { C, F, S } from "@/lib/theme";
 
 // Key/value rows with a dotted leader between them — the spec-sheet look.
 // Replaces v4's `specKRow`, which set the key in uppercase Archivo and the
@@ -33,7 +33,7 @@ export function SpecTable({ rows, tone = "default", style }: Props) {
             <View style={[s.leader, onDark && { backgroundColor: "rgba(255,255,255,0.18)" }]} />
             <Body
               color={onDark ? C.paper : C.ink}
-              style={[s.value, row.emphasis && { fontFamily: "Archivo_700Bold" }]}
+              style={[s.value, row.emphasis && { fontFamily: F.bodyBold }]}
             >
               {row.value}
             </Body>

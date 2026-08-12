@@ -90,7 +90,9 @@ const s = StyleSheet.create({
   tagT: { fontFamily: F.bodyBold, fontSize: 10, letterSpacing: 0.8, textTransform: "uppercase", color: C.paper },
   cardBody: { padding: 14, gap: 10 },
   cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  name: { fontFamily: F.bodySemiBold, fontSize: 15, color: C.ink, flex: 1 },
+  // Fraunces regular — matches web's DesignYourOwnConfigurator product name
+  // (`<h3 className="font-display text-2xl ...">`).
+  name: { fontFamily: F.displayRegular, fontSize: 16, color: C.ink, flex: 1 },
   price: { fontFamily: F.bodyBold, fontSize: 14, color: C.ink },
   swatches: { flexDirection: "row", alignItems: "center", gap: 5 },
   dot: { width: 14, height: 14, borderRadius: 999, borderWidth: 1, borderColor: C.ruleMed },

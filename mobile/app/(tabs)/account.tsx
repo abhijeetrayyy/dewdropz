@@ -51,6 +51,7 @@ export default function AccountScreen() {
             <View style={{ marginTop: S.section }}>
               <Eyebrow>Read while you&apos;re here</Eyebrow>
               <Rule weight="ink" style={{ marginTop: 9 }} />
+              <NavRow icon="explore" label="Trail guide" onPress={() => router.push("/trails")} />
               <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
               <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
               <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} last />
@@ -124,7 +125,8 @@ export default function AccountScreen() {
           <View style={{ marginTop: S.block }}>
             <Eyebrow>Read</Eyebrow>
             <Rule weight="soft" style={{ marginTop: 9 }} />
-            <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
+            <NavRow icon="explore" label="Trail guide" onPress={() => router.push("/trails")} />
+              <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
             <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
             <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} />
             <NavRow icon="grid_view" label="Collections" onPress={() => router.push("/collections")} last />

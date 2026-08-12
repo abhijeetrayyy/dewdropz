@@ -77,6 +77,29 @@ export async function getProductReviews(productId: string, approvedOnly = true) 
   return data as (Review & { user: { full_name: string | null; avatar_url: string | null } })[]
 }
 
+// Store-wide approved reviews, newest first — what the homepage's "Worn.
+// Tested. Reported back." section shows. Returns [] when nothing has been
+// approved yet, and the section hides itself rather than inventing voices:
+// this replaced a hardcoded list of four fabricated customers.
+export async function getFeaturedReviews(limit = 8) {
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*, user:profiles(full_name, avatar_url), product:products(name, slug, images)')
+    .eq('is_approved', true)
+    .not('content', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) return []
+  return (data ?? []) as unknown as FeaturedReview[]
+}
+
+export type FeaturedReview = Review & {
+  user: { full_name: string | null; avatar_url: string | null } | null
+  product: { name: string; slug: string; images: string[] | null } | null
+}
+
 export async function getProductRating(productId: string) {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase

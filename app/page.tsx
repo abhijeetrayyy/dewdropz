@@ -11,6 +11,7 @@ import SeasonKit from '@/components/sections/SeasonKit'
 import TheClimb from '@/components/sections/TheClimb'
 import CollectionsRow from '@/components/sections/CollectionsRow'
 import ShopByCategory from '@/components/sections/ShopByCategory'
+import ShowcaseRails from '@/components/sections/ShowcaseRails'
 import DesignYourOwn from '@/components/sections/DesignYourOwn'
 import Community from '@/components/sections/Community'
 import BrandPulse from '@/components/sections/BrandPulse'
@@ -18,6 +19,8 @@ import NewsletterBar from '@/components/sections/NewsletterBar'
 import { getProducts, getCollections } from '@/actions/products'
 import { getCategories } from '@/actions/categories'
 import { getStoreSettings } from '@/actions/settings'
+import { getFeaturedReviews } from '@/actions/reviews'
+import { getShowcaseRails } from '@/actions/showcase'
 
 // The homepage is one day on the mountain, lived by scrolling: pre-dawn start on
 // the summit, first light, the climb, the ridge at midday, pack check, stories on
@@ -27,20 +30,22 @@ import { getStoreSettings } from '@/actions/settings'
 // The light follows the clock: dawn dark → blue hour → bright paper at midday →
 // warm afternoon paper → night ink.
 export default async function Home() {
-  const [products, collections, categories, settings] = await Promise.all([
+  const [products, collections, categories, settings, reviews, rails] = await Promise.all([
     getProducts(),
     getCollections(),
     getCategories({ parentId: null }),
     getStoreSettings(),
+    getFeaturedReviews(),
+    getShowcaseRails(),
   ])
-  const { season_kit, climb, featured_collection_slugs } = settings.home_config
+  const { season_kit, climb, featured_collection_slugs, featured_category_slugs, stats } = settings.home_config
 
   return (
     <>
       <NavBar />
       <TrailSpine />
       <main>
-        <SummitHero />
+        <SummitHero collections={collections} />
         <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="The brief">
           <TrustBand />
         </div>
@@ -54,16 +59,17 @@ export default async function Home() {
           <CollectionsRow collections={collections} featuredSlugs={featured_collection_slugs} />
         </div>
         <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
-          <ShopByCategory categories={categories} products={products} />
+          <ShopByCategory categories={categories} products={products} featuredSlugs={featured_category_slugs} />
         </div>
+        <ShowcaseRails rails={rails} />
         <div data-trail-time="14:30" data-trail-alt="3,800M" data-trail-label="The workbench">
           <DesignYourOwn products={products} />
         </div>
         <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
-          <Community />
+          <Community reviews={reviews} />
         </div>
         <div data-trail-time="19:30" data-trail-alt="2,900M" data-trail-label="Basecamp">
-          <BrandPulse />
+          <BrandPulse stats={stats} />
         </div>
         <div data-trail-time="21:00" data-trail-alt="2,900M" data-trail-label="Radio check">
           <NewsletterBar />

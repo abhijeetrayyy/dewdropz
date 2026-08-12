@@ -5,12 +5,9 @@ import { C, T } from "@/lib/theme";
 // list only — a raw `fontSize` anywhere in a screen file is a bug, because it
 // means that screen has quietly opted out of the system and will drift.
 //
-// Four voices, per the v5 notes in theme.ts:
-//   Display*  — Bricolage 800, the shout
-//   Editorial — Bricolage 500, long headlines that shouldn't shout
-//   Serif/Quote — Instrument Serif, the brand's own voice and its asides
-//   Eyebrow/Mono/Numeric — Space Mono, the margin notes
-//   Title/Body/Meta/Micro — Archivo, the speaking voice
+// Two voices, matched to the website (see the v6 notes in theme.ts):
+//   Display*/Editorial/Serif/Quote — Fraunces, the web app's own font-display
+//   Title/Body/Meta/Micro/Eyebrow/Mono/Numeric — Inter, the web app's font-body
 
 type Props = TextProps & { color?: string };
 

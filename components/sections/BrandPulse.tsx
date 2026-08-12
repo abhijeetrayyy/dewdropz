@@ -5,14 +5,19 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
-import { BLUR_DATA_URL, STATS, STATS_BG_IMAGE, FOUNDER_QUOTE } from '@/lib/constants'
+import { BLUR_DATA_URL, STATS_BG_IMAGE, FOUNDER_QUOTE } from '@/lib/constants'
+import type { HomeStat } from '@/types/database'
 
 // The single brand statement of the page. This absorbs what BrandStatement,
 // TrekManifesto, WhoGoes, MarqueeBand, StatsBand, and BrandStory used to say
 // across six separate sections — one headline, one paragraph, the numbers, and
 // the founder's voice, then back to the store. Emotion works by contrast, not
 // repetition; one strong beat beats six matching ones.
-export default function BrandPulse() {
+// `stats` comes from store_settings.home_config and defaults to empty. It used
+// to be four hardcoded claims ("12,000+ trekkers geared up") that nobody had
+// measured; a storefront should not publish invented numbers, so the band now
+// renders only what an owner actually entered in /admin/settings.
+export default function BrandPulse({ stats = [] }: { stats?: HomeStat[] }) {
   const sectionRef = useRef<HTMLElement>(null)
   const numberRefs = useRef<(HTMLSpanElement | null)[]>([])
 
@@ -20,7 +25,7 @@ export default function BrandPulse() {
     const section = sectionRef.current
     if (!section) return
 
-    const tweens = STATS.map((stat, i) => {
+    const tweens = stats.map((stat, i) => {
       const el = numberRefs.current[i]
       if (!el) return null
       const counter = { value: 0 }
@@ -42,7 +47,7 @@ export default function BrandPulse() {
         t?.kill()
       })
     }
-  }, [])
+  }, [stats])
 
   return (
     <section ref={sectionRef} className="relative bg-ink px-6 md:px-10 py-28 md:py-36 overflow-hidden">
@@ -82,8 +87,9 @@ export default function BrandPulse() {
         </motion.p>
       </div>
 
+      {stats.length > 0 && (
       <div className="relative max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-6 text-center mt-16">
-        {STATS.map((stat, i) => (
+        {stats.map((stat, i) => (
           <div key={stat.label}>
             <div className="font-display font-light text-[clamp(32px,5vw,56px)] text-paper tabular-nums">
               <span
@@ -100,6 +106,7 @@ export default function BrandPulse() {
           </div>
         ))}
       </div>
+      )}
 
       <div className="relative max-w-2xl mx-auto text-center mt-16 border-t border-paper/10 pt-10">
         <p className="font-display italic text-base md:text-lg text-paper/75 leading-relaxed">

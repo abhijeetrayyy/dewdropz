@@ -12,7 +12,17 @@ import { toast } from 'sonner'
 import { Loader2, Save, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
 import { getStoreSettings, updateStoreSettings } from '@/actions/settings'
 import { getProducts, getCollections } from '@/actions/products'
-import type { HomeConfig, ProductWithCollection, Collection } from '@/types/database'
+import { getCategories } from '@/actions/categories'
+import type {
+  HomeConfig, ProductWithCollection, Collection, Category, HomeStat, HomeShowcaseRail, HomeShowcaseKind,
+} from '@/types/database'
+
+const RAIL_KINDS: { value: HomeShowcaseKind; label: string; hint: string }[] = [
+  { value: 'recent', label: 'Just added', hint: 'Newest active products first.' },
+  { value: 'best_sellers', label: 'Best sellers', hint: 'Ranked by units actually ordered.' },
+  { value: 'category', label: 'From a category', hint: 'Everything in one category.' },
+  { value: 'collection', label: 'From a collection', hint: 'Everything in one collection.' },
+]
 
 // The homepage's two product-showcase sections (Season Kit, The Climb) and its
 // featured-collections row all read from store_settings.home_config now
@@ -22,20 +32,23 @@ export function HomepageEngine() {
   const [config, setConfig] = useState<HomeConfig | null>(null)
   const [products, setProducts] = useState<ProductWithCollection[]>([])
   const [collections, setCollections] = useState<Collection[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     async function load() {
       try {
-        const [settings, productList, collectionList] = await Promise.all([
+        const [settings, productList, collectionList, categoryList] = await Promise.all([
           getStoreSettings(),
           getProducts(),
           getCollections(),
+          getCategories({ parentId: null }),
         ])
         setConfig(settings.home_config)
         setProducts(productList)
         setCollections(collectionList)
+        setCategories(categoryList)
       } catch {
         toast.error('Failed to load homepage settings')
       } finally {
@@ -72,6 +85,67 @@ export function HomepageEngine() {
       ? [...config.featured_collection_slugs, slug]
       : config.featured_collection_slugs.filter((s) => s !== slug)
     setConfig({ ...config, featured_collection_slugs })
+  }
+
+  function toggleFeaturedCategory(slug: string, checked: boolean) {
+    if (!config) return
+    const featured_category_slugs = checked
+      ? [...config.featured_category_slugs, slug]
+      : config.featured_category_slugs.filter((s) => s !== slug)
+    setConfig({ ...config, featured_category_slugs })
+  }
+
+  function updateStat(index: number, patch: Partial<HomeStat>) {
+    if (!config) return
+    setConfig({ ...config, stats: config.stats.map((s, i) => (i === index ? { ...s, ...patch } : s)) })
+  }
+
+  function addStat() {
+    if (!config) return
+    setConfig({ ...config, stats: [...config.stats, { value: 0, suffix: '', label: '', plain: false }] })
+  }
+
+  function removeStat(index: number) {
+    if (!config) return
+    setConfig({ ...config, stats: config.stats.filter((_, i) => i !== index) })
+  }
+
+  function updateRail(index: number, patch: Partial<HomeShowcaseRail>) {
+    if (!config) return
+    setConfig({ ...config, showcase: config.showcase.map((r, i) => (i === index ? { ...r, ...patch } : r)) })
+  }
+
+  function addRail() {
+    if (!config) return
+    setConfig({
+      ...config,
+      showcase: [
+        ...config.showcase,
+        {
+          id: `rail-${Date.now()}`,
+          kind: 'recent',
+          title: 'New rail',
+          category_slug: null,
+          collection_slug: null,
+          limit: 8,
+          enabled: true,
+        },
+      ],
+    })
+  }
+
+  function removeRail(index: number) {
+    if (!config) return
+    setConfig({ ...config, showcase: config.showcase.filter((_, i) => i !== index) })
+  }
+
+  function moveRail(index: number, dir: -1 | 1) {
+    if (!config) return
+    const target = index + dir
+    if (target < 0 || target >= config.showcase.length) return
+    const showcase = [...config.showcase]
+    ;[showcase[index], showcase[target]] = [showcase[target], showcase[index]]
+    setConfig({ ...config, showcase })
   }
 
   function updateStation(index: number, patch: Partial<HomeConfig['climb']['stations'][number]>) {
@@ -306,6 +380,197 @@ export function HomepageEngine() {
               ))
             )}
           </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Each collection&apos;s homepage image is its own <strong>Collection image</strong>, set in{' '}
+            <a href="/admin/collections" className="underline">Collections</a>.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Featured categories */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Featured categories</CardTitle>
+          <CardDescription>
+            Which tiles fill the &quot;What are you packing for?&quot; row. Leave all unchecked to show every active
+            top-level category.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3 rounded-md border border-gray-200 p-3">
+            {categories.length === 0 ? (
+              <p className="text-sm text-gray-400">No categories yet.</p>
+            ) : (
+              categories.map((c) => (
+                <label key={c.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={config.featured_category_slugs.includes(c.slug)}
+                    onCheckedChange={(checked) => toggleFeaturedCategory(c.slug, !!checked)}
+                  />
+                  {c.name}
+                </label>
+              ))
+            )}
+          </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Each tile&apos;s picture is the category&apos;s own image, set in{' '}
+            <a href="/admin/categories" className="underline">Categories</a>.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Showcase rails */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Product rails</CardTitle>
+          <CardDescription>
+            Extra rows of products on the homepage and in the mobile apps. These are worked out live from the
+            catalogue — a rail with nothing to show hides itself, and fills in on its own as products and orders
+            arrive. Nothing here needs pinning to specific items.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {config.showcase.map((rail, i) => (
+            <div key={rail.id} className="space-y-3 rounded-md border border-gray-200 p-3">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={rail.enabled}
+                  onCheckedChange={(c) => updateRail(i, { enabled: !!c })}
+                  aria-label="Show this rail"
+                />
+                <Input
+                  value={rail.title}
+                  onChange={(e) => updateRail(i, { title: e.target.value })}
+                  placeholder="Rail heading"
+                  className="flex-1"
+                />
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => moveRail(i, -1)} disabled={i === 0} aria-label="Move up">
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => moveRail(i, 1)} disabled={i === config.showcase.length - 1} aria-label="Move down">
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => removeRail(i)} aria-label="Remove rail">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Source</Label>
+                  <Select
+                    value={rail.kind}
+                    onValueChange={(v) =>
+                      updateRail(i, { kind: v as HomeShowcaseKind, category_slug: null, collection_slug: null })
+                    }
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {RAIL_KINDS.map((k) => (
+                        <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {rail.kind === 'category' && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Category</Label>
+                    <Select value={rail.category_slug ?? ''} onValueChange={(v) => updateRail(i, { category_slug: v })}>
+                      <SelectTrigger><SelectValue placeholder="Pick one" /></SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {rail.kind === 'collection' && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Collection</Label>
+                    <Select value={rail.collection_slug ?? ''} onValueChange={(v) => updateRail(i, { collection_slug: v })}>
+                      <SelectTrigger><SelectValue placeholder="Pick one" /></SelectTrigger>
+                      <SelectContent>
+                        {collections.map((c) => (
+                          <SelectItem key={c.id} value={c.slug}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Max products</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={rail.limit}
+                    onChange={(e) => updateRail(i, { limit: Math.max(1, Number(e.target.value) || 1) })}
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500">{RAIL_KINDS.find((k) => k.value === rail.kind)?.hint}</p>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={addRail}>
+            <Plus className="w-4 h-4 mr-1.5" /> Add rail
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Numbers band */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Numbers band</CardTitle>
+          <CardDescription>
+            The counting figures near the bottom of the homepage. Empty by default and hidden while empty — only add
+            numbers you can stand behind, since these are public claims.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {config.stats.length === 0 && (
+            <p className="text-sm text-gray-400">No numbers set — the band is hidden on the homepage.</p>
+          )}
+          {config.stats.map((stat, i) => (
+            <div key={i} className="grid grid-cols-[120px_90px_1fr_auto_auto] gap-3 items-end rounded-md border border-gray-200 p-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Value</Label>
+                <Input
+                  type="number"
+                  value={stat.value}
+                  onChange={(e) => updateStat(i, { value: Number(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Suffix</Label>
+                <Input value={stat.suffix} onChange={(e) => updateStat(i, { suffix: e.target.value })} placeholder="+" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Label</Label>
+                <Input
+                  value={stat.label}
+                  onChange={(e) => updateStat(i, { label: e.target.value })}
+                  placeholder="Trekkers geared up"
+                />
+              </div>
+              <label className="flex items-center gap-2 pb-2 text-xs text-gray-600">
+                <Checkbox checked={stat.plain} onCheckedChange={(c) => updateStat(i, { plain: !!c })} />
+                Plain
+              </label>
+              <Button variant="ghost" size="icon" onClick={() => removeStat(i)} aria-label="Remove number">
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={addStat}>
+            <Plus className="w-4 h-4 mr-1.5" /> Add number
+          </Button>
         </CardContent>
       </Card>
     </div>

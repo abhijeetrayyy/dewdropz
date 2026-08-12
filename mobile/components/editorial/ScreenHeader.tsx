@@ -6,7 +6,7 @@ import Animated, { Extrapolation, interpolate, SharedValue, useAnimatedStyle } f
 import { Rule } from "./Rule";
 import { IconButton } from "@/components/ui/IconButton";
 import { Display1, Eyebrow, Lede, Meta } from "@/components/ui/Type";
-import { C, S } from "@/lib/theme";
+import { C, F, S } from "@/lib/theme";
 
 // One header for every pushed screen, so back/title/action land in the same
 // place on all 30 of them. v4 had each screen hand-roll its own row, which is
@@ -95,7 +95,9 @@ const s = StyleSheet.create({
   // Absolutely positioned so the compact title is optically centred in the bar
   // regardless of how many controls sit on either side of it.
   barTitle: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
-  barTitleText: { fontFamily: "Archivo_700Bold", fontSize: 15 },
+  // Fraunces, matching Display1 above it — the large title cross-fades into
+  // this one on scroll, and swapping typeface mid-fade would read as a glitch.
+  barTitleText: { fontFamily: F.displayRegular, fontSize: 16 },
   right: { flexDirection: "row", alignItems: "center", gap: 8 },
   large: { paddingHorizontal: S.gutter, paddingTop: S.md, paddingBottom: S.lg },
 });

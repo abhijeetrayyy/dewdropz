@@ -158,7 +158,8 @@ const s = StyleSheet.create({
   kitFrame: { width: "100%", aspectRatio: 4 / 5, borderRadius: R.card, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.07)" },
   kitIndex: { position: "absolute", top: 6, left: 6, backgroundColor: "rgba(12,18,15,0.55)", borderRadius: R.tag, paddingHorizontal: 5, paddingVertical: 2 },
   kitIndexT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 1, color: C.paper },
-  kitName: { fontFamily: F.bodySemiBold, fontSize: 13, lineHeight: 17, color: C.paper, marginTop: 9 },
+  // Fraunces regular — same product-name treatment as ProductCard/DesignYourOwn.
+  kitName: { fontFamily: F.displayRegular, fontSize: 14, lineHeight: 18, color: C.paper, marginTop: 9 },
 
   cta: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.lg },
   ctaT: { fontFamily: F.bodyBold, fontSize: 17, color: C.paper, marginTop: 4, letterSpacing: -0.2 },

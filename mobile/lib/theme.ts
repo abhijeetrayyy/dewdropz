@@ -1,22 +1,28 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// DewDropz mobile — "Editorial" design system (v5)
+// DewDropz mobile — "Editorial" design system (v6)
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // v4 kept the right ingredients (warm paper, one loud accent, a display
 // weight) but cooked them like an app template: every screen was a stack of
 // white shadowed cards on cream, one 46px display size doing every headline
-// job from "Your pack" to the home hero, and two of the four loaded typefaces
-// (Instrument Serif, Space Mono) sitting unused in the bundle.
+// job from "Your pack" to the home hero.
 //
-// v5 keeps the identity — paper, ink, ember, meadow, marigold, Bricolage —
-// and rebuilds the *grammar* around four rules borrowed from print:
+// v5 rebuilt the *grammar* around four rules borrowed from print, and gave
+// mobile its own four-typeface voice (Bricolage Grotesque, Archivo, Instrument
+// Serif, Space Mono) — deliberately distinct from the website's fonts, on the
+// theory that mobile was its own publication.
 //
-//   1. FOUR VOICES, NOT ONE. Bricolage 800 sets the shout (display). Archivo
-//      sets the speaking voice (body/UI). Space Mono sets the margin notes —
-//      eyebrows, indices, timestamps, SKUs — which is what makes a layout read
-//      as edited rather than generated. Instrument Serif sets the asides: pull
-//      quotes and the brand's own voice. All four were already in the bundle;
-//      only one was really being used.
+// v6 changes exactly rule 1 and nothing else: the two apps are now read as one
+// brand rather than two products that happen to share a name, so mobile sets
+// type in the SAME two faces the website loads (app/layout.tsx: next/font
+// Fraunces + Inter) instead of its own four. Rules 2–4 — the layout grammar —
+// are untouched; they were never about which typeface, only how much air
+// around it.
+//
+//   1. THREE VOICES, SHARED WITH WEB. Fraunces sets the display roles, Archivo
+//      the speaking voice, Space Mono the technical marginalia — the same
+//      three faces the website now loads. See the `F` block below for why each
+//      was chosen and what job it does.
 //
 //   2. RULES, NOT CARDS. A hairline rule and 40px of air separate sections
 //      better than a shadowed white box, and cost nothing to render. `SHADOW`
@@ -120,59 +126,101 @@ export const C = {
   heroGreen: "#182b22", warmPaper: "#F4EBD7",
 } as const;
 
+// v6 — ONE type system across web and mobile: Fraunces / Archivo / Space Mono.
+// Identical faces in both apps (web declares them in app/layout.tsx via
+// next/font as --font-display / --font-body / --font-mono).
+//
+// Three roles, because this brand genuinely speaks in three registers:
+//   display  Fraunces    the voice — headlines, collection names, pull quotes
+//   body     Archivo     the speaking voice — copy, buttons, labels, UI
+//   mono     Space Mono  the instrument readout — coordinates, altitudes,
+//                        clock times, spec values, order numbers, indices
+//
+// The weight rule is read straight off web's own class usage (grepped across
+// every component): EVERY section/page headline — hero through card — is
+// `font-display font-light` (Fraunces 300). Only smaller in-card or in-row
+// headings (a product name in a grid, a collection name in a list) drop back
+// to Fraunces' default 400, never bold.
+//
+// v5 ran four different faces here (Bricolage Grotesque, Archivo, Instrument
+// Serif, Space Mono) — deliberately its own identity, distinct from the site.
+// That is no longer the brief: the two are read as one brand. Two of v5's
+// four (Archivo, Space Mono) survive because they were the right calls; they
+// are now shared with web rather than mobile-only.
 export const F = {
-  // Display — Bricolage Grotesque. 800 shouts, 700 speaks firmly, 500 is the
-  // quiet editorial cut used for long headlines that shouldn't yell.
-  display: "BricolageGrotesque_800ExtraBold",
-  displayBold: "BricolageGrotesque_700Bold",
-  displayMid: "BricolageGrotesque_500Medium",
+  // ── display — Fraunces ────────────────────────────────────────────────────
+  // Warm old-style serif with a real optical-size axis. Carries the brand's
+  // voice. `Light` is web's own headline weight (`font-display font-light`
+  // on every section h2 sitewide); `Regular` is what web drops to for
+  // card-scale headings and named entities (product names, collection names).
+  display: "Fraunces_300Light",
+  displayRegular: "Fraunces_400Regular",
+  displayItalic: "Fraunces_300Light_Italic", // pull quotes, asides, taglines
+  serifItalic: "Fraunces_400Regular_Italic",
 
-  // Body — Archivo.
+  // ── body — Archivo ────────────────────────────────────────────────────────
+  // A grotesque descended from late-19th-century American gothics: the
+  // lineage of signage and industrial printing. Sturdier at small sizes than
+  // a neutral UI sans and, for a company that prints garments to order, it
+  // reads as equipment rather than software.
   body: "Archivo_400Regular",
   bodyMedium: "Archivo_500Medium",
   bodySemiBold: "Archivo_600SemiBold",
   bodyBold: "Archivo_700Bold",
-  bodyItalic: "Archivo_400Regular_Italic",
+  bodyItalic: "Archivo_400Regular_Italic", // real italic, unlike the Inter cut
 
-  // Editorial asides — Instrument Serif. Was loaded but never rendered in v4.
-  serif: "InstrumentSerif_400Regular",
-  serifItalic: "InstrumentSerif_400Regular_Italic",
-
-  // Margin notes — Space Mono. Eyebrows, indices, timestamps, order numbers.
+  // ── mono — Space Mono ─────────────────────────────────────────────────────
+  // The technical register: coordinates, altitudes, the day-arc clock times,
+  // spec values, order numbers, section indices. This is a real role in this
+  // brand, not decoration — web asks for `font-mono` in 41 places — and mono
+  // is what makes columns of figures actually line up.
   mono: "SpaceMono_400Regular",
   monoBold: "SpaceMono_700Bold",
 
   // Material Symbols Rounded — see components/ui/Icon.tsx
   icon: "MaterialSymbolsRounded",
   iconFill: "MaterialSymbolsRoundedFill",
-
-  // ---- Legacy aliases — Customize Studio only ----
-  displayRegular: "BricolageGrotesque_800ExtraBold",
-  displayItalic: "InstrumentSerif_400Regular_Italic",
 } as const;
 
 // ─── Type scale ──────────────────────────────────────────────────────────────
-// Tracking tightens as size grows: at 60px the default letterspace reads as a
-// gap, at 11px it reads as texture. That inverse relationship is the single
-// biggest difference between type that looks set and type that looks typed.
+// Tracking and leading now follow web's own numbers rather than a rule tuned
+// for a bold grotesque sans. Grepped across every `font-display` heading on
+// the site: tight negative tracking appears in exactly one place — the
+// all-caps hero (`tracking-[-0.04em]`) — everywhere else (section h2s, card
+// h3s) carries NO tracking utility at all, i.e. 0. Fraunces is also a light,
+// generous serif; the old -1.4…-0.8 tracking and sub-1.0 leading that suited
+// 800-weight Bricolage Grotesque reads as cramped on it. Leading below is
+// pulled from web's own `leading-[1.03]`–`leading-[1.1]` classes on these
+// exact headline roles.
 export const T = {
   /** Home hero / screen openers only. One per screen, maximum. */
-  hero: { fontFamily: F.display, fontSize: 56, lineHeight: 53, letterSpacing: -2.2 },
+  hero: { fontFamily: F.display, fontSize: 56, lineHeight: 56, letterSpacing: -2.2 },
   /** Screen titles and major section headlines. */
-  d1: { fontFamily: F.display, fontSize: 40, lineHeight: 40, letterSpacing: -1.4 },
+  d1: { fontFamily: F.display, fontSize: 40, lineHeight: 42, letterSpacing: -0.2 },
   /** Section headlines inside a screen. */
-  d2: { fontFamily: F.display, fontSize: 29, lineHeight: 31, letterSpacing: -0.8 },
-  /** Sub-section / card headlines. */
-  d3: { fontFamily: F.display, fontSize: 22, lineHeight: 25, letterSpacing: -0.4 },
+  d2: { fontFamily: F.display, fontSize: 29, lineHeight: 32, letterSpacing: -0.1 },
+  /** Sub-section / card headlines — web's default (non-light) Fraunces weight. */
+  d3: { fontFamily: F.displayRegular, fontSize: 22, lineHeight: 26, letterSpacing: 0 },
 
-  /** Long editorial headlines that shouldn't shout — journal, about, values. */
-  editorial: { fontFamily: F.displayMid, fontSize: 27, lineHeight: 32, letterSpacing: -0.5 },
-  /** Serif display — the brand's own voice. Collection names, manifesto lines. */
-  serif: { fontFamily: F.serif, fontSize: 38, lineHeight: 40, letterSpacing: -0.5 },
-  /** Pull quotes, testimonials, guide asides. */
-  quote: { fontFamily: F.serifItalic, fontSize: 23, lineHeight: 31, letterSpacing: -0.2 },
+  /** Long editorial headlines that shouldn't shout — journal, about, values.
+   *  Web's journal titles (list and article) are font-light like every other
+   *  section headline, not a lighter separate cut — matched here. */
+  editorial: { fontFamily: F.display, fontSize: 27, lineHeight: 33, letterSpacing: 0 },
+  /** Serif display — the brand's own voice. Collection names, manifesto lines.
+   *  Web sets these at default Fraunces weight (CollectionsRow, ProductDetail
+   *  narrative), same cut as d3. */
+  serif: { fontFamily: F.displayRegular, fontSize: 38, lineHeight: 42, letterSpacing: 0 },
+  /** Pull quotes, testimonials, guide asides — web is consistently
+   *  `font-display font-light italic` for every one of these. */
+  quote: { fontFamily: F.displayItalic, fontSize: 23, lineHeight: 31, letterSpacing: 0 },
 
-  /** Row titles, product names, list headings. */
+  /** Row titles, product names, list headings. Kept on Inter rather than
+   *  following web's product-name Fraunces exactly — on web that heading is
+   *  never also a settings row ("UPI"), a delivery method, or an address
+   *  name, all of which this one role also renders here. The specific
+   *  product/collection "name" styles that DO have a clean web equivalent
+   *  (ProductCard, DesignYourOwn, SeasonWindow) are set in Fraunces directly
+   *  at their own call sites instead of through this shared, mixed-use role. */
   title: { fontFamily: F.bodyBold, fontSize: 16, lineHeight: 21, letterSpacing: -0.1 },
   /** Default copy. */
   body: { fontFamily: F.body, fontSize: 15, lineHeight: 23 },
@@ -185,11 +233,14 @@ export const T = {
   /** Smallest readable UI text — tags, helper text. */
   micro: { fontFamily: F.bodyMedium, fontSize: 11, lineHeight: 15 },
 
-  /** THE editorial signature: mono eyebrow above every section head. */
+  /** THE editorial signature: a mono eyebrow above every section head —
+   *  matching web's own `font-mono text-[10px] uppercase tracking-[0.2em]`,
+   *  which it uses for exactly this on the day-arc section heads. */
   eyebrow: { fontFamily: F.monoBold, fontSize: 10, lineHeight: 13, letterSpacing: 1.9, textTransform: "uppercase" as const },
-  /** Mono margin note — indices, timestamps, order numbers, figure credits. */
+  /** Margin note — indices, timestamps, order numbers, figure credits. */
   mono: { fontFamily: F.mono, fontSize: 10, lineHeight: 13, letterSpacing: 1.2 },
-  /** Numerals that need to align in a column (prices, totals, specs). */
+  /** Numerals that need to align in a column (prices, totals, specs) — the
+   *  reason this role is mono at all: proportional figures don't line up. */
   numeric: { fontFamily: F.monoBold, fontSize: 13, lineHeight: 17, letterSpacing: 0.2 },
 
   /** Legacy uppercase label — kept so un-migrated callers don't break. */

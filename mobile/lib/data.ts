@@ -1,5 +1,4 @@
 import { supabase } from "./supabase";
-import { PRODUCTS, COLLECTIONS } from "./constants";
 import { resolveAssetUrl } from "./customize/assetUrl";
 
 export type ProductAttribute = {
@@ -98,19 +97,11 @@ export async function getProducts(): Promise<Product[]> {
 
   if (data && data.length > 0) return (data as unknown as Product[]).map(resolveImages);
 
-  // Fallback to constants
-  return PRODUCTS.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    price: p.price,
-    images: p.images,
-    collection: { id: p.collectionId, slug: p.collectionId, name: p.collectionName },
-    variants: p.variants,
-    description: p.longDescription,
-    short_description: p.short_description,
-    compare_at_price: p.compare_at_price,
-  }));
+  // No constants fallback. This used to fall back to a hardcoded demo
+  // catalogue, which meant an empty or unreachable database silently rendered
+  // products that don't exist and can't be ordered. An empty shop is the
+  // truth; the screens all have empty states for it.
+  return [];
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -125,21 +116,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
   if (data) return resolveImages(data as unknown as Product);
 
-  // Fallback to constants
-  const p = PRODUCTS.find((x) => x.slug === slug);
-  if (!p) return null;
-  return {
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    price: p.price,
-    images: p.images,
-    collection: { id: p.collectionId, slug: p.collectionId, name: p.collectionName },
-    variants: p.variants,
-    description: p.longDescription,
-    short_description: p.short_description,
-    compare_at_price: p.compare_at_price,
-  };
+  return null;
 }
 
 // The customizable blanks, cheapest-first so the showcase reads as an
@@ -173,20 +150,7 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
     .eq("status", "active")
     .is("deleted_at", null);
 
-  if (data && data.length > 0) return (data as unknown as Product[]).map(resolveImages);
-
-  return PRODUCTS.filter((p) => slugs.includes(p.slug)).map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    name: p.name,
-    price: p.price,
-    images: p.images,
-    collection: { id: p.collectionId, slug: p.collectionId, name: p.collectionName },
-    variants: p.variants,
-    description: p.longDescription,
-    short_description: p.short_description,
-    compare_at_price: p.compare_at_price,
-  }));
+  return ((data as unknown as Product[]) ?? []).map(resolveImages);
 }
 
 // Matches on the collection's real `slug` (e.g. "mist-and-morning") — the same
@@ -199,21 +163,17 @@ export async function getProductsByCollection(collectionSlug: string): Promise<P
   return all.filter((p) => p.collection?.slug === collectionSlug);
 }
 
-export async function getCollections() {
+export type CollectionRow = {
+  id: string; slug: string; name: string; tagline: string | null; image_url: string | null;
+};
+
+export async function getCollections(): Promise<CollectionRow[]> {
   const { data } = await supabase
     .from("collections")
     .select("id,slug,name,tagline,image_url")
     .order("created_at", { ascending: true });
 
-  if (data && data.length > 0) return data.map((c) => ({ ...c, image_url: resolveAssetUrl(c.image_url) }));
-
-  return COLLECTIONS.map((c) => ({
-    id: c.id,
-    slug: c.id,
-    name: c.name,
-    tagline: c.tagline,
-    image_url: c.image,
-  }));
+  return (data ?? []).map((c) => ({ ...c, image_url: resolveAssetUrl(c.image_url) }));
 }
 
 // getRelatedProducts / getCartRecommendations mirror the web app's
@@ -460,4 +420,138 @@ export async function getNotificationPreferences(userId: string): Promise<Notifi
 export async function updateNotificationPreferences(userId: string, prefs: NotificationPreferences) {
   const { error } = await supabase.from("profiles").update({ notification_preferences: prefs }).eq("id", userId);
   if (error) throw error;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Home configuration — the same light CMS the website reads
+// ─────────────────────────────────────────────────────────────────────────────
+// `store_settings.home_config` is publicly readable (migration 007), so the
+// phone reads the admin's homepage configuration straight from Supabase rather
+// than through the Next.js API. That matters: the app already works with the
+// website offline, and the home screen is the last place that should start
+// depending on a second server being reachable.
+//
+// The rail resolution below mirrors actions/showcase.ts on the web — the same
+// deliberate duplication as getRelatedProducts, so both platforms merchandise
+// identically. Best-sellers goes through the product_sales_ranking RPC
+// (migration 028) because order_items is correctly closed to storefront reads.
+
+export type HomeShowcaseKind = "recent" | "best_sellers" | "category" | "collection";
+
+export type HomeShowcaseRail = {
+  id: string;
+  kind: HomeShowcaseKind;
+  title: string;
+  category_slug: string | null;
+  collection_slug: string | null;
+  limit: number;
+  enabled: boolean;
+};
+
+export type HomeConfig = {
+  featured_collection_slugs: string[];
+  featured_category_slugs: string[];
+  showcase: HomeShowcaseRail[];
+};
+
+export type ResolvedRail = { id: string; title: string; kind: HomeShowcaseKind; products: Product[] };
+
+export type HomeData = {
+  rails: ResolvedRail[];
+  featuredCollectionSlugs: string[];
+  featuredCategorySlugs: string[];
+};
+
+const EMPTY_HOME: HomeData = { rails: [], featuredCollectionSlugs: [], featuredCategorySlugs: [] };
+
+export async function getHomeData(): Promise<HomeData> {
+  const { data: settings } = await supabase
+    .from("store_settings")
+    .select("home_config")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const cfg = (settings?.home_config ?? null) as Partial<HomeConfig> | null;
+  if (!cfg) return EMPTY_HOME;
+
+  const rails = await Promise.all((cfg.showcase ?? []).filter((r) => r.enabled).map(resolveRail));
+
+  return {
+    // An empty rail is dropped, not rendered as a heading over nothing — the
+    // catalogue is small and several rails legitimately have nothing to show.
+    rails: rails.filter((r): r is ResolvedRail => r !== null && r.products.length > 0),
+    featuredCollectionSlugs: cfg.featured_collection_slugs ?? [],
+    featuredCategorySlugs: cfg.featured_category_slugs ?? [],
+  };
+}
+
+async function resolveRail(rail: HomeShowcaseRail): Promise<ResolvedRail | null> {
+  const limit = Math.min(Math.max(rail.limit || 8, 1), 24);
+  let products: Product[] = [];
+
+  if (rail.kind === "recent") {
+    const { data } = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    products = ((data as unknown as Product[]) ?? []).map(resolveImages);
+  } else if (rail.kind === "collection" && rail.collection_slug) {
+    const { data: col } = await supabase
+      .from("collections")
+      .select("id")
+      .eq("slug", rail.collection_slug)
+      .maybeSingle();
+    if (col) {
+      const { data } = await supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("status", "active")
+        .is("deleted_at", null)
+        .eq("collection_id", col.id)
+        .limit(limit);
+      products = ((data as unknown as Product[]) ?? []).map(resolveImages);
+    }
+  } else if (rail.kind === "category" && rail.category_slug) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", rail.category_slug)
+      .maybeSingle();
+    if (cat) {
+      const { data: links } = await supabase
+        .from("product_categories")
+        .select("product_id")
+        .eq("category_id", cat.id)
+        .limit(limit);
+      const ids = (links ?? []).map((l) => l.product_id as string);
+      if (ids.length) {
+        const { data } = await supabase
+          .from("products")
+          .select(PRODUCT_SELECT)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .in("id", ids);
+        products = ((data as unknown as Product[]) ?? []).map(resolveImages);
+      }
+    }
+  } else if (rail.kind === "best_sellers") {
+    const { data: ranked } = await supabase.rpc("product_sales_ranking", { p_limit: limit });
+    const ids = ((ranked as { product_id: string }[] | null) ?? []).map((r) => r.product_id);
+    if (ids.length) {
+      const { data } = await supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("status", "active")
+        .is("deleted_at", null)
+        .in("id", ids);
+      const byId = new Map(((data as unknown as Product[]) ?? []).map((p) => [p.id, resolveImages(p)]));
+      // `in()` returns rows in arbitrary order — re-apply the sales ranking.
+      products = ids.map((id) => byId.get(id)).filter(Boolean) as Product[];
+    }
+  }
+
+  return { id: rail.id, title: rail.title, kind: rail.kind, products };
 }

@@ -1,35 +1,32 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import PageHeader from '@/components/PageHeader'
-import TreksList from '@/components/sections/TreksList'
+import TrailGuide from '@/components/sections/TrailGuide'
 import NewsletterBar from '@/components/sections/NewsletterBar'
 
 export const metadata: Metadata = {
-  title: 'Guided Treks — DEWDROPZ',
-  description: 'Join a DEWDROPZ-guided group trek across the Himalaya — led by the same guides who design the gear.',
+  title: 'Trail Guide — DEWDROPZ',
+  description:
+    'A field guide to the Uttarakhand trails our gear is built on — altitude, difficulty, the right season, and what you pass along the way.',
 }
 
-// Treks paused as a business line. The whole page is kept intact below —
-// restore it by removing this redirect (and the other "Treks paused" blocks:
-// NavBar, footer, SummitHero, SeasonKit, TerrainScene WAYPOINTS).
-const TREKS_PAUSED = true
-
+// Reference, not a booking funnel. This page used to sell guided departures
+// with dates, prices and live spot counts for a business line that doesn't
+// run; it's now a straight informational guide to real trails, which is both
+// honest and the thing people actually search for.
 export default function TreksPage() {
-  if (TREKS_PAUSED) redirect('/collections')
-
   return (
     <>
       <NavBar />
       <main>
         <PageHeader
-          eyebrow="Guided Treks"
-          title="Come trek with the people who make your gear."
-          subtitle="Our founders still guide. A few times a year, we open a handful of spots on the routes we know best."
+          eyebrow="Trail Guide"
+          title="The trails this gear was built on."
+          subtitle="Where they are, how high they go, when they're worth walking, and what you pass on the way. No departures to book — just what we'd tell a friend before their first one."
           variant="altitude"
         />
-        <TreksList />
+        <TrailGuide />
         <NewsletterBar />
       </main>
       <FooterSection />

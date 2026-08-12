@@ -9,11 +9,19 @@ import type { Category, ProductWithCollection } from '@/types/database'
 export default function ShopByCategory({
   categories,
   products,
+  featuredSlugs = [],
 }: {
   categories: Category[]
   products: ProductWithCollection[]
+  /** Admin's pick, in their order. Empty = every active top-level category,
+   *  which is what this section did before the setting existed. */
+  featuredSlugs?: string[]
 }) {
-  if (categories.length === 0) return null
+  const shown = featuredSlugs.length
+    ? featuredSlugs.map((s) => categories.find((c) => c.slug === s)).filter((c): c is Category => Boolean(c))
+    : categories
+
+  if (shown.length === 0) return null
 
   return (
     // Early afternoon on the page's clock — paper warms a step past midday.
@@ -38,7 +46,7 @@ export default function ShopByCategory({
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {categories.map((tile) => {
+          {shown.map((tile) => {
             const count = products.filter((p) => p.categories?.some((pc) => pc.category_id === tile.id)).length
             return (
               <Link
