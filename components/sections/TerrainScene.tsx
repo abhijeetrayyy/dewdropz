@@ -1,11 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, type ComponentProps, type RefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { createNoise2D } from 'simplex-noise'
 import { HeroWeather, seasonHaze, type Season } from './HeroWeather'
 
@@ -546,21 +544,11 @@ const HOUSE_D = 1.5
 // roughly px 981 at the end of the descent, directly under the house, with the
 // two figures flanking it at 888 and 1092.
 const FIRE_AT = { x: -1.3, z: 2.6 } as const
-// Both figures were originally placed by eye and both landed badly — one with
-// its back to the camera, the other stranded on dark ground a metre outside the
-// firelight. These came out of a sweep of the ring around the fire instead,
-// scored on four things at once: how far each sits from the flame in world
-// space, how far it reads from the flame on screen, how much the ground drops
-// away underneath it, and how many degrees off the camera axis it ends up
-// facing. The result is symmetric — fire at px 980, one figure at 883, the other
-// at 1077 — with both close enough that the firelight actually reaches them.
-const SITTER_AT = { x: -1.8, z: 1.9 } as const
-const WAVER_AT = { x: -1.2, z: 3.8 } as const
-/** Nearly square to the camera — about 8° off. A wider three-quarter turn shows
- *  this figure's back-left quarter, which puts the pack AND the hanging arm on
- *  the same side of the silhouette, where they pile into an unreadable lump.
- *  Front-on, the pack hides behind the torso and the raised arm reads cleanly. */
-const WAVER_TURN = -0.3
+// Where the seat log lies. The spot it inherited was chosen to frame a seated
+// figure, and with the figure gone a log that far out just read as a fallen tree.
+// This one is 0.55 from the flame and lands about 56px to its left — close enough
+// to be furniture, on ground that barely drops between the two.
+const SEAT_LOG_AT = { x: -1.82, z: 2.79 } as const
 
 /** Group-local (x, z) → terrain-space (x, z), undoing the group's turn and scale.
  *  Needed by anything that has to sample the ground it stands on, and by the
@@ -847,334 +835,160 @@ function RisingParticles({
   )
 }
 
-// ─── The two people at the fire ──────────────────────────────────────────────
-// "Adventurer" by Quaternius (CC0), decimated to 1,221 triangles and the two
-// clips this scene plays. See assets-src/character/README.md for the pipeline
-// and public/character/CREDITS.txt for attribution.
+// ─── The cabin ───────────────────────────────────────────────────────────────
+// Built once, into a single merged, vertex-coloured geometry: plinth, walls,
+// roof, ridge, eaves, chimney, door and step are all one draw call. Previously
+// each was its own mesh — fourteen draw calls for a building that never moves
+// and never changes colour. The tree geometry in this file already works this
+// way, and paintGeometry/mergeGeometries are the same helpers.
 //
-// This replaces two figures built from boxes and spheres. That approach had a
-// hard ceiling: at ~130px, with the fire lighting one side, every joint between
-// primitives shows, and no amount of tuning proportions gets you a body that
-// moves. A rigged mesh with an authored wave does in one clip what a dozen
-// hand-placed shapes could not.
-//
-// ── What it costs, and when ──────────────────────────────────────────────────
-// The source model is 1.9MB. Decimating it and dropping the 22 unused clips gets
-// that to 95KB, which is the difference between an asset worth loading and one
-// that isn't. Even so the fetch is
-// gated on progress: nothing is requested until the descent passes PRELOAD_FROM,
-// which leaves a comfortable margin before the camp resolves at ARRIVE_FROM.
-//
-// Phones never pay it at all. The scroll-scrubbed descent doesn't run on
-// touch devices (see SummitHero), so progress stays at 0 there, the gate never
-// opens, and the model is never requested.
-const ADVENTURER_URL = '/character/adventurer.glb'
-const CLIP_WAVE = 'CharacterArmature|Wave'
-// The full Wave clip runs 1.67s, and well over half of it is the arm swinging up
-// and back down through a horizontal pose that reads as pointing rather than
-// waving. Captured across the cycle, the hand is only properly raised in the back
-// third. Cropping to that keeps the greeting unmistakable — this lands at the very
-// end of the descent and a viewer may only see a second of it.
-const WAVE_FRAMES: readonly [number, number] = [26, 36]
-const WAVE_FPS = 24
-/** Fetch well before the camp fades in, so it is decoded and ready by then. */
-const PRELOAD_FROM = 0.34
-/** Height in terrain units, set against the cabin rather than picked by eye.
- *  The door is 0.58 tall in these units, so a figure at 0.78 stood taller than
- *  the doorway it was standing next to and turned the cabin into a shed. Just
- *  under the door height is what reads as a person at a house. */
-const FIGURE_HEIGHT = 0.62
+// Colour lives in the vertices, so the variety costs nothing: weathered stone
+// under warm timber under a greyer, colder roof.
+const CABIN_STONE = new THREE.Color('#4B443C')
+const CABIN_WALL = new THREE.Color('#6B5540')
+const CABIN_ROOF = new THREE.Color('#7C6853')
+const CABIN_RIDGE = new THREE.Color('#5A4B3C')
+const CABIN_DARK = new THREE.Color('#33261A')
 
-type Loaded = { scene: THREE.Group; animations: THREE.AnimationClip[] }
+function buildCabinGeometry() {
+  const parts: THREE.BufferGeometry[] = []
+  const add = (geo: THREE.BufferGeometry, color: THREE.Color) => parts.push(paintGeometry(geo, color))
 
-function useAdventurer(enabled: boolean) {
-  const [loaded, setLoaded] = useState<Loaded | null>(null)
-  useEffect(() => {
-    if (!enabled || loaded) return
-    let cancelled = false
-    new GLTFLoader().load(
-      ADVENTURER_URL,
-      (gltf) => {
-        if (!cancelled) setLoaded({ scene: gltf.scene as THREE.Group, animations: gltf.animations })
-      },
-      undefined,
-      // A failed fetch leaves the camp as fire + cabin, which still reads. Better
-      // that than a broken frame at the emotional high point of the page.
-      () => {}
-    )
-    return () => {
-      cancelled = true
-    }
-  }, [enabled, loaded])
-  return loaded
+  // Dry-stone footing, proud of the walls. Deep enough that no slope can open a
+  // gap under the sill.
+  const plinth = new THREE.BoxGeometry(2.04, 0.6, 1.64)
+  plinth.translate(0, -0.16, 0)
+  add(plinth, CABIN_STONE)
+
+  const walls = new THREE.BoxGeometry(1.9, 1.0, 1.5)
+  walls.translate(0, 0.5, 0)
+  add(walls, CABIN_WALL)
+
+  // Hip roof. A 4-sided cone is a square pyramid and the plan is 1.9 x 1.5, so
+  // it is squashed on Z after the 45° turn — as a vertex operation here, which is
+  // the same order the old parent-group scale achieved.
+  const roof = new THREE.ConeGeometry(1.57, 0.68, 4)
+  roof.rotateY(Math.PI / 4)
+  roof.scale(1, 1, 0.82)
+  roof.translate(0, 1.22, 0)
+  add(roof, CABIN_ROOF)
+
+  // Ridge cap. One board that gives the roof an edge to catch the firelight
+  // instead of reading as a smooth cone. An earlier pass also ran fascia boards
+  // along the eaves, but at 2.24 wide they stuck out past the roofline and read
+  // as planks floating beside the building.
+  const ridge = new THREE.BoxGeometry(0.16, 0.07, 0.16)
+  ridge.translate(0, 1.55, 0)
+  add(ridge, CABIN_RIDGE)
+
+  const chimney = new THREE.BoxGeometry(0.22, 0.62, 0.22)
+  chimney.translate(0.55, 1.52, 0.15)
+  add(chimney, CABIN_STONE)
+  const cap = new THREE.BoxGeometry(0.3, 0.07, 0.3)
+  cap.translate(0.55, 1.86, 0.15)
+  add(cap, CABIN_RIDGE)
+
+  const door = new THREE.BoxGeometry(0.4, 0.68, 0.03)
+  door.translate(-0.45, 0.34, 0.755)
+  add(door, CABIN_DARK)
+  const step = new THREE.BoxGeometry(0.54, 0.1, 0.24)
+  step.translate(-0.45, 0.05, 0.87)
+  add(step, CABIN_STONE)
+
+  // Glazing bars. At this size an unbroken rectangle of light reads as a hole cut
+  // in the wall; two crossed bars turn it into a window.
+  for (const wx of [0.42, -0.95]) {
+    const bar = new THREE.BoxGeometry(0.028, 0.34, 0.012)
+    bar.translate(wx, 0.62, 0.762)
+    add(bar, CABIN_DARK)
+    const sill = new THREE.BoxGeometry(0.42, 0.026, 0.012)
+    sill.translate(wx, 0.62, 0.762)
+    add(sill, CABIN_DARK)
+  }
+
+  const merged = mergeGeometries(parts, false)
+  merged.computeVertexNormals()
+  for (const part of parts) part.dispose()
+  return merged
 }
 
-/** A pose is a set of rotations applied ON TOP of each bone's bind rotation, in
- *  radians about the bone's own axes. It has to compose rather than replace:
- *  a bind pose carries its own local rotations, and assigning to bone.rotation
- *  throws those away and folds the character in half. */
-type Pose = Record<string, readonly [number, number, number]>
-
-/** Bone names are matched on letters and digits only. three's GLTFLoader runs
- *  every node name through PropertyBinding.sanitizeNodeName, which strips dots —
- *  so the rig's "UpperLeg.L" arrives as "UpperLegL". Matching the raw name meant
- *  every bone with a dot silently missed, and the first seated pose came out as
- *  a figure standing bolt upright with its head bowed: Hips, Chest and Head had
- *  applied, and all four leg bones had not. */
-const boneKey = (name: string) => name.replace(/[^A-Za-z0-9]/g, '').toLowerCase()
-
-// Sitting. The pack has no sit clip — of its 24 animations not one is seated —
-// so this is authored from the rig: thighs forward, shins down, a slight lean in
-// toward the fire, forearms resting on the knees.
-const SITTING_POSE: Pose = {
-  // Signs matter and are not guessable: positive X swings a limb FORWARD on this
-  // rig. The first attempt had the thighs at -1.42 and the shins at +1.35, which
-  // very nearly cancel — the figure came out with straight legs trailing behind
-  // it, pitched forward like a swan dive. Thigh forward, shin back by the same
-  // amount, is what puts the shin vertical under a horizontal thigh.
-  'UpperLeg.L': [1.4, 0, -0.07],
-  'UpperLeg.R': [1.4, 0, 0.07],
-  // Measured off the posed rig rather than guessed: at -1.3 the thigh came out
-  // at a correct 75° from vertical but the shin was still 32° forward of it, so
-  // the figure read as perching rather than sitting. More knee.
-  'LowerLeg.L': [-1.78, 0, 0.06],
-  'LowerLeg.R': [-1.78, 0, -0.06],
-  Chest: [0.12, 0, 0],
-  // Less shoulder, more elbow — at 0.85/0.35 the arms reached straight out in
-  // front like a sleepwalker. Forearms should drop onto the knees.
-  'UpperArm.L': [0.42, 0, 0.14],
-  'UpperArm.R': [0.42, 0, -0.14],
-  'LowerArm.L': [0.8, 0, 0],
-  'LowerArm.R': [0.8, 0, 0],
-  Head: [-0.05, 0, 0],
-}
-
-function Adventurer({
-  source,
-  clip,
-  pose,
-  seat,
-  cx,
-  cz,
-  turn,
-  fadeRef,
-}: {
-  source: Loaded
-  /** Omitted for a posed figure — a mixer would overwrite the pose every frame. */
-  clip?: string
-  pose?: Pose
-  /** Put a log under them. Its height comes from the posed rig, not from here. */
-  seat?: boolean
-  /** Terrain-space position — these live outside the arrival group. */
-  cx: number
-  cz: number
-  turn: number
-  fadeRef: RefObject<number>
-}) {
-  const groupRef = useRef<THREE.Group>(null)
-  const seatMatRef = useRef<THREE.MeshStandardMaterial>(null)
-  const wasTransparent = useRef(true)
-
-  // SkeletonUtils.clone, not Object3D.clone — a plain clone shares the skeleton,
-  // so two copies would drive the same bones and play the same frame of the same
-  // animation in lockstep.
-  const built = useMemo(() => {
-    const root = cloneSkinned(source.scene) as THREE.Group
-    // Normalise to a known height: the export is authored at a scale that has
-    // nothing to do with this mountain, and hard-coding a magic factor would
-    // silently break if the asset is ever re-exported.
-    // Pose first, then measure — the bounding box below has to describe the
-    // shape we actually render, and a seated body is barely half the height of
-    // a standing one.
-    if (pose) {
-      const byKey = new Map(Object.entries(pose).map(([k, v]) => [boneKey(k), v]))
-      root.traverse((o) => {
-        const rot = byKey.get(boneKey(o.name))
-        if (!rot) return
-        // rotateX/Y/Z multiply onto the existing quaternion, preserving the bind
-        // rotation, which is the whole point (see the Pose docstring).
-        o.rotateX(rot[0])
-        o.rotateY(rot[1])
-        o.rotateZ(rot[2])
-      })
-      root.updateMatrixWorld(true)
-      root.traverse((o) => {
-        const sm = o as THREE.SkinnedMesh
-        if ((sm as unknown as { isSkinnedMesh?: boolean }).isSkinnedMesh) sm.skeleton.update()
-      })
-    }
-
-    // Measure the SKINNED pose, not the bind pose.
-    //
-    // Box3.setFromObject transforms each mesh's bind-pose geometry by that mesh's
-    // own world matrix. On this export (FBX2glTF) both the armature and the mesh
-    // nodes carry a scale of 100 which the bind matrices then undo, so that
-    // reading is meaningless: it reports the character as 63.8 units tall and 223
-    // deep. Scaling by it put both figures on screen at about 2cm — invisible,
-    // which is exactly what the first attempt rendered.
-    //
-    // applyBoneTransform runs a vertex through the actual skinning maths, so this
-    // measures where the geometry really ends up: 1.83 units, feet on y=0. A few
-    // hundred samples per mesh is plenty for a bounding box and it runs once.
-    const box = new THREE.Box3()
-    const v = new THREE.Vector3()
-    root.updateMatrixWorld(true)
-    root.traverse((o) => {
-      const sm = o as THREE.SkinnedMesh
-      if (!(sm as unknown as { isSkinnedMesh?: boolean }).isSkinnedMesh) return
-      sm.skeleton.update()
-      const pos = sm.geometry.attributes.position
-      const step = Math.max(1, Math.floor(pos.count / 200))
-      for (let i = 0; i < pos.count; i += step) {
-        v.fromBufferAttribute(pos, i)
-        sm.applyBoneTransform(i, v)
-        v.applyMatrix4(sm.matrixWorld)
-        box.expandByPoint(v)
-      }
-    })
-    const h = box.max.y - box.min.y
-    const k = h > 0 ? FIGURE_HEIGHT / h : 1
-    root.scale.setScalar(k)
-    // Feet on the ground, not the rig origin.
-    root.position.y = -box.min.y * k
-
-    // Where the hips actually ended up. A seated figure needs something under it,
-    // and hard-coding that height is guesswork that goes wrong the moment the
-    // pose changes — the first attempt put the log at standing-hip height and the
-    // character sat on thin air with the log stranded behind. Reading the bone
-    // back out of the posed rig keeps the two locked together.
-    let hipY = 0
-    root.updateMatrixWorld(true)
-    root.traverse((o) => {
-      if (boneKey(o.name) === 'hips') hipY = o.getWorldPosition(new THREE.Vector3()).y
-    })
-    root.traverse((o) => {
-      const m = o as THREE.Mesh
-      if (!m.isMesh) return
-      // Skinned bounds are computed from the bind pose, so an animated limb can
-      // leave the box and the whole character pops out of existence.
-      m.frustumCulled = false
-      const mats = Array.isArray(m.material) ? m.material : [m.material]
-      // Cloned per instance: the fade writes to these every frame, and the loader
-      // hands both copies the same material objects.
-      const next = mats.map((mat) => {
-        const c = mat.clone()
-        // The build strips NORMAL (see assets-src/character/README.md), so face
-        // normals have to come from the shader — which is also exactly the
-        // faceted look this decimated model wants.
-        if ('flatShading' in c) (c as THREE.MeshStandardMaterial).flatShading = true
-        c.transparent = true
-        c.opacity = 0
-        // Depth still writes while fading, so the character's own parts sort
-        // against each other instead of showing through one another.
-        c.depthWrite = true
-        return c
-      })
-      m.material = Array.isArray(m.material) ? next : next[0]
-    })
-    return { root, hipY }
-  }, [source, pose])
-
-  const { root: model, hipY } = built
-  const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
-
-  useEffect(() => {
-    if (!clip) return
-    const found = source.animations.find((a) => a.name === clip)
-    if (!found) return
-    const useClip =
-      clip === CLIP_WAVE
-        ? THREE.AnimationUtils.subclip(found, 'Wave_raised', WAVE_FRAMES[0], WAVE_FRAMES[1], WAVE_FPS)
-        : found
-    const action = mixer.clipAction(useClip)
-    // LoopPingPong, not LoopRepeat. A repeating loop has to teleport from the
-    // last frame back to the first, and on a wave that is a visible snap of the
-    // arm every cycle. Ping-pong plays the sweep forward then backward, so the
-    // two ends of the loop ARE the turning points of the wave and there is no
-    // discontinuity at all. Halved timeScale on top: the raw clip waves at a
-    // frantic pace that reads as a twitch at this size.
-    action.setLoop(THREE.LoopPingPong, Infinity)
-    action.timeScale = clip === CLIP_WAVE ? 0.5 : 0.85
-    action.reset().play()
-    return () => {
-      mixer.stopAllAction()
-    }
-  }, [mixer, source, clip])
-
-  useEffect(() => () => mixer.uncacheRoot(model), [mixer, model])
-
-  useFrame((_, delta) => {
-    const g = groupRef.current
-    const k = fadeRef.current ?? 0
-    const visible = k > 0.01
-    if (g) g.visible = visible
-    if (!visible) return
-    if (clip) mixer.update(delta)
-    // Toggling `transparent` recompiles the shader, so it flips once at the end
-    // of the fade rather than every frame.
-    const wantTransparent = k < 0.995
-    const flip = wantTransparent !== wasTransparent.current
-    if (flip) wasTransparent.current = wantTransparent
-    if (seatMatRef.current) seatMatRef.current.opacity = k
-    model.traverse((o) => {
-      const m = (o as THREE.Mesh).material as THREE.Material | undefined
-      if (!m || !('opacity' in m)) return
-      m.opacity = k
-      if (flip) {
-        m.transparent = wantTransparent
-        m.needsUpdate = true
-      }
-    })
+/** The two lit panes as one geometry — they always share a brightness.
+ *  `scale` sizes each quad in place. It cannot be applied to the merged result:
+ *  scaling that would scale the pane POSITIONS as well, which flung the bloom
+ *  quads clean off the wall and left a pale blob hanging beside the cabin. */
+function buildWindowGeometry(z: number, scale = 1) {
+  const parts = [0.42, -0.95].map((wx) => {
+    const pane = new THREE.PlaneGeometry(0.42 * scale, 0.34 * scale)
+    pane.translate(wx, 0.62, z)
+    return pane
   })
+  const merged = mergeGeometries(parts, false)
+  for (const part of parts) part.dispose()
+  return merged
+}
 
-  return (
-    <group ref={groupRef} position={[cx, worldY(cx, cz), cz]} rotation={[0, turn, 0]}>
-      <primitive object={model} />
-      {seat && (
-        <mesh position={[0, hipY - 0.085, -0.06]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.095, 0.095, 0.62, 7]} />
-          <meshStandardMaterial ref={seatMatRef} color="#3E2E20" roughness={1} transparent opacity={0} />
-        </mesh>
-      )}
-    </group>
+/** Stone ring plus the log pile inside it, merged. */
+function buildFireBaseGeometry() {
+  const parts: THREE.BufferGeometry[] = []
+  const ring = new THREE.TorusGeometry(0.26, 0.045, 5, 9)
+  ring.rotateX(-Math.PI / 2)
+  ring.translate(0, 0.03, 0)
+  parts.push(paintGeometry(ring, new THREE.Color('#44423C')))
+  for (let i = 0; i < 3; i++) {
+    const log = new THREE.CylinderGeometry(0.038, 0.045, 0.42, 5)
+    log.rotateX(-1.15)
+    log.translate(0, 0.055, 0.05)
+    log.rotateY((i * Math.PI * 2) / 3 + 0.4)
+    parts.push(paintGeometry(log, new THREE.Color('#33251A')))
+  }
+  const merged = mergeGeometries(parts, false)
+  merged.computeVertexNormals()
+  for (const part of parts) part.dispose()
+  return merged
+}
+
+/** Outer flame over a paler core, merged and vertex-coloured — both are additive
+ *  and both flicker together, so there is no reason for two draw calls. */
+function buildFlameGeometry() {
+  const outer = new THREE.ConeGeometry(0.115, 0.32, 6)
+  outer.translate(0, 0.15, 0)
+  const inner = new THREE.ConeGeometry(0.058, 0.19, 6)
+  inner.translate(0, 0.11, 0)
+  const merged = mergeGeometries(
+    [paintGeometry(outer, new THREE.Color('#C25A12')), paintGeometry(inner, new THREE.Color('#FFD9A0'))],
+    false
   )
+  outer.dispose()
+  inner.dispose()
+  return merged
 }
 
 function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>; reduceMotion: boolean }) {
   const groupRef = useRef<THREE.Group>(null)
-  const armRef = useRef<THREE.Group>(null)
-  const flameRef = useRef<THREE.Group>(null)
+  const flameRef = useRef<THREE.Mesh>(null)
   const lightRef = useRef<THREE.PointLight>(null)
   const fadeRef = useRef(0)
   const fireFlickRef = useRef(1)
-  // Flipped once, on the way down, to start fetching the character model.
-  const [nearArrival, setNearArrival] = useState(false)
-  const adventurer = useAdventurer(nearArrival)
   const lamp = useLampTexture()
   const shade = useShadeTexture()
   const mist = useSoftMistTexture()
+
+  const cabin = useMemo(() => buildCabinGeometry(), [])
+  const panes = useMemo(() => buildWindowGeometry(0.756), [])
+  const glow = useMemo(() => buildWindowGeometry(0.785, 2.9), [])
+  const fireBase = useMemo(() => buildFireBaseGeometry(), [])
+  const flame = useMemo(() => buildFlameGeometry(), [])
+
   const y = useMemo(() => seatHeight(ARRIVAL.x, ARRIVAL.z), [])
-  // Every standing thing gets its own ground sample — otherwise a figure three
-  // units from the house floats or sinks by however much the slope moves.
   const fireY = useMemo(() => siteOffset(FIRE_AT.x, FIRE_AT.z, y), [y])
-  // The house is seated on the lowest corner of its own footprint, so anything
-  // sitting *outside* that footprint — the doorstep, the woodpile — is on ground
-  // the house never sampled, and floats wherever the slope falls away.
+  const logY = useMemo(() => siteOffset(SEAT_LOG_AT.x, SEAT_LOG_AT.z, y), [y])
   // Terrain-space anchors for the ground decals, which live outside the group.
   const fireXZ = useMemo(() => siteToTerrain(FIRE_AT.x, FIRE_AT.z), [])
-  const sitterXZ = useMemo(() => siteToTerrain(SITTER_AT.x, SITTER_AT.z), [])
-  const waverXZ = useMemo(() => siteToTerrain(WAVER_AT.x, WAVER_AT.z), [])
-  const stepY = useMemo(() => siteOffset(-0.45, 0.87, y), [y])
-  const woodY = useMemo(() => siteOffset(1.15, 0.2, y), [y])
-  // The firelight sits outside the fading group (see below), so it needs its
-  // position in terrain space rather than group space.
+  const logXZ = useMemo(() => siteToTerrain(SEAT_LOG_AT.x, SEAT_LOG_AT.z), [])
   const firePos = useMemo<[number, number, number]>(() => {
     const [tx, tz] = siteToTerrain(FIRE_AT.x, FIRE_AT.z)
-    // Held well above the logs on purpose. Sat down in the flame the light was
-    // ~0.35 from the woodpile and ~0.8 from the figures, and inverse-square turned
-    // that into a 4× difference — the logs blew out to white while the people
-    // stayed dark. Raised, the ratio drops to about 1.6× and the whole camp lights
-    // evenly.
+    // Held above the logs: sat down in the flame, inverse-square blew the nearest
+    // wood out to white while everything a metre away stayed dark.
     return [tx, worldY(tx, tz) + 0.78, tz]
   }, [])
 
@@ -1192,13 +1006,12 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
     // rather than as two different kinds of burning.
     const lampFlicker = 0.86 + Math.sin(t * 3.1) * 0.08 + Math.sin(t * 7.7) * 0.06
     const fireFlicker = 0.74 + Math.sin(t * 7.9) * 0.14 + Math.sin(t * 13.3) * 0.12
-
-    // The light is always mounted, and only its intensity moves. Adding or
-    // removing a light from the scene forces every lit material to recompile its
-    // shader — doing that at the moment of reveal would hitch exactly where the
-    // page most needs to be smooth.
     fireFlickRef.current = fireFlicker
-    if (!nearArrival && p > PRELOAD_FROM) setNearArrival(true)
+
+    // The light is always mounted and only its intensity moves. Adding or removing
+    // a light forces every lit material in the scene to recompile its shader, and
+    // doing that at the moment of reveal would hitch exactly where the page most
+    // needs to be smooth.
     if (lightRef.current) lightRef.current.intensity = k * fireFlicker * 3.4
 
     const g = groupRef.current
@@ -1208,11 +1021,9 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
       if (!g.visible) return
     }
 
-    // Traversed rather than tracked through two dozen ref callbacks: ~40 objects
-    // once a frame is nothing, and it keeps the JSX free of ref bookkeeping.
-    // Materials opt into a brightness ceiling and a flutter through userData, so
-    // a glow sprite can sit at 0.7 and a flame can gutter without either one
-    // needing its own ref threaded up here.
+    // Materials opt into a brightness ceiling and a flutter through userData, so a
+    // glow can sit at 0.7 and a flame can gutter without either needing its own
+    // ref threaded up here.
     if (g) {
       g.traverse((o) => {
         const m = (o as THREE.Mesh).material as THREE.Material | undefined
@@ -1223,16 +1034,11 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
       })
     }
 
-    // The flame breathes rather than scaling uniformly — taller and thinner as
-    // it flares, which is the shape change that reads as fire.
+    // The flame breathes rather than scaling uniformly — taller and thinner as it
+    // flares, which is the shape change that reads as fire.
     if (flameRef.current) {
       flameRef.current.scale.set(0.94 + fireFlicker * 0.14, 0.72 + fireFlicker * 0.42, 0.94 + fireFlicker * 0.14)
       flameRef.current.rotation.y = Math.sin(t * 2.3) * 0.3
-    }
-
-    // The wave only starts once you are actually close enough to be greeted.
-    if (armRef.current) {
-      armRef.current.rotation.z = -0.42 - Math.sin(t * 4.2) * 0.4 * k
     }
   })
 
@@ -1246,9 +1052,7 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
       {/* Ground contact. Without these the camp reads as hovering even though
           every piece of it is seated correctly — see the note on GroundDecal. */}
       <GroundDecal cx={ARRIVAL.x} cz={ARRIVAL.z} size={3.0} map={shade} color="#0A120C" strength={0.45} fadeRef={fadeRef} />
-      <GroundDecal cx={sitterXZ[0]} cz={sitterXZ[1]} size={1.0} map={shade} color="#0A120C" strength={0.42} fadeRef={fadeRef} />
-      <GroundDecal cx={waverXZ[0]} cz={waverXZ[1]} size={0.95} map={shade} color="#0A120C" strength={0.46} fadeRef={fadeRef} />
-      {/* The firelight on the grass, draped over the slope rather than laid flat. */}
+      <GroundDecal cx={logXZ[0]} cz={logXZ[1]} size={1.1} map={shade} color="#0A120C" strength={0.4} fadeRef={fadeRef} />
       <GroundDecal
         cx={fireXZ[0]}
         cz={fireXZ[1]}
@@ -1262,119 +1066,33 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
         flickRef={fireFlickRef}
       />
 
-      {/* The two people. Terrain-space siblings of the group below, so the
-          group's turn and 0.85 scale don't have to be unwound for them. */}
-      {adventurer && (
-        <>
-          <Adventurer
-            source={adventurer}
-            clip={CLIP_WAVE}
-            cx={waverXZ[0]}
-            cz={waverXZ[1]}
-            turn={ARRIVAL_TURN + WAVER_TURN}
-            fadeRef={fadeRef}
-          />
-          <Adventurer
-            source={adventurer}
-            pose={SITTING_POSE}
-            seat
-            cx={sitterXZ[0]}
-            cz={sitterXZ[1]}
-            turn={ARRIVAL_TURN + faceFire(SITTER_AT)}
-            fadeRef={fadeRef}
-          />
-        </>
-      )}
-
       <group ref={groupRef} position={[ARRIVAL.x, y, ARRIVAL.z]} rotation={[0, ARRIVAL_TURN, 0]} scale={ARRIVAL_SCALE}>
-          {/* ── The home ──
-          Timber matched to the ridge huts (#6B5540 walls / #8A7259 roof) rather
-          than picked fresh. A brighter pass read as plastic against the muted
-          slope, and more importantly it made the valley house look like it was
-          built of something other than the lamps up on the mountain. */}
-        {/* A stone plinth, slightly proud of the walls. Houses up here are built on
-          dry-stone footings because the ground moves, and visually it's what
-          stops the timber box from looking like it was dropped on the grass. */}
-        <mesh position={[0, -0.16, 0]}>
-          <boxGeometry args={[2.04, 0.6, 1.64]} />
-          <meshStandardMaterial color="#4B443C" roughness={1} transparent opacity={0} />
-        </mesh>
-        <mesh position={[0, 0.5, 0]}>
-          <boxGeometry args={[1.9, 1, 1.5]} />
-          <meshStandardMaterial color="#6B5540" emissive="#2E2113" emissiveIntensity={0.4} roughness={0.9} transparent opacity={0} />
-        </mesh>
-        {/* Hip roof. A 4-sided cone is a SQUARE pyramid, and the plan here is
-          1.9 × 1.5 — so a roof sized to overhang the walls by 0.2 at the sides
-          overhung by 0.4 front and back. It read as a pagoda on stilts, and the
-          eaves hanging out over open ground were what made the whole house look
-          like it was floating. The squash lives on a parent group rather than on
-          the mesh: three.js applies a mesh's own scale before its rotation, so
-          scaling the cone directly would shear the diamond instead of narrowing
-          the finished roof. */}
-        <group scale={[1, 1, 0.82]}>
-          <mesh position={[0, 1.22, 0]} rotation={[0, Math.PI / 4, 0]}>
-            <coneGeometry args={[1.57, 0.68, 4]} />
-            <meshStandardMaterial color="#8A7259" emissive="#3A2C1B" emissiveIntensity={0.3} roughness={0.85} transparent opacity={0} />
-          </mesh>
-        </group>
-        {/* Chimney */}
-        <mesh position={[0.55, 1.5, 0.15]}>
-          <boxGeometry args={[0.22, 0.55, 0.22]} />
-          <meshStandardMaterial color="#5E4B39" roughness={1} transparent opacity={0} />
-        </mesh>
-        {/* Door, with a stone step out of it — the step is what implies someone
-          walks in and out, rather than the door being painted on. */}
-        <mesh position={[-0.45, 0.34, 0.755]}>
-          <planeGeometry args={[0.4, 0.68]} />
-          <meshStandardMaterial color="#3B2C1E" roughness={1} transparent opacity={0} />
-        </mesh>
-        <mesh position={[-0.45, stepY + 0.05, 0.87]}>
-          <boxGeometry args={[0.54, 0.1, 0.24]} />
-          <meshStandardMaterial color="#4B443C" roughness={1} transparent opacity={0} />
-        </mesh>
-        {/* Two lit windows — the reason the whole thing reads as inhabited — each
-          with the same tight bloom the ridge huts use, so the light spills onto
-          the wall instead of stopping dead at the pane. fog={false} on both:
-          weather can dim the mountain, but it can never put the house out. */}
-        {[0.42, -0.95].map((wx, i) => (
-          <group key={i}>
-            <mesh position={[wx, 0.62, 0.756]}>
-              <planeGeometry args={[0.42, 0.34]} />
-              <meshBasicMaterial color="#FFD489" transparent opacity={0} fog={false} userData={{ flick: 'lamp' }} />
-            </mesh>
-            {/* Glazing bars. At 200px an unbroken rectangle of light reads as a
-              hole cut in the wall; two dark bars turn it into a window. */}
-            <mesh position={[wx, 0.62, 0.762]}>
-              <boxGeometry args={[0.028, 0.34, 0.008]} />
-              <meshStandardMaterial color="#2A1F14" roughness={1} transparent opacity={0} />
-            </mesh>
-            <mesh position={[wx, 0.62, 0.762]}>
-              <boxGeometry args={[0.42, 0.026, 0.008]} />
-              <meshStandardMaterial color="#2A1F14" roughness={1} transparent opacity={0} />
-            </mesh>
-            <sprite position={[wx, 0.62, 0.85]} scale={1.15}>
-              <spriteMaterial
-                map={lamp}
-                transparent
-                opacity={0}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-                fog={false}
-                userData={{ baseOpacity: 0.7, flick: 'lamp' }}
-              />
-            </sprite>
-          </group>
-        ))}
-        {/* Woodpile against the gable */}
-        <mesh position={[1.15, woodY + 0.16, 0.2]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.16, 0.16, 0.7, 6]} />
-          <meshStandardMaterial color="#4A3A29" roughness={1} transparent opacity={0} />
+        {/* The cabin — one mesh, one material, one draw call. */}
+        <mesh geometry={cabin}>
+          <meshStandardMaterial vertexColors emissive="#2E2113" emissiveIntensity={0.3} roughness={0.9} transparent opacity={0} />
         </mesh>
 
-        {/* Chimney smoke. The one detail that says somebody lit the stove before
-          you got here — and the reason the chimney is worth having at all. */}
+        {/* The lit panes, and their spill onto the wall. fog={false} on both:
+            weather can dim the mountain, but it can never put the house out. */}
+        <mesh geometry={panes}>
+          <meshBasicMaterial color="#FFD489" transparent opacity={0} fog={false} userData={{ flick: 'lamp' }} />
+        </mesh>
+        <mesh geometry={glow}>
+          <meshBasicMaterial
+            map={lamp}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            fog={false}
+            userData={{ baseOpacity: 0.5, flick: 'lamp' }}
+          />
+        </mesh>
+
+        {/* Chimney smoke — the one detail that says somebody lit the stove before
+            you got here, and the reason the chimney is worth having. */}
         <RisingParticles
-          position={[0.55, 1.82, 0.15]}
+          position={[0.55, 1.9, 0.15]}
           count={14}
           radius={0.08}
           rise={0.13}
@@ -1388,66 +1106,22 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
           fadeRef={fadeRef}
         />
 
-        {/* ── The fire ────────────────────────────────────────────────────────── */}
+        {/* ── The fire ── */}
         <group position={[FIRE_AT.x, fireY, FIRE_AT.z]}>
-          {/* Ring of stones. Five segments, not thirty — at this size the facets
-            read as rocks, where a smooth torus reads as a rubber tube. */}
-          <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.26, 0.045, 5, 9]} />
-            <meshStandardMaterial color="#44423C" roughness={1} transparent opacity={0} />
+          <mesh geometry={fireBase}>
+            <meshStandardMaterial vertexColors roughness={1} transparent opacity={0} />
           </mesh>
-
-          {/* Three logs in a low crossed pile. They were a tall teepee first, and
-            standing proud of the flame their dark uprights cut the bright cone
-            into a hard "A" — the fire read as a lit tent. Laid almost flat they
-            sit under the flame instead of in front of it. */}
-          {[0, 1, 2].map((i) => (
-            <group key={i} rotation={[0, (i * Math.PI * 2) / 3 + 0.4, 0]}>
-              <mesh position={[0, 0.055, 0.05]} rotation={[-1.15, 0, 0]}>
-                <cylinderGeometry args={[0.038, 0.045, 0.42, 5]} />
-                <meshStandardMaterial color="#33251A" roughness={1} transparent opacity={0} />
-              </mesh>
-            </group>
-          ))}
-
-          {/* Flame: two additive cones, outer amber over a smaller near-white
-            core. Deliberately small and mostly transparent — the first pass was
-            a big opaque cone and it read as a lit tent, not a fire. What sells a
-            fire at this size is the glow it throws and the way it moves, so the
-            geometry stays modest and the bloom does the work. Basic materials
-            with fog off: a fire that dims with distance haze looks like a
-            sticker of a fire. */}
-          <group ref={flameRef} position={[0, 0.13, 0]}>
-            <mesh position={[0, 0.15, 0]}>
-              <coneGeometry args={[0.115, 0.32, 6]} />
-              <meshBasicMaterial
-                color="#FF7A1E"
-                transparent
-                opacity={0}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-                fog={false}
-                userData={{ baseOpacity: 0.62, flick: 'fire' }}
-              />
-            </mesh>
-            <mesh position={[0, 0.11, 0]}>
-              <coneGeometry args={[0.058, 0.19, 6]} />
-              <meshBasicMaterial
-                color="#FFD9A0"
-                transparent
-                opacity={0}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-                fog={false}
-                userData={{ baseOpacity: 0.7, flick: 'fire' }}
-              />
-            </mesh>
-          </group>
-
-          {/* Bloom around the flame, and a pool of light on the ground. The pool is
-            a flat plane rather than a sprite: a sprite billboards to face the
-            camera, so light meant to lie on the grass would stand up like a wall
-            as the descent came down to eye level. */}
+          <mesh ref={flameRef} geometry={flame} position={[0, 0.13, 0]}>
+            <meshBasicMaterial
+              vertexColors
+              transparent
+              opacity={0}
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+              fog={false}
+              userData={{ baseOpacity: 0.72, flick: 'fire' }}
+            />
+          </mesh>
           <sprite position={[0, 0.2, 0]} scale={1.05}>
             <spriteMaterial
               map={lamp}
@@ -1459,7 +1133,6 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
               userData={{ baseOpacity: 0.6, flick: 'fire' }}
             />
           </sprite>
-
           <RisingParticles
             position={[0, 0.2, 0]}
             count={26}
@@ -1476,6 +1149,19 @@ function Arrival({ progressRef, reduceMotion }: { progressRef: RefObject<number>
             fadeRef={fadeRef}
           />
         </group>
+
+        {/* A log to sit on, laid across the fire rather than pointing at it.
+            Empty on purpose: an unoccupied seat by a lit fire says someone is
+            here without having to draw them. */}
+        <mesh
+          position={[SEAT_LOG_AT.x, logY + 0.1, SEAT_LOG_AT.z]}
+          rotation={[0, faceFire(SEAT_LOG_AT) + Math.PI / 2, Math.PI / 2]}
+        >
+          <cylinderGeometry args={[0.115, 0.107, 0.8, 7]} />
+          {/* Lighter than a shadowed log would be, so the firelight actually
+              registers on it and it reads as a seat someone left. */}
+          <meshStandardMaterial color="#4E3A28" roughness={1} transparent opacity={0} />
+        </mesh>
       </group>
     </>
   )

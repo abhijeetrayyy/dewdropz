@@ -89,12 +89,23 @@ export default function SummitHero({ collections = [] }: { collections?: Collect
   // Stop rendering the moment the hero leaves the viewport, and pick it up again
   // on the way back. A generous margin means the loop is already running before
   // any of the scene is actually visible, so there is never a stalled first frame.
+  //
+  // Reports from a hidden document are ignored on purpose. A backgrounded tab has
+  // no rendering opportunities, so its observer reports nothing intersecting —
+  // and acting on that pinned the loop off permanently, leaving the canvas at its
+  // unsized 300x150 default with no scene in it at all. Hidden tabs don't need
+  // this anyway: browsers already throttle rAF to a stop on their own, and they
+  // do it better, because they also know when to start again.
   useEffect(() => {
     const section = sectionRef.current
     if (!section || typeof IntersectionObserver === 'undefined') return
-    const io = new IntersectionObserver((entries) => setInView(entries[0]?.isIntersecting ?? true), {
-      rootMargin: '200px 0px',
-    })
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (document.visibilityState === 'hidden') return
+        setInView(entries[0]?.isIntersecting ?? true)
+      },
+      { rootMargin: '200px 0px' }
+    )
     io.observe(section)
     return () => io.disconnect()
   }, [])

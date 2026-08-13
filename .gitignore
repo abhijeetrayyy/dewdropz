@@ -39,8 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Upstream character archive. Contains only Adventurer.fbx, which nothing in the
-# build consumes — decimate.mjs reads adventurer-original.glb. Kept on disk for
-# reference; re-downloadable from quaternius.com (CC0) if ever needed.
-assets-src/character/*.zip
