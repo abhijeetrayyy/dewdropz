@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { resolveAssetUrl } from "@/lib/customize/assetUrl";
 import { SkeletonProductGrid } from "@/components/ui/Skeleton";
+import { useTabBarSpace } from "@/components/TabBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Icon } from "@/components/ui/Icon";
@@ -41,6 +42,7 @@ const SPECS = [
 // and a spec table so the "is this actually good cotton?" question is answered
 // before it's asked.
 export default function DesignTabScreen() {
+  const tabSpace = useTabBarSpace();
   const insets = useSafeAreaInsets();
   const { data: products = [], isLoading, isError, refetch } = useCustomizableProductsQuery();
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -48,7 +50,7 @@ export default function DesignTabScreen() {
   return (
     <View style={s.root}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: S.block }}
+        contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: S.block + tabSpace }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ink} />}
       >
@@ -102,7 +104,7 @@ export default function DesignTabScreen() {
                   const available = colors.filter((c) => c.available);
                   const cover = resolveAssetUrl(available[0]?.front?.mockupImage ?? p.images?.[0]);
                   return (
-                    <Animated.View key={p.id} entering={FadeInDown.delay(i * 70).springify().damping(18)}>
+                    <Animated.View key={p.id} entering={FadeInDown.delay(i * 70).duration(380)}>
                       <TouchableOpacity
                         activeOpacity={0.94}
                         onPress={() => {

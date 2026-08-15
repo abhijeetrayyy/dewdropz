@@ -1,5 +1,5 @@
 import { Text, TextStyle } from "react-native";
-import { F } from "@/lib/theme";
+import { C, F } from "@/lib/theme";
 
 // Material Symbols Rounded is a ligature icon font: the *word* "home" shapes
 // into the home glyph via the font's GSUB table. RN can't animate a variable
@@ -16,7 +16,7 @@ type Props = {
   style?: TextStyle;
 };
 
-export function Icon({ name, size = 24, color = "#17231D", filled = false, style }: Props) {
+export function Icon({ name, size = 24, color = C.ink, filled = false, style }: Props) {
   return (
     <Text
       style={[

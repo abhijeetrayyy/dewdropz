@@ -1,15 +1,21 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { Swipeable } from "react-native-gesture-handler";
+// The Reanimated implementation. The legacy `Swipeable` exported from the
+// package root is marked `@deprecated use Reanimated version of Swipeable
+// instead` — it drives the row off the old Animated API, on the JS thread.
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeOutLeft, LinearTransition } from "react-native-reanimated";
 import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { formatPrice } from "@/lib/utils";
 import { ProductCard } from "@/components/ProductCard";
+import { StatusCap } from "@/components/ui/StatusCap";
+import { useTabBarSpace } from "@/components/TabBar";
 import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
+import { Topography } from "@/components/editorial/Topography";
 import { SectionHead } from "@/components/editorial/SectionHead";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Body, Display1, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
@@ -39,6 +45,8 @@ export default function CartScreen() {
 // line the moment it's cleared.
 function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_W } = useWindowDimensions();
+  const tabSpace = useTabBarSpace();
   const { data: allProducts = [] } = useProductsQuery();
   const cartSlugs = items.map((i: any) => i.slug);
   const recs = getCartRecommendations(allProducts as any, cartSlugs, 6);
@@ -50,20 +58,39 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
 
   return (
     <View style={s.root}>
-      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
-        <View style={s.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Eyebrow>Ready to go</Eyebrow>
-            <Display1 style={{ marginTop: 8 }}>Your pack</Display1>
+      <StatusCap />
+      {/* Same ink panel as every other screen's header, carrying the two
+          figures that matter here. The pack used to open on a cream bar and a
+          hairline — indistinguishable from Saved, Orders or Settings. */}
+      <View style={[s.panel, { paddingTop: insets.top + 12 }]}>
+        <Topography
+          width={SCREEN_W}
+          height={260}
+          color={C.sage}
+          opacity={0.12}
+          lines={8}
+          seed={5.1}
+          originX={0.8}
+          originY={0.3}
+        />
+        <View style={{ paddingHorizontal: S.gutter }}>
+          <Text style={s.panelEyebrow}>READY TO GO</Text>
+          <Text style={s.panelTitle}>Your pack</Text>
+          <View style={s.panelStats}>
+            <View style={s.panelStat}>
+              <Text style={s.panelStatV}>{cnt}</Text>
+              <Text style={s.panelStatL}>{cnt === 1 ? "PIECE" : "PIECES"}</Text>
+            </View>
+            <View style={s.panelStatRule} />
+            <View style={s.panelStat}>
+              <Text style={s.panelStatV}>{formatPrice(tot)}</Text>
+              <Text style={s.panelStatL}>SUBTOTAL</Text>
+            </View>
           </View>
-          <Mono color={C.textMuted}>
-            {cnt} {cnt === 1 ? "PIECE" : "PIECES"}
-          </Mono>
         </View>
-        <Rule weight="ink" style={{ marginTop: S.lg }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 260 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 260 + tabSpace }} showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: S.gutter }}>
           {items.map((it: any, i: number) => (
             <Animated.View
@@ -105,13 +132,25 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
                       <View style={s.qty}>
                         <TouchableOpacity
                           onPress={() => {
-                            haptics.select();
+                            // Stepping down from 1 removes the line. The store
+                            // has always done that, but the button gave the
+                            // same quiet selection tick as any other decrement,
+                            // so an item vanished with no acknowledgement —
+                            // swipe-to-delete, the deliberate gesture, was the
+                            // only removal that said anything.
+                            const last = it.quantity <= 1;
+                            if (last) {
+                              haptics.warning();
+                              toast.show("Removed from pack");
+                            } else {
+                              haptics.select();
+                            }
                             updateQuantity(it.productId, it.quantity - 1, it.size, it.customDesignId);
                           }}
                           hitSlop={10}
-                          accessibilityLabel="Decrease quantity"
+                          accessibilityLabel={it.quantity <= 1 ? "Remove from pack" : "Decrease quantity"}
                         >
-                          <Icon name="remove" size={17} color={C.textMid} />
+                          <Icon name={it.quantity <= 1 ? "delete" : "remove"} size={17} color={C.textMid} />
                         </TouchableOpacity>
                         <Text style={s.qtyV}>{it.quantity}</Text>
                         <TouchableOpacity
@@ -165,8 +204,13 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
         ) : null}
       </ScrollView>
 
-      {/* ── Summary ─────────────────────────────────────────────────────── */}
-      <View style={[s.summary, { paddingBottom: insets.bottom + 14 }]}>
+      {/* ── Summary ───────────────────────────────────────────────────────
+          Offset by the floating tab bar's footprint rather than pinned to 0.
+          The bar no longer sits in layout flow (it floats over the page), so
+          `bottom: 0` would put the checkout button underneath it. `tabSpace`
+          is the one number that describes that footprint — see
+          components/TabBar.tsx. ──────────────────────────────────────────── */}
+      <View style={[s.summary, { bottom: tabSpace }]}>
         <View style={s.shipRow}>
           <Mono color={qualifies ? C.forest : C.textMuted}>
             {qualifies ? "FREE SHIPPING UNLOCKED" : `${formatPrice(remaining)} TO FREE SHIPPING`}
@@ -208,12 +252,13 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
 
 function EmptyPack() {
   const insets = useSafeAreaInsets();
+  const tabSpace = useTabBarSpace();
   const { slugs } = useWishlistStore();
   const { data: saved = [] } = useProductsBySlugsQuery(slugs.slice(0, 4));
 
   return (
     <View style={s.root}>
-      <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: S.section + tabSpace }} showsVerticalScrollIndicator={false}>
         <View style={[s.header, { paddingTop: insets.top + 14 }]}>
           <Eyebrow>Empty</Eyebrow>
           <Display1 style={{ marginTop: 8 }}>Your pack</Display1>
@@ -249,6 +294,7 @@ function EmptyPack() {
                       price={p.price}
                       imageUri={p.images?.[0] ?? ""}
                       meta={p.collection?.name}
+                      variants={p.variants}
                       showQuickAdd
                     />
                   </View>
@@ -266,6 +312,20 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
   header: { paddingHorizontal: S.gutter, paddingBottom: S.md },
   headerRow: { flexDirection: "row", alignItems: "flex-end", gap: S.md },
+  panel: {
+    backgroundColor: C.ink,
+    overflow: "hidden",
+    borderBottomLeftRadius: R.sheet,
+    borderBottomRightRadius: R.sheet,
+    paddingBottom: S.lg,
+  },
+  panelEyebrow: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 1.9, color: C.sage },
+  panelTitle: { fontFamily: F.display, fontSize: 40, lineHeight: 42, letterSpacing: -0.2, color: C.paper, marginTop: 8 },
+  panelStats: { flexDirection: "row", marginTop: S.lg },
+  panelStat: { flex: 1 },
+  panelStatRule: { width: 1, backgroundColor: "rgba(251,247,239,0.14)", marginHorizontal: S.md },
+  panelStatV: { fontFamily: F.display, fontSize: 26, lineHeight: 30, color: C.paper },
+  panelStatL: { fontFamily: F.mono, fontSize: 9, letterSpacing: 1.2, color: "rgba(251,247,239,0.5)", marginTop: 4 },
 
   item: { flexDirection: "row", gap: S.md, alignItems: "flex-start", paddingVertical: S.lg, backgroundColor: C.paper },
   swipeDelete: { backgroundColor: C.danger, width: 68, alignItems: "center", justifyContent: "center", borderRadius: R.card, marginVertical: S.md },
@@ -277,7 +337,6 @@ const s = StyleSheet.create({
 
   summary: {
     position: "absolute",
-    bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: C.paper,
@@ -285,6 +344,7 @@ const s = StyleSheet.create({
     borderTopColor: C.ruleSoft,
     paddingHorizontal: S.gutter,
     paddingTop: S.md,
+    paddingBottom: S.md,
     ...SHADOW_BAR,
   },
   shipRow: { flexDirection: "row", alignItems: "center", gap: 6 },

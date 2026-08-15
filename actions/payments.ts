@@ -6,10 +6,9 @@ import crypto from 'crypto'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { getStripe } from '@/lib/stripe'
 import { getCart } from './cart'
-import { createOrder, sendOrderConfirmationIfFirstTime } from './orders'
+import { createOrder } from './orders'
 import { setPaymentStatusInternal } from '@/lib/orders-internal'
-import { sendPaymentFailedEmail } from '@/lib/email'
-import { sendSlackAlert } from '@/lib/slack'
+import { enqueue } from '@/lib/jobs'
 import { requireAdmin } from './auth'
 import type Stripe from 'stripe'
 
@@ -20,8 +19,10 @@ async function notifyPaymentFailed(orderId: string) {
   const supabase = createAdminSupabaseClient()
   const { data: order } = await supabase.from('orders').select('email, order_number').eq('id', orderId).single()
   if (!order) return
-  await sendPaymentFailedEmail({ email: order.email, orderNumber: order.order_number }).catch(() => {})
-  await sendSlackAlert(`:x: Payment failed for order ${order.order_number} (${order.email}).`)
+  // Queued rather than sent here: this runs inside a webhook, and an email
+  // provider having a bad minute must not decide whether the webhook succeeds.
+  await enqueue('payment.failed', { email: order.email, orderNumber: order.order_number })
+  await enqueue('slack.alert', { text: `:x: Payment failed for order ${order.order_number} (${order.email}).` })
 }
 
 export async function createStripeCheckoutSession(input: {
@@ -33,6 +34,9 @@ export async function createStripeCheckoutSession(input: {
   billing_address_id?: string
   coupon_code?: string
   notes?: string
+  /** One per checkout attempt. Without it a retried "pay" creates a second
+   *  order AND a second gateway intent — the customer can be charged twice. */
+  idempotencyKey?: string
 }) {
   const orderResult = await createOrder({
     ...input,
@@ -86,6 +90,8 @@ export async function createRazorpayOrder(input: {
   billing_address_id?: string
   coupon_code?: string
   notes?: string
+  /** See the Stripe entry point above — same reasoning. */
+  idempotencyKey?: string
 }) {
   const orderResult = await createOrder({
     ...input,
@@ -183,7 +189,7 @@ export async function verifyStripeWebhook(payload: string, signature: string) {
             .from('orders')
             .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
             .eq('id', orderId)
-          if (!alreadyPaid) await sendOrderConfirmationIfFirstTime(orderId).catch(() => {})
+          if (!alreadyPaid) await enqueue('order.confirmation', { orderId })
         }
         break
       }
@@ -286,7 +292,7 @@ export async function verifyRazorpayWebhook(rawBody: string, signature: string) 
               .from('orders')
               .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
               .eq('id', order.id)
-            if (!alreadyPaid) await sendOrderConfirmationIfFirstTime(order.id).catch(() => {})
+            if (!alreadyPaid) await enqueue('order.confirmation', { orderId: order.id })
           }
         }
         break
@@ -359,7 +365,7 @@ export async function verifyRazorpayPayment(input: {
     .from('orders')
     .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
     .eq('id', order.id)
-  if (!alreadyPaid) await sendOrderConfirmationIfFirstTime(order.id).catch(() => {})
+  if (!alreadyPaid) await enqueue('order.confirmation', { orderId: order.id })
 
   return { success: true }
 }

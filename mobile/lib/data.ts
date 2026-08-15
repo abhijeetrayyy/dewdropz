@@ -33,6 +33,8 @@ export type CustomizationConfig = { colors: CustomizationColorway[] };
 export type Product = {
   id: string; slug: string; name: string; price: number;
   images: string[]; collection?: { id: string; slug: string; name: string };
+  /** Taxonomy junction rows — a product can sit in several categories. */
+  categories?: { category_id: string; is_primary?: boolean }[];
   variants?: { id: string; name: string; price_adjustment: number; inventory_quantity?: number | null }[];
   description?: string; short_description?: string;
   compare_at_price?: number | null;
@@ -50,8 +52,12 @@ export type Product = {
 // detail select) so the "N LEFT" / "NEW" tags on grid/rail cards have real
 // data to render against — without these, ProductCard's badge logic is
 // silently dead on every list screen even though the JSX is correct.
+// `categories` joins the taxonomy junction so list screens can filter by
+// category the same way the web shop does (ShopContent.tsx matches on
+// `product.categories?.some(...)`). Mobile had no category axis at all — the
+// tables have existed since migration 004 and nothing on the phone read them.
 const PRODUCT_SELECT =
-  "id,slug,name,price,images,collection:collections(id,slug,name),variants:product_variants(id,name,price_adjustment),description,short_description,compare_at_price,is_customizable,inventory_quantity,created_at";
+  "id,slug,name,price,images,collection:collections(id,slug,name),categories:product_categories(category_id,is_primary),variants:product_variants(id,name,price_adjustment),description,short_description,compare_at_price,is_customizable,inventory_quantity,created_at";
 
 // Only the customizable blanks, with the colourway config the studio and the
 // home showcase need. Kept separate from PRODUCT_SELECT so ordinary list
@@ -165,12 +171,42 @@ export async function getProductsByCollection(collectionSlug: string): Promise<P
 
 export type CollectionRow = {
   id: string; slug: string; name: string; tagline: string | null; image_url: string | null;
+  description?: string | null;
+  /** CSS gradient string authored in admin. Parsed for native use by
+   *  `lib/gradient.ts` — it's the one piece of per-collection art direction
+   *  that exists for every collection whether or not it has a photograph. */
+  gradient?: string | null;
 };
+
+export type CategoryRow = {
+  id: string; slug: string; name: string;
+  description: string | null;
+  image_url: string | null;
+  parent_id: string | null;
+  sort_order: number;
+};
+
+// The product taxonomy — four top-level categories since migration 004, and
+// never surfaced on mobile until now. This is the axis a shopper with a trek
+// booked actually navigates by ("I need a shell"), as opposed to collections,
+// which are the brand's editorial grouping ("Silent Altitude").
+export async function getCategories(): Promise<CategoryRow[]> {
+  const { data } = await supabase
+    .from("categories")
+    .select("id,slug,name,description,image_url,parent_id,sort_order")
+    .eq("is_active", true)
+    .is("parent_id", null)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  return (data ?? []).map((c) => ({ ...c, image_url: resolveAssetUrl(c.image_url) })) as CategoryRow[];
+}
 
 export async function getCollections(): Promise<CollectionRow[]> {
   const { data } = await supabase
     .from("collections")
-    .select("id,slug,name,tagline,image_url")
+    .select("id,slug,name,tagline,image_url,description,gradient")
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
   return (data ?? []).map((c) => ({ ...c, image_url: resolveAssetUrl(c.image_url) }));
@@ -277,7 +313,23 @@ export type Order = {
   // `image` is resolved server-side from whichever of design preview / product
   // photo is available (see getOrderById) so screens don't need to know the
   // fallback order themselves.
-  items?: { product_name?: string; quantity: number; unit_price?: number; image?: string | null }[];
+  // `product` is joined on the detail query so "Buy again" can put the same
+  // pieces back in the cart. Without it an order line carried a name and a
+  // price but nothing that identified the product, so the button could only
+  // ever dump the customer in the shop.
+  items?: {
+    product_name?: string;
+    quantity: number;
+    unit_price?: number;
+    image?: string | null;
+    product?: {
+      id: string;
+      slug: string;
+      price: number;
+      images?: string[];
+      variants?: { id: string; name: string; inventory_quantity?: number | null }[];
+    } | null;
+  }[];
 };
 
 // Orders never had a `lib/data.ts` wrapper — both order screens queried
@@ -287,23 +339,41 @@ export type Order = {
 export async function getOrders(userId: string): Promise<Order[]> {
   const { data, error } = await supabase
     .from("orders")
-    // `items` is joined here purely for its length — the orders list shows
-    // "N pieces" per row, and without the join `items` was always undefined,
-    // so every order in the list rendered "0 pieces" regardless of contents.
-    // Only `quantity` is selected: enough to sum, far lighter than pulling
-    // product names and prices for rows that never display them.
-    .select("id,order_number,status,payment_status,total_amount,subtotal,shipping_cost,created_at,items:order_items(quantity)")
+    // `product_name` joins alongside `quantity` because the list row names what
+    // was bought. It used to select `quantity` alone — described as "far lighter
+    // than pulling product names for rows that never display them" — which is
+    // precisely why every row could only say "1 piece", "2 pieces". A purchase
+    // history that doesn't say what you purchased isn't history. The thumbnail
+    // is joined too, so a row can show the thing rather than describe it.
+    .select(
+      "id,order_number,status,payment_status,total_amount,subtotal,shipping_cost,created_at," +
+        "items:order_items(quantity,product_name,product:products(images))",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as Order[];
+
+  // Product images are stored as site-relative paths ("/custom/tshirt/...")
+  // because the web app serves them out of /public. A native app has no origin
+  // to resolve those against, so they load as nothing — which is why the
+  // catalogue queries all run through `resolveImages`. The order queries never
+  // did, so every thumbnail here was a blank grey rectangle.
+  return ((data ?? []) as unknown as Order[]).map((o) => ({
+    ...o,
+    items: o.items?.map((it) => ({
+      ...it,
+      product: it.product
+        ? { ...it.product, images: (it.product.images ?? []).map(resolveAssetUrl).filter(Boolean) }
+        : it.product,
+    })),
+  }));
 }
 
 export async function getOrderById(id: string): Promise<Order> {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "*,items:order_items(product_name,quantity,unit_price,design:custom_designs(front_preview_url,back_preview_url),product:products(images))"
+      "*,items:order_items(product_name,quantity,unit_price,design:custom_designs(front_preview_url,back_preview_url),product:products(id,slug,price,images,variants:product_variants(id,name,inventory_quantity)))"
     )
     .eq("id", id)
     .single();
@@ -315,14 +385,23 @@ export async function getOrderById(id: string): Promise<Order> {
     items?: {
       product_name?: string; quantity: number; unit_price?: number;
       design?: { front_preview_url?: string | null; back_preview_url?: string | null } | null;
-      product?: { images?: string[] } | null;
+      product?: NonNullable<Order["items"]>[number]["product"];
     }[];
   } & Record<string, unknown>;
   const items = raw.items?.map((item) => ({
     product_name: item.product_name,
     quantity: item.quantity,
     unit_price: item.unit_price,
-    image: item.design?.front_preview_url ?? item.design?.back_preview_url ?? item.product?.images?.[0] ?? null,
+    // `resolveAssetUrl` on every branch: design previews are absolute Supabase
+    // storage URLs and pass straight through, but the product-photo fallback is
+    // a site-relative path that a native app cannot fetch as-is.
+    image:
+      resolveAssetUrl(
+        item.design?.front_preview_url ?? item.design?.back_preview_url ?? item.product?.images?.[0],
+      ) || null,
+    product: item.product
+      ? { ...item.product, images: (item.product.images ?? []).map(resolveAssetUrl).filter(Boolean) }
+      : null,
   }));
   return { ...raw, items } as unknown as Order;
 }

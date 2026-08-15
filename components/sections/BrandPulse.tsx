@@ -50,7 +50,7 @@ export default function BrandPulse({ stats = [] }: { stats?: HomeStat[] }) {
   }, [stats])
 
   return (
-    <section ref={sectionRef} className="relative bg-ink px-6 md:px-10 py-28 md:py-36 overflow-hidden">
+    <section ref={sectionRef} className="relative bg-forest-deep border-t border-paper/10 px-6 md:px-10 py-28 md:py-36 overflow-hidden">
       <Image
         src={STATS_BG_IMAGE}
         alt="Sunrise over a Himalayan summit, seen from above the clouds"

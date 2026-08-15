@@ -69,7 +69,6 @@ export {
   updateOrderStatus,
   updatePaymentStatus,
   getAllOrders,
-  addTrackingInfo,
   cancelOrder,
   cancelOrderAsAdmin,
   refundOrder,

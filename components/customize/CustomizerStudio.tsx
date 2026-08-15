@@ -112,6 +112,8 @@ export default function CustomizerStudio({
         back_preview_url?: string
         front_print_url?: string
         back_print_url?: string
+        front_print_dpi?: number
+        back_print_dpi?: number
       } = {}
       let cartImage = product.images?.[0] ?? ''
       let lowestDpi = Infinity
@@ -138,6 +140,7 @@ export default function CustomizerStudio({
 
         payload[`${side}_design`] = canvas.toJSON() as unknown as Json
         payload[`${side}_print_url`] = printUrl
+        payload[`${side}_print_dpi`] = print.dpi
         payload[`${side}_preview_url`] = previewUrl
         if (side === sides[0]) cartImage = previewUrl
       }

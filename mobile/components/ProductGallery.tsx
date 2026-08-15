@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Modal, StyleSheet, Text, TouchableOpacity, View , useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Easing,
   Extrapolation,
   interpolate,
   SharedValue,
@@ -16,8 +17,12 @@ import { C, F, R, S } from "@/lib/theme";
 import { Icon } from "@/components/ui/Icon";
 import { haptics } from "@/lib/haptics";
 
-const { width: W, height: SCREEN_H } = Dimensions.get("window");
-const GALLERY_H = Math.round(SCREEN_H * 0.6);
+// NOTE: window size is measured per render via `useWindowDimensions`, never
+// captured at module scope with `Dimensions.get()`. A module-scope read happens
+// once at import and is then wrong forever — after a rotation, in Android
+// split-screen, on a foldable being unfolded, or in an iPad Slide Over. This
+// gallery is the worst place for that: page width drives paging maths, so a
+// stale W makes swipes land between photos.
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 function ZoomableImage({ uri }: { uri: string }) {
@@ -73,6 +78,8 @@ function ZoomableImage({ uri }: { uri: string }) {
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
   }));
 
+  const { width: W, height: SCREEN_H } = useWindowDimensions();
+
   return (
     <GestureDetector gesture={Gesture.Race(doubleTap, Gesture.Simultaneous(pinch, pan))}>
       {/* Full-SCREEN page, not a W×W square. The square version pinned every
@@ -107,6 +114,8 @@ type Props = { images: string[]; discountPct?: number; isNew?: boolean };
 
 export function ProductGallery({ images, discountPct, isNew }: Props) {
   const insets = useSafeAreaInsets();
+  const { width: W, height: SCREEN_H } = useWindowDimensions();
+  const GALLERY_H = Math.round(SCREEN_H * 0.6);
   const list = images.length ? images : [""];
   const [page, setPage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -119,7 +128,7 @@ export function ProductGallery({ images, discountPct, isNew }: Props) {
   const badge = discountPct ? { label: `−${discountPct}%`, bg: C.rust, fg: C.paper } : isNew ? { label: "NEW", bg: C.ink, fg: C.paper } : null;
 
   return (
-    <View style={s.wrap}>
+    <View style={[s.wrap, { height: GALLERY_H }]}>
       <Animated.ScrollView
         horizontal
         pagingEnabled
@@ -139,12 +148,24 @@ export function ProductGallery({ images, discountPct, isNew }: Props) {
               setPage(i);
               setLightboxOpen(true);
             }}
-            style={s.slide}
+            style={{ width: W, height: GALLERY_H }}
           >
             {img ? (
-              <Image source={{ uri: img }} style={s.slideImg} contentFit="cover" transition={220} alt="" />
+              // Slide 0 settles in from very slightly oversized rather than
+              // cutting straight to its final frame, so arriving from a grid
+              // card reads as the photograph coming to rest.
+              //
+              // This is deliberately NOT a shared-element transition. Reanimated
+              // 4.5.1 ships `sharedTransitionTag` behind a STATIC feature flag
+              // (`ENABLE_SHARED_ELEMENT_TRANSITIONS`) that is compiled into the
+              // native binary as false — verified in the build's own compiler
+              // flags. Enabling it means patching node_modules and rebuilding,
+              // so tagging views here would add props that silently do nothing.
+              <ArrivingSlide isLead={i === 0} width={W} height={GALLERY_H}>
+                <Image source={{ uri: img }} style={{ width: W, height: GALLERY_H }} contentFit="cover" transition={220} alt="" />
+              </ArrivingSlide>
             ) : (
-              <View style={s.slidePh}>
+              <View style={[s.slidePh, { width: W, height: GALLERY_H }]}>
                 <Text style={s.slidePhT}>DEWDROPZ</Text>
               </View>
             )}
@@ -206,7 +227,39 @@ export function ProductGallery({ images, discountPct, isNew }: Props) {
   );
 }
 
+/**
+ * The lead slide settles in from ~6% oversized instead of cutting to its final
+ * frame, so arriving from a grid card reads as the photograph coming to rest
+ * rather than the screen swapping under you.
+ *
+ * A canned `ZoomIn` is wrong here — it starts at scale 0, which is an entrance,
+ * not a settle. The point is that the image is already there and only finishes
+ * moving.
+ */
+function ArrivingSlide({
+  isLead,
+  width,
+  height,
+  children,
+}: {
+  isLead: boolean;
+  width: number;
+  height: number;
+  children: React.ReactNode;
+}) {
+  const scale = useSharedValue(isLead ? 1.06 : 1);
+  useEffect(() => {
+    if (!isLead) return;
+    scale.value = withTiming(1, { duration: 420, easing: Easing.bezier(0.22, 1, 0.36, 1) });
+  }, [isLead, scale]);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return <Animated.View style={[{ width, height, overflow: "hidden" }, style]}>{children}</Animated.View>;
+}
+
 function Segment({ index, scrollX }: { index: number; scrollX: SharedValue<number> }) {
+  const { width: W } = useWindowDimensions();
   const style = useAnimatedStyle(() => ({
     opacity: interpolate(
       scrollX.value,
@@ -219,10 +272,8 @@ function Segment({ index, scrollX }: { index: number; scrollX: SharedValue<numbe
 }
 
 const s = StyleSheet.create({
-  wrap: { height: GALLERY_H, overflow: "hidden", backgroundColor: C.sand },
-  slide: { width: W, height: GALLERY_H },
-  slideImg: { width: W, height: GALLERY_H },
-  slidePh: { width: W, height: GALLERY_H, backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
+  wrap: { overflow: "hidden", backgroundColor: C.sand },
+  slidePh: { backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
   slidePhT: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 4, color: "rgba(251,247,239,0.35)" },
   badge: { position: "absolute", left: S.gutter, borderRadius: R.tag, paddingHorizontal: 8, paddingVertical: 4 },
   badgeT: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 1 },

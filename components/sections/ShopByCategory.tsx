@@ -21,7 +21,17 @@ export default function ShopByCategory({
     ? featuredSlugs.map((s) => categories.find((c) => c.slug === s)).filter((c): c is Category => Boolean(c))
     : categories
 
-  if (shown.length === 0) return null
+  // A category tile with nothing behind it is a dead end: the shopper taps
+  // "Bottles & Extras" and lands on an empty shop. `product_categories` is
+  // currently empty, so every tile on this page was one — 757px of scroll
+  // promoting four doors that all opened onto nothing. Tiles now have to be
+  // stocked to appear, and with none stocked the section stands down entirely
+  // rather than holding its shape with hollow promises.
+  const stocked = shown.filter((tile) =>
+    products.some((p) => p.categories?.some((pc) => pc.category_id === tile.id))
+  )
+
+  if (stocked.length === 0) return null
 
   return (
     // Early afternoon on the page's clock — paper warms a step past midday.
@@ -46,7 +56,7 @@ export default function ShopByCategory({
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {shown.map((tile) => {
+          {stocked.map((tile) => {
             const count = products.filter((p) => p.categories?.some((pc) => pc.category_id === tile.id)).length
             return (
               <Link

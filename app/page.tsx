@@ -41,12 +41,17 @@ export default async function Home() {
   ])
   const { season_kit, climb, featured_collection_slugs, featured_category_slugs, stats } = settings.home_config
 
+  // Whether the pack-check section has anything real to send people to.
+  const hasStockedCategory = categories.some((c) =>
+    products.some((p) => p.categories?.some((pc) => pc.category_id === c.id))
+  )
+
   return (
     <>
       <NavBar />
       <TrailSpine />
       <main>
-        <SummitHero collections={collections} />
+        <SummitHero products={products} collections={collections} />
         <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="First light">
           <TrustBand />
         </div>
@@ -59,19 +64,36 @@ export default async function Home() {
         <div data-trail-time="11:00" data-trail-alt="4,500M" data-trail-label="The ridge">
           <CollectionsRow collections={collections} featuredSlugs={featured_collection_slugs} />
         </div>
-        <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
-          <ShopByCategory categories={categories} products={products} featuredSlugs={featured_category_slugs} />
-        </div>
-        <ShowcaseRails rails={rails} />
+        {/* Same rule as Community below: a section that stands down has to take
+            its trail chapter with it, or the HUD announces a stop that isn't
+            there. ShopByCategory suppresses itself when no category has stock. */}
+        {hasStockedCategory && (
+          <div data-trail-time="13:00" data-trail-alt="4,100M" data-trail-label="Pack check">
+            <ShopByCategory categories={categories} products={products} featuredSlugs={featured_category_slugs} />
+          </div>
+        )}
+        {/* ShowcaseRails is unplugged from the homepage, not deleted — the
+            component and its admin config stay. With three products in the
+            catalogue its "Just added" rail listed the same three garments that
+            SeasonKit and TheClimb had already shown, a third time, for another
+            720px of scroll. It earns its place back when there is a catalogue
+            big enough for "just added" to mean something. */}
+        {false && <ShowcaseRails rails={rails} />}
         <div data-trail-time="14:30" data-trail-alt="3,800M" data-trail-label="The workbench">
           <DesignYourOwn products={products} />
         </div>
         <div data-trail-time="15:30" data-trail-alt="3,600M" data-trail-label="Golden hour">
           <HomeTrails />
         </div>
-        <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
-          <Community reviews={reviews} />
-        </div>
+        {/* Community renders null until real approved reviews exist. The trail
+            wrapper has to disappear with it — TrailSpine builds its chapter HUD
+            from these data-trail-* attributes, so leaving it in advertised a
+            "The way down" stop on the journey that had nothing behind it. */}
+        {reviews.length > 0 && (
+          <div data-trail-time="16:30" data-trail-alt="3,400M" data-trail-label="The way down">
+            <Community reviews={reviews} />
+          </div>
+        )}
         <div data-trail-time="19:30" data-trail-alt="2,900M" data-trail-label="Basecamp">
           <BrandPulse stats={stats} />
         </div>

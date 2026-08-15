@@ -1,5 +1,6 @@
 'use server'
 
+import { rateLimit } from '@/lib/rateLimit'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { contactSchema } from '@/lib/validations'
 import { sendEmail } from '@/lib/email'
@@ -15,6 +16,12 @@ import { requireAdmin } from './auth'
 export async function submitContactMessage(input: { name: string; email: string; message: string }) {
   const parsed = contactSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
+
+  // Unauthenticated insert, so throttled per caller. Five in ten minutes is far
+  // above what a person sending a genuine enquiry needs and far below what a
+  // script needs to be worth running.
+  const limited = await rateLimit('contact', { limit: 5, windowSeconds: 600 })
+  if (!limited.ok) return { error: limited.error }
 
   const supabase = createAdminSupabaseClient()
   const { error } = await supabase.from('contact_messages').insert({

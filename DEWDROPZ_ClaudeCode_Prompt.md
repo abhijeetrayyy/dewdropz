@@ -151,67 +151,16 @@ Mobile: hamburger that opens a full-screen overlay menu with Motion `AnimatePres
 
 ---
 
-## SECTION 2 — HeroSection
+## SECTION 2 — HeroSection — REMOVED
 
-File: `components/sections/HeroSection.tsx` — `'use client'`
+The original hero spec (react-bits particles, a self-drawing mountain SVG, a
+stacked DEW/DROPZ headline, two CTAs, a bouncing chevron) lived here and is
+deleted on purpose. It described a hero this site outgrew, and leaving it in the
+repo meant every later pass was quietly measured against a brief nobody intended
+to follow any more.
 
-**Visual:** Full viewport height (`min-h-screen`). Dark background (`bg-ink`). Two-layer composition:
-
-**Layer 1 — Atmospheric Background:**
-Use react-bits `<Particles>` component configured with:
-```typescript
-<Particles
-  quantity={60}
-  color="#7BA46F"
-  size={0.4}
-  staticity={80}
-  ease={50}
-/>
-```
-Particles simulate dust motes in mountain air.
-
-**Layer 2 — Mountain SVG:**
-Draw an SVG mountain ridge (path) absolutely positioned at the bottom of the hero, spanning full width. Use this path structure — multiple peaks of varying heights evoking a Himalayan ridgeline. The SVG should be `opacity-20` in `stroke-[#27481F]` with `fill-none`. Animate on page load: path draws itself using GSAP `drawSVG` or a strokeDashoffset technique over 2.4 seconds with `ease-out`.
-
-```typescript
-useEffect(() => {
-  const path = mountainPathRef.current
-  const length = path.getTotalLength()
-  gsap.set(path, { strokeDasharray: length, strokeDashoffset: length })
-  gsap.to(path, {
-    strokeDashoffset: 0,
-    duration: 2.4,
-    ease: 'power3.out',
-    delay: 0.4,
-  })
-}, [])
-```
-
-**Layer 3 — Content:**
-Centered, max-width container.
-
-Top: `<BlurText>` from react-bits — text: "BRAND IDENTITY" in `font-body text-xs tracking-[0.3em] text-sage uppercase`. Configure `delay={800}` `animateBy="word"`.
-
-Middle: Main headline in two lines using `font-display font-light` at `text-[clamp(64px,13vw,160px)]` `leading-[0.88]` `tracking-[-0.025em]`:
-```
-DEW
-DROPZ
-```
-"DEW" in `text-paper`. "DROPZ" in `text-sage font-semibold`.
-
-Animate with GSAP: Each letter `y: 120, opacity: 0` → `y: 0, opacity: 1` staggered by 0.04s, starting after 0.6s delay, `ease: "power4.out"`.
-
-Below headline: Tagline `— Feel Alive` in `font-display italic text-sage text-[clamp(18px,2.5vw,30px)]`. Use react-bits `<BlurText>` with `delay={1200}`.
-
-Bottom of hero: Two CTAs in a row, centered, appearing at `delay: 1.6s`:
-- Primary: "Explore Collections" — `bg-forest text-paper px-8 py-3 text-xs tracking-[0.1em] uppercase font-body font-medium`
-- Secondary: "Our Story" — ghost, `border border-paper/30 text-paper/70 px-8 py-3 text-xs tracking-[0.1em] uppercase font-body`
-
-Both buttons: `hover:scale-[1.03] transition-transform duration-300`
-
-Scroll indicator at very bottom: small animated chevron that bounces gently, `opacity-40`.
-
----
+The hero is now owned by components/sections/SummitHero.tsx and its own comments.
+Treat that file as the source of truth; there is deliberately no spec to satisfy.
 
 ## SECTION 3 — BrandStatement
 

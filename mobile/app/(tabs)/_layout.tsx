@@ -8,7 +8,15 @@ import { TabBar } from "@/components/TabBar";
 // not five separate manual placements.
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        // The bar floats over the content (see components/TabBar.tsx), so the
+        // scene must fill the whole window rather than being inset above it.
+        tabBarStyle: { position: "absolute", borderTopWidth: 0, backgroundColor: "transparent" },
+      }}
+      tabBar={(props) => <TabBar {...props} />}
+    >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="shop" />
       <Tabs.Screen name="design" />

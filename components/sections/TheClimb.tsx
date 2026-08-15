@@ -12,6 +12,7 @@ import type { ProductWithCollection, HomeClimbStation, HomeConfig } from '@/type
 type Station = HomeClimbStation & { product: ProductWithCollection }
 
 function StationRow({ station, index }: { station: Station; index: number }) {
+  const stationNo = String(index + 1).padStart(2, '0')
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
   const flip = index % 2 === 1
@@ -51,8 +52,14 @@ function StationRow({ station, index }: { station: Station; index: number }) {
       </div>
 
       <div className={flip ? 'md:order-1 md:text-right' : ''}>
+        {/* `station.label` is admin-set and is currently just the station's own
+            number, so this printed "Station 01 · 01" — the same digits twice in
+            one eyebrow, with the image badge above making it three times. The
+            label is only appended when it actually says something the number
+            does not, so a meaningful label ("Base camp") still reads. */}
         <div className="font-mono text-[10px] tracking-[0.18em] text-forest uppercase">
-          Station {String(index + 1).padStart(2, '0')} · {station.label}
+          Station {stationNo}
+          {station.label && station.label.trim() !== stationNo ? ` · ${station.label}` : ''}
         </div>
         <h3 className="mt-2 font-display text-[clamp(24px,3vw,36px)] text-text leading-tight">
           <Link href={`/products/${p.slug}`} className="hover:text-forest transition-colors duration-300">

@@ -21,6 +21,7 @@ import { PullQuote } from "@/components/editorial/PullQuote";
 import { SpecTable } from "@/components/editorial/SpecTable";
 import { Body, Display1, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
 import { formatPrice } from "@/lib/utils";
+import { FREE_SHIPPING_THRESHOLD_PAISE, FLAT_SHIPPING_RATE_PAISE } from "@/lib/constants";
 import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { useProductQuery, useProductRatingQuery, useProductsQuery, useRecentlyViewedQuery } from "@/lib/queries";
@@ -28,6 +29,7 @@ import { getRelatedProducts } from "@/lib/data";
 import { pushRecentlyViewed } from "@/lib/recentlyViewed";
 import { toast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
+import { shareLink } from "@/lib/support";
 import { C, F, R, S, SHADOW_BAR } from "@/lib/theme";
 
 const GENERIC_CARE = "Care varies by material — check the product label. When in doubt, cold wash and air dry.";
@@ -52,7 +54,9 @@ const SHIPPING_COPY =
 
 export default function ProductScreen() {
   const insets = useSafeAreaInsets();
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  // `pick=size` arrives from a quick-add tap on a sized product — the card
+  // can't choose a size on the shopper's behalf, so it sends them here.
+  const { slug, pick } = useLocalSearchParams<{ slug: string; pick?: string }>();
   const { data: p, isLoading, isPending, isError } = useProductQuery(slug);
   const { data: allProducts = [] } = useProductsQuery();
   const { data: recentlyViewed = [] } = useRecentlyViewedQuery(slug);
@@ -61,6 +65,12 @@ export default function ProductScreen() {
   const { addItem } = useCartStore();
   const { has, toggle } = useWishlistStore();
   const sizeGuideRef = useRef<BottomSheetModal>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  // `onLayout` reports a child's offset within its PARENT, so the size block's
+  // position in the scroll content is the info column's own offset (i.e. the
+  // gallery height) plus the block's offset inside it.
+  const infoY = useRef(0);
+  const jumpedToSize = useRef(false);
   // Two-state header: glass over the gallery, paper bar past it.
   const [scrolled, setScrolled] = useState(false);
 
@@ -132,7 +142,17 @@ export default function ProductScreen() {
     if (!inStock) return;
     haptics.tap();
     addItem(
-      { productId: p!.id, slug: p!.slug, name: p!.name, price: fp, image: p!.images?.[0] ?? "", size },
+      {
+        productId: p!.id,
+        slug: p!.slug,
+        name: p!.name,
+        price: fp,
+        image: p!.images?.[0] ?? "",
+        size,
+        // Carried through so checkout can link the line to an exact variant
+        // instead of re-resolving it from the size string on the server.
+        variantId: variant?.id ?? null,
+      },
       1,
     );
     toast.success("Added to pack");
@@ -142,6 +162,7 @@ export default function ProductScreen() {
     <View style={s.root}>
       <StatusBar style={scrolled ? "dark" : "light"} />
       <ScrollView
+        ref={scrollRef}
         bounces={false}
         contentContainerStyle={{ paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
@@ -153,7 +174,7 @@ export default function ProductScreen() {
       >
         <ProductGallery images={p.images ?? []} discountPct={discountPct} isNew={isNew} />
 
-        <View style={s.info}>
+        <View style={s.info} onLayout={(e) => (infoY.current = e.nativeEvent.layout.y)}>
           {/* ── Identity ─────────────────────────────────────────────────── */}
           <View style={s.topRow}>
             {p.collection ? <Eyebrow style={{ flex: 1 }}>{p.collection.name}</Eyebrow> : <View style={{ flex: 1 }} />}
@@ -188,6 +209,38 @@ export default function ProductScreen() {
             INCL. ALL TAXES
           </Mono>
 
+          {/* ── Delivery & returns, stated up front ─────────────────────────
+              Baymard's product-page research puts two of the most common
+              conversion failures here: 67% of sites give no cost transparency
+              before checkout, and 44% bury the return policy — 15% of shoppers
+              abandon an order over one they can't find. Both were true of this
+              page: shipping wasn't mentioned at all above the fold, and returns
+              sat inside a collapsed accordion far below the buy bar.
+              Three plain lines, resolved against the real thresholds in
+              lib/constants.ts, so the numbers can never contradict the cart. */}
+          <View style={s.assurance}>
+            <View style={s.assuranceRow}>
+              <Icon name="local_shipping" size={16} color={C.forestDeep} />
+              <Body color={C.textMid} style={{ flex: 1 }}>
+                {fp >= FREE_SHIPPING_THRESHOLD_PAISE
+                  ? "Free delivery on this item."
+                  : `${formatPrice(FLAT_SHIPPING_RATE_PAISE)} delivery — free over ${formatPrice(FREE_SHIPPING_THRESHOLD_PAISE)}.`}
+              </Body>
+            </View>
+            <View style={s.assuranceRow}>
+              <Icon name="restart_alt" size={16} color={C.forestDeep} />
+              <Body color={C.textMid} style={{ flex: 1 }}>
+                7-day returns on unused items with tags.
+              </Body>
+            </View>
+            <View style={s.assuranceRow}>
+              <Icon name="payments" size={16} color={C.forestDeep} />
+              <Body color={C.textMid} style={{ flex: 1 }}>
+                Cash on delivery available across India.
+              </Body>
+            </View>
+          </View>
+
           <Rule weight="strong" style={{ marginTop: S.lg }} />
 
           <Body color={C.textMid} style={{ marginTop: S.lg }}>
@@ -196,11 +249,30 @@ export default function ProductScreen() {
 
           {/* ── Size ─────────────────────────────────────────────────────── */}
           {p.variants && p.variants.length > 0 ? (
-            <View style={{ marginTop: S.block }}>
+            <View
+              style={{ marginTop: S.block }}
+              onLayout={(e) => {
+                if (pick !== "size" || jumpedToSize.current) return;
+                jumpedToSize.current = true;
+                scrollRef.current?.scrollTo({
+                  y: Math.max(0, infoY.current + e.nativeEvent.layout.y - 90),
+                  animated: true,
+                });
+              }}
+            >
               <View style={s.sizeHead}>
                 <Title style={{ flex: 1 }}>Size</Title>
                 <TouchableOpacity
                   style={s.guideLink}
+                  // A 16pt icon beside 13pt text is a ~20pt-tall target, less
+                  // than half the 44pt minimum — and this is the control that
+                  // stops someone guessing their size, i.e. the one that
+                  // prevents a return. hitSlop rather than padding, so the link
+                  // stays visually a link rather than becoming a second button
+                  // competing with "Size" beside it.
+                  hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open size guide"
                   onPress={() => {
                     haptics.tap();
                     sizeGuideRef.current?.present();
@@ -272,7 +344,7 @@ export default function ProductScreen() {
                 contentContainerStyle={{ gap: S.md, paddingTop: S.lg }}
               >
                 {related.map((r, i) => (
-                  <Animated.View key={r.id} entering={FadeInDown.delay(i * 50).springify().damping(18)}>
+                  <Animated.View key={r.id} entering={FadeInDown.delay(i * 50).duration(380)}>
                     <ProductCard
                       width={148}
                       productId={r.id}
@@ -334,7 +406,12 @@ export default function ProductScreen() {
                 toast.show(saved ? "Removed from saved" : "Saved");
               }}
             />
-            <IconButton name="ios_share" tone={tone} />
+            <IconButton
+              name="ios_share"
+              tone={tone}
+              accessibilityLabel={`Share ${p!.name}`}
+              onPress={() => shareLink(p!.name, `/product/${p!.slug}`)}
+            />
           </>
         )}
       />
@@ -343,11 +420,24 @@ export default function ProductScreen() {
       <View style={[s.bar, { paddingBottom: insets.bottom + 12 }]}>
         {p.is_customizable ? (
           <TouchableOpacity
-            style={s.cta}
+            // `flex: 1`, as the other branch already does. Without it this
+            // button hugs its own text and leaves a third of the buy bar as
+            // bare paper to its right — on the one row of the page whose whole
+            // job is to be the obvious next action. A lone primary CTA fills
+            // its bar; it doesn't sit in the middle of one looking unfinished.
+            style={[s.cta, { flex: 1 }]}
             activeOpacity={0.92}
             onPress={() => {
               haptics.tap();
-              router.push(`/customize/${p.slug}`);
+              // Carry the size. Every customizable product also renders the
+              // size selector above, and "Design yours" is the ONLY way off
+              // this page for one — so without this the shopper picks XL, taps
+              // the primary CTA, and lands in a studio that has quietly reset
+              // them to S. The selector was decorative on exactly the products
+              // where it is the page's only real choice.
+              router.push(
+                size ? `/customize/${p.slug}?size=${encodeURIComponent(size)}` : `/customize/${p.slug}`,
+              );
             }}
           >
             <Icon name="draw" size={20} color={C.white} />
@@ -392,6 +482,14 @@ const s = StyleSheet.create({
   info: { paddingHorizontal: S.gutter, paddingTop: S.xl },
 
   topRow: { flexDirection: "row", alignItems: "center", gap: S.sm },
+  assurance: {
+    marginTop: S.lg,
+    gap: 10,
+    backgroundColor: C.forest12,
+    borderRadius: R.panel,
+    padding: S.md,
+  },
+  assuranceRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 5 },
 
   priceRow: { flexDirection: "row", alignItems: "baseline", gap: 10, marginTop: 14 },
@@ -407,7 +505,10 @@ const s = StyleSheet.create({
   sizeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: S.md },
   sizeBtn: {
     minWidth: 62,
-    height: 46,
+    // Already clears the 44pt touch minimum; minHeight rather than height so it
+    // also survives large text instead of clipping the size someone is buying.
+    minHeight: 46,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: R.chip,
     borderWidth: 1,
@@ -442,7 +543,11 @@ const s = StyleSheet.create({
     gap: 9,
     backgroundColor: C.forest,
     borderRadius: R.pill,
-    height: 54,
+    // minHeight, matching components/Button.tsx: text scales with the system
+    // setting by default, and a 16pt label runs to ~50pt at the top
+    // accessibility sizes — inside a fixed 54 that clips the buy button.
+    minHeight: 54,
+    paddingVertical: 12,
     paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center",

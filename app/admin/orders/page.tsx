@@ -3,21 +3,26 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
-import { getAllOrders, updateOrderStatus, addTrackingInfo, bulkUpdateOrderStatus, refundOrder, cancelOrderAsAdmin, getRefundAttentionCount } from '@/actions/orders'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { getAllOrders, updateOrderStatus, bulkUpdateOrderStatus, refundOrder, cancelOrderAsAdmin, getRefundAttentionCount, exportOrdersCsv, type OrderView } from '@/actions/orders'
+
+const VIEW_KEYS: string[] = ['all','unfulfilled','cod_pending','rto','needs_attention']
+import { createShipment, updateShipmentStatus } from '@/actions/shipments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Package, Search, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react'
-import { CardListSkeleton } from '@/components/admin/CardListSkeleton'
+import { Search, ChevronLeft, ChevronRight, Loader2, AlertTriangle, MoreHorizontal, Palette } from 'lucide-react'
+import { TableSkeleton } from '@/components/admin/CardListSkeleton'
 import type { OrderWithItems, Order } from '@/types/database'
 
 const PAGE_SIZE = 20
@@ -26,7 +31,9 @@ const PAGE_SIZE = 20
 const BULK_STATUSES: Order['status'][] = ['confirmed', 'processing', 'delivered', 'cancelled']
 
 function fmtAmount(p: number) { return `₹${(p / 100).toLocaleString('en-IN')}` }
-function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+}
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info'> = {
   pending: 'warning', confirmed: 'info', processing: 'info',
@@ -37,6 +44,7 @@ const paymentStatusColors: Record<string, 'default' | 'secondary' | 'destructive
 }
 
 export default function OrdersPage() {
+  const router = useRouter()
   const [orders, setOrders] = useState<OrderWithItems[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
@@ -68,12 +76,33 @@ export default function OrdersPage() {
   }
   useEffect(() => { loadAttentionCount() }, [])
 
+  // Downloads whatever the current view is showing, so "export what I am
+  // looking at" needs no extra thought. Built and revoked in the browser — the
+  // CSV never touches disk on the server.
+  async function exportCsv() {
+    try {
+      const csv = await exportOrdersCsv({
+        view: VIEW_KEYS.includes(filter) ? (filter as OrderView) : undefined,
+        search: debouncedSearch || undefined,
+      })
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `orders-${filter}-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { toast.error('Could not export') }
+  }
+
   async function load() {
     setLoading(true)
     try {
+      // Saved views go through `view`; the plain status values still go through
+      // `status`, so the dropdown can hold both without two controls.
+      const isView = VIEW_KEYS.includes(filter)
       const { orders: rows, total: t } = await getAllOrders({
-        needsAttention: filter === 'needs_attention',
-        status: filter && filter !== 'all' && filter !== 'needs_attention' ? filter : undefined,
+        view: isView ? (filter as OrderView) : undefined,
+        status: isView ? undefined : filter,
         search: debouncedSearch || undefined,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
@@ -107,12 +136,24 @@ export default function OrdersPage() {
     }
   }
 
+  // Creates a real shipment rather than overwriting the order's single tracking
+  // column, so a second parcel on the same order is possible — the order's own
+  // status is then derived from its parcels, not set here by hand.
   async function shipOrder() {
     if (!selectedOrder || !trackForm.carrier || !trackForm.number) { toast.error('Carrier and tracking number required'); return }
     setSaving(true)
     try {
-      await addTrackingInfo(selectedOrder.id, trackForm.carrier, trackForm.number, trackForm.url || undefined)
-      toast.success('Order shipped')
+      const res = await createShipment({
+        orderId: selectedOrder.id,
+        courierName: trackForm.carrier,
+        awb: trackForm.number,
+        trackingUrl: trackForm.url || undefined,
+      })
+      if ('error' in res) { toast.error(res.error); return }
+      // Straight to dispatched: the team only opens this once the parcel has
+      // actually been handed over, and this records the event as well.
+      await updateShipmentStatus(res.id, 'in_transit', { description: `Handed to ${trackForm.carrier}` })
+      toast.success('Parcel added — order marked shipped')
       setShipDialog(false)
       load()
     } catch { toast.error('Failed') }
@@ -166,6 +207,29 @@ export default function OrdersPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  /** One line describing the basket, so a row stays a row. The detail page is
+   *  one click away for anyone who needs the itemisation. */
+  function summarise(o: OrderWithItems) {
+    const items = o.items ?? []
+    const units = items.reduce((n, i) => n + i.quantity, 0)
+    const first = items[0]
+    const rest = items.length - 1
+    return {
+      units,
+      customCount: items.filter((i) => i.custom_design_id).length,
+      label: !first ? '—' : `${first.product_name}${rest > 0 ? ` +${rest} more` : ''}`,
+    }
+  }
+
+  /** The single move this order is waiting for. Anything else lives in the
+   *  overflow menu — a row with five buttons is a row nobody reads. */
+  function primaryAction(o: OrderWithItems) {
+    if (o.status === 'pending' || o.status === 'confirmed') return { label: 'Ship', run: () => openShip(o) }
+    if (o.status === 'processing') return { label: 'Ship', run: () => openShip(o) }
+    if (o.status === 'shipped') return { label: 'Delivered', run: () => changeStatus(o.id, 'delivered') }
+    return null
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -173,10 +237,21 @@ export default function OrdersPage() {
           <h2 className="text-2xl font-bold tracking-tight text-black">Orders</h2>
           <p className="text-sm text-gray-500 mt-1">{total} order{total === 1 ? '' : 's'}</p>
         </div>
+        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="rounded-md border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:border-black hover:text-black"
+        >
+          Export CSV
+        </button>
         <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(0) }}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="All statuses" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="all">All orders</SelectItem>
+            <SelectItem value="unfulfilled">Unfulfilled — to pack</SelectItem>
+            <SelectItem value="cod_pending">COD — not collected</SelectItem>
+            <SelectItem value="rto">Returning (RTO)</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="confirmed">Confirmed</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
@@ -186,6 +261,7 @@ export default function OrdersPage() {
             <SelectItem value="needs_attention">⚠ Needs Attention{attentionCount > 0 ? ` (${attentionCount})` : ''}</SelectItem>
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {attentionCount > 0 && filter !== 'needs_attention' && (
@@ -206,26 +282,22 @@ export default function OrdersPage() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order # or email..." className="pl-8" />
         </div>
-        <div className="flex items-center gap-2">
-          <Checkbox checked={orders.length > 0 && selected.size === orders.length} onCheckedChange={toggleSelectAll} />
-          <span className="text-xs text-gray-500">Select all on page</span>
-          {selected.size > 0 && (
-            <div className="flex items-center gap-2 text-sm ml-2">
-              <span className="text-gray-500">{selected.size} selected</span>
-              <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as Order['status'])}>
-                <SelectTrigger className="w-[140px] h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {BULK_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm" onClick={handleBulkStatus}>Apply</Button>
-            </div>
-          )}
-        </div>
+        {selected.size > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">{selected.size} selected</span>
+            <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as Order['status'])}>
+              <SelectTrigger className="w-[140px] h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {BULK_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={handleBulkStatus}>Apply</Button>
+          </div>
+        )}
       </div>
 
       {loading ? (
-        <CardListSkeleton count={5} />
+        <TableSkeleton rows={8} />
       ) : orders.length === 0 ? (
         <Card className="border-dashed shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -233,115 +305,145 @@ export default function OrdersPage() {
             <p className="text-sm text-gray-500 max-w-sm">No orders match your current filters or search criteria.</p>
           </CardContent>
         </Card>
-      ) : orders.map((o) => (
-        <Card key={o.id}>
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggleSelected(o.id)} />
-              <div>
-                <CardTitle className="text-base text-black">{o.order_number}</CardTitle>
-                <p className="text-sm text-gray-500">{fmtDate(o.created_at)} — {o.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {o.refund_needs_attention && (
-                <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Needs Refund</Badge>
-              )}
-              <Badge variant={statusColors[o.status]} className="capitalize">{o.status}</Badge>
-              <Badge variant={paymentStatusColors[o.payment_status] ?? 'secondary'} className="capitalize">{o.payment_status.replace('_', ' ')}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
+      ) : (
+        <Card>
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      aria-label="Select all orders on this page"
+                      checked={orders.length > 0 && selected.size === orders.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Payment</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[110px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {o.items?.map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell className="font-medium text-gray-900">
-                      <div className="flex items-center gap-3">
-                        {i.custom_design_id && (i.design?.front_preview_url || i.design?.back_preview_url) && (
-                          <div className="flex gap-1 flex-shrink-0">
-                            {[i.design.front_preview_url, i.design.back_preview_url].filter(Boolean).map((url, idx) => (
-                              <a key={idx} href={url!} target="_blank" rel="noopener noreferrer" className="block h-10 w-10 rounded-sm overflow-hidden border border-gray-200 hover:border-gray-400 transition-colors">
-                                <Image src={url!} alt="" width={40} height={40} className="h-full w-full object-cover" />
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                        <div>
-                          <div>{i.product_name}{i.variant_name ? ` — ${i.variant_name}` : ''}</div>
-                          {i.custom_design_id && (
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <Badge variant="secondary" className="text-[10px]">Custom Design</Badge>
-                              {(i.design?.front_print_url || i.design?.back_print_url) && (
-                                <span className="flex gap-2 text-[11px]">
-                                  {i.design.front_print_url && <a href={i.design.front_print_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black underline">Front print file</a>}
-                                  {i.design.back_print_url && <a href={i.design.back_print_url} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-black underline">Back print file</a>}
-                                </span>
-                              )}
-                            </div>
+                {orders.map((o) => {
+                  const s = summarise(o)
+                  const action = primaryAction(o)
+                  const canCancel = o.status === 'pending' || o.status === 'confirmed' || o.status === 'processing'
+                  const canRefund = o.payment_status === 'paid' || o.payment_status === 'partially_refunded'
+                  return (
+                    <TableRow
+                      key={o.id}
+                      // The row is a mouse convenience; the order number below is
+                      // a real link, so keyboard and middle-click still work.
+                      onClick={() => router.push(`/admin/orders/${o.id}`)}
+                      className="cursor-pointer hover:bg-gray-50"
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          aria-label={`Select order ${o.order_number}`}
+                          checked={selected.has(o.id)}
+                          onCheckedChange={() => toggleSelected(o.id)}
+                        />
+                      </TableCell>
+
+                      <TableCell>
+                        <Link
+                          href={`/admin/orders/${o.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-medium text-gray-900 hover:underline whitespace-nowrap"
+                        >
+                          {o.order_number}
+                        </Link>
+                        <div className="text-xs text-gray-400 max-w-[220px] truncate">
+                          {fmtDate(o.created_at)} · {o.email}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-sm text-gray-600">
+                        <div className="flex items-center gap-1.5">
+                          <span className="tabular-nums text-gray-400">{s.units}×</span>
+                          <span className="max-w-[140px] truncate">{s.label}</span>
+                          {s.customCount > 0 && (
+                            // Flagged in the list because a custom item is the one
+                            // that cannot just be picked off a shelf — it has to be
+                            // printed before it can ship.
+                            <Badge variant="secondary" className="gap-1 text-[10px] shrink-0">
+                              <Palette className="h-3 w-3" /> {s.customCount}
+                            </Badge>
                           )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{i.quantity}</TableCell>
-                    <TableCell className="text-right text-gray-500">{fmtAmount(i.unit_price)}</TableCell>
-                    <TableCell className="text-right">{fmtAmount(i.total_price)}</TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+
+                      <TableCell className="text-right tabular-nums font-medium text-gray-900">
+                        {fmtAmount(o.total_amount)}
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge
+                          variant={paymentStatusColors[o.payment_status] ?? 'secondary'}
+                          className="capitalize whitespace-nowrap"
+                        >
+                          {o.payment_status.replace('_', ' ')}{o.payment_method === 'cod' ? ' · COD' : ''}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Badge variant={statusColors[o.status]} className="capitalize">{o.status}</Badge>
+                          {o.refund_needs_attention && (
+                            <AlertTriangle className="h-3.5 w-3.5 text-red-600" aria-label="Refund needs attention" />
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {action && (
+                            <Button size="sm" variant="outline" onClick={action.run}>{action.label}</Button>
+                          )}
+                          {(canRefund || canCancel) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" aria-label={`More actions for ${o.order_number}`}>
+                                  {cancellingId === o.id
+                                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                                    : <MoreHorizontal className="h-4 w-4" />}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => router.push(`/admin/orders/${o.id}`)}>
+                                  View details
+                                </DropdownMenuItem>
+                                {o.status === 'pending' || o.status === 'confirmed' ? (
+                                  <DropdownMenuItem onClick={() => changeStatus(o.id, 'processing')}>
+                                    Mark processing
+                                  </DropdownMenuItem>
+                                ) : null}
+                                {canRefund && (
+                                  <DropdownMenuItem onClick={() => openRefund(o)} className="text-red-600">
+                                    {o.refund_needs_attention ? 'Retry refund' : 'Refund'}
+                                  </DropdownMenuItem>
+                                )}
+                                {canCancel && (
+                                  <DropdownMenuItem onClick={() => cancelSingleOrder(o)} className="text-red-600">
+                                    Cancel order
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
-
-            {o.admin_notes && (
-              <div className="mt-3 pt-3 border-t text-xs text-gray-500 whitespace-pre-line">
-                {o.admin_notes}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <div className="text-sm text-gray-500">
-                Subtotal {fmtAmount(o.subtotal)} + Shipping {fmtAmount(o.shipping_cost)} + Tax {fmtAmount(o.tax_amount)}
-                {o.discount_amount > 0 ? ` - Discount ${fmtAmount(o.discount_amount)}` : ''}
-                {' = '}<strong className="text-black">{fmtAmount(o.total_amount)}</strong>
-                {o.tracking_number && <span className="ml-4 text-xs">📦 {o.carrier}: {o.tracking_number}</span>}
-              </div>
-              <div className="flex gap-2">
-                {(o.status === 'pending' || o.status === 'confirmed') && (
-                  <>
-                    <Button variant="outline" size="sm" onClick={() => changeStatus(o.id, 'processing')}>Processing</Button>
-                    <Button size="sm" onClick={() => openShip(o)}>Ship</Button>
-                  </>
-                )}
-                {o.status === 'processing' && <Button size="sm" onClick={() => openShip(o)}>Ship</Button>}
-                {o.status === 'shipped' && <Button size="sm" onClick={() => changeStatus(o.id, 'delivered')}>Delivered</Button>}
-                {(o.payment_status === 'paid' || o.payment_status === 'partially_refunded') && (
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => openRefund(o)}>
-                    {o.refund_needs_attention ? 'Retry Refund' : 'Refund'}
-                  </Button>
-                )}
-                {(o.status === 'pending' || o.status === 'confirmed' || o.status === 'processing') && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-gray-500 hover:text-red-700"
-                    disabled={cancellingId === o.id}
-                    onClick={() => cancelSingleOrder(o)}
-                  >
-                    {cancellingId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Cancel'}
-                  </Button>
-                )}
-              </div>
-            </div>
           </CardContent>
         </Card>
-      ))}
+      )}
 
       {total > PAGE_SIZE && (
         <div className="flex items-center justify-between text-sm text-gray-500">
@@ -361,25 +463,9 @@ export default function OrdersPage() {
             <div><Label>Tracking Number *</Label><Input value={trackForm.number} onChange={(e) => setTrackForm({ ...trackForm, number: e.target.value })} /></div>
             <div><Label>Tracking URL</Label><Input value={trackForm.url} onChange={(e) => setTrackForm({ ...trackForm, url: e.target.value })} placeholder="https://..." /></div>
           </div>
-          <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
-            <Button 
-              variant="secondary" 
-              className="text-xs"
-              onClick={(e) => {
-                e.preventDefault()
-                setTrackForm({
-                  carrier: 'Delhivery',
-                  number: `DLV-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-                  url: 'https://delhivery.com/track'
-                })
-              }}
-            >
-              Generate Mock Tracking
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShipDialog(false)}>Cancel</Button>
-              <Button onClick={shipOrder} disabled={saving}>{saving ? 'Shipping...' : 'Mark Shipped'}</Button>
-            </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShipDialog(false)}>Cancel</Button>
+            <Button onClick={shipOrder} disabled={saving}>{saving ? 'Shipping...' : 'Mark Shipped'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -63,19 +63,32 @@ export default function TrailSpine() {
         stop ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      <div className="font-mono text-[12px] tracking-[0.14em] tabular-nums">{stop?.time ?? ''}</div>
-      <div className="relative h-28 w-px bg-white/25">
+      {/* Set vertically, and that is a fix rather than a flourish. Horizontally
+          this HUD measured 45px wide from left-5, so it ran to x=65 while every
+          section's content starts at x=40 (px-10) — the rail sat on top of
+          headlines, card captions and body copy on every section of the page,
+          all the way down. `mix-blend-difference` kept it *visible* over them,
+          which is probably why it was never caught, but legible-on-top-of is
+          still collision. Vertical type puts the whole column inside ~14px, so
+          it clears the gutter on the narrow laptop widths where the container
+          actually meets its padding. */}
+      <div
+        className="font-mono text-[11px] tracking-[0.14em] tabular-nums"
+        style={{ writingMode: 'vertical-rl' }}
+      >
+        {stop?.time ?? ''}
+      </div>
+      <div className="relative h-24 w-px bg-white/25">
         <div
           className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-white transition-[top] duration-200"
           style={{ top: `${progress * 100}%` }}
         />
       </div>
-      <div className="font-mono text-[10px] tracking-[0.12em] tabular-nums opacity-70">{stop?.alt ?? ''}</div>
       <div
-        className="font-body text-[8px] tracking-[0.28em] uppercase opacity-50"
+        className="font-mono text-[9px] tracking-[0.12em] tabular-nums opacity-70"
         style={{ writingMode: 'vertical-rl' }}
       >
-        {stop?.label ?? ''}
+        {stop?.alt ?? ''}
       </div>
     </div>
   )

@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, router } from "expo-router";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image } from "expo-image";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/utils";
 import { useOrdersQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { SkeletonRows } from "@/components/ui/Skeleton";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
@@ -28,6 +30,10 @@ const STATUS_TONE: Record<string, { label: string; fg: string; bg: string }> = {
   confirmed: { label: "CONFIRMED", fg: C.textMid, bg: C.cream },
   pending: { label: "PENDING", fg: C.textMid, bg: C.cream },
   cancelled: { label: "CANCELLED", fg: C.danger, bg: C.danger12 },
+  // `refunded` is a status the orders table holds and this map didn't, so a
+  // refunded order fell through to the `pending` fallback and told the
+  // customer their money-back order was still waiting to be processed.
+  refunded: { label: "REFUNDED", fg: C.textMuted, bg: C.cream },
 };
 
 // Orders. v4 rendered each order as a shadowed card containing two grey
@@ -50,6 +56,7 @@ export default function OrdersScreen() {
 
   return (
     <View style={s.root}>
+      <StatusCap />
       <ScrollView
         contentContainerStyle={{ paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
@@ -58,7 +65,15 @@ export default function OrdersScreen() {
         <ScreenHeader
           eyebrow="Your history"
           title="Orders"
-          lede={activeCount > 0 ? `${activeCount} on the way right now.` : undefined}
+          lede={orders.length === 0 ? "Every order you place shows up here with its progress." : undefined}
+          stats={
+            orders.length > 0
+              ? [
+                  { label: "On the way", value: String(activeCount) },
+                  { label: "Placed", value: String(orders.length) },
+                ]
+              : undefined
+          }
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
@@ -103,9 +118,23 @@ export default function OrdersScreen() {
                 // Sum quantities, not lines — an order of one item ×3 is
                 // "3 pieces" to a customer, not "1 piece".
                 const count = o.items?.reduce((n, it) => n + (it.quantity ?? 0), 0) ?? 0;
+                // "Alpine Shell" · "Alpine Shell + 2 more" — the first name
+                // carries the row, the rest are a tail, so a long order stays
+                // scannable at a glance.
+                const names = (o.items ?? [])
+                  .map((it) => it.product_name)
+                  .filter((n): n is string => !!n);
+                const summary =
+                  names.length === 0
+                    ? `${count} ${count === 1 ? "piece" : "pieces"}`
+                    : names.length === 1
+                      ? names[0]
+                      : `${names[0]} + ${names.length - 1} more`;
+                // Already resolved to an absolute URL in getOrders.
+                const thumb = o.items?.find((it) => it.product?.images?.[0])?.product?.images?.[0];
 
                 return (
-                  <Animated.View key={o.id} entering={FadeInDown.delay(Math.min(i, 6) * 50).springify().damping(18)}>
+                  <Animated.View key={o.id} entering={FadeInDown.delay(Math.min(i, 6) * 50).duration(380)}>
                     <Link href={`/orders/${o.id}`} asChild>
                       <TouchableOpacity activeOpacity={0.7}>
                         <View style={s.row}>
@@ -118,23 +147,32 @@ export default function OrdersScreen() {
                           </View>
 
                           <View style={s.rowBody}>
+                            {thumb ? (
+                              <Image source={{ uri: thumb }} style={s.thumb} contentFit="cover" alt="" />
+                            ) : null}
                             <View style={{ flex: 1 }}>
-                              <Title>
-                                {count} {count === 1 ? "piece" : "pieces"}
-                              </Title>
+                              {/* What was actually bought. Every row used to read
+                                  "1 piece" / "2 pieces" — a count with no subject,
+                                  identical across an entire order history. */}
+                              <Title numberOfLines={2}>{summary}</Title>
                               <Body color={C.textMid} style={{ marginTop: 3 }}>
-                                {delivered ? "Delivered" : "Ordered"}{" "}
+                                {count} {count === 1 ? "piece" : "pieces"} ·{" "}
+                                {delivered ? "delivered" : "ordered"}{" "}
                                 {new Date(o.created_at).toLocaleDateString("en-IN", {
                                   day: "numeric",
-                                  month: "long",
+                                  month: "short",
                                   year: "numeric",
                                 })}
                               </Body>
                             </View>
                             <View style={{ alignItems: "flex-end", gap: 6 }}>
                               <Numeric>{formatPrice(o.total_amount)}</Numeric>
+                              {/* The whole row opens the order, so this reads
+                                  as what the tap does. It used to say "Track"
+                                  and "Buy again" — two actions the row didn't
+                                  perform, on a control that only navigates. */}
                               <View style={s.go}>
-                                <Text style={s.goT}>{delivered ? "Buy again" : "Track"}</Text>
+                                <Text style={s.goT}>{delivered ? "View order" : "Track"}</Text>
                                 <Icon name="arrow_forward" size={15} color={C.ink} />
                               </View>
                             </View>
@@ -162,6 +200,7 @@ const s = StyleSheet.create({
   status: { borderRadius: R.tag, paddingHorizontal: 7, paddingVertical: 3.5 },
   statusT: { fontFamily: F.monoBold, fontSize: 9, letterSpacing: 1.1 },
   rowBody: { flexDirection: "row", alignItems: "flex-start", gap: S.md },
+  thumb: { width: 48, height: 60, borderRadius: R.card, backgroundColor: C.sand },
   go: { flexDirection: "row", alignItems: "center", gap: 4 },
   goT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.ink },
 });

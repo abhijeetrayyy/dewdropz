@@ -1,8 +1,8 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Image } from "expo-image";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { C, F, R, S } from "@/lib/theme";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, pickVariant } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { toast } from "@/components/ui/Toast";
@@ -24,6 +24,7 @@ import { Icon } from "@/components/ui/Icon";
 
 const NEW_WINDOW_DAYS = 21;
 
+type Variant = { id: string; name: string; inventory_quantity?: number | null };
 type Tag = { label: string; tone?: "neutral" | "scarcity" };
 type Props = {
   productId: string;
@@ -37,6 +38,12 @@ type Props = {
   createdAt?: string;
   showHeart?: boolean;
   showQuickAdd?: boolean;
+  /**
+   * The product's sizes. Required for `showQuickAdd` to add anything: a line
+   * with no size can't be resolved to a variant at checkout, so quick-add on a
+   * sized product opens the product screen to choose one instead.
+   */
+  variants?: Variant[] | null;
   width?: number;
   /** Taller 2:3 crop for hero/feature placements. */
   feature?: boolean;
@@ -61,12 +68,39 @@ export function ProductCard({
   createdAt,
   showHeart,
   showQuickAdd,
+  variants,
   width,
   feature,
 }: Props) {
   const addItem = useCartStore((s) => s.addItem);
   const { has, toggle } = useWishlistStore();
   const saved = has(slug);
+
+  // Quick-add used to call addItem() with no size at all, so every tap on a
+  // sized product (every layer, every tee) put an unfulfillable line in the
+  // cart — checkout then posted `size: undefined, variantId: null` and the
+  // server had nothing to resolve a variant from. A product with more than one
+  // size now routes to the product screen to pick one; a single-size or
+  // sizeless product still adds in one tap, which is the case quick-add is for.
+  function quickAdd() {
+    if ((variants?.length ?? 0) > 1) {
+      haptics.tap();
+      router.push(`/product/${slug}?pick=size`);
+      return;
+    }
+    const only = pickVariant(variants);
+    haptics.tap();
+    addItem({
+      productId,
+      slug,
+      name,
+      price,
+      image: imageUri,
+      size: only?.name,
+      variantId: only?.id ?? null,
+    });
+    toast.success("Added to pack");
+  }
 
   const isNew = !!createdAt && Date.now() - new Date(createdAt).getTime() < NEW_WINDOW_DAYS * 86400000;
   const discountPct = compareAtPrice && compareAtPrice > price ? Math.round((1 - price / compareAtPrice) * 100) : undefined;
@@ -119,12 +153,14 @@ export function ProductCard({
               onPress={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                haptics.tap();
-                addItem({ productId, slug, name, price, image: imageUri });
-                toast.success("Added to pack");
+                quickAdd();
               }}
               style={s.quickAdd}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={
+                (variants?.length ?? 0) > 1 ? `Choose a size for ${name}` : `Add ${name} to pack`
+              }
             >
               <Icon name="add" size={18} color={C.paper} />
             </TouchableOpacity>

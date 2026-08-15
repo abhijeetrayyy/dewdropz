@@ -88,16 +88,32 @@ export default function NavBar() {
       <Logo markHeight={26} priority wordmarkClassName="font-display text-base tracking-widest text-paper" />
 
       <nav className="hidden lg:flex items-center gap-8">
-        {NAV_LINKS.map((link) => (
-          <Link
-            key={link.label}
-            href={link.href}
-            className="group relative font-body text-xs tracking-[0.12em] uppercase text-paper/80 hover:text-paper transition-colors duration-300"
-          >
-            {link.label}
-            <span className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-sage transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-x-100" />
-          </Link>
-        ))}
+        {NAV_LINKS.map((link) => {
+          // While the hero's studio act holds the frame, this link is where the
+          // eye should go next — the frame is showing the tool, and this is the
+          // site's permanent door to it. SummitHero writes `data-hero-act` on
+          // <body> at the act boundaries and the arbitrary variant below reads
+          // it, so the cue costs no state, no context and no re-render up here.
+          const isStudioDoor = link.href === '/customize'
+          return (
+            <Link
+              key={link.label}
+              href={link.href}
+              className={`group relative font-body text-xs tracking-[0.12em] uppercase text-paper/80 hover:text-paper transition-colors duration-300 ${
+                isStudioDoor ? '[body[data-hero-act=studio]_&]:text-paper' : ''
+              }`}
+            >
+              {link.label}
+              <span className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-sage transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-x-100" />
+              {isStudioDoor && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-x-3 -inset-y-2 rounded-full border border-sage/60 opacity-0 transition-opacity duration-500 [body[data-hero-act=studio]_&]:animate-pulse [body[data-hero-act=studio]_&]:opacity-100 motion-reduce:animate-none"
+                />
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* gap-6 (24px x 3 gaps = 72px) left nothing for the header's own

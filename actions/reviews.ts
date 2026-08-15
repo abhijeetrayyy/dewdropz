@@ -6,6 +6,7 @@ import { requireAdmin, getUser } from './auth'
 import { reviewSchema, newsletterSchema } from '@/lib/validations'
 import { getSession } from './auth'
 import type { Review } from '@/types/database'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function createReview(input: {
   product_id: string
@@ -122,6 +123,11 @@ export async function subscribeToNewsletter(input: { email: string; source?: str
   const parsed = newsletterSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
+  // Unauthenticated insert. Looser than the contact form because a real person
+  // may legitimately retry a typo'd address a few times.
+  const limited = await rateLimit('newsletter', { limit: 10, windowSeconds: 600 })
+  if (!limited.ok) return { error: limited.error }
+
   const supabase = await createServerSupabaseClient()
 
   const { error } = await supabase
@@ -191,16 +197,21 @@ export async function getAllReviews(options?: { approved?: boolean; limit?: numb
   const supabase = await createServerSupabaseClient()
   let query = supabase
     .from('reviews')
-    .select('*, user:profiles(full_name, avatar_url), product:products(name, slug)')
+    // Counted, because a list that cannot say how many rows exist cannot show
+    // a page number either — and this table grows with every sale.
+    .select('*, user:profiles(full_name, avatar_url), product:products(name, slug)', { count: 'exact' })
     .order('created_at', { ascending: false })
 
   if (options?.approved !== undefined) query = query.eq('is_approved', options.approved)
-  if (options?.limit) query = query.limit(options.limit)
-  if (options?.offset) query = query.range(options.offset, options.offset + (options.limit ?? 20) - 1)
+  if (options?.limit != null && options?.offset != null) {
+    query = query.range(options.offset, options.offset + options.limit - 1)
+  } else if (options?.limit) {
+    query = query.limit(options.limit)
+  }
 
-  const { data, error } = await query
+  const { data, error, count } = await query
   if (error) throw new Error(error.message)
-  return data
+  return { reviews: data ?? [], total: count ?? 0 }
 }
 
 export async function approveReview(reviewId: string) {

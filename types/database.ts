@@ -256,6 +256,7 @@ export interface CustomizationConfig {
 export interface Product {
   id: string
   collection_id: string | null
+  hsn_code: string | null
   slug: string
   name: string
   description: string | null
@@ -346,6 +347,8 @@ export interface CustomDesign {
   back_preview_url: string | null
   front_print_url: string | null
   back_print_url: string | null
+  front_print_dpi: number | null
+  back_print_dpi: number | null
   // Which garment colorway this was designed against. Null on designs
   // created before colorways existed.
   color_name: string | null
@@ -366,6 +369,11 @@ export interface Order {
   subtotal: number
   shipping_cost: number
   tax_amount: number
+  /** One entry per distinct rate, as printed on a GST invoice. */
+  tax_breakdown: { rate: number; taxable: number; tax: number }[]
+  /** Stored, not recomputed — the split must keep matching the invoice even if
+   *  the store later moves state. */
+  tax_is_igst: boolean
   discount_amount: number
   total_amount: number
   currency: string
@@ -398,10 +406,22 @@ export interface OrderItem {
   unit_price: number
   quantity: number
   total_price: number
+  // Tax snapshotted per line, the way an invoice needs it.
+  hsn_code: string | null
+  tax_rate: number
+  taxable_value: number
+  tax_amount: number
+  // Production, for customised lines. printed_at NULL on a line with a
+  // custom_design_id means it is still in the print queue.
+  printed_at: string | null
+  printed_by: string | null
+  production_note: string | null
   created_at: string
   // Only populated by admin queries that explicitly join it (getAllOrders) —
   // the customer-facing order preview URLs, for fulfillment.
-  design?: Pick<CustomDesign, 'front_preview_url' | 'back_preview_url' | 'front_print_url' | 'back_print_url'> | null
+  // The admin order detail and the print queue select the whole row — the
+  // print files and the saved canvas are what production actually needs.
+  design?: CustomDesign | null
   // Only populated by queries that explicitly join it — the product's own
   // photos, used as the order-line thumbnail when the item isn't a custom
   // design (which has no `design` preview to fall back to).
@@ -666,7 +686,11 @@ export interface StoreSettings {
   flat_shipping_rate: number
   free_shipping_threshold: number
   enable_tax: boolean
+  /** Fallback rate for products with no HSN mapping. Real rates live in tax_rates. */
   gst_percentage: number
+  /** Place of supply origin — decides CGST+SGST vs IGST. */
+  origin_state: string
+  gstin: string | null
   currency: string
   timezone: string
   home_config: HomeConfig

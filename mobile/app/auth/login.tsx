@@ -1,28 +1,55 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/auth";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { IconButton } from "@/components/ui/IconButton";
+import { StatusCap } from "@/components/ui/StatusCap";
+import { Topography } from "@/components/editorial/Topography";
 import { Icon } from "@/components/ui/Icon";
-import { Rule } from "@/components/editorial/Rule";
-import { Body, Display1, Eyebrow, Mono } from "@/components/ui/Type";
+import { Body } from "@/components/ui/Type";
 import { haptics } from "@/lib/haptics";
+import { toast } from "@/components/ui/Toast";
 import { C, F, R, S } from "@/lib/theme";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
-  const { signIn } = useAuthStore();
+  const { signIn, resetPassword } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_W } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [fieldErrs, setFieldErrs] = useState<{ email?: string; pw?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // There was no recovery path in the app at all — a forgotten password meant
+  // the account was simply unreachable from mobile. The email already typed
+  // into the form is the one we send to, so this is one tap from being stuck.
+  async function handleReset() {
+    if (!EMAIL_RE.test(email.trim())) {
+      setFieldErrs((p) => ({ ...p, email: "Enter your email first, then tap this again" }));
+      haptics.warning();
+      return;
+    }
+    setResetting(true);
+    setErr("");
+    const r = await resetPassword(email.trim());
+    setResetting(false);
+    if (r.error) {
+      setErr(r.error);
+      haptics.error();
+      return;
+    }
+    haptics.success();
+    // Deliberately does not confirm whether the address has an account — that
+    // would turn this form into an email-enumeration oracle.
+    toast.show("If that email has an account, a reset link is on its way");
+  }
 
   async function handle() {
     const errs: typeof fieldErrs = {};
@@ -48,26 +75,52 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <StatusBar style="dark" />
-      <View style={[s.top, { paddingTop: insets.top + 6 }]}>
-        <IconButton name="arrow_back" onPress={() => router.back()} />
-        <TouchableOpacity onPress={() => router.replace("/(tabs)")} hitSlop={10}>
-          <Mono color={C.textMuted}>SKIP FOR NOW</Mono>
-        </TouchableOpacity>
+      <StatusCap />
+
+      {/* The ink panel, same as every other screen. This is the first surface a
+          new customer ever sees, and it was the last one still on flat cream —
+          so the app introduced itself in a voice it never used again. */}
+      <View style={[s.panel, { paddingTop: insets.top + 10 }]}>
+        <Topography
+          width={SCREEN_W}
+          height={300}
+          color={C.sage}
+          opacity={0.13}
+          lines={9}
+          seed={8.2}
+          originX={0.84}
+          originY={0.22}
+        />
+        <View style={s.top}>
+          <IconButton
+            name="arrow_back"
+            tone="glass"
+            accessibilityLabel="Back"
+            onPress={() => router.back()}
+          />
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)")}
+            hitSlop={10}
+            accessibilityRole="button"
+          >
+            <Text style={s.skip}>SKIP FOR NOW</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+          <Text style={s.panelEyebrow}>WELCOME BACK</Text>
+          <Text style={s.panelTitle}>Your kit,{"\n"}on every device.</Text>
+          <Text style={s.panelLede}>
+            Sign in to sync your pack, your orders and everything you&apos;ve saved.
+          </Text>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.xl, paddingBottom: S.block }}
+        contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: S.block }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Eyebrow>Welcome back</Eyebrow>
-        <Display1 style={{ marginTop: 8 }}>Your kit,{"\n"}on every device.</Display1>
-        <Body color={C.textMid} style={{ marginTop: 12 }}>
-          Sign in to sync your pack, your orders and everything you&apos;ve saved.
-        </Body>
-
-        <Rule weight="ink" style={{ marginTop: S.xl }} />
 
         {err ? (
           <View style={s.errBox}>
@@ -103,6 +156,16 @@ export default function LoginScreen() {
           />
         </View>
 
+        <TouchableOpacity
+          onPress={handleReset}
+          disabled={resetting}
+          hitSlop={8}
+          style={s.forgot}
+          accessibilityRole="button"
+        >
+          <Text style={s.forgotT}>{resetting ? "Sending…" : "Forgot your password?"}</Text>
+        </TouchableOpacity>
+
         <Button title="Sign in" loading={loading} onPress={handle} style={{ width: "100%" }} />
 
         <View style={s.switchRow}>
@@ -116,8 +179,22 @@ export default function LoginScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
+  panel: {
+    backgroundColor: C.ink,
+    overflow: "hidden",
+    borderBottomLeftRadius: R.sheet,
+    borderBottomRightRadius: R.sheet,
+    paddingBottom: S.lg,
+    marginBottom: S.block,
+  },
+  panelEyebrow: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 1.9, color: C.sage },
+  panelTitle: { fontFamily: F.display, fontSize: 36, lineHeight: 39, letterSpacing: -0.2, color: C.paper, marginTop: 9 },
+  panelLede: { fontFamily: F.body, fontSize: 15, lineHeight: 23, color: "rgba(251,247,239,0.7)", marginTop: 12 },
+  skip: { fontFamily: F.mono, fontSize: 10, letterSpacing: 1.6, color: "rgba(251,247,239,0.6)" },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: S.gutter },
   errBox: { flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: C.danger12, borderRadius: R.panel, padding: 14, marginTop: S.lg },
+  forgot: { alignSelf: "flex-start", paddingVertical: S.xs, marginBottom: S.md },
+  forgotT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.textMid },
   switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: S.xl },
   switchT: { fontFamily: F.body, fontSize: 15, color: C.textMid },
 });

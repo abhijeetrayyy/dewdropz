@@ -190,3 +190,42 @@ export async function sendShipmentNotificationEmail(params: {
     `,
   })
 }
+
+export async function sendAbandonedCartEmail(params: {
+  email: string
+  name: string | null
+  recoveryUrl: string
+  items: Array<{ name: string; quantity: number; price: number }>
+}) {
+  const itemsHtml = params.items
+    .map(
+      (item) =>
+        `<tr>
+          <td style="padding:8px;border-bottom:1px solid #eee;">${item.name} × ${item.quantity}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">₹${((item.price * item.quantity) / 100).toLocaleString('en-IN')}</td>
+        </tr>`
+    )
+    .join('')
+
+  const total = params.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+
+  // No discount code, no countdown, no "we noticed you were looking at…". A
+  // reminder that the cart still exists is the whole job; training customers to
+  // abandon carts because a coupon always follows is an expensive habit to buy.
+  return sendEmail({
+    to: params.email,
+    subject: 'Your cart is still here',
+    html: `
+      <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:40px 20px;">
+        <h1 style="font-size:28px;letter-spacing:-0.5px;margin-bottom:8px;">DEWDROPZ</h1>
+        <p style="font-style:italic;color:#7BA46F;">You left something behind.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:15px;">${params.name ? `${params.name}, y` : 'Y'}our cart is saved and waiting.</p>
+        <table style="width:100%;border-collapse:collapse;margin:24px 0;">${itemsHtml}</table>
+        <p style="font-size:15px;"><strong>Total ₹${(total / 100).toLocaleString('en-IN')}</strong></p>
+        <a href="${params.recoveryUrl}" style="display:inline-block;background:#27481F;color:white;padding:12px 24px;text-decoration:none;border-radius:2px;margin-top:16px;">Return to my cart</a>
+        <p style="font-size:12px;color:#999;margin-top:32px;">If you have changed your mind, no action is needed — the cart will clear itself.</p>
+      </div>
+    `,
+  })
+}

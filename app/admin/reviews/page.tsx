@@ -3,23 +3,43 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from 'react'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAllReviews, approveReview, deleteReview } from '@/actions/reviews'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
-import { Check, Trash2, Star } from 'lucide-react'
+import { Check, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const PAGE_SIZE = 20
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Array<Record<string, unknown>>>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
 
+  // Reviews grow with every sale, so this loaded the entire table on every
+  // visit — one page at a time now, same shape as the customers list.
   async function load() {
-    try { setReviews(await getAllReviews({ approved: undefined })) }
+    try {
+      const { reviews: rows, total: t } = await getAllReviews({
+        approved: undefined, limit: PAGE_SIZE, offset: page * PAGE_SIZE,
+      })
+      setReviews(rows as Array<Record<string, unknown>>)
+      setTotal(t)
+    }
     catch { toast.error('Failed to load reviews') }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [page])
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  // Deleting the last row on a page would otherwise leave the admin staring at
+  // an empty table with no hint that there are earlier pages.
+  async function reload() {
+    if (reviews.length === 1 && page > 0) setPage((p) => p - 1)
+    else load()
+  }
 
   async function approve(id: string) {
     try { await approveReview(id); toast.success('Review approved'); load() }
@@ -28,7 +48,7 @@ export default function ReviewsPage() {
 
   async function remove(id: string) {
     if (!confirm('Delete this review?')) return
-    try { await deleteReview(id); toast.success('Deleted'); load() }
+    try { await deleteReview(id); toast.success('Deleted'); reload() }
     catch { toast.error('Failed') }
   }
 
@@ -36,7 +56,9 @@ export default function ReviewsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-black">Reviews</h2>
-        <p className="text-sm text-gray-500 mt-1">Moderate customer reviews</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Moderate customer reviews · {total} total
+        </p>
       </div>
 
       <Card>
@@ -83,6 +105,20 @@ export default function ReviewsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <span>Page {page + 1} of {pageCount}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+            </Button>
+            <Button variant="outline" size="sm" disabled={page + 1 >= pageCount} onClick={() => setPage((p) => p + 1)}>
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

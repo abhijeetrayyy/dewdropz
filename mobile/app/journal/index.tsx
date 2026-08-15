@@ -1,10 +1,10 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
 import { Body, Editorial, Mono, Title } from "@/components/ui/Type";
@@ -24,11 +24,11 @@ export default function JournalIndexScreen() {
 
   return (
     <View style={s.root}>
+      <StatusCap />
       {/* These are paper screens pushed from dark-hero ones (product,
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <StatusBar style="dark" />
       <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
         <ScreenHeader
           eyebrow="The journal"
@@ -38,7 +38,7 @@ export default function JournalIndexScreen() {
 
         <View style={{ paddingHorizontal: S.gutter }}>
           {/* ── Lead ──────────────────────────────────────────────────────── */}
-          <Animated.View entering={FadeInDown.springify().damping(18)}>
+          <Animated.View entering={FadeInDown.duration(380)}>
             <TouchableOpacity
               activeOpacity={0.94}
               onPress={() => {
@@ -74,7 +74,7 @@ export default function JournalIndexScreen() {
             <Rule weight="ink" style={{ marginTop: 9 }} />
 
             {rest.map((a, i) => (
-              <Animated.View key={a.id} entering={FadeInDown.delay((i + 1) * 70).springify().damping(18)}>
+              <Animated.View key={a.id} entering={FadeInDown.delay((i + 1) * 70).duration(380)}>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => {
@@ -84,7 +84,7 @@ export default function JournalIndexScreen() {
                   style={s.row}
                 >
                   <View style={{ flex: 1 }}>
-                    <Mono color={C.clay}>{a.tag.toUpperCase()}</Mono>
+                    <Mono color={C.clayDeep}>{a.tag.toUpperCase()}</Mono>
                     <Title style={{ marginTop: 7 }}>{a.title}</Title>
                     <Body color={C.textMid} style={{ marginTop: 6 }} numberOfLines={2}>
                       {a.excerpt}

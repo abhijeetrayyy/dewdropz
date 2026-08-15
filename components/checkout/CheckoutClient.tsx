@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/providers/CartProvider'
 import { syncLocalCartToDbCart } from '@/actions/checkout'
 import { createAddress } from '@/actions/addresses'
 import { createOrder } from '@/actions/orders'
 import { createRazorpayOrder } from '@/actions/payments'
+import { previewCheckoutTotals } from '@/actions/promotions'
 import { formatPrice } from '@/lib/utils'
 import type { Address } from '@/types/database'
 
@@ -48,8 +49,74 @@ export default function CheckoutClient({
   const [addingAddress, setAddingAddress] = useState(initialAddresses.length === 0)
   const [addressForm, setAddressForm] = useState(emptyAddressForm)
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay')
+  // Survives re-renders; reset after a successful order.
+  const idempotencyKey = useRef<string | null>(null)
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
+  // Automatic offers, resolved server-side against real product prices. Shown
+  // before payment: a discount a customer only discovers on the confirmation
+  // page is a discount they didn't get to decide with.
+  const [quote, setQuote] = useState<{
+    subtotal: number
+    promotions: { label: string; amount: number; freeShipping: boolean }[]
+    promoDiscount: number
+    freeShipping: boolean
+    couponDiscount: number
+    couponError?: string
+    totalDiscount: number
+  }>({ subtotal: 0, promotions: [], promoDiscount: 0, freeShipping: false, couponDiscount: 0, totalDiscount: 0 })
+
+  // The code that has actually been applied, separate from what is being typed —
+  // otherwise every keystroke would re-price the cart.
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState('')
+  const [couponBusy, setCouponBusy] = useState(false)
+
+  const cartKey = items.map((i) => `${i.slug}:${i.size}:${i.quantity}`).join('|')
+  useEffect(() => {
+    let cancelled = false
+    previewCheckoutTotals(
+      items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity })),
+      appliedCoupon || undefined,
+      userId
+    )
+      .then((r) => {
+        if (cancelled) return
+        setQuote(r)
+        // A code that stops qualifying because the cart changed has to come off,
+        // or the summary keeps promising a discount checkout will refuse.
+        if (r.couponError && appliedCoupon) {
+          setAppliedCoupon('')
+          setError(r.couponError)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+    // Keyed on the cart's contents, not the array identity, so re-renders don't
+    // re-query and a quantity change does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartKey, appliedCoupon, userId])
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase()
+    if (!code) return
+    setCouponBusy(true)
+    setError('')
+    try {
+      const r = await previewCheckoutTotals(
+        items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity })),
+        code,
+        userId
+      )
+      if (r.couponError) { setError(r.couponError); return }
+      setAppliedCoupon(code)
+      setCouponInput('')
+    } catch {
+      setError('Could not check that code')
+    } finally {
+      setCouponBusy(false)
+    }
+  }
 
   async function handleSaveAddress() {
     setError('')
@@ -91,21 +158,34 @@ export default function CheckoutClient({
       }
 
       if (paymentMethod === 'cod') {
+        // Minted once per attempt and held in a ref, so a double-clicked button
+        // or a retry after a dropped response reuses it and gets the original
+        // order back instead of placing a second one.
+        if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID()
         const result = await createOrder({
           userId, email, shipping_address_id: selectedAddressId, payment_method: 'cod',
+          coupon_code: appliedCoupon || undefined,
+          idempotencyKey: idempotencyKey.current,
         })
         if ('error' in result) {
           setError(typeof result.error === 'string' ? result.error : 'Could not place order')
           setPlacing(false)
           return
         }
+        idempotencyKey.current = null
         clear()
         router.push(`/account/orders/${result.orderId}?success=true`)
         return
       }
 
+      // Same key discipline as the COD path. This one matters more: without it
+      // a retried "pay" creates a second order and a second Razorpay intent, so
+      // the customer can be charged twice for one basket.
+      if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID()
       const rpResult = await createRazorpayOrder({
         userId, email, shipping_address_id: selectedAddressId,
+        coupon_code: appliedCoupon || undefined,
+        idempotencyKey: idempotencyKey.current,
       })
       if ('error' in rpResult) {
         setError(typeof rpResult.error === 'string' ? rpResult.error : 'Could not start payment')
@@ -146,6 +226,8 @@ export default function CheckoutClient({
             setPlacing(false)
             return
           }
+          // The attempt is finished; a later checkout must mint a fresh key.
+          idempotencyKey.current = null
           clear()
           router.push(`/account/orders/${rpResult.orderId}?success=true`)
         },
@@ -264,13 +346,58 @@ export default function CheckoutClient({
                   <span className="text-text tabular-nums shrink-0">{formatPrice(item.price * item.quantity)}</span>
                 </div>
               ))}
-              <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-t border-rule mt-2">
+              {quote.promotions.map((p) => (
+                <div key={p.label} className="flex items-center justify-between font-body text-sm py-2 text-forest">
+                  <span className="truncate pr-2">{p.label}</span>
+                  <span className="tabular-nums shrink-0">{p.freeShipping ? 'Free shipping' : `−${formatPrice(p.amount)}`}</span>
+                </div>
+              ))}
+
+              {quote.couponDiscount > 0 && (
+                <div className="flex items-center justify-between font-body text-sm py-2 text-forest">
+                  <span className="truncate pr-2">Coupon {appliedCoupon}</span>
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="tabular-nums">−{formatPrice(quote.couponDiscount)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAppliedCoupon('')}
+                      className="text-mid hover:text-text"
+                      aria-label={`Remove coupon ${appliedCoupon}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                </div>
+              )}
+
+              {!appliedCoupon && (
+                <div className="flex gap-2 py-3 border-t border-rule mt-2">
+                  <input
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon() } }}
+                    placeholder="Coupon code"
+                    aria-label="Coupon code"
+                    className="flex-1 min-w-0 border border-rule rounded-sm px-3 py-2 font-body text-sm uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:border-forest"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={couponBusy || !couponInput.trim()}
+                    className="px-4 py-2 border border-forest text-forest font-body text-[10px] tracking-[0.12em] uppercase rounded-sm disabled:opacity-40 hover:bg-forest hover:text-paper transition-colors"
+                  >
+                    {couponBusy ? '…' : 'Apply'}
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-t border-rule">
                 <span>Shipping &amp; tax</span>
-                <span className="text-mid">Calculated after address</span>
+                <span className="text-mid">{quote.freeShipping ? 'Shipping free · tax at checkout' : 'Calculated after address'}</span>
               </div>
               <div className="flex items-center justify-between font-body text-base font-medium py-4">
                 <span className="text-text">Subtotal</span>
-                <span className="text-forest tabular-nums">{formatPrice(subtotal)}</span>
+                <span className="text-forest tabular-nums">{formatPrice(Math.max(0, subtotal - quote.totalDiscount))}</span>
               </div>
 
               {error && <p className="text-clay text-xs font-body mb-3">{error}</p>}

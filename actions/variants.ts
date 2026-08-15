@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { VariantWithOptions, InventoryMovement, InventoryMovementWithDetails } from '@/types/database'
+import { auditLog } from '@/lib/audit'
 
 // -- Public reads --
 
@@ -150,8 +151,19 @@ export async function adjustStock(input: {
   reason: 'restock' | 'adjustment' | 'damaged'
   notes?: string
 }) {
-  await requireAdmin()
+  const actor = await requireAdmin()
   const supabase = createAdminSupabaseClient()
+
+  // `inventory_movements` already records WHAT moved; this records WHO moved it
+  // in the same place as every other admin action, so one query answers
+  // "what did this person change today" across orders, prices and stock.
+  await auditLog({
+    actorId: actor.id, actorEmail: actor.email, action: 'stock.adjusted',
+    entityType: input.variant_id ? 'product_variant' : 'product',
+    entityId: input.variant_id ?? input.product_id,
+    after: { quantity_change: input.quantity_change, reason: input.reason },
+    note: input.notes,
+  })
 
   await supabase.rpc('adjust_stock_atomic', {
     p_product_id: input.product_id,

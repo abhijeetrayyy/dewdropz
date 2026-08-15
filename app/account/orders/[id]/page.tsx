@@ -3,6 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAuth } from '@/actions/auth'
 import { getOrder } from '@/actions/orders'
+import { getShipmentsForOrder } from '@/actions/shipments'
+import { getOrderPromotions } from '@/actions/promotions'
+import { splitTax } from '@/lib/tax'
+import { getReturnEligibility, getReturnsForOrder } from '@/actions/returns'
+import ReturnRequest from './ReturnRequest'
 import { formatPrice } from '@/lib/utils'
 import CancelOrderButton from './CancelOrderButton'
 
@@ -16,11 +21,41 @@ const STATUS_LABEL: Record<string, string> = {
   refunded: 'Refunded',
 }
 
+// The courier's vocabulary, said the way a customer would say it.
+const SHIPMENT_LABEL: Record<string, string> = {
+  pending: 'Packed',
+  label_created: 'Label created',
+  picked_up: 'Picked up',
+  in_transit: 'In transit',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  failed: 'Delivery failed',
+  rto: 'Returning to us',
+  cancelled: 'Cancelled',
+}
+
 export default async function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireAuth()
   const { id } = await params
   const order = await getOrder(id, user.id)
   if (!order) notFound()
+
+  const orderPromotions = await getOrderPromotions(id)
+  const promotionTotal = orderPromotions.reduce((n, p) => n + p.amount, 0)
+
+  // Both read through RLS, scoped to the caller's own orders.
+  const eligibility = await getReturnEligibility(id)
+  const returns = await getReturnsForOrder(id)
+
+  // RLS restricts this to the caller's own orders, so no extra ownership check.
+  const shipments = (await getShipmentsForOrder(id)) as {
+    id: string
+    courier_name: string | null
+    awb: string | null
+    tracking_url: string | null
+    status: string
+    events: { id: string; status: string; description: string | null; location: string | null; occurred_at: string }[]
+  }[]
 
   const address = order.shipping_address as {
     full_name?: string
@@ -67,15 +102,86 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
           </div>
           <div>
             <div className="font-body text-xs text-mid uppercase tracking-[0.1em] mb-2">Tracking</div>
-            {order.tracking_number ? (
+            {/* Falls back to the order's own tracking columns for orders placed
+                before shipments existed, so history does not go blank. */}
+            {shipments.length === 0 && !order.tracking_number && (
+              <div className="font-body text-sm text-mid">Not available yet</div>
+            )}
+            {shipments.length === 0 && order.tracking_number && (
               <div className="font-body text-sm text-text">
                 {order.carrier} — <a href={order.tracking_url || '#'} className="text-forest hover:underline" target="_blank" rel="noreferrer">{order.tracking_number}</a>
               </div>
-            ) : (
-              <div className="font-body text-sm text-mid">Not available yet</div>
+            )}
+            {shipments.length > 0 && (
+              <div className="font-body text-sm text-text">
+                {shipments.length === 1 ? '1 parcel' : `${shipments.length} parcels`}
+              </div>
             )}
           </div>
         </div>
+
+        {/* Parcels. An order can ship in more than one box — each carries its
+            own courier, AWB and scan history, which is the whole reason a single
+            tracking column on the order was not enough. */}
+        {shipments.length > 0 && (
+          <div className="mt-10">
+            <div className="mb-4 font-body text-xs uppercase tracking-[0.1em] text-mid">
+              {shipments.length === 1 ? 'Your parcel' : 'Your parcels'}
+            </div>
+            <div className="space-y-4">
+              {shipments.map((s, i) => (
+                <div key={s.id} className="rounded-sm border border-rule p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <div className="font-body text-sm text-text">
+                      {shipments.length > 1 && (
+                        <span className="mr-2 font-mono text-xs text-mid">{String(i + 1).padStart(2, '0')}</span>
+                      )}
+                      {s.courier_name ?? 'Parcel'}
+                      {s.awb && <span className="ml-2 font-mono text-xs text-mid">{s.awb}</span>}
+                    </div>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-forest">
+                      {SHIPMENT_LABEL[s.status] ?? s.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+
+                  {s.tracking_url && (
+                    <a
+                      href={s.tracking_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block font-body text-sm text-forest hover:underline"
+                    >
+                      Track this parcel →
+                    </a>
+                  )}
+
+                  {/* The history a bare status field can never give you. */}
+                  {s.events?.length > 0 && (
+                    <ol className="mt-4 space-y-2 border-t border-rule pt-3">
+                      {[...s.events]
+                        .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+                        .map((e) => (
+                          <li key={e.id} className="flex gap-3 font-body text-xs">
+                            <span className="w-28 shrink-0 font-mono text-[10px] text-mid">
+                              {new Date(e.occurred_at).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                              })}
+                            </span>
+                            <span className="text-text">
+                              {SHIPMENT_LABEL[e.status] ?? e.status.replace(/_/g, ' ')}
+                              {e.description ? ` — ${e.description}` : ''}
+                              {e.location ? ` · ${e.location}` : ''}
+                            </span>
+                          </li>
+                        ))}
+                    </ol>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           {order.items?.map((item) => {
@@ -113,16 +219,52 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
             <span>Shipping</span>
             <span className="tabular-nums text-text">{formatPrice(order.shipping_cost)}</span>
           </div>
+          {/* GST is shown the way it is levied: one line per rate, split into
+              CGST/SGST for a delivery inside our own state and IGST outside it.
+              A single "Tax" line is not something a customer can reconcile
+              against an invoice. */}
           {order.tax_amount > 0 && (
-            <div className="flex items-center justify-between font-body text-sm text-mid">
-              <span>Tax</span>
-              <span className="tabular-nums text-text">{formatPrice(order.tax_amount)}</span>
-            </div>
+            order.tax_breakdown?.length ? (
+              order.tax_breakdown.map((b) => {
+                const split = splitTax(b.tax, order.tax_is_igst)
+                return order.tax_is_igst ? (
+                  <div key={b.rate} className="flex items-center justify-between font-body text-sm text-mid">
+                    <span>IGST {b.rate}%</span>
+                    <span className="tabular-nums text-text">{formatPrice(split.igst)}</span>
+                  </div>
+                ) : (
+                  <div key={b.rate} className="space-y-1.5">
+                    <div className="flex items-center justify-between font-body text-sm text-mid">
+                      <span>CGST {b.rate / 2}%</span>
+                      <span className="tabular-nums text-text">{formatPrice(split.cgst)}</span>
+                    </div>
+                    <div className="flex items-center justify-between font-body text-sm text-mid">
+                      <span>SGST {b.rate / 2}%</span>
+                      <span className="tabular-nums text-text">{formatPrice(split.sgst)}</span>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              // Orders placed before per-line tax existed carry only a total.
+              <div className="flex items-center justify-between font-body text-sm text-mid">
+                <span>Tax</span>
+                <span className="tabular-nums text-text">{formatPrice(order.tax_amount)}</span>
+              </div>
+            )
           )}
-          {order.discount_amount > 0 && (
+          {/* Promotions are named; anything left over is the coupon, which the
+              customer typed themselves and already knows about. */}
+          {orderPromotions.map((p) => (
+            <div key={p.label} className="flex items-center justify-between font-body text-sm text-mid">
+              <span>{p.label}</span>
+              <span className="tabular-nums text-forest">−{formatPrice(p.amount)}</span>
+            </div>
+          ))}
+          {order.discount_amount - promotionTotal > 0 && (
             <div className="flex items-center justify-between font-body text-sm text-mid">
               <span>Discount</span>
-              <span className="tabular-nums text-forest">−{formatPrice(order.discount_amount)}</span>
+              <span className="tabular-nums text-forest">−{formatPrice(order.discount_amount - promotionTotal)}</span>
             </div>
           )}
           <div className="flex items-center justify-between font-body text-base font-medium pt-2">
@@ -130,6 +272,24 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
             <span className="text-forest tabular-nums">{formatPrice(order.total_amount)}</span>
           </div>
         </div>
+
+        {/* Returns already opened on this order, so a customer can see where a
+            request got to instead of wondering whether it registered. */}
+        {returns.length > 0 && (
+          <div className="mt-10 border-t border-rule pt-6">
+            <h2 className="font-body text-xs uppercase tracking-[0.1em] text-mid">Returns</h2>
+            <div className="mt-3 space-y-2">
+              {returns.map((r) => (
+                <div key={r.id} className="flex items-baseline justify-between gap-4 text-sm">
+                  <span className="font-mono text-xs text-mid">{r.rma_number}</span>
+                  <span className="text-text capitalize">{String(r.status).replace(/_/g, ' ')}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {eligibility.eligible && <ReturnRequest orderId={id} lines={eligibility.lines} />}
       </div>
     </div>
   )

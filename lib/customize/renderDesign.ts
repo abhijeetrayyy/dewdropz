@@ -2,15 +2,17 @@ import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { createCanvas, loadImage, GlobalFonts, type SKRSContext2D } from '@napi-rs/canvas'
 import type { CustomizationZone } from '@/types/database'
+import { scaleForZone, dpiForScale, outputSize } from './printSpec'
 
 // The zone coordinate space every design is authored in. Mobile stores layer
 // positions in these units, so rendering is a pure scale-up from here.
 const CANONICAL_WIDTH = 800
 
-// Print files render at a multiple of the zone's canonical size. The artwork a
-// shopper supplies is the real ceiling on quality, but this stops the export
-// itself from being the limiting factor.
-const PRINT_SCALE = 4
+// Print scale is no longer a constant here. It was `PRINT_SCALE = 4`, which had
+// nothing to do with the print size it was producing: on the tee's 212px zone
+// that made an 849px file for a 12-inch print — 71 DPI, and unusable. It now
+// comes from the zone's physical dimensions via printSpec, the same rule the
+// web studio follows.
 
 // The mobile studio renders text with these exact TTFs (vendored from the same
 // @expo-google-fonts packages the app bundles), so server output matches what
@@ -114,15 +116,24 @@ async function drawLayer(ctx: SKRSContext2D, layer: RenderLayer, scale: number) 
 }
 
 // The artwork alone on transparency — this is the file that goes to the printer.
-export async function renderPrint(zone: CustomizationZone, layers: RenderLayer[]): Promise<Buffer> {
+export async function renderPrint(
+  zone: CustomizationZone,
+  layers: RenderLayer[]
+): Promise<{ buffer: Buffer; dpi: number; widthPx: number; heightPx: number }> {
   ensureFonts()
-  const canvas = createCanvas(
-    Math.round(zone.widthPx * PRINT_SCALE),
-    Math.round(zone.heightPx * PRINT_SCALE)
-  )
+  const scale = scaleForZone(zone)
+  const { widthPx, heightPx } = outputSize(zone, scale)
+
+  const canvas = createCanvas(widthPx, heightPx)
   const ctx = canvas.getContext('2d')
-  for (const layer of layers) await drawLayer(ctx, layer, PRINT_SCALE)
-  return canvas.toBuffer('image/png')
+  for (const layer of layers) await drawLayer(ctx, layer, scale)
+
+  return {
+    buffer: canvas.toBuffer('image/png'),
+    dpi: dpiForScale(zone, scale),
+    widthPx,
+    heightPx,
+  }
 }
 
 // The same artwork composited over the garment photo, clipped to the print

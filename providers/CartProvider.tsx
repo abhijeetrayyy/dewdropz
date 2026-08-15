@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { mirrorCartForRecovery } from '@/actions/checkout'
 
 export interface CartLine {
   slug: string
@@ -51,6 +52,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  }, [items, hydrated])
+
+  // Mirror the cart server-side for signed-in customers, so an abandoned cart
+  // can be recovered. Debounced, because adjusting a quantity fires this on
+  // every click, and skipped on the first pass after hydration: mirroring what
+  // was already in localStorage would bump the cart's updated_at on every page
+  // load, and a cart that looks perpetually active is never abandoned.
+  const mirroredOnce = useRef(false)
+  useEffect(() => {
+    if (!hydrated) return
+    if (!mirroredOnce.current) { mirroredOnce.current = true; return }
+    if (items.length === 0) return
+    const timer = setTimeout(() => {
+      mirrorCartForRecovery(
+        items.map((l) => ({
+          slug: l.slug, size: l.size, quantity: l.quantity,
+          productId: l.productId, variantId: l.variantId, customDesignId: l.customDesignId,
+        }))
+      ).catch(() => {
+        // Recovery is a nicety; a failed mirror must never break the cart.
+      })
+    }, 2500)
+    return () => clearTimeout(timer)
   }, [items, hydrated])
 
   const addItem: CartContextValue['addItem'] = (item, quantity = 1) => {

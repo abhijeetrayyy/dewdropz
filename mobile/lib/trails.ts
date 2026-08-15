@@ -27,6 +27,31 @@ export type Trail = {
 
 export const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"] as const;
 
+/**
+ * Altitude as a number, parsed from the authored display string ("3,800m").
+ *
+ * Stored as prose because that is how it is written in the guide and on the
+ * website, and duplicating it as a second numeric field is how the two drift
+ * apart. Parsing keeps one source of truth; if a string is ever malformed this
+ * returns 0 and the trail simply sits at the bottom of the profile rather than
+ * throwing.
+ */
+export function altitudeMeters(trail: Pick<Trail, "altitude">): number {
+  return Number(trail.altitude.replace(/[^0-9]/g, "")) || 0;
+}
+
+/** Difficulty as a rank, for sorting. The strings are an ordered scale. */
+const DIFFICULTY_RANK = ["Easy", "Easy–Moderate", "Moderate", "Hard"];
+export function difficultyRank(trail: Pick<Trail, "difficulty">): number {
+  const i = DIFFICULTY_RANK.indexOf(trail.difficulty);
+  return i === -1 ? DIFFICULTY_RANK.length : i;
+}
+
+/** The month a trail guide should open on — this one. */
+export function currentMonth(): string {
+  return MONTHS[new Date().getMonth()];
+}
+
 export const TRAILS: Trail[] = [
   {
     slug: 'kedarkantha',

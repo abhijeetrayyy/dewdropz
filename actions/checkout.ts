@@ -2,6 +2,8 @@
 
 import { clearCart, addToCart } from './cart'
 import { getProductBySlug } from './products'
+import { getUser } from './auth'
+import { matchVariantForSize } from '@/lib/variantMatch'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Bridges the storefront's local cart (slug + plain size string, no DB identity)
@@ -43,16 +45,35 @@ export async function syncLocalCartToDbCart(
     const product = await getProductBySlug(line.slug)
     if (!product) { skipped.push(line.slug); continue }
 
-    let variantId: string | null = null
-    if (product.variants?.length) {
-      const prefix = `${line.size.toLowerCase()} /`
-      const match = product.variants.find((v) => v.name.toLowerCase().startsWith(prefix))
-      variantId = (match ?? product.variants[0]).id
-    }
+    const variantId = matchVariantForSize(product.variants, line.size)?.id ?? null
 
     const result = await addToCart({ product_id: product.id, variant_id: variantId, quantity: line.quantity, userId, client })
     if (result && 'error' in result) skipped.push(line.slug)
   }
 
   return { skipped }
+}
+
+/**
+ * Mirror a signed-in customer's local cart into the database so it can be
+ * recovered if they leave.
+ *
+ * The storefront cart lives in localStorage, which means that until this
+ * existed the server only ever saw a cart at the moment someone pressed Place
+ * Order — recovery would have covered failed payments and nothing else.
+ *
+ * Two deliberate properties:
+ *  - It derives the user from the session rather than taking a userId, so a
+ *    client cannot write into somebody else's cart.
+ *  - It is called only when the cart actually CHANGES, never on mount. Mirroring
+ *    on every page load would keep bumping `carts.updated_at` and the sweep
+ *    would never consider any cart abandoned.
+ */
+export async function mirrorCartForRecovery(
+  lines: { slug: string; size: string; quantity: number; productId?: string; variantId?: string | null; customDesignId?: string }[]
+) {
+  const user = await getUser()
+  if (!user) return { mirrored: false }
+  await syncLocalCartToDbCart(lines, user.id)
+  return { mirrored: true }
 }

@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { SectionHead } from "@/components/editorial/SectionHead";
 import { IndexList } from "@/components/editorial/IndexList";
 import { StatBand } from "@/components/editorial/StatBand";
@@ -25,11 +25,11 @@ import { C, S } from "@/lib/theme";
 export default function AboutScreen() {
   return (
     <View style={s.root}>
+      <StatusCap />
       {/* These are paper screens pushed from dark-hero ones (product,
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <StatusBar style="dark" />
       <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
         <ScreenHeader
           eyebrow="Our story"

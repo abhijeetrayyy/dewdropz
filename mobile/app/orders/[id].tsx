@@ -2,9 +2,13 @@ import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, pickVariant } from "@/lib/utils";
 import { useOrderQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
+import { useCartStore } from "@/stores/cart";
+import { toast } from "@/components/ui/Toast";
+import { haptics } from "@/lib/haptics";
+import { contactSupport } from "@/lib/support";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { IconButton } from "@/components/ui/IconButton";
@@ -40,15 +44,66 @@ export default function OrderDetailScreen() {
     ? STAGES.reduce((acc, stage, i) => (stage.statuses.includes(o.status as never) ? i : acc), o.status === "delivered" ? 3 : 0)
     : 0;
 
+  const addItem = useCartStore((st) => st.addItem);
+
   const delivered = o?.status === "delivered";
-  const headline = delivered ? "Delivered." : o?.status === "shipped" ? "On the road." : "Packed.";
+  // Cancelled and refunded orders used to fall through to "Packed." — the one
+  // headline the screen exists to get right, stating the opposite of the truth.
+  const closed = o?.status === "cancelled" || o?.status === "refunded";
+  const headline = closed
+    ? o?.status === "refunded"
+      ? "Refunded."
+      : "Cancelled."
+    : delivered
+      ? "Delivered."
+      : o?.status === "shipped"
+        ? "On the road."
+        : "Packed.";
+
+  // Puts the same pieces back in the pack. Lines whose product has since been
+  // delisted are skipped rather than added as a broken line, and the count in
+  // the toast reflects what actually went in.
+  function buyAgain() {
+    if (!o?.items?.length) return;
+    haptics.tap();
+    let added = 0;
+    for (const line of o.items) {
+      const p = line.product;
+      if (!p) continue;
+      const variant = pickVariant(p.variants);
+      addItem(
+        {
+          productId: p.id,
+          slug: p.slug,
+          name: line.product_name ?? p.slug,
+          price: p.price,
+          image: p.images?.[0] ?? "",
+          size: variant?.name,
+          variantId: variant?.id ?? null,
+        },
+        line.quantity,
+      );
+      added += 1;
+    }
+    if (added === 0) {
+      toast.show("Those pieces aren't available any more");
+      return;
+    }
+    toast.success(`Added ${added} ${added === 1 ? "piece" : "pieces"} to pack`);
+  }
+
+  const helpSubject = o ? `Help with order #${o.order_number}` : "Help with an order";
 
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 6 }]}>
         <IconButton name="arrow_back" onPress={() => router.back()} />
         <Mono color={C.textMuted}>{o ? `#${o.order_number}` : "ORDER"}</Mono>
-        <IconButton name="help" />
+        <IconButton
+          name="help"
+          accessibilityLabel="Get help with this order"
+          onPress={() => contactSupport(helpSubject)}
+        />
       </View>
 
       <ScrollView
@@ -72,8 +127,8 @@ export default function OrderDetailScreen() {
           <>
             {/* ── Status ─────────────────────────────────────────────────── */}
             <View style={{ paddingHorizontal: S.gutter, paddingTop: S.lg }}>
-              <Eyebrow color={delivered ? C.forest : C.clayDeep}>
-                {delivered ? "Complete" : "In transit"}
+              <Eyebrow color={closed ? C.textMuted : delivered ? C.forest : C.clayDeep}>
+                {closed ? "Closed" : delivered ? "Complete" : "In transit"}
               </Eyebrow>
               <Display1 style={{ marginTop: 8 }}>{headline}</Display1>
               <Body color={C.textMid} style={{ marginTop: 8 }}>
@@ -81,18 +136,34 @@ export default function OrderDetailScreen() {
                 {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
               </Body>
 
-              {/* Labelled segment bar — each segment is a named stage. */}
-              <View style={s.segments}>
-                {STAGES.map((stg, i) => (
-                  <View key={stg.key} style={[s.segment, i <= activeIndex && s.segmentOn]} />
-                ))}
-              </View>
-              <Mono color={C.textMuted} style={{ marginTop: 8 }}>
-                STAGE {activeIndex + 1} OF {STAGES.length} · {STAGES[activeIndex].label.toUpperCase()}
-              </Mono>
+              {/* The whole delivery-progress apparatus is suppressed once an
+                  order is cancelled or refunded. It used to render regardless:
+                  a cancelled order showed "In transit", a segment bar and
+                  "STAGE 1 OF 4 · PACKED IN DEHRADUN" — a delivery that was
+                  never going to happen, described as under way. */}
+              {closed ? (
+                <Body color={C.textMid} style={{ marginTop: S.lg }}>
+                  {o.status === "refunded"
+                    ? "This order was refunded. The money is back with your bank — it can take a few working days to appear."
+                    : "This order was cancelled and nothing was dispatched."}
+                </Body>
+              ) : (
+                <>
+                  {/* Labelled segment bar — each segment is a named stage. */}
+                  <View style={s.segments}>
+                    {STAGES.map((stg, i) => (
+                      <View key={stg.key} style={[s.segment, i <= activeIndex && s.segmentOn]} />
+                    ))}
+                  </View>
+                  <Mono color={C.textMuted} style={{ marginTop: 8 }}>
+                    STAGE {activeIndex + 1} OF {STAGES.length} · {STAGES[activeIndex].label.toUpperCase()}
+                  </Mono>
+                </>
+              )}
             </View>
 
             {/* ── Timeline ───────────────────────────────────────────────── */}
+            {closed ? null : (
             <View style={{ paddingHorizontal: S.gutter, marginTop: S.block }}>
               <SectionHead eyebrow="Progress" title="Where it is." size="d3" />
               <View style={{ marginTop: S.lg }}>
@@ -118,6 +189,7 @@ export default function OrderDetailScreen() {
                 })}
               </View>
             </View>
+            )}
 
             {/* ── Contents ───────────────────────────────────────────────── */}
             <View style={{ paddingHorizontal: S.gutter, marginTop: S.block }}>
@@ -158,16 +230,22 @@ export default function OrderDetailScreen() {
         )}
       </ScrollView>
 
+      {/* "Track" used to sit here and push to the shop — from the very screen
+          that already shows the tracking timeline. It's gone; on an order still
+          in transit this screen IS the tracking, so help is the only action
+          left to offer. */}
       {o ? (
         <View style={[s.bar, { paddingBottom: insets.bottom + 14 }]}>
-          <Button title="Get help" variant="quiet" icon="chat" onPress={() => {}} style={{ flex: 1 }} />
           <Button
-            title={delivered ? "Buy again" : "Track"}
-            variant="dark"
-            icon={delivered ? "refresh" : "map"}
-            onPress={() => router.push("/(tabs)/shop")}
+            title="Get help"
+            variant="quiet"
+            icon="chat"
+            onPress={() => contactSupport(helpSubject)}
             style={{ flex: 1 }}
           />
+          {delivered ? (
+            <Button title="Buy again" variant="dark" icon="refresh" onPress={buyAgain} style={{ flex: 1 }} />
+          ) : null}
         </View>
       ) : null}
     </View>

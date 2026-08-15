@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { ENV } from "@/lib/env";
 import type { Session, User } from "@supabase/supabase-js";
 
 type AuthStore = {
@@ -14,6 +15,8 @@ type AuthStore = {
     password: string,
     fullName: string,
   ) => Promise<{ error?: string }>;
+  /** Sends the password-reset email. The app had no recovery path at all. */
+  resetPassword: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 };
 
@@ -58,6 +61,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       email,
       password,
       options: { data: { full_name: fullName } },
+    });
+    if (error) return { error: error.message };
+    return {};
+  },
+
+  // Deliberately redirects to the WEB app's reset page rather than a deep link
+  // back into the app: the recovery link is opened from a mail client, often
+  // on a different device from the one that's locked out, and a browser page
+  // works everywhere an app-scheme link does not.
+  resetPassword: async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${ENV.siteUrl}/auth/reset-password`,
     });
     if (error) return { error: error.message };
     return {};

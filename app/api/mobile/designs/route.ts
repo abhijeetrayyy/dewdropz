@@ -109,12 +109,15 @@ export async function POST(request: NextRequest) {
       ])
 
       const [printUrl, previewUrl] = await Promise.all([
-        uploadFileAdmin(STORAGE_BUCKETS.DESIGNS, `${crypto.randomUUID()}.png`, print, 'image/png'),
+        uploadFileAdmin(STORAGE_BUCKETS.DESIGNS, `${crypto.randomUUID()}.png`, print.buffer, 'image/png'),
         uploadFileAdmin(STORAGE_BUCKETS.DESIGNS, `${crypto.randomUUID()}.png`, preview, 'image/png'),
       ])
 
       row[`${side}_print_url`] = printUrl
       row[`${side}_preview_url`] = previewUrl
+      // Recorded with the design so production can see what it is holding
+      // without re-downloading and measuring the file.
+      row[`${side}_print_dpi`] = print.dpi
       row[`${side}_design`] = { layers }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not render your design.'

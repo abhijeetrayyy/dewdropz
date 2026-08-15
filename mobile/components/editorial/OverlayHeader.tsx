@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Rule } from "./Rule";
@@ -19,6 +20,14 @@ import { C, F, M, S } from "@/lib/theme";
 // once the hero has scrolled away. Callers pass a `scrolled` boolean derived
 // from their own scroll handler — a plain threshold flip, so this re-renders
 // twice per screen rather than every frame.
+//
+// It also carries the scrim behind the SYSTEM status bar. Every screen using
+// this asks for light glyphs while the hero is showing, and there was nothing
+// guaranteeing they'd land on anything dark: product mockups are shot on pale
+// grey, so the clock and battery were white on near-white and washed out
+// completely. A hero is art-directed for the area its own copy occupies, never
+// for the 60px the OS draws over — so that contrast has to be manufactured
+// here rather than hoped for.
 
 type Props = {
   scrolled: boolean;
@@ -34,6 +43,15 @@ export function OverlayHeader({ scrolled, title, onBack, renderRight }: Props) {
 
   return (
     <View style={[s.wrap, { paddingTop: insets.top + 6 }]} pointerEvents="box-none">
+      {!scrolled ? (
+        <LinearGradient
+          colors={["rgba(12,18,15,0.55)", "rgba(12,18,15,0.22)", "rgba(12,18,15,0)"]}
+          locations={[0, 0.62, 1]}
+          style={[StyleSheet.absoluteFill, s.scrim]}
+          pointerEvents="none"
+        />
+      ) : null}
+
       {scrolled ? (
         <Animated.View
           entering={FadeIn.duration(M.fast)}
@@ -71,6 +89,8 @@ export function OverlayHeader({ scrolled, title, onBack, renderRight }: Props) {
 const s = StyleSheet.create({
   wrap: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 },
   solid: { backgroundColor: C.paper },
+  // Extends below the control row so the ramp finishes off the buttons.
+  scrim: { bottom: -26 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: S.gutter, paddingBottom: 8 },
   // Centred independently of the controls so the title doesn't shift when the
   // right-hand side gains or loses a button.

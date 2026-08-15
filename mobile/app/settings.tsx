@@ -1,14 +1,18 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect } from "react";
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Body, Eyebrow, Mono, Title } from "@/components/ui/Type";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationPreferencesQuery, useUpdateNotificationPreferencesMutation } from "@/lib/queries";
 import { haptics } from "@/lib/haptics";
+import { contactSupport } from "@/lib/support";
 import { SITE } from "@/lib/editorial";
 import { C, F, M, S } from "@/lib/theme";
 
@@ -21,7 +25,7 @@ import { C, F, M, S } from "@/lib/theme";
 // flipping them didn't persist anywhere, so they silently reset every time
 // the app reopened. They now read from and write to profiles.notification_preferences.
 export default function SettingsScreen() {
-  const { user, signOut } = useAuthStore();
+  const { user } = useAuthStore();
   const { data: prefs, isLoading } = useNotificationPreferencesQuery(user?.id);
   const updatePrefs = useUpdateNotificationPreferencesMutation(user?.id);
 
@@ -30,8 +34,58 @@ export default function SettingsScreen() {
     updatePrefs.mutate({ ...prefs, [key]: value });
   }
 
+  // Deleting an account is irreversible and there is no self-serve endpoint for
+  // it yet, so this raises a request rather than pretending to do the deletion.
+  // It previously called signOut() under a "Delete account" label — the user
+  // was told their data was gone when nothing had been deleted at all.
+  function requestDeletion() {
+    haptics.warning();
+    Alert.alert(
+      "Delete your account?",
+      "This removes your order history, saved gear and addresses for good. We'll open an email so you can confirm the request — deletion is handled within 30 days.",
+      [
+        { text: "Keep my account", style: "cancel" },
+        {
+          text: "Request deletion",
+          style: "destructive",
+          onPress: () =>
+            contactSupport(
+              "Account deletion request",
+              `Please delete the DewDropz account for ${user?.email ?? "(this email address)"}.\n\nI understand this permanently removes my order history, saved gear and saved addresses.`,
+            ),
+        },
+      ],
+    );
+  }
+
+  // Everything on this screen is account-scoped, so a signed-out visitor
+  // (deep link, or a sign-out that left them here) used to sit on notification
+  // skeletons that never resolved: the preferences query is disabled without a
+  // user id, so `prefs` stayed undefined forever.
+  if (!user) {
+    return (
+      <View style={s.root}>
+        <StatusCap />
+        <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
+          <ScreenHeader eyebrow="Preferences" title="Settings" />
+          <View style={{ paddingHorizontal: S.gutter }}>
+            <EmptyState
+              eyebrow="Signed out"
+              icon="settings"
+              title="Sign in to change these."
+              body="Notification preferences live with your account, so they follow you to every device you sign in on."
+              ctaLabel="Sign in"
+              ctaHref="/auth/login"
+            />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={s.root}>
+      <StatusCap />
       <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
         <ScreenHeader eyebrow="Preferences" title="Settings" />
 
@@ -71,11 +125,10 @@ export default function SettingsScreen() {
             )}
           </Group>
 
-          <Group eyebrow="Preferences">
-            <LinkRow icon="straighten" label="Units" value="Metric" />
-            <LinkRow icon="translate" label="Language" value="English" />
-            <LinkRow icon="light_mode" label="Appearance" value="Daylight" last />
-          </Group>
+          {/* A "Units / Language / Appearance" group used to sit here showing
+              Metric / English / Daylight behind chevrons that opened nothing —
+              three settings the app has no second option for. They come back
+              when there is something to switch to. */}
 
           <Group eyebrow="About">
             <LinkRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
@@ -84,16 +137,12 @@ export default function SettingsScreen() {
           </Group>
 
           <Group eyebrow="Account">
-            <LinkRow icon="shield" label="Privacy" />
-            <TouchableOpacity
-              style={s.row}
-              activeOpacity={0.7}
-              onPress={() => {
-                haptics.warning();
-                signOut();
-                router.replace("/(tabs)/account");
-              }}
-            >
+            <LinkRow
+              icon="mail"
+              label="Contact us"
+              onPress={() => contactSupport("Hello from the DewDropz app")}
+            />
+            <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={requestDeletion}>
               <Icon name="delete" size={20} color={C.danger} />
               <Text style={[s.rowLabel, { color: C.danger }]}>Delete account</Text>
             </TouchableOpacity>
@@ -124,15 +173,21 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   const x = useSharedValue(value ? 20 : 0);
   const knobStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 
+  // The knob has to follow `value` and not just the tap that set it: a failed
+  // write to profiles.notification_preferences reverts the query cache, and
+  // without this the switch would sit in the position the user chose while the
+  // saved preference said the opposite.
+  useEffect(() => {
+    x.value = withTiming(value ? 20 : 0, { duration: M.fast });
+  }, [value, x]);
+
   return (
     <TouchableOpacity
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       onPress={() => {
         haptics.select();
-        const next = !value;
-        x.value = withTiming(next ? 20 : 0, { duration: M.fast });
-        onChange(next);
+        onChange(!value);
       }}
       style={[s.toggle, value && s.toggleOn]}
     >
@@ -173,25 +228,25 @@ function ToggleRow({
   );
 }
 
+// `onPress` is required, not optional. The optional version invited rows that
+// rendered a chevron and did nothing but fire a haptic, which is how four of
+// them shipped.
 function LinkRow({
   icon,
   label,
-  value,
   last,
   onPress,
 }: {
   icon: string;
   label: string;
-  value?: string;
   last?: boolean;
-  onPress?: () => void;
+  onPress: () => void;
 }) {
   return (
     <>
-      <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={onPress ?? (() => haptics.select())}>
+      <TouchableOpacity style={s.row} activeOpacity={0.7} accessibilityRole="button" onPress={onPress}>
         <Icon name={icon} size={20} color={C.textMid} />
         <Title style={{ flex: 1 }}>{label}</Title>
-        {value ? <Mono color={C.textMuted}>{value.toUpperCase()}</Mono> : null}
         <Icon name="chevron_right" size={19} color={C.faintIcon} />
       </TouchableOpacity>
       {last ? <Rule weight="soft" /> : <Rule weight="hair" />}

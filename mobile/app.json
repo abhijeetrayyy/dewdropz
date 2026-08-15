@@ -42,7 +42,8 @@
     "extra": {
       "supabaseUrl": "https://incspnucryjdhbcerpcb.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3NwbnVjcnlqZGhiY2VycGNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NzM2MzksImV4cCI6MjA5ODA0OTYzOX0.ICWRE3Ahooq8JLAgZyTSvjLvfxaZ_Wd7qn6B0NwGPEA",
-      "apiUrl": "http://localhost:3010"
+      "apiUrl": "http://localhost:3010",
+      "siteUrl": "https://dewdropz.shop"
     }
   }
 }

@@ -68,7 +68,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           v4 put it (and where it collided with every screen's header). */}
       <View pointerEvents="none" style={[s.stack, { bottom: insets.bottom + 92 }]}>
         {items.map((t) => (
-          <Animated.View key={t.id} entering={FadeInUp.springify().damping(17)} exiting={FadeOutDown.duration(180)} style={s.toast}>
+          <Animated.View key={t.id} entering={FadeInUp.duration(380)} exiting={FadeOutDown.duration(180)} style={s.toast}>
             {t.variant === "success" ? (
               <Icon name="check_circle" size={16} color={C.forest12} filled />
             ) : t.variant === "error" ? (
@@ -100,7 +100,7 @@ const s = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 20,
     maxWidth: 420,
-    shadowColor: "#000",
+    shadowColor: C.ink,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.22,
     shadowRadius: 16,

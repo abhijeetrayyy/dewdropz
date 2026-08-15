@@ -66,7 +66,7 @@ export default function OrderPlacedScreen() {
           </Body>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(380).springify().damping(18)} style={{ marginTop: S.block }}>
+        <Animated.View entering={FadeInDown.delay(380).duration(380)} style={{ marginTop: S.block }}>
           <Rule weight="soft" />
           <SpecTable
             rows={[

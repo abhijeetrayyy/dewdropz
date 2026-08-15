@@ -5,9 +5,10 @@ import { C, T } from "@/lib/theme";
 // list only — a raw `fontSize` anywhere in a screen file is a bug, because it
 // means that screen has quietly opted out of the system and will drift.
 //
-// Two voices, matched to the website (see the v6 notes in theme.ts):
-//   Display*/Editorial/Serif/Quote — Fraunces, the web app's own font-display
-//   Title/Body/Meta/Micro/Eyebrow/Mono/Numeric — Inter, the web app's font-body
+// Three voices, matched to the website (see the v6 notes in theme.ts):
+//   Display*/Editorial/Serif/Quote — Fraunces, the web app's font-display
+//   Title/Body/Lede/Meta/Micro     — Archivo, the web app's font-body
+//   Eyebrow/Mono/Numeric           — Space Mono, the technical register
 
 type Props = TextProps & { color?: string };
 
@@ -17,11 +18,11 @@ export const Display1 = ({ style, color = C.ink, ...p }: Props) => <Text style={
 export const Display2 = ({ style, color = C.ink, ...p }: Props) => <Text style={[T.d2, { color }, style]} {...p} />;
 export const Display3 = ({ style, color = C.ink, ...p }: Props) => <Text style={[T.d3, { color }, style]} {...p} />;
 
-/** Bricolage 500 — for headlines long enough that 800 would bully the page. */
+/** Fraunces light — headlines long enough that the display sizes would shout. */
 export const Editorial = ({ style, color = C.ink, ...p }: Props) => <Text style={[T.editorial, { color }, style]} {...p} />;
-/** Instrument Serif regular — collection names, manifesto lines. */
+/** Fraunces regular — collection names, manifesto lines. */
 export const Serif = ({ style, color = C.ink, ...p }: Props) => <Text style={[T.serif, { color }, style]} {...p} />;
-/** Instrument Serif italic — pull quotes, testimonials, guide asides. */
+/** Fraunces light italic — pull quotes, testimonials, guide asides. */
 export const Quote = ({ style, color = C.ink, ...p }: Props) => <Text style={[T.quote, { color }, style]} {...p} />;
 
 export const Title = ({ style, color = C.ink, ...p }: Props) => <Text style={[T.title, { color }, style]} {...p} />;
@@ -42,6 +43,7 @@ export const Numeric = ({ style, color = C.ink, ...p }: Props) => <Text style={[
 /**
  * Legacy uppercase Archivo label. Superseded by `Eyebrow` — kept so screens
  * that haven't been migrated keep rendering while the redesign lands.
+ * @deprecated use `Eyebrow`
  */
 export const Label = ({ style, color = C.forest, ...p }: Props) => <Text style={[T.label, { color }, style]} {...p} />;
 /** @deprecated use `Quote` */

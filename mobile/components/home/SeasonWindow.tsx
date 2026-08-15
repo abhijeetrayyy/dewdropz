@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useWindowDimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { Topography } from "@/components/editorial/Topography";
@@ -12,8 +12,6 @@ import { formatPrice } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const BAND_W = SCREEN_W;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The season window — the front page's answer to "why now?"
@@ -32,7 +30,12 @@ const BAND_W = SCREEN_W;
 // Set on the altitude band (deep blue-black, the high-cold end of the palette)
 // with contour texture behind it, so the section reads as elevation before a
 // single word is parsed.
-export function SeasonWindow() {
+// `index` is supplied by the home screen's section counter rather than being
+// hardcoded here — this block used to print a literal "01" while the numbered
+// SectionHeads below it started at "02", so the issue had two sections claiming
+// the opening slot depending on which one you read as first.
+export function SeasonWindow({ index }: { index?: string }) {
+  const { width: BAND_W } = useWindowDimensions();
   const kit = useMemo(() => currentSeasonKit(), []);
   const { data: products = [] } = useProductsBySlugsQuery(kit.products);
 
@@ -56,7 +59,7 @@ export function SeasonWindow() {
           <Eyebrow color={C.sage} style={{ flex: 1 }}>
             {kit.seasonLabel} · open now
           </Eyebrow>
-          <Mono color="rgba(255,255,255,0.45)">01</Mono>
+          {index ? <Mono color="rgba(255,255,255,0.45)">{index}</Mono> : null}
         </View>
         <Rule weight="soft" style={{ marginTop: 9, opacity: 0.35 }} />
 

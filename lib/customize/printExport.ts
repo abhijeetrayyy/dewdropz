@@ -1,36 +1,19 @@
 import type { Canvas } from 'fabric'
 import type { CustomizationZone } from '@/types/database'
+import { TARGET_DPI, MIN_DPI, scaleForZone, dpiForScale, outputSize } from './printSpec'
 
-// What a print file actually has to be. The studio canvas is only ~220px wide
-// (the zone's canonical size), so exporting it at multiplier 1 — which is what
-// this used to do — handed the printer a 220px file for a 12-inch print: 18 DPI.
-// The real export resolution comes from the zone's physical size instead, which
-// is exactly what widthIn/heightIn are recorded for.
-const TARGET_DPI = 300
-
-// Below this a DTG print visibly softens; if we can't hit it within the size
-// budget we still export, but the caller is told the real number.
-const MIN_DPI = 150
+// The DPI rule itself now lives in printSpec, shared with the server renderer
+// behind the mobile design API — the two used to disagree, and only one of them
+// was right.
 
 // design-uploads caps objects at 10MB, so a print PNG has to land under that
 // with headroom for the base64/multipart overhead of the upload itself.
 const MAX_BYTES = 8.5 * 1024 * 1024
 
-// Browsers refuse to rasterise a canvas past a few thousand px per side
-// (Safari is the strictest). Staying well inside that avoids toDataURL
-// silently returning a blank or throwing.
-const MAX_EDGE_PX = 8192
-
 function approxBytes(dataUrl: string): number {
   const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
   // 4 base64 chars encode 3 bytes; padding '=' costs a byte each.
   return Math.floor(base64.length * 0.75) - (base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0)
-}
-
-function multiplierFor(zone: CustomizationZone, dpi: number): number {
-  const byWidth = (zone.widthIn * dpi) / zone.widthPx
-  const byEdge = MAX_EDGE_PX / Math.max(zone.widthPx, zone.heightPx)
-  return Math.min(byWidth, byEdge)
 }
 
 export type PrintExport = { dataUrl: string; dpi: number; widthPx: number; heightPx: number }
@@ -44,15 +27,14 @@ export function exportPrintArtwork(canvas: Canvas, zone: CustomizationZone): Pri
   let last: PrintExport | null = null
 
   for (let dpi = TARGET_DPI; dpi >= MIN_DPI; dpi -= 50) {
-    const multiplier = multiplierFor(zone, dpi)
+    const multiplier = scaleForZone(zone, dpi)
     const dataUrl = canvas.toDataURL({ format: 'png', multiplier })
     const result: PrintExport = {
       dataUrl,
       // Report what the file actually is, not what we asked for — the
       // MAX_EDGE_PX clamp can land it below the requested DPI.
-      dpi: Math.round((zone.widthPx * multiplier) / zone.widthIn),
-      widthPx: Math.round(zone.widthPx * multiplier),
-      heightPx: Math.round(zone.heightPx * multiplier),
+      dpi: dpiForScale(zone, multiplier),
+      ...outputSize(zone, multiplier),
     }
     if (approxBytes(dataUrl) <= MAX_BYTES) return result
     last = result

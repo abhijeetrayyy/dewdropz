@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { ArrowRight, Layers, Plus, Shirt, SlidersHorizontal } from "lucide-react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, { FadeIn, useSharedValue, withTiming } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useProductQuery } from "@/lib/queries";
 import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/lib/utils";
@@ -13,23 +13,32 @@ import { haptics } from "@/lib/haptics";
 import { toast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CustomizeStage, MOCKUP_ASPECT } from "@/components/customize/CustomizeStage";
+import { CustomizeStage, useMockupAspect } from "@/components/customize/CustomizeStage";
+import { Icon } from "@/components/ui/Icon";
+import { IconButton } from "@/components/ui/IconButton";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { StudioToolbar } from "@/components/customize/StudioToolbar";
 import { saveDesign, uploadPickedImage } from "@/lib/customize/save";
 import {
   DesignLayer, DesignState, EMPTY_DESIGN, SideKey, defaultInkFor, newId,
 } from "@/lib/customize/types";
 import type { CustomizationColorway } from "@/lib/data";
-import { C, F, R } from "@/lib/theme";
+import { C, F, M, R, S } from "@/lib/theme";
 
-const { height: SCREEN_H } = Dimensions.get("window");
-/** Panels never take more than this, so the garment always keeps the majority. */
-const SHEET_MAX = Math.round(SCREEN_H * 0.34);
 
 type StudioTab_ = "none" | "blank" | "add" | "edit" | "layers";
 
 export default function CustomizeScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  // `size` arrives from the product page's buy bar, which shows a size selector
+  // above a "Design yours" CTA. Without honouring it the studio silently
+  // restarts the shopper at the first variant.
+  const { slug, size: sizeParam } = useLocalSearchParams<{ slug: string; size?: string }>();
+  // Measured per render — the studio is the screen most likely to be used in
+  // Android split-screen (artwork in one pane, gallery in the other).
+  const insets = useSafeAreaInsets();
+  const { height: SCREEN_H } = useWindowDimensions();
+  /** Panels never take more than this, so the garment keeps the majority. */
+  const SHEET_MAX = Math.round(SCREEN_H * 0.34);
   const { data: product, isLoading, isError } = useProductQuery(slug);
   const { addItem } = useCartStore();
 
@@ -45,7 +54,16 @@ export default function CustomizeScreen() {
 
   const variants = product?.variants ?? [];
   const [variantId, setVariantId] = useState<string>("");
-  const variant = variants.find((v) => v.id === variantId) ?? variants[0];
+  // The incoming size is a DEFAULT, not state — so it slots in as the fallback
+  // rather than being copied into `variantId` by an effect. An explicit tap
+  // sets `variantId` and wins from then on; until then the product page's
+  // choice stands. (`variants` is rebuilt every render, so an effect keyed on
+  // it would re-run constantly and need a ref to guard itself — deriving the
+  // value sidesteps that entirely.)
+  const paramVariant = sizeParam
+    ? variants.find((v) => v.name.toLowerCase() === sizeParam.toLowerCase())
+    : undefined;
+  const variant = variants.find((v) => v.id === variantId) ?? paramVariant ?? variants[0];
 
   const [activeSide, setActiveSide] = useState<SideKey>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -77,6 +95,30 @@ export default function CustomizeScreen() {
   const layers = design[effectiveSide];
   const selected = layers.find((l) => l.id === selectedId) ?? null;
 
+  const aspect = useMockupAspect(color?.[effectiveSide]?.mockupImage);
+
+  // Canvas zoom lives in a shared value (the stage animates against it on the
+  // UI thread) mirrored into React state purely so the badge can render a
+  // number. Reset whenever the garment underneath changes, or you'd land on a
+  // new side still panned to the last one's corner.
+  const zoom = useSharedValue(1);
+  const [zoomLabel, setZoomLabel] = useState(1);
+  // Bumped whenever a new layer lands, so the stage pans to show it rather than
+  // leaving it somewhere outside a zoomed-in viewport.
+  const [centerOn, setCenterOn] = useState<{ x: number; y: number; nonce: number }>();
+  const nonce = useRef(0);
+  const focus = useCallback((x: number, y: number) => {
+    nonce.current += 1;
+    setCenterOn({ x, y, nonce: nonce.current });
+  }, []);
+  // Called from the handlers that swap the garment, not from an effect keyed on
+  // them — an effect here would setState during render-commit and cascade an
+  // extra render on every side/colour tap.
+  const resetZoom = useCallback(() => {
+    zoom.value = withTiming(1, { duration: M.base });
+    setZoomLabel(1);
+  }, [zoom]);
+
 
   function patchSide(side: SideKey, mutate: (list: DesignLayer[]) => DesignLayer[]) {
     commit({ ...design, [side]: mutate(design[side]) });
@@ -107,6 +149,7 @@ export default function CustomizeScreen() {
     };
     patchSide(effectiveSide, (l) => [...l, layer]);
     setSelectedId(layer.id);
+    focus(layer.x, layer.y);
   }
 
   async function addImage() {
@@ -155,6 +198,7 @@ export default function CustomizeScreen() {
       };
       patchSide(effectiveSide, (l) => [...l, layer]);
       setSelectedId(layer.id);
+      focus(layer.x + w / 2, layer.y + h / 2);
       haptics.select();
     } catch (err) {
       haptics.error();
@@ -260,7 +304,7 @@ export default function CustomizeScreen() {
       <View style={s.root}>
         <View style={{ padding: 20, gap: 12 }}>
           <Skeleton height={16} width="40%" />
-          <Skeleton height={Math.round(SCREEN_H * 0.32)} radius={R.md} />
+          <Skeleton height={Math.round(SCREEN_H * 0.32)} radius={R.card} />
         </View>
       </View>
     );
@@ -292,32 +336,63 @@ export default function CustomizeScreen() {
   // the same rule as the web studio. Width-only sizing inside a page-level
   // ScrollView (what this screen used to do) meant the tool you tapped and the
   // artwork it edited could never be on screen at the same time.
+  //
+  // `aspect` is measured from the mockup rather than assumed — the constant it
+  // replaced described the garments as landscape when they are portrait, which
+  // both cropped the photo and put the print area in the wrong place.
   const stageWidth = Math.max(
     120,
-    Math.min(stageBox.w - 24, (stageBox.h - 40) / MOCKUP_ASPECT, 520)
+    Math.min(stageBox.w - 24, (stageBox.h - 24) / aspect, 520)
   );
 
   return (
     <View style={s.root}>
-      {/* Side switch stays pinned above the stage — it's a mode, not a tool. */}
-      {twoSided && (
-        <View style={s.sideTabs}>
-          {sides.map((sd) => (
-            <TouchableOpacity
-              key={sd}
-              onPress={() => { haptics.select(); setActiveSide(sd); setSelectedId(null); }}
-              style={[s.sideTab, effectiveSide === sd && s.sideTabOn]}
-            >
-              <Text style={[s.sideTabT, effectiveSide === sd && s.sideTabTOn]}>
-                {sd === "front" ? "Front" : "Back"}
-              </Text>
-              {design[sd].length > 0 && (
-                <View style={[s.sideDot, effectiveSide === sd && s.sideDotOn]} />
-              )}
-            </TouchableOpacity>
-          ))}
+      <StatusCap />
+
+      {/* ── Panel ─────────────────────────────────────────────────────────
+          The studio was the last screen still wearing React Navigation's own
+          bar, titled "Customize" in a different typeface at a different height
+          from every other header in the app. It now carries the same ink panel,
+          with the Front/Back switch folded into it — that switch is a MODE, and
+          a mode belongs in the chrome rather than floating above the garment as
+          if it were another tool. ─────────────────────────────────────────── */}
+      <View style={[s.panel, { paddingTop: insets.top + 8 }]}>
+        <View style={s.panelRow}>
+          <IconButton
+            name="arrow_back"
+            tone="glass"
+            accessibilityLabel="Back"
+            onPress={() => router.back()}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={s.panelKicker}>THE STUDIO</Text>
+            <Text style={s.panelTitle} numberOfLines={1}>
+              {product.name}
+            </Text>
+          </View>
+          {twoSided ? (
+            <View style={s.sideTabs}>
+              {sides.map((sd) => (
+                <TouchableOpacity
+                  key={sd}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: effectiveSide === sd }}
+                  accessibilityLabel={`${sd === "front" ? "Front" : "Back"} of the garment`}
+                  onPress={() => { haptics.select(); setActiveSide(sd); setSelectedId(null); resetZoom(); }}
+                  style={[s.sideTab, effectiveSide === sd && s.sideTabOn]}
+                >
+                  <Text style={[s.sideTabT, effectiveSide === sd && s.sideTabTOn]}>
+                    {sd === "front" ? "Front" : "Back"}
+                  </Text>
+                  {design[sd].length > 0 ? (
+                    <View style={[s.sideDot, effectiveSide === sd && s.sideDotOn]} />
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
         </View>
-      )}
+      </View>
 
       {/* Stage — flex:1, so it absorbs whatever the panels leave behind. */}
       <View
@@ -334,9 +409,11 @@ export default function CustomizeScreen() {
               side={effectiveSide}
               layers={layers}
               stageWidth={stageWidth}
+              aspect={aspect}
+              zoom={zoom}
+              onZoomChange={setZoomLabel}
+              centerOn={centerOn}
               selectedId={selectedId}
-              focused={false}
-              onFocus={() => {}}
               onSelect={selectLayer}
               onCommit={(id, patch) =>
                 patchSide(effectiveSide, (l) =>
@@ -344,6 +421,21 @@ export default function CustomizeScreen() {
                 )
               }
             />
+
+            {/* Only appears once you're actually zoomed, so it never sits over
+                the garment as permanent furniture. */}
+            {zoomLabel > 1.05 ? (
+              <TouchableOpacity
+                style={s.zoomPill}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`Zoomed to ${Math.round(zoomLabel * 100)} percent. Tap to fit.`}
+                onPress={() => { haptics.select(); resetZoom(); }}
+              >
+                <Icon name="fit_screen" size={13} color={C.paper} />
+                <Text style={s.zoomPillT}>{Math.round(zoomLabel * 100)}%</Text>
+              </TouchableOpacity>
+            ) : null}
           </Animated.View>
         ) : null}
       </View>
@@ -364,19 +456,36 @@ export default function CustomizeScreen() {
                     <TouchableOpacity
                       key={c.name}
                       disabled={!c.available}
-                      onPress={() => { haptics.select(); setColorIndex(i); setSelectedId(null); }}
+                      onPress={() => { haptics.select(); setColorIndex(i); setSelectedId(null); resetZoom(); }}
                       accessibilityLabel={c.available ? c.name : `${c.name}, coming soon`}
-                      style={[
-                        s.swatch,
-                        { backgroundColor: c.hex },
-                        colorIndex === i && s.swatchOn,
-                        !c.available && s.swatchOff,
-                      ]}
-                    />
+                      style={s.swatchHit}
+                    >
+                      <View
+                        style={[
+                          s.swatch,
+                          { backgroundColor: c.hex },
+                          colorIndex === i && s.swatchOn,
+                          !c.available && s.swatchOff,
+                        ]}
+                      />
+                      {/* An unavailable swatch was previously signalled by
+                          opacity alone, which reads as "slightly paler dot",
+                          not as "you cannot have this" — so the three
+                          coming-soon colours looked tappable, did nothing when
+                          tapped, and gave no reason why. Opacity is also the
+                          one channel a shopper can't distinguish on a swatch
+                          whose whole job is to be a colour. The slash is the
+                          second, non-colour channel. */}
+                      {!c.available ? <View style={s.swatchSlash} /> : null}
+                    </TouchableOpacity>
                   ))}
+                  {/* The suffix used to hang off `color`, the SELECTED colour —
+                      which can never be an unavailable one, so it could never
+                      render. It belongs on the row, describing the swatches
+                      that are struck through. */}
                   <Text style={s.colorName}>
                     {color?.name}
-                    {color && !color.available ? " · coming soon" : ""}
+                    {colors.some((c) => !c.available) ? " · some colours coming soon" : ""}
                   </Text>
                 </View>
 
@@ -459,15 +568,21 @@ export default function CustomizeScreen() {
       {/* Tab bar — one tool at a time; tapping the open tab hands the height
           back to the garment. */}
       <View style={s.tabs}>
-        <StudioTab label="Blank" icon={Shirt} tab="blank" current={tab} onSelect={setTab} />
-        <StudioTab label="Add" icon={Plus} tab="add" current={tab} onSelect={setTab} />
-        <StudioTab label="Edit" icon={SlidersHorizontal} tab="edit" current={tab} onSelect={setTab} dimmed={!selected} />
-        <StudioTab label={layers.length ? `Layers ${layers.length}` : "Layers"} icon={Layers} tab="layers" current={tab} onSelect={setTab} />
+        <StudioTab label="Blank" icon="checkroom" tab="blank" current={tab} onSelect={setTab} />
+        <StudioTab label="Add" icon="add" tab="add" current={tab} onSelect={setTab} />
+        <StudioTab label="Edit" icon="tune" tab="edit" current={tab} onSelect={setTab} dimmed={!selected} />
+        <StudioTab label={layers.length ? `Layers ${layers.length}` : "Layers"} icon="layers" tab="layers" current={tab} onSelect={setTab} />
       </View>
 
       <View style={s.footer}>
-        <View>
-          <Text style={s.fLbl}>{product.name}</Text>
+        {/* Colour and size are chosen behind the "Blank" tab, which the studio
+            doesn't open on — so what you were about to buy was invisible right
+            up to the moment you bought it. Stated here instead. */}
+        <View style={{ flex: 1 }}>
+          <Text style={s.fLbl} numberOfLines={1}>
+            {[color?.name, variant?.name && `Size ${variant.name}`].filter(Boolean).join(" · ") ||
+              product.name}
+          </Text>
           <Text style={s.fPrice}>{formatPrice(product.price + (variant?.price_adjustment ?? 0))}</Text>
         </View>
         <TouchableOpacity
@@ -477,11 +592,11 @@ export default function CustomizeScreen() {
           activeOpacity={0.9}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={C.white} />
           ) : (
             <>
               <Text style={s.ctaT}>Add to Cart</Text>
-              <ArrowRight size={16} strokeWidth={2} color="#FFFFFF" />
+              <Icon name="arrow_forward" size={18} color={C.white} />
             </>
           )}
         </TouchableOpacity>
@@ -491,17 +606,18 @@ export default function CustomizeScreen() {
 }
 
 function StudioTab({
-  label, icon: IconCmp, tab, current, onSelect, dimmed,
+  label, icon, tab, current, onSelect, dimmed,
 }: {
   label: string;
-  icon: typeof Plus;
+  /** Material Symbols glyph name — same family as the rest of the app. */
+  icon: string;
   tab: StudioTab_;
   current: StudioTab_;
   onSelect: (updater: (t: StudioTab_) => StudioTab_) => void;
   dimmed?: boolean;
 }) {
   const on = current === tab;
-  const fg = on ? C.forest : dimmed ? C.light : C.mid;
+  const fg = on ? C.forest : dimmed ? C.textMuted : C.textMid;
   return (
     <TouchableOpacity
       onPress={() => { haptics.select(); onSelect((t) => (t === tab ? "none" : tab)); }}
@@ -510,7 +626,7 @@ function StudioTab({
       style={[s.tab, on && s.tabOn]}
       activeOpacity={0.8}
     >
-      <IconCmp size={18} strokeWidth={1.75} color={fg} />
+      <Icon name={icon} size={20} color={fg} filled={on} />
       <Text style={[s.tabT, { color: fg }]} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   );
@@ -520,62 +636,105 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
   scroll: { flex: 1, backgroundColor: C.paper },
   pickers: { paddingHorizontal: 20, paddingVertical: 14 },
-  lbl: { fontFamily: F.mono, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: C.mid, marginBottom: 8 },
+  lbl: { fontFamily: F.mono, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: C.textMid, marginBottom: 8 },
   swatchRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  swatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: C.rule },
+  // The dot stays 30 — a colour swatch reads as a sample, not a button, and
+  // scaling it to 44 would make the row look like a set of toggles. The 44×44
+  // hit box around it is what the finger actually gets. The row's own `gap`
+  // then applies between hit boxes rather than between dots, so the dots sit
+  // further apart than before; that reads as deliberate air in a picker and is
+  // the cheaper side of the trade against a 30pt target.
+  swatchHit: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  swatch: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: C.ruleMed },
   swatchOn: { borderWidth: 2.5, borderColor: C.forest },
   swatchOff: { opacity: 0.35 },
-  colorName: { fontFamily: F.body, fontSize: 12, color: C.mid, marginLeft: 4 },
+  // Struck through the dot at 45°. 34 is the 30pt dot's diagonal (≈42) trimmed
+  // to sit inside the circle rather than poke out of it.
+  swatchSlash: {
+    position: "absolute",
+    width: 34,
+    height: 1.5,
+    backgroundColor: C.textMid,
+    transform: [{ rotate: "-45deg" }],
+  },
+  colorName: { fontFamily: F.body, fontSize: 12, color: C.textMid, marginLeft: 4 },
   size: {
-    minWidth: 46, alignItems: "center", paddingVertical: 9, paddingHorizontal: 12,
-    borderWidth: 1, borderColor: C.rule, borderRadius: R.sm, backgroundColor: C.surface,
+    // 9pt of padding around 13pt text came to ~36 tall — under the 44 minimum,
+    // on the control that decides what garment actually ships. minHeight rather
+    // than more padding, so the chip still grows with the system text size.
+    minWidth: 46, minHeight: 44, justifyContent: "center",
+    alignItems: "center", paddingVertical: 9, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: C.ruleMed, borderRadius: R.pill, backgroundColor: C.paper,
   },
   sizeOn: { backgroundColor: C.forest, borderColor: C.forest },
   sizeOff: { opacity: 0.4 },
-  sizeT: { fontFamily: F.body, fontSize: 13, color: C.text },
-  sizeTOn: { color: "#FFFFFF", fontWeight: "700" },
-  sideTabs: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4 },
-  sideTab: {
-    flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: R.md,
-    borderWidth: 1, borderColor: C.rule, backgroundColor: C.surface,
+  sizeT: { fontFamily: F.body, fontSize: 13, color: C.ink },
+  sizeTOn: { color: C.paper, fontFamily: F.bodyBold },
+  panel: {
+    backgroundColor: C.ink,
+    borderBottomLeftRadius: R.sheet,
+    borderBottomRightRadius: R.sheet,
+    paddingBottom: S.md,
   },
-  sideTabOn: { backgroundColor: C.forest, borderColor: C.forest },
-  sideTabT: { fontFamily: F.bodyBold, fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", color: C.mid },
-  sideTabTOn: { color: "#FFFFFF" },
+  panelRow: { flexDirection: "row", alignItems: "center", gap: S.md, paddingHorizontal: S.gutter },
+  panelKicker: { fontFamily: F.monoBold, fontSize: 9, letterSpacing: 1.8, color: C.sage },
+  panelTitle: { fontFamily: F.display, fontSize: 22, lineHeight: 26, color: C.paper, marginTop: 3 },
+
+  // A segmented pill on the ink, not two outlined cards on paper.
+  sideTabs: {
+    flexDirection: "row",
+    gap: 3,
+    backgroundColor: "rgba(251,247,239,0.1)",
+    borderRadius: R.pill,
+    padding: 3,
+  },
+  sideTab: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingVertical: 7, paddingHorizontal: 12, borderRadius: R.pill,
+  },
+  sideTabOn: { backgroundColor: C.paper },
+  sideTabT: { fontFamily: F.bodySemiBold, fontSize: 11, letterSpacing: 0.4, color: "rgba(251,247,239,0.65)" },
+  sideTabTOn: { color: C.ink },
   stageArea: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
-  sheet: { borderTopWidth: 1, borderTopColor: C.rule, backgroundColor: C.paper },
+  zoomPill: {
+    position: "absolute", bottom: 10, alignSelf: "center",
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: C.ink + "D9", paddingHorizontal: 12, paddingVertical: 7, borderRadius: R.pill,
+  },
+  zoomPillT: { fontFamily: F.monoBold, fontSize: 11, letterSpacing: 0.6, color: C.paper },
+  sheet: { borderTopWidth: 1, borderTopColor: C.ruleMed, backgroundColor: C.paper },
   tabs: {
     flexDirection: "row", gap: 4, paddingHorizontal: 8, paddingVertical: 6,
-    borderTopWidth: 1, borderTopColor: C.rule, backgroundColor: C.paper,
+    borderTopWidth: 1, borderTopColor: C.ruleMed, backgroundColor: C.paper,
   },
-  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3, height: 54, borderRadius: R.md },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3, height: 54, borderRadius: R.panel },
   tabOn: { backgroundColor: C.sage12 },
   tabT: { fontFamily: F.bodyBold, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase" },
-  sideDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: C.forest, marginTop: 4 },
-  sideDotOn: { backgroundColor: "#FFFFFF" },
-  hintT: { fontFamily: F.body, fontSize: 12, color: C.light, paddingVertical: 6 },
-  layerRow: { paddingVertical: 10, paddingHorizontal: 10, borderRadius: R.sm, marginTop: 4 },
+  sideDot: { width: 5, height: 5, borderRadius: 999, backgroundColor: C.sage },
+  sideDotOn: { backgroundColor: C.forest },
+  hintT: { fontFamily: F.body, fontSize: 12, color: C.textMuted, paddingVertical: 6 },
+  layerRow: { paddingVertical: 10, paddingHorizontal: 10, borderRadius: R.panel, marginTop: 4 },
   layerRowOn: { backgroundColor: C.sage12 },
-  layerT: { fontFamily: F.body, fontSize: 13, color: C.text },
+  layerT: { fontFamily: F.body, fontSize: 13, color: C.ink },
   deselect: { paddingTop: 8, paddingBottom: 2 },
-  deselectT: { fontFamily: F.body, fontSize: 11, color: C.light },
+  deselectT: { fontFamily: F.body, fontSize: 11, color: C.textMuted },
   footer: {
     // In-flow, not absolute. It was pinned to the bottom back when the whole
     // screen was one ScrollView; in the flex column it would sit on top of the
     // tool tabs and swallow them.
     flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14,
     paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28,
-    backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.rule,
+    backgroundColor: C.paper, borderTopWidth: 1, borderTopColor: C.ruleMed,
   },
-  fLbl: { fontFamily: F.body, fontSize: 12, color: C.mid },
+  fLbl: { fontFamily: F.body, fontSize: 12, color: C.textMid },
   // Inter, not Fraunces — web's price treatment is always font-body
   // (DesignYourOwnConfigurator.tsx: `font-body text-lg tabular-nums`), never
   // the display serif, even next to a product name that IS in Fraunces.
-  fPrice: { fontFamily: F.bodyBold, fontSize: 20, color: C.text },
+  fPrice: { fontFamily: F.bodyBold, fontSize: 20, color: C.ink },
   cta: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: C.forest, borderRadius: R.md, paddingVertical: 15, paddingHorizontal: 26, minWidth: 168,
+    backgroundColor: C.forest, borderRadius: R.pill, paddingVertical: 15, paddingHorizontal: 26, minWidth: 168,
   },
   ctaOff: { opacity: 0.45 },
-  ctaT: { fontFamily: F.bodyBold, fontSize: 14, color: "#FFFFFF", letterSpacing: 0.3, fontWeight: "700" },
+  ctaT: { fontFamily: F.bodyBold, fontSize: 14, color: C.white, letterSpacing: -0.1 },
 });

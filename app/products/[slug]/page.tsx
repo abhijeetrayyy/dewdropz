@@ -5,6 +5,8 @@ import FooterSection from '@/components/layout/FooterSection'
 import ProductDetail from '@/components/sections/ProductDetail'
 import { getProductBySlug, getProducts, getCollections } from '@/actions/products'
 import { getRelatedProducts } from '@/lib/recommendations'
+import { getStoreSettings } from '@/actions/settings'
+import { getOffersForProduct } from '@/actions/promotions'
 
 export async function generateStaticParams() {
   const products = await getProducts()
@@ -26,14 +28,29 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [allProducts, collections] = await Promise.all([getProducts(), getCollections()])
+  const [allProducts, collections, settings, offers] = await Promise.all([
+    getProducts(),
+    getCollections(),
+    getStoreSettings(),
+    // Automatic offers that would fire on this product. Shown here because an
+    // offer nobody learns about until checkout is an offer that did not do its
+    // job — the point of running one is that it affects what people buy.
+    getOffersForProduct(product.slug, product.collection?.slug ?? null),
+  ])
   const related = getRelatedProducts(allProducts, product.slug, 6)
 
   return (
     <>
       <NavBar />
       <main>
-        <ProductDetail product={product} collection={product.collection} related={related} collections={collections} />
+        <ProductDetail
+          product={product}
+          collection={product.collection}
+          related={related}
+          collections={collections}
+          freeShippingThreshold={settings.free_shipping_threshold}
+          offers={offers}
+        />
       </main>
       <FooterSection />
     </>

@@ -63,6 +63,8 @@ export async function getStoreSettings() {
       free_shipping_threshold: 200000,
       enable_tax: true,
       gst_percentage: 5.0,
+      origin_state: 'Uttarakhand',
+      gstin: null,
       currency: 'INR',
       timezone: 'Asia/Kolkata',
       home_config: DEFAULT_HOME_CONFIG,

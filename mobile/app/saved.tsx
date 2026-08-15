@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useWishlistStore } from "@/stores/wishlist";
 import { ProductCard } from "@/components/ProductCard";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,7 +16,7 @@ import { Body, Mono } from "@/components/ui/Type";
 import { useProductsBySlugsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { useCartStore } from "@/stores/cart";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, pickVariant } from "@/lib/utils";
 import { toast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { C, R, S } from "@/lib/theme";
@@ -42,13 +43,15 @@ export default function SavedScreen() {
   function addAllToPack() {
     haptics.tap();
     for (const p of products as any[]) {
+      const variant = pickVariant(p.variants);
       addItem({
         productId: p.id,
         slug: p.slug,
         name: p.name,
         price: p.price,
         image: p.images?.[0] ?? "",
-        size: p.variants?.[0]?.name,
+        size: variant?.name,
+        variantId: variant?.id ?? null,
       });
     }
     toast.success(`Added ${products.length} item${products.length !== 1 ? "s" : ""} to pack`);
@@ -56,6 +59,7 @@ export default function SavedScreen() {
 
   return (
     <View style={s.root}>
+      <StatusCap />
       <ScrollView
         contentContainerStyle={{ paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
@@ -64,7 +68,18 @@ export default function SavedScreen() {
         <ScreenHeader
           eyebrow="Kept for later"
           title="Saved"
-          lede={products.length > 0 ? `${products.length} pieces · ${formatPrice(total)} altogether.` : undefined}
+          lede={products.length === 0 ? "Tap the heart on any piece and it waits for you here." : undefined}
+          stats={
+            products.length > 0
+              ? [
+                  { label: "Pieces", value: String(products.length) },
+                  { label: "Altogether", value: formatPrice(total) },
+                  ...(lowStock.length > 0
+                    ? [{ label: "Running low", value: String(lowStock.length) }]
+                    : []),
+                ]
+              : undefined
+          }
         />
 
         <View style={{ paddingHorizontal: S.gutter }}>
@@ -87,12 +102,21 @@ export default function SavedScreen() {
             <SkeletonProductGrid count={4} />
           ) : isError ? (
             <ErrorState message="Couldn't load your saved gear." onRetry={() => refetch()} />
-          ) : slugs.length === 0 ? (
+          ) : products.length === 0 ? (
+            // Keyed on what actually RESOLVED, not on how many slugs are stored.
+            // A saved slug whose product has since been unpublished or deleted
+            // still counts in `slugs`, so the old check fell through to the grid
+            // branch and rendered "0 PIECES", an "Add all to pack" button and a
+            // rule above an empty void — no empty state at all.
             <EmptyState
               eyebrow="Nothing saved"
               icon="favorite"
-              title="Keep a shortlist."
-              body="Tap the heart on any piece and it'll wait for you here — across every device you sign in on."
+              title={slugs.length > 0 ? "Nothing left to show." : "Keep a shortlist."}
+              body={
+                slugs.length > 0
+                  ? "The pieces you saved aren't available any more. Anything you save from here on will wait for you in this list."
+                  : "Tap the heart on any piece and it'll wait for you here — across every device you sign in on."
+              }
               ctaLabel="Browse the gear room"
               onPress={() => router.push("/(tabs)/shop")}
             />
@@ -110,7 +134,7 @@ export default function SavedScreen() {
                 {(products as any[]).map((p, i) => (
                   <Animated.View
                     key={p.id}
-                    entering={FadeInDown.delay(Math.min(i, 6) * 45).springify().damping(18)}
+                    entering={FadeInDown.delay(Math.min(i, 6) * 45).duration(380)}
                     style={s.cell}
                   >
                     <ProductCard
@@ -127,6 +151,7 @@ export default function SavedScreen() {
                           : undefined
                       }
                       showHeart
+                      variants={p.variants}
                       showQuickAdd
                     />
                   </Animated.View>

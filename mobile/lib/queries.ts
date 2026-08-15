@@ -13,6 +13,7 @@ export const qk = {
   customizable: ["products", "customizable"] as const,
   productsBySlugs: (slugs: string[]) => ["products", "by-slugs", [...slugs].sort()] as const,
   collections: ["collections"] as const,
+  categories: ["categories"] as const,
   home: ["home-config"] as const,
   orders: (userId: string) => ["orders", userId] as const,
   order: (id: string) => ["orders", "detail", id] as const,
@@ -61,6 +62,11 @@ export function useHomeQuery() {
 
 export function useCollectionsQuery() {
   return useQuery({ queryKey: qk.collections, queryFn: Data.getCollections, staleTime: 5 * 60_000 });
+}
+
+// Taxonomy changes on a human timescale, same as collections.
+export function useCategoriesQuery() {
+  return useQuery({ queryKey: qk.categories, queryFn: Data.getCategories, staleTime: 5 * 60_000 });
 }
 
 export function useOrdersQuery(userId: string | undefined) {

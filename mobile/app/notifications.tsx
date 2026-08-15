@@ -2,10 +2,12 @@ import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } 
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Body, Mono, Title } from "@/components/ui/Type";
 import { useAuthStore } from "@/stores/auth";
 import { useMarkAllNotificationsReadMutation, useMarkNotificationReadMutation, useNotificationsQuery } from "@/lib/queries";
@@ -17,10 +19,14 @@ import { C, F, S } from "@/lib/theme";
 
 // Real data as of the notifications table (migration 024) — this used to
 // render mockTrekData.NOTIFICATIONS unconditionally with no query at all.
+//
+// Palette tokens, not literals: order updates were tinted #125B45 on #DCEFE5,
+// a teal that appears nowhere else in the brand, and the other two inlined the
+// hex values of C.textMid and C.cream by hand.
 const ICON_BY_TYPE: Record<AppNotification["type"], { icon: string; iconColor: string; iconBg: string }> = {
-  order_update: { icon: "local_shipping", iconColor: "#125B45", iconBg: "#DCEFE5" },
-  promotion: { icon: "local_offer", iconColor: "#5C6A62", iconBg: "#F1EADD" },
-  back_in_stock: { icon: "workspace_premium", iconColor: "#5C6A62", iconBg: "#F1EADD" },
+  order_update: { icon: "local_shipping", iconColor: C.forestDeep, iconBg: C.forest12 },
+  promotion: { icon: "local_offer", iconColor: C.textMid, iconBg: C.cream },
+  back_in_stock: { icon: "workspace_premium", iconColor: C.clayDeep, iconBg: C.clay12 },
 };
 
 export default function NotificationsScreen() {
@@ -30,6 +36,9 @@ export default function NotificationsScreen() {
   const markRead = useMarkNotificationReadMutation(user?.id);
   const markAllRead = useMarkAllNotificationsReadMutation(user?.id);
 
+  // "Mark all read" used to render unconditionally, including on an empty list.
+  const unreadCount = notifications?.filter((n) => !n.read_at).length ?? 0;
+
   function handlePress(n: AppNotification) {
     haptics.select();
     if (!n.read_at) markRead.mutate(n.id);
@@ -38,6 +47,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={s.root}>
+      <StatusCap />
       <ScrollView
         contentContainerStyle={{ paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
@@ -46,23 +56,48 @@ export default function NotificationsScreen() {
         <ScreenHeader
           eyebrow="Activity"
           title="Notifications"
+          stats={
+            notifications && notifications.length > 0
+              ? [
+                  { label: "Unread", value: String(unreadCount) },
+                  { label: "Total", value: String(notifications.length) },
+                ]
+              : undefined
+          }
           right={
-            <TouchableOpacity
-              onPress={() => {
-                haptics.select();
-                markAllRead.mutate();
-              }}
-              hitSlop={10}
-            >
-              <Text style={s.markRead}>Mark all read</Text>
-            </TouchableOpacity>
+            unreadCount > 0 ? (
+              <TouchableOpacity
+                onPress={() => {
+                  haptics.select();
+                  markAllRead.mutate();
+                }}
+                hitSlop={10}
+                accessibilityRole="button"
+              >
+                <Text style={s.markRead}>Mark all read</Text>
+              </TouchableOpacity>
+            ) : null
           }
         />
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Rule weight="ink" />
+          {/* The heavy rule that used to sit here separated the list from a flat
+              cream header. The ink panel is that separation now, so the rule was
+              left floating with nothing above it. */}
 
-          {isLoading ? (
+          {/* Notifications are per-account, so a signed-out visitor was being
+              told "Nothing yet" — a statement about an inbox we hadn't looked
+              in, because the query is disabled without a user id. */}
+          {!user ? (
+            <EmptyState
+              eyebrow="Signed out"
+              icon="notifications"
+              title="Sign in for updates."
+              body="Order updates, drop alerts and restock notices are tied to your account."
+              ctaLabel="Sign in"
+              ctaHref="/auth/login"
+            />
+          ) : isLoading ? (
             <View style={{ gap: S.lg, paddingTop: S.lg }}>
               <Skeleton height={54} />
               <Skeleton height={54} />
@@ -81,7 +116,7 @@ export default function NotificationsScreen() {
             notifications.map((n, i) => {
               const meta = ICON_BY_TYPE[n.type];
               return (
-                <Animated.View key={n.id} entering={FadeInDown.delay(Math.min(i, 6) * 50).springify().damping(18)}>
+                <Animated.View key={n.id} entering={FadeInDown.delay(Math.min(i, 6) * 50).duration(380)}>
                   <TouchableOpacity activeOpacity={0.7} onPress={() => handlePress(n)}>
                     <View style={s.row}>
                       <View style={[s.icon, { backgroundColor: meta.iconBg }]}>
@@ -109,13 +144,20 @@ export default function NotificationsScreen() {
             })
           )}
 
-          <TouchableOpacity style={s.footer} activeOpacity={0.7} onPress={() => router.push("/settings")}>
-            <Icon name="tune" size={19} color={C.textMuted} />
-            <Body color={C.textMid} style={{ flex: 1 }}>
-              Order updates and drop alerts can be turned off separately in Settings.
-            </Body>
-            <Icon name="chevron_right" size={19} color={C.faintIcon} />
-          </TouchableOpacity>
+          {user ? (
+            <TouchableOpacity
+              style={s.footer}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              onPress={() => router.push("/settings")}
+            >
+              <Icon name="tune" size={19} color={C.textMuted} />
+              <Body color={C.textMid} style={{ flex: 1 }}>
+                Order updates and drop alerts can be turned off separately in Settings.
+              </Body>
+              <Icon name="chevron_right" size={19} color={C.faintIcon} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
     </View>

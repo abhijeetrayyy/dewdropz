@@ -1,4 +1,4 @@
-import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import { useWindowDimensions, ScrollView, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
@@ -15,14 +15,14 @@ import { MonthStrip } from "@/components/trails/MonthStrip";
 import { TRAILS } from "@/lib/trails";
 import { C, R, S } from "@/lib/theme";
 
-const { height: SCREEN_H } = Dimensions.get("window");
-const HERO_H = Math.round(SCREEN_H * 0.46);
 
 // One trail, in full. Reference content — nothing here is for sale, and the
 // only outbound action is to the shop, phrased as "what to carry" rather than
 // a product pitch, because arriving at a guide and being sold to is exactly
 // what makes a brand's editorial content feel dishonest.
 export default function TrailDetailScreen() {
+  const { height: SCREEN_H } = useWindowDimensions();
+  const HERO_H = Math.round(SCREEN_H * 0.46);
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const trail = TRAILS.find((t) => t.slug === slug);

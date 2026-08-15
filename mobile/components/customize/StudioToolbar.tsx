@@ -1,8 +1,5 @@
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import {
-  Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic,
-  ArrowUp, ArrowDown, FlipHorizontal2,
-} from "lucide-react-native";
+import { Icon } from "@/components/ui/Icon";
 import type { DesignLayer } from "@/lib/customize/types";
 import { C, F, R } from "@/lib/theme";
 
@@ -12,6 +9,8 @@ const FONTS: { label: string; family: string }[] = [
   { label: "Mono", family: "SpaceMono_400Regular" },
 ];
 
+// Print inks, not UI colours: these go on the garment, so they are a fixed
+// physical palette rather than theme tokens.
 const INKS = ["#FFFFFF", "#1A1A1A", "#27481F", "#7BA46F", "#B8826B", "#142536"];
 
 // Renders exactly ONE panel, chosen by `mode`. The screen owns the tab bar and
@@ -60,32 +59,32 @@ export function StudioToolbar({
       {mode === "add" && (
       <View style={s.addRow}>
         <TouchableOpacity style={s.addBtn} onPress={onAddText} activeOpacity={0.85}>
-          <Type size={16} strokeWidth={1.75} color={C.forest} />
+          <Icon name="title" size={16} color={C.forest} />
           <Text style={s.addT}>Text</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.addBtn} onPress={onAddImage} disabled={uploading} activeOpacity={0.85}>
-          <ImagePlus size={16} strokeWidth={1.75} color={C.forest} />
+          <Icon name="add_photo_alternate" size={16} color={C.forest} />
           <Text style={s.addT}>{uploading ? "Adding…" : "Image"}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.iconBtn, !canUndo && s.disabled]} onPress={onUndo} disabled={!canUndo}>
-          <Undo2 size={16} strokeWidth={1.75} color={canUndo ? C.text : C.light} />
+          <Icon name="undo" size={16} color={canUndo ? C.ink : C.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity style={[s.iconBtn, !canRedo && s.disabled]} onPress={onRedo} disabled={!canRedo}>
-          <Redo2 size={16} strokeWidth={1.75} color={canRedo ? C.text : C.light} />
+          <Icon name="redo" size={16} color={canRedo ? C.ink : C.textMuted} />
         </TouchableOpacity>
       </View>
       )}
 
       {mode === "add" && twoSided && (
         <TouchableOpacity style={s.copyRow} onPress={onCopyToOtherSide} activeOpacity={0.7}>
-          <FlipHorizontal2 size={13} strokeWidth={1.75} color={C.mid} />
+          <Icon name="flip" size={13} color={C.textMid} />
           <Text style={s.copyT}>Copy {activeSide} to {activeSide === "front" ? "back" : "front"}</Text>
         </TouchableOpacity>
       )}
 
       {mode === "add" && !selected ? (
         <Text style={s.hint}>
-          Tap Text or Image to start. Drag to move, pinch to resize, twist to rotate.
+          Tap Text or Image to start. Pinch the garment to zoom in close.
         </Text>
       ) : null}
 
@@ -101,7 +100,7 @@ export function StudioToolbar({
                 value={text.text}
                 onChangeText={(v) => onPatch({ text: v })}
                 placeholder="Your text"
-                placeholderTextColor={C.light}
+                placeholderTextColor={C.textMuted}
                 style={s.input}
               />
 
@@ -121,13 +120,13 @@ export function StudioToolbar({
                   onPress={() => onPatch({ bold: !text.bold })}
                   style={[s.chip, text.bold && s.chipOn]}
                 >
-                  <Bold size={14} strokeWidth={2} color={text.bold ? "#FFFFFF" : C.text} />
+                  <Icon name="format_bold" size={14} color={text.bold ? C.paper : C.ink} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onPatch({ italic: !text.italic })}
                   style={[s.chip, text.italic && s.chipOn]}
                 >
-                  <Italic size={14} strokeWidth={2} color={text.italic ? "#FFFFFF" : C.text} />
+                  <Icon name="format_italic" size={14} color={text.italic ? C.paper : C.ink} />
                 </TouchableOpacity>
               </ScrollView>
 
@@ -163,25 +162,25 @@ export function StudioToolbar({
               </View>
             </>
           ) : (
-            <Text style={s.hint}>Pinch to resize, twist to rotate, drag to move.</Text>
+            <Text style={s.hint}>Drag to move. Use the green corner to resize, the clay one to rotate. Pinch the garment to zoom.</Text>
           )}
 
           <View style={s.actionRow}>
             <TouchableOpacity style={s.act} onPress={() => onReorder("up")}>
-              <ArrowUp size={14} strokeWidth={1.75} color={C.text} />
+              <Icon name="arrow_upward" size={14} color={C.ink} />
               <Text style={s.actT}>Forward</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.act} onPress={() => onReorder("down")}>
-              <ArrowDown size={14} strokeWidth={1.75} color={C.text} />
+              <Icon name="arrow_downward" size={14} color={C.ink} />
               <Text style={s.actT}>Back</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.act} onPress={onDuplicate}>
-              <Copy size={14} strokeWidth={1.75} color={C.text} />
+              <Icon name="content_copy" size={14} color={C.ink} />
               <Text style={s.actT}>Copy</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.act} onPress={onDelete}>
-              <Trash2 size={14} strokeWidth={1.75} color={C.clay} />
-              <Text style={[s.actT, { color: C.clay }]}>Delete</Text>
+              <Icon name="delete" size={14} color={C.clay} />
+              <Text style={[s.actT, { color: C.clayDeep }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -195,44 +194,44 @@ const s = StyleSheet.create({
   addRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   addBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    borderWidth: 1, borderColor: C.rule, borderRadius: R.md, paddingVertical: 12, backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.ruleMed, borderRadius: R.pill, paddingVertical: 12, backgroundColor: C.paper,
   },
   addT: { fontFamily: F.bodyBold, fontSize: 13, color: C.forest },
   iconBtn: {
     width: 42, height: 42, alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: C.rule, borderRadius: R.md, backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.ruleMed, borderRadius: R.panel, backgroundColor: C.paper,
   },
   disabled: { opacity: 0.45 },
   copyRow: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" },
-  copyT: { fontFamily: F.body, fontSize: 12, color: C.mid },
-  hint: { fontFamily: F.body, fontSize: 12, color: C.light, lineHeight: 18 },
-  panel: { gap: 12, borderTopWidth: 1, borderTopColor: C.rule, paddingTop: 12 },
+  copyT: { fontFamily: F.body, fontSize: 12, color: C.textMid },
+  hint: { fontFamily: F.body, fontSize: 12, color: C.textMuted, lineHeight: 18 },
+  panel: { gap: 12, borderTopWidth: 1, borderTopColor: C.ruleMed, paddingTop: 12 },
   input: {
-    borderWidth: 1, borderColor: C.rule, borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 10,
-    fontFamily: F.body, fontSize: 15, color: C.text, backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.ruleMed, borderRadius: R.panel, paddingHorizontal: 12, paddingVertical: 10,
+    fontFamily: F.body, fontSize: 15, color: C.ink, backgroundColor: C.paper,
   },
   chipRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.md,
-    borderWidth: 1, borderColor: C.rule, backgroundColor: C.surface,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.pill,
+    borderWidth: 1, borderColor: C.ruleMed, backgroundColor: C.paper,
   },
   chipOn: { backgroundColor: C.forest, borderColor: C.forest },
-  chipT: { fontSize: 13, color: C.text },
-  chipTOn: { color: "#FFFFFF" },
+  chipT: { fontSize: 13, color: C.ink },
+  chipTOn: { color: C.paper },
   sizeRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  lbl: { fontFamily: F.mono, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: C.mid },
+  lbl: { fontFamily: F.mono, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: C.textMid },
   stepBtn: {
-    width: 34, height: 34, borderRadius: R.sm, borderWidth: 1, borderColor: C.rule,
-    alignItems: "center", justifyContent: "center", backgroundColor: C.surface,
+    width: 34, height: 34, borderRadius: R.pill, borderWidth: 1, borderColor: C.ruleMed,
+    alignItems: "center", justifyContent: "center", backgroundColor: C.paper,
   },
-  stepT: { fontFamily: F.body, fontSize: 18, color: C.text, lineHeight: 20 },
-  sizeV: { fontFamily: F.body, fontSize: 14, color: C.text, width: 30, textAlign: "center" },
-  ink: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: C.rule },
+  stepT: { fontFamily: F.body, fontSize: 18, color: C.ink, lineHeight: 20 },
+  sizeV: { fontFamily: F.body, fontSize: 14, color: C.ink, width: 30, textAlign: "center" },
+  ink: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: C.ruleMed },
   inkOn: { borderWidth: 2.5, borderColor: C.forest },
   actionRow: { flexDirection: "row", gap: 8 },
   act: {
     flex: 1, alignItems: "center", gap: 3, paddingVertical: 9,
-    borderWidth: 1, borderColor: C.rule, borderRadius: R.md, backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.ruleMed, borderRadius: R.panel, backgroundColor: C.paper,
   },
-  actT: { fontFamily: F.body, fontSize: 10, color: C.text },
+  actT: { fontFamily: F.body, fontSize: 10, color: C.ink },
 });

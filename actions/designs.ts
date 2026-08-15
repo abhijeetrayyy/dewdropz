@@ -22,6 +22,10 @@ export async function saveCustomDesign(input: {
   back_preview_url?: string | null
   front_print_url?: string | null
   back_print_url?: string | null
+  /** The DPI each print file actually achieved, recorded so production can see
+   *  what it is holding without downloading and measuring it. */
+  front_print_dpi?: number | null
+  back_print_dpi?: number | null
   color_name?: string | null
   color_hex?: string | null
 }) {
@@ -40,6 +44,8 @@ export async function saveCustomDesign(input: {
       back_preview_url: input.back_preview_url ?? null,
       front_print_url: input.front_print_url ?? null,
       back_print_url: input.back_print_url ?? null,
+      front_print_dpi: input.front_print_dpi ?? null,
+      back_print_dpi: input.back_print_dpi ?? null,
       color_name: input.color_name ?? null,
       color_hex: input.color_hex ?? null,
     })

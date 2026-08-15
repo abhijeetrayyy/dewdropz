@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useWindowDimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
@@ -20,21 +20,22 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonProductGrid } from "@/components/ui/Skeleton";
 import { useCollectionsQuery, useProductsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, pickVariant } from "@/lib/utils";
 import { COLLECTION_CONDITIONS } from "@/lib/editorial";
 import { useCartStore } from "@/stores/cart";
 import { toast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
+import { shareLink } from "@/lib/support";
 import { C, F, S } from "@/lib/theme";
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const HERO_H = Math.round(SCREEN_H * 0.46);
 
 // A collection is a curated argument, not a filtered list, so the screen leads
 // with the plate and the tagline before it shows a single price. The "take the
 // whole kit" block sits above the grid rather than beside it — it's the one
 // action this screen exists to offer that Shop can't.
 export default function CollectionScreen() {
+  const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
+  const HERO_H = Math.round(SCREEN_H * 0.46);
   const insets = useSafeAreaInsets();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const {
@@ -65,19 +66,20 @@ export default function CollectionScreen() {
   const error = colsError || prodError;
   const minPrice = products.length ? Math.min(...products.map((p: any) => p.price)) : 0;
   const kitTotal = products.reduce((sum: number, p: any) => sum + p.price, 0);
-  const kitSave = Math.round(kitTotal * 0.1);
   const conditions = slug ? COLLECTION_CONDITIONS[slug] : undefined;
 
   function addWholeKit() {
     haptics.tap();
     for (const p of products as any[]) {
+      const variant = pickVariant(p.variants);
       addItem({
         productId: p.id,
         slug: p.slug,
         name: p.name,
         price: p.price,
         image: p.images?.[0] ?? "",
-        size: p.variants?.[0]?.name,
+        size: variant?.name,
+        variantId: variant?.id ?? null,
       });
     }
     toast.success(`Added ${products.length} pieces to pack`);
@@ -171,8 +173,13 @@ export default function CollectionScreen() {
                     <View style={{ flex: 1 }}>
                       <Mono color={C.forest}>THE COMPLETE KIT</Mono>
                       <Display3 style={{ marginTop: 6 }}>Take all {products.length}.</Display3>
+                      {/* Stated as a plain total. This line used to promise
+                          "about ₹X less than buying them one at a time" off a
+                          hardcoded 10% — a saving nothing in the cart or at
+                          checkout ever applied, so the basket contradicted the
+                          claim the moment it was tapped. */}
                       <Body color={C.textMid} style={{ marginTop: 6 }}>
-                        {formatPrice(kitTotal)} — about {formatPrice(kitSave)} less than buying them one at a time.
+                        {formatPrice(kitTotal)} for the set — every piece built for the same weather.
                       </Body>
                     </View>
                     <View style={s.kitGo}>
@@ -219,7 +226,7 @@ export default function CollectionScreen() {
                       {products.map((p: any, i: number) => (
                         <Animated.View
                           key={p.id}
-                          entering={FadeInDown.delay(Math.min(i, 6) * 50).springify().damping(18)}
+                          entering={FadeInDown.delay(Math.min(i, 6) * 50).duration(380)}
                           style={s.cell}
                         >
                           <ProductCard
@@ -235,6 +242,7 @@ export default function CollectionScreen() {
                                 ? { label: `${p.inventory_quantity} LEFT`, tone: "scarcity" }
                                 : undefined
                             }
+                            variants={p.variants}
                             showQuickAdd
                           />
                         </Animated.View>
@@ -252,7 +260,16 @@ export default function CollectionScreen() {
         scrolled={scrolled || !c}
         title={c?.name}
         onBack={() => router.back()}
-        renderRight={(tone) => <IconButton name="ios_share" tone={tone} />}
+        renderRight={(tone) =>
+          c ? (
+            <IconButton
+              name="ios_share"
+              tone={tone}
+              accessibilityLabel={`Share ${c.name}`}
+              onPress={() => shareLink(c.name, `/collections/${c.slug}`)}
+            />
+          ) : null
+        }
       />
     </View>
   );

@@ -1,19 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2, Save } from 'lucide-react'
 import { getStoreSettings, updateStoreSettings } from '@/actions/settings'
 import type { StoreSettings } from '@/types/database'
-import { ShippingEngine } from './shipping-engine'
-import { HomepageEngine } from './homepage-engine'
 
+// Settings is now only the things that are genuinely settings.
+//
+// It used to carry four tabs, and the three that mattered day to day — shipping
+// zones, homepage merchandising and tax rules — were the ones buried behind a
+// tab on a page called "Settings". They now have their own pages in the
+// sidebar; what is left is the store's own identity, which is edited once.
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -22,9 +25,8 @@ export default function SettingsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getStoreSettings()
-        setSettings(data)
-      } catch (error) {
+        setSettings(await getStoreSettings())
+      } catch {
         toast.error('Failed to load settings')
       } finally {
         setLoading(false)
@@ -40,11 +42,9 @@ export default function SettingsPage() {
       await updateStoreSettings({
         store_name: settings.store_name,
         support_email: settings.support_email,
-        enable_tax: settings.enable_tax,
-        gst_percentage: settings.gst_percentage,
       })
-      toast.success('General settings saved successfully')
-    } catch (error) {
+      toast.success('Settings saved')
+    } catch {
       toast.error('Failed to save settings')
     } finally {
       setSaving(false)
@@ -58,103 +58,68 @@ export default function SettingsPage() {
   if (!settings) return null
 
   return (
-    <div className="space-y-6 pb-10 max-w-5xl">
+    <div className="space-y-6 pb-10 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-black">Settings Engine</h2>
-          <p className="text-sm text-gray-500 mt-1">Configure global platform behavior, logistics, and compliance rules.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-black">Settings</h2>
+          <p className="text-sm text-gray-500 mt-1">How the store identifies itself to customers.</p>
         </div>
         <Button onClick={handleSave} disabled={saving} className="bg-black hover:bg-black/90">
           {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          Save General Settings
+          Save
         </Button>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-6 bg-gray-100/50 p-1">
-          <TabsTrigger value="general" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">General</TabsTrigger>
-          <TabsTrigger value="shipping" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Shipping & Delivery</TabsTrigger>
-          <TabsTrigger value="taxes" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Taxes</TabsTrigger>
-          <TabsTrigger value="homepage" className="px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Homepage</TabsTrigger>
-        </TabsList>
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Store identity</CardTitle>
+          <CardDescription>Used in customer emails, receipts and invoices.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2 max-w-md">
+            <Label htmlFor="store_name">Store name</Label>
+            <Input
+              id="store_name"
+              value={settings.store_name}
+              onChange={(e) => setSettings({ ...settings, store_name: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2 max-w-md">
+            <Label htmlFor="store_email">Support email</Label>
+            <Input
+              id="store_email"
+              type="email"
+              value={settings.support_email}
+              onChange={(e) => setSettings({ ...settings, support_email: e.target.value })}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="general" className="mt-0">
-          <Card className="shadow-sm border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-lg">Platform Identity</CardTitle>
-              <CardDescription>Global variables for customer communications and receipts.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2 max-w-md">
-                <Label htmlFor="store_name">Store Name</Label>
-                <Input
-                  id="store_name"
-                  value={settings.store_name}
-                  onChange={(e) => setSettings({ ...settings, store_name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2 max-w-md">
-                <Label htmlFor="store_email">Support Email</Label>
-                <Input
-                  id="store_email"
-                  type="email"
-                  value={settings.support_email}
-                  onChange={(e) => setSettings({ ...settings, support_email: e.target.value })}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="shipping" className="mt-0">
-          <ShippingEngine />
-        </TabsContent>
-
-        <TabsContent value="taxes" className="mt-0">
-          <Card className="shadow-sm border-gray-200 max-w-2xl">
-            <CardHeader>
-              <CardTitle className="text-lg">Compliance & Taxation</CardTitle>
-              <CardDescription>Rules engine for checkout cart modifications based on geography.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-start justify-between p-4 bg-gray-50 border border-gray-100 rounded-lg">
-                <div className="space-y-1 pr-6">
-                  <Label className="text-base font-semibold text-gray-900">Enable Tax Calculation Engine</Label>
-                  <div className="text-sm text-gray-500">When enabled, the cart automatically calculates standard GST during the checkout flow based on the rules defined below.</div>
-                </div>
-                <div className="pt-1">
-                  <Checkbox
-                    checked={settings.enable_tax}
-                    onCheckedChange={(checked) => setSettings({ ...settings, enable_tax: !!checked })}
-                    className="w-5 h-5"
-                  />
-                </div>
-              </div>
-              {settings.enable_tax && (
-                <div className="p-4 border border-gray-100 rounded-lg space-y-4">
-                  <h4 className="font-medium text-sm text-gray-900">Active Rules</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="gst_percentage">Default GST Percentage (%)</Label>
-                      <Input
-                        id="gst_percentage"
-                        type="number"
-                        step="0.1"
-                        value={settings.gst_percentage}
-                        onChange={(e) => setSettings({ ...settings, gst_percentage: parseFloat(e.target.value || '0') })}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="homepage" className="mt-0">
-          <HomepageEngine />
-        </TabsContent>
-      </Tabs>
+      {/* Signposted rather than silently moved: anyone who knew these lived here
+          needs to be told where they went, once. */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg">Moved out of Settings</CardTitle>
+          <CardDescription>These now have their own pages in the sidebar.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-3">
+          {[
+            ['Shipping', '/admin/shipping', 'Zones, rates, free-shipping threshold'],
+            ['Homepage', '/admin/homepage', 'Front-page merchandising'],
+            ['Tax Rules', '/admin/tax', 'GST by HSN, origin state, GSTIN'],
+          ].map(([label, href, hint]) => (
+            <Link
+              key={href}
+              href={href}
+              className="rounded-lg border border-gray-200 p-4 hover:border-gray-900 transition-colors"
+            >
+              <div className="text-sm font-medium text-gray-900">{label}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{hint}</div>
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }

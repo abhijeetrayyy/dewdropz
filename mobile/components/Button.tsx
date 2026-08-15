@@ -130,8 +130,14 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  lg: { height: 54 },
-  md: { height: 44, paddingHorizontal: 20 },
+  // minHeight, not height. RN scales text with the system setting by default,
+  // and at the top accessibility sizes a 16px label renders near 50px — inside
+  // a fixed 54px box that is a clipped primary CTA, and inside the fixed 44px
+  // `md` box it is a clipped one with nothing left to read. The padding keeps
+  // the label off the edge once it outgrows the minimum; at default text sizes
+  // the content is ~43px tall, so minHeight still governs and nothing moves.
+  lg: { minHeight: 54, paddingVertical: 12 },
+  md: { minHeight: 44, paddingHorizontal: 20, paddingVertical: 10 },
   outline: { borderWidth: 1.5, borderColor: C.ruleStrong },
   label: { fontFamily: F.bodyBold, fontSize: 16, letterSpacing: -0.1 },
   labelMd: { fontSize: 14 },

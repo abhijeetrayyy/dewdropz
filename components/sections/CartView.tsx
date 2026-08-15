@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useMagneticHover } from '@/hooks/useMagneticHover'
@@ -12,25 +13,27 @@ import { formatPrice } from '@/lib/utils'
 import { getCartRecommendations } from '@/lib/recommendations'
 import type { ProductWithCollection, Collection } from '@/types/database'
 
-// Matches the free-shipping threshold quoted in TrustBand/FooterSection —
-// no numeric constant exists yet for it, so this mirrors that copy exactly.
-// Paise, same unit as everything else touching real product/order data.
-const FREE_SHIPPING_THRESHOLD = 200000
-
 export default function CartView({
   allProducts,
   collections,
+  freeShippingThreshold,
 }: {
   allProducts: ProductWithCollection[]
   collections: Collection[]
+  /** In paise, from store settings — previously a constant here that had to be
+   *  kept in step by hand with the product page and the footer, and wasn't. */
+  freeShippingThreshold: number
 }) {
   const { items, updateQuantity, removeItem, subtotal } = useCart()
   const checkoutBtn = useMagneticHover(0.3, 10)
+  // Set by the recovery-email landing page. Arriving from an inbox to a cart
+  // that silently repopulated itself is disorienting; one line explains it.
+  const recovered = useSearchParams().get('recovered') === '1'
 
   const cartSlugs = items.map((i) => i.slug)
   const suggestions = getCartRecommendations(allProducts, cartSlugs, 6)
-  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)
-  const shippingProgress = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100))
+  const remaining = Math.max(0, freeShippingThreshold - subtotal)
+  const shippingProgress = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100))
 
   if (items.length === 0) {
     return (
@@ -102,6 +105,9 @@ export default function CartView({
           <p className="mt-2 font-body text-sm text-mid">
             {items.reduce((n, i) => n + i.quantity, 0)} piece{items.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'} — ships from Dehradun in 2 days.
           </p>
+          {recovered && (
+            <p className="mt-3 font-body text-sm text-forest">Welcome back — your saved cart has been restored.</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dimensions, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useWindowDimensions, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
@@ -15,8 +15,6 @@ import { JOURNAL, formatArticleDate, journalById } from "@/lib/editorial";
 import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
 
-const { height: SCREEN_H } = Dimensions.get("window");
-const PLATE_H = Math.round(SCREEN_H * 0.44);
 
 // The reader. This is the one screen in the app where typography is the entire
 // interface, so it gets the widest measure, the largest body size (17/28), and
@@ -29,6 +27,8 @@ const PLATE_H = Math.round(SCREEN_H * 0.44);
 //   • A drop-cap-ish mono paragraph index runs down the left margin, matching
 //     the numbered furniture used everywhere else in the app.
 export default function JournalArticleScreen() {
+  const { height: SCREEN_H } = useWindowDimensions();
+  const PLATE_H = Math.round(SCREEN_H * 0.44);
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const article = journalById(id ?? "");
@@ -146,7 +146,7 @@ export default function JournalArticleScreen() {
                 <View style={s.moreRow}>
                   <Image source={{ uri: a.image }} style={s.moreThumb} contentFit="cover" alt="" />
                   <View style={{ flex: 1 }}>
-                    <Mono color={C.clay}>{a.tag.toUpperCase()}</Mono>
+                    <Mono color={C.clayDeep}>{a.tag.toUpperCase()}</Mono>
                     <Title style={{ marginTop: 5 }} numberOfLines={2}>
                       {a.title}
                     </Title>

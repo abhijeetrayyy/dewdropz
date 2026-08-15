@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View , useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,10 +7,12 @@ import { useAuthStore } from "@/stores/auth";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { IconButton } from "@/components/ui/IconButton";
+import { StatusCap } from "@/components/ui/StatusCap";
+import { Topography } from "@/components/editorial/Topography";
 import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
 import { IndexList } from "@/components/editorial/IndexList";
-import { Body, Display1, Display2, Eyebrow, Mono } from "@/components/ui/Type";
+import { Body, Display1, Display2, Eyebrow } from "@/components/ui/Type";
 import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
 
@@ -25,6 +27,7 @@ const PERKS = [
 export default function SignUpScreen() {
   const { signUp } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_W } = useWindowDimensions();
   const [full, setFull] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -89,21 +92,40 @@ export default function SignUpScreen() {
 
   return (
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <StatusBar style="dark" />
-      <View style={[s.top, { paddingTop: insets.top + 6 }]}>
-        <IconButton name="arrow_back" onPress={() => router.back()} />
-        <Mono color={C.textMuted}>FREE · NO SPAM</Mono>
+      <StatusCap />
+
+      <View style={[s.panel, { paddingTop: insets.top + 10 }]}>
+        <Topography
+          width={SCREEN_W}
+          height={280}
+          color={C.sage}
+          opacity={0.13}
+          lines={9}
+          seed={4.7}
+          originX={0.86}
+          originY={0.24}
+        />
+        <View style={s.top}>
+          <IconButton
+            name="arrow_back"
+            tone="glass"
+            accessibilityLabel="Back"
+            onPress={() => router.back()}
+          />
+          <Text style={s.kicker}>FREE · NO SPAM</Text>
+        </View>
+
+        <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+          <Text style={s.panelEyebrow}>CREATE AN ACCOUNT</Text>
+          <Text style={s.panelTitle}>Join the{"\n"}expedition.</Text>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.xl, paddingBottom: S.block }}
+        contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: S.block }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Eyebrow>Create an account</Eyebrow>
-        <Display1 style={{ marginTop: 8 }}>Join the{"\n"}expedition.</Display1>
-
-        <Rule weight="ink" style={{ marginTop: S.xl }} />
 
         {err ? (
           <View style={s.errBox}>
@@ -171,6 +193,17 @@ export default function SignUpScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
+  panel: {
+    backgroundColor: C.ink,
+    overflow: "hidden",
+    borderBottomLeftRadius: R.sheet,
+    borderBottomRightRadius: R.sheet,
+    paddingBottom: S.lg,
+    marginBottom: S.block,
+  },
+  panelEyebrow: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 1.9, color: C.sage },
+  panelTitle: { fontFamily: F.display, fontSize: 36, lineHeight: 39, letterSpacing: -0.2, color: C.paper, marginTop: 9 },
+  kicker: { fontFamily: F.mono, fontSize: 10, letterSpacing: 1.6, color: "rgba(251,247,239,0.6)" },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: S.gutter },
   errBox: { flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: C.danger12, borderRadius: R.panel, padding: 14, marginTop: S.lg },
   switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: S.xl },

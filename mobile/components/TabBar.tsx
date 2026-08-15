@@ -1,21 +1,64 @@
 import { useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { C, F, M } from "@/lib/theme";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { C, F, M, S } from "@/lib/theme";
 import { useCartStore } from "@/stores/cart";
 import { haptics } from "@/lib/haptics";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
 
-// v4 marked the active tab with a 58×30 mint pill behind the icon — a stray
-// third accent color living permanently at the bottom of every screen, and the
-// only rounded-rectangle in an app whose whole radius rule is "sharp or fully
-// round, nothing between".
+// ─────────────────────────────────────────────────────────────────────────────
+// The tab bar, floating.
+// ─────────────────────────────────────────────────────────────────────────────
+// v6 was an opaque paper strip pinned edge-to-edge with a hairline above it —
+// correct, legible, and the single element that most made the app read as a
+// template. Content ran into it and stopped; nothing passed behind anything.
 //
-// v5 marks it the way a printed page marks a running head: a short ink rule
-// above the icon, the icon filled, the label in mono. No color needed, and the
-// rule visually rhymes with the section rules on every screen above it.
+// This floats a dark pill above the content instead, so the page continues
+// underneath and the bar reads as an object resting on the app rather than a
+// wall at the bottom of it. Three things make that work:
+//
+//   1. The container is taken OUT of layout flow (`position: absolute`) so the
+//      page genuinely runs underneath rather than stopping short of the bar.
+//      That means the navigator no longer insets screens for it, so every tab
+//      screen pads itself by `useTabBarSpace()` — the one contract this file
+//      exports. Get that wrong on a screen and its last row hides behind the
+//      pill, which is the cost of the effect and the reason the hook exists
+//      rather than a copied magic number.
+//   2. `pointerEvents: box-none` on the container, so the transparent margin
+//      either side of the pill doesn't eat taps meant for content beneath it.
+//   3. Ink, not glass. iOS could blur here, but Android's BlurView needs a
+//      `blurTarget` ref pointing at a wrapper around the scrolling content —
+//      a per-screen architectural change for a material that would then differ
+//      between platforms anyway. A solid ink pill is the same object on both,
+//      and it holds the white glyphs at any scroll position over any
+//      photograph. The blur is a subtle addition on iOS only, under the ink.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Pill height: icon + label + dot + vertical padding. */
+const PILL_H = 62;
+/** Air between the pill and the safe-area edge. */
+const PILL_GAP = 10;
+
+/**
+ * Vertical space a tab screen must reserve at the bottom of its scroll content
+ * so the last row clears the floating bar.
+ *
+ * Every tab screen adds this to its `contentContainerStyle.paddingBottom`, and
+ * anything pinned to the bottom of a tab screen (the cart's summary bar) offsets
+ * itself by it.
+ */
+export function useTabBarSpace() {
+  const insets = useSafeAreaInsets();
+  return PILL_H + PILL_GAP + Math.max(insets.bottom, 10);
+}
 
 const ICON: Record<string, string> = {
   index: "home",
@@ -32,15 +75,6 @@ const LABEL: Record<string, string> = {
   account: "You",
 };
 
-function TabMark({ focused }: { focused: boolean }) {
-  const w = useSharedValue(focused ? 16 : 0);
-  useEffect(() => {
-    w.value = withTiming(focused ? 16 : 0, { duration: M.base });
-  }, [focused, w]);
-  const style = useAnimatedStyle(() => ({ width: w.value, opacity: w.value / 16 }));
-  return <Animated.View style={[s.mark, style]} />;
-}
-
 type TabBarProps = {
   state: { index: number; routes: { key: string; name: string }[] };
   navigation: {
@@ -54,58 +88,143 @@ export function TabBar({ state, navigation }: TabBarProps) {
   const cartCount = useCartStore((s) => s.itemCount());
 
   return (
-    <View style={[s.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const badge = route.name === "cart" ? cartCount : 0;
+    <View
+      pointerEvents="box-none"
+      style={[s.container, { paddingBottom: Math.max(insets.bottom, 10) }]}
+    >
+      <View style={s.pill}>
+        {Platform.OS === "ios" ? (
+          <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
+        ) : null}
+        <View style={[StyleSheet.absoluteFill, s.pillFill]} />
 
-        return (
-          <TouchableOpacity
-            key={route.key}
-            style={s.tab}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityState={{ selected: focused }}
-            accessibilityLabel={LABEL[route.name] ?? route.name}
-            onPress={() => {
-              if (!focused) haptics.select();
-              const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-              if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-            }}
-          >
-            <TabMark focused={focused} />
-            <View style={s.iconWrap}>
-              <Icon
-                name={ICON[route.name] ?? "home"}
-                size={22}
-                color={focused ? C.ink : C.textMuted}
-                filled={focused}
-              />
-              <Badge count={badge} />
-            </View>
-            <Text style={[s.label, focused && s.labelActive]}>{(LABEL[route.name] ?? route.name).toUpperCase()}</Text>
-          </TouchableOpacity>
-        );
-      })}
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
+          const badge = route.name === "cart" ? cartCount : 0;
+
+          return (
+            <Tab
+              key={route.key}
+              name={route.name}
+              focused={focused}
+              badge={badge}
+              onPress={() => {
+                if (!focused) haptics.select();
+                const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+                if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+              }}
+            />
+          );
+        })}
+      </View>
     </View>
   );
 }
 
+function Tab({
+  name,
+  focused,
+  badge,
+  onPress,
+}: {
+  name: string;
+  focused: boolean;
+  badge: number;
+  onPress: () => void;
+}) {
+  // The active tab lifts and brightens; the inactive ones sit back. Springing
+  // the lift rather than fading it is what makes the row feel physical.
+  const lift = useSharedValue(focused ? 1 : 0);
+  useEffect(() => {
+    lift.value = focused
+      ? withSpring(1, { damping: 15, stiffness: 180 })
+      : withTiming(0, { duration: M.fast });
+  }, [focused, lift]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -3 * lift.value }],
+  }));
+  const dotStyle = useAnimatedStyle(() => ({
+    opacity: lift.value,
+    transform: [{ scale: 0.4 + 0.6 * lift.value }],
+  }));
+
+  return (
+    <TouchableOpacity
+      style={s.tab}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected: focused }}
+      accessibilityLabel={LABEL[name] ?? name}
+      onPress={onPress}
+    >
+      <Animated.View style={[s.iconWrap, iconStyle]}>
+        <Icon
+          name={ICON[name] ?? "home"}
+          size={22}
+          color={focused ? C.paper : "rgba(251,247,239,0.5)"}
+          filled={focused}
+        />
+        <Badge count={badge} />
+      </Animated.View>
+      {/* Clamped, like Apple's own tab bar, which stops scaling its labels and
+          relayouts rather than growing the bar. PILL_H is a fixed 62 and
+          `useTabBarSpace()` publishes it to all five tab screens as their
+          bottom padding — a pill that grew to fit 26px labels would both eat
+          the screen and silently invalidate every one of those reservations.
+          The label is the redundant channel here: the icon, the active dot and
+          the destination's own masthead all still scale. */}
+      <Text style={[s.label, focused && s.labelActive]} numberOfLines={1} maxFontSizeMultiplier={1.4}>
+        {(LABEL[name] ?? name).toUpperCase()}
+      </Text>
+      <Animated.View style={[s.dot, dotStyle]} />
+    </TouchableOpacity>
+  );
+}
+
 const s = StyleSheet.create({
-  bar: {
+  // Transparent and in-flow: this is what the navigator measures to inset
+  // screens, so it must keep real height.
+  container: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+  },
+  pill: {
     flexDirection: "row",
     alignItems: "flex-start",
-    paddingTop: 0,
+    borderRadius: 26,
+    overflow: "hidden",
+    paddingVertical: 11,
     paddingHorizontal: 4,
-    backgroundColor: C.paper,
-    borderTopWidth: 1,
-    borderTopColor: C.ruleSoft,
+    // Lifted off the page. On Android `elevation` is what actually casts the
+    // shadow; the iOS shadow* props are ignored there and vice versa, so both
+    // are set.
+    shadowColor: "#0A0F0C",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 22,
+    elevation: 12,
   },
-  tab: { flex: 1, alignItems: "center", gap: 4 },
-  // Sits flush against the bar's top rule, so the active mark reads as a
-  // thickening of that rule rather than a floating dash.
-  mark: { height: 2, backgroundColor: C.ink, marginBottom: 8 },
-  iconWrap: { marginTop: 0 },
-  label: { fontFamily: F.mono, fontSize: 9, letterSpacing: 1.1, color: C.textMuted },
-  labelActive: { fontFamily: F.monoBold, color: C.ink },
+  // Under the blur on iOS, alone on Android — and that difference is why the
+  // alpha can't be shared. On iOS the BlurView beneath diffuses whatever the
+  // remaining 6% lets through, so it reads as depth. Android has no blur under
+  // it (see IconButton for why expo-blur's Android path needs a BlurTargetView),
+  // so the same 6% renders the background SHARP: on Home the marquee's
+  // "MONSOON WINDOW · OPEN NOW" and the topographic contours ghost straight
+  // through the bar, which reads as a rendering fault rather than as glass.
+  // Opaque on Android is the honest translation of the same intent.
+  pillFill: {
+    backgroundColor: Platform.OS === "ios" ? "rgba(16,21,18,0.94)" : C.ink,
+  },
+
+  tab: { flex: 1, alignItems: "center", gap: 3 },
+  iconWrap: {},
+  label: { fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: "rgba(251,247,239,0.5)" },
+  labelActive: { fontFamily: F.monoBold, color: C.paper },
+  dot: { width: 4, height: 4, borderRadius: 999, backgroundColor: C.sage, marginTop: 1 },
 });

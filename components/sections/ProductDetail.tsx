@@ -33,15 +33,25 @@ interface ProductDetailProps {
   collection: Collection | null
   related: ProductWithCollection[]
   collections: Collection[]
+  /** In paise, from store settings. */
+  freeShippingThreshold: number
+  offers: { label: string; description: string }[]
 }
 
+// The free-shipping figure is no longer written here. It said "over Rs. 3,000"
+// while the cart, the footer and the actual store setting all said ₹2,000 — so
+// the product page was quoting a threshold that did not exist, and changing the
+// real one in admin could never have fixed it.
 const TRUST_BADGES = [
-  { label: 'Free shipping over Rs. 3,000', icon: 'M3 12h18M3 12l4-4m-4 4l4 4M21 12l-4-4m4 4l-4 4' },
   { label: '7-day easy returns', icon: 'M4 4v6h6M4 10a8 8 0 1 0 2.3-5.7L4 7' },
   { label: 'Field tested at altitude', icon: 'M12 3l9 18H3L12 3z' },
 ]
 
-export default function ProductDetail({ product, collection, related, collections }: ProductDetailProps) {
+const SHIP_ICON = 'M3 12h18M3 12l4-4m-4 4l4 4M21 12l-4-4m4 4l-4 4'
+
+export default function ProductDetail({
+  product, collection, related, collections, freeShippingThreshold, offers,
+}: ProductDetailProps) {
   const { addItem } = useCart()
   const { toggleItem, hasItem } = useWishlist()
   const saved = hasItem(product.slug)
@@ -336,6 +346,25 @@ export default function ProductDetail({ product, collection, related, collection
                     <span className="font-body text-xs text-clay font-medium">{discountPct}% off</span>
                   ) : null}
                 </div>
+                {/* Prices are exclusive of GST, which is added at checkout —
+                    said here rather than discovered on the payment screen. */}
+                <div className="mt-1 font-body text-[11px] text-mid">Plus GST, calculated at checkout</div>
+
+                {offers.length > 0 && (
+                  <ul className="mt-4 space-y-1.5">
+                    {offers.map((o) => (
+                      <li key={o.label} className="flex items-baseline gap-2 font-body text-xs">
+                        <span className="rounded-sm bg-forest/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-forest">
+                          Offer
+                        </span>
+                        <span className="text-text">
+                          <strong className="font-medium">{o.label}</strong>
+                          <span className="text-mid"> — {o.description}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {lowStock && (
                   <p className="mt-2 font-body text-xs text-clay flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-clay animate-pulse flex-shrink-0" />
@@ -522,6 +551,16 @@ export default function ProductDetail({ product, collection, related, collection
               <ProductDeliveryCheck subtotal={price * quantity} weightGrams={product.weight ?? 500} />
 
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Built from the real setting, so changing the threshold in
+                    admin changes what the product page promises. */}
+                <div className="flex items-start gap-2.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-forest mt-0.5 flex-shrink-0">
+                    <path d={SHIP_ICON} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="font-body text-[11px] text-mid leading-snug">
+                    Free shipping over {formatPrice(freeShippingThreshold)}
+                  </span>
+                </div>
                 {TRUST_BADGES.map((badge) => (
                   <div key={badge.label} className="flex items-start gap-2.5">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-forest mt-0.5 flex-shrink-0">

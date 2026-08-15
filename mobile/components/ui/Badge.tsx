@@ -11,7 +11,16 @@ export function Badge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <View style={s.badge}>
-      <Text style={s.t}>{count > 9 ? "9+" : count}</Text>
+      {/* The one place a scaling clamp is the right call rather than a dodge.
+          This badge is pinned to the corner of a tab icon: it cannot grow
+          without covering the icon it annotates, so letting 9px run to ~28px
+          would break the thing it is describing. It is also not the
+          authoritative number — the Pack screen is, at full scale — so
+          clamping the glance and leaving the destination unclamped keeps the
+          count readable without turning the tab bar into a lost cause. */}
+      <Text style={s.t} maxFontSizeMultiplier={1.6}>
+        {count > 9 ? "9+" : count}
+      </Text>
     </View>
   );
 }
@@ -22,7 +31,7 @@ const s = StyleSheet.create({
     top: -3,
     right: -11,
     minWidth: 16,
-    height: 16,
+    minHeight: 16,
     borderRadius: 999,
     backgroundColor: C.clay,
     borderWidth: 1.5,

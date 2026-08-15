@@ -32,7 +32,7 @@ export default function CollectionsRow({
     // value read as one long block with a heading dropped in the middle of it.
     // The deeper ground also suits the collection photography, which is the
     // heaviest imagery in the light half of the page.
-    <section className="bg-paper-deep px-6 md:px-10 py-20 md:py-24">
+    <section className="bg-paper border-t border-rule px-6 md:px-10 py-20 md:py-24">
       <div className="max-w-7xl mx-auto">
         <div className="mb-10 flex items-end justify-between">
           <div>

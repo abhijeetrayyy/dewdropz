@@ -1,10 +1,10 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";
 import { Body, Mono, Serif } from "@/components/ui/Type";
@@ -31,11 +31,11 @@ export default function CollectionsIndexScreen() {
 
   return (
     <View style={s.root}>
+      <StatusCap />
       {/* These are paper screens pushed from dark-hero ones (product,
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <StatusBar style="dark" />
       <ScrollView
         contentContainerStyle={{ paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
@@ -45,6 +45,14 @@ export default function CollectionsIndexScreen() {
           eyebrow="The index"
           title="Collections"
           lede="Every piece we make belongs to one set of conditions. Start with the weather you're walking into."
+          stats={
+            collections.length > 0
+              ? [
+                  { label: "Collections", value: String(collections.length) },
+                  { label: "Pieces", value: String(products.length) },
+                ]
+              : undefined
+          }
         />
 
         <View style={{ paddingHorizontal: S.gutter }}>
@@ -74,7 +82,7 @@ export default function CollectionsIndexScreen() {
                 const from = inCollection.length ? Math.min(...inCollection.map((p) => p.price)) : 0;
 
                 return (
-                  <Animated.View key={c.id} entering={FadeInDown.delay(i * 70).springify().damping(18)}>
+                  <Animated.View key={c.id} entering={FadeInDown.delay(i * 70).duration(380)}>
                     <TouchableOpacity
                       activeOpacity={0.94}
                       onPress={() => {

@@ -22,7 +22,7 @@ export default function DesignYourOwn({ products }: { products: ProductWithColle
     // a warm gradient, a low sun-glow, and the brand's topographic contours.
     // The contrast people actually notice comes from the dark workbench panel
     // sitting on top of it.
-    <section className="relative overflow-hidden bg-[linear-gradient(170deg,#F6F0E2_0%,#F2E8D2_45%,#EFE2C6_100%)] px-6 py-20 md:px-10 md:py-28">
+    <section className="relative overflow-hidden bg-paper border-t border-rule px-6 py-20 md:px-10 md:py-28">
       {/* Low warm glow, as if the light is coming across the bench. */}
       <div
         aria-hidden

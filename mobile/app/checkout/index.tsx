@@ -7,12 +7,13 @@ import { useCartStore } from "@/stores/cart";
 import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/Button";
+import { StatusCap } from "@/components/ui/StatusCap";
 import { Input } from "@/components/Input";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
 import { SpecTable } from "@/components/editorial/SpecTable";
-import { Body, Display2, Eyebrow, Micro, Mono, Numeric, Title } from "@/components/ui/Type";
+import { Body, Display2, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
 import { useAddressesQuery, useCheckoutMutation } from "@/lib/queries";
 import { FREE_SHIPPING_THRESHOLD_PAISE, FLAT_SHIPPING_RATE_PAISE } from "@/lib/constants";
 import { haptics } from "@/lib/haptics";
@@ -153,33 +154,43 @@ export default function CheckoutScreen() {
 
   return (
     <KeyboardAvoidingView style={s.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      {/* ── Header + progress ─────────────────────────────────────────────── */}
-      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <IconButton name={step === 1 ? "arrow_back" : "close"} onPress={() => (step === 1 ? setStep(0) : router.back())} />
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Mono color={C.textMuted}>CHECKOUT</Mono>
+      <StatusCap />
+      {/* ── Header + progress ─────────────────────────────────────────────
+          The same ink panel every other screen wears, with the step tracker
+          living inside it rather than as a separate strip on paper below. */}
+      <View style={[s.panel, { paddingTop: insets.top + 10 }]}>
+        <View style={s.header}>
+          <IconButton
+            name={step === 1 ? "arrow_back" : "close"}
+            tone="glass"
+            accessibilityLabel={step === 1 ? "Back to delivery" : "Close checkout"}
+            onPress={() => (step === 1 ? setStep(0) : router.back())}
+          />
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text style={s.panelKicker}>CHECKOUT</Text>
+          </View>
+          <View style={s.secure}>
+            <Icon name="lock" size={13} color={C.sage} />
+            <Text style={s.secureT}>Secure</Text>
+          </View>
         </View>
-        <View style={s.secure}>
-          <Icon name="lock" size={13} color={C.forest} />
-          <Micro color={C.forest}>Secure</Micro>
-        </View>
-      </View>
 
-      <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
-        <View style={s.stepRow}>
-          {STEPS.map((label, i) => (
-            <View key={label} style={{ flex: 1, gap: 7 }}>
-              <View style={[s.stepTrack, i <= step && s.stepTrackOn]} />
-              <Mono color={i <= step ? C.ink : C.textFaint}>
-                {String(i + 1).padStart(2, "0")} {label.toUpperCase()}
-              </Mono>
-            </View>
-          ))}
+        <View style={{ paddingHorizontal: S.gutter, paddingTop: S.md }}>
+          <View style={s.stepRow}>
+            {STEPS.map((label, i) => (
+              <View key={label} style={{ flex: 1, gap: 7 }}>
+                <View style={[s.stepTrack, i <= step && s.stepTrackOn]} />
+                <Text style={[s.stepLabel, i <= step && s.stepLabelOn]}>
+                  {String(i + 1).padStart(2, "0")} {label.toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.block, paddingBottom: 180 }}
+        contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.block, paddingBottom: 260 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -355,16 +366,43 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       {/* ── Pinned total + action ─────────────────────────────────────────── */}
+      {/* ── Pinned cost + action ──────────────────────────────────────────
+          The breakdown is here on BOTH steps, not just the payment one.
+          Unexpected extra costs at checkout are the single largest fixable
+          cause of abandonment — 39% of shoppers, per Baymard's benchmark — and
+          this bar previously showed a bare "TOTAL" on the delivery step with
+          nothing to explain what was inside it. Subtotal and delivery are now
+          always on screen, so the number never changes without warning.
+          Kept at the bottom because ~half of shoppers check out one-handed and
+          the CTA has to stay in the thumb's reach. ────────────────────────── */}
       <View style={[s.bar, { paddingBottom: insets.bottom + 14 }]}>
-        <View style={s.barTotals}>
-          <Mono color={C.textMuted}>TOTAL</Mono>
-          <Numeric style={{ fontSize: 17, marginTop: 3 }}>{formatPrice(grand)}</Numeric>
+        <View style={s.barBreakdown}>
+          <View style={s.barLine}>
+            <Body color={C.textMid}>Subtotal</Body>
+            <Numeric color={C.textMid}>{formatPrice(tot)}</Numeric>
+          </View>
+          <View style={s.barLine}>
+            <Body color={C.textMid}>Delivery</Body>
+            <Numeric color={ship === 0 ? C.forest : C.textMid}>
+              {ship === 0 ? "FREE" : formatPrice(ship)}
+            </Numeric>
+          </View>
+          <View style={[s.barLine, s.barLineTotal]}>
+            <Text style={s.barTotalL}>Total</Text>
+            <Text style={s.barTotalV}>{formatPrice(grand)}</Text>
+          </View>
         </View>
+
         {step === 0 ? (
-          <Button title="Continue" iconRight="arrow_forward" onPress={continueToPayment} style={{ flex: 1 }} />
+          <Button title="Continue to payment" iconRight="arrow_forward" onPress={continueToPayment} style={{ width: "100%" }} />
         ) : (
-          <Button title="Place order" loading={checkout.isPending} onPress={place} style={{ flex: 1 }} />
+          <Button title="Place order" loading={checkout.isPending} onPress={place} style={{ width: "100%" }} />
         )}
+
+        <View style={s.barTrust}>
+          <Icon name="lock" size={12} color={C.textMuted} />
+          <Text style={s.barTrustT}>Cash on delivery · 7-day returns · No card details stored</Text>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -372,14 +410,24 @@ export default function CheckoutScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
+  panel: {
+    backgroundColor: C.ink,
+    borderBottomLeftRadius: R.sheet,
+    borderBottomRightRadius: R.sheet,
+    paddingBottom: S.lg,
+  },
+  panelKicker: { fontFamily: F.mono, fontSize: 10, letterSpacing: 1.9, color: "rgba(251,247,239,0.55)" },
   header: { flexDirection: "row", alignItems: "center", gap: S.sm, paddingHorizontal: S.gutter, paddingBottom: S.xs },
   secure: { flexDirection: "row", alignItems: "center", gap: 4, minWidth: 40, justifyContent: "flex-end" },
+  secureT: { fontFamily: F.bodyMedium, fontSize: 11, color: C.sage },
+  stepLabel: { fontFamily: F.mono, fontSize: 10, letterSpacing: 1.2, color: "rgba(251,247,239,0.4)" },
+  stepLabelOn: { fontFamily: F.monoBold, color: C.paper },
 
   gate: { flex: 1, justifyContent: "center", paddingHorizontal: S.gutter, paddingBottom: 80 },
 
   stepRow: { flexDirection: "row", gap: S.sm },
-  stepTrack: { height: 2, backgroundColor: C.sand, borderRadius: R.tag },
-  stepTrackOn: { backgroundColor: C.ink },
+  stepTrack: { height: 2, backgroundColor: "rgba(251,247,239,0.18)", borderRadius: R.tag },
+  stepTrackOn: { backgroundColor: C.sage },
 
   addrRow: { flexDirection: "row", alignItems: "flex-start", gap: S.md, paddingVertical: S.md },
   addrTop: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -403,10 +451,13 @@ const s = StyleSheet.create({
     borderTopColor: C.ruleSoft,
     paddingHorizontal: S.gutter,
     paddingTop: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: S.md,
     ...SHADOW_BAR,
   },
-  barTotals: { minWidth: 84 },
+  barBreakdown: { gap: 3, marginBottom: S.md },
+  barLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  barLineTotal: { marginTop: 5, paddingTop: 7, borderTopWidth: 1, borderTopColor: C.ruleSoft },
+  barTotalL: { fontFamily: F.bodyBold, fontSize: 16, color: C.ink },
+  barTotalV: { fontFamily: F.monoBold, fontSize: 18, color: C.ink },
+  barTrust: { flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center", marginTop: 11 },
+  barTrustT: { fontFamily: F.body, fontSize: 11, color: C.textMuted },
 });

@@ -103,11 +103,15 @@ export const JOURNAL = [
 
 // Real logistics facts (see CONTACT_FAQS + store settings) surfaced as a single
 // trust strip — the "will it arrive, can I return it" anxieties answered up front.
+// Four logistics answers, placed right after the hero in the order the doubts
+// actually arrive: can I pay my way, what will it cost, what if it's wrong, and
+// is it any good. Split into label + value so the band can set them with real
+// hierarchy instead of four identical uppercase strings in a row.
 export const TRUST_POINTS = [
-  'COD available across India',
-  'Free shipping over ₹2,000',
-  '7-day easy returns',
-  'Field-tested at 5,200m',
+  { label: 'Payment', value: 'Cash on delivery, India-wide' },
+  { label: 'Shipping', value: 'Free over ₹2,000' },
+  { label: 'Returns', value: '7 days, unused with tags' },
+  { label: 'Tested', value: 'On the range at 5,200 m' },
 ]
 
 
@@ -357,3 +361,10 @@ export const SUSTAINABILITY_COMMITMENTS = [
     body: 'No plastic polybags. Orders ship in recycled kraft paper and compostable mailers, tested to survive Indian monsoon transit.',
   },
 ]
+
+
+/** Days after delivery a customer may still open a return. Lives here rather
+ *  than in actions/returns.ts because a 'use server' file may only export async
+ *  functions — and because the copy that promises it (product page, FAQ) reads
+ *  from constants too, so the promise and the enforcement cannot drift. */
+export const RETURN_WINDOW_DAYS = 7

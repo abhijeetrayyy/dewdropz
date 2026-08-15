@@ -3,6 +3,21 @@ export function formatPrice(paise: number): string {
   return `₹${rupees.toLocaleString("en-IN")}`;
 }
 
+/**
+ * The size to use when adding a product to the cart without asking — the first
+ * one that is actually orderable, falling back to the first listed so a
+ * product whose stock isn't tracked still adds.
+ *
+ * Bulk actions ("Add all to pack", "Take all N") used to reach for
+ * `variants[0]` directly, which happily picked a sold-out size.
+ */
+export function pickVariant<T extends { id: string; name: string; inventory_quantity?: number | null }>(
+  variants: T[] | null | undefined,
+): T | undefined {
+  if (!variants?.length) return undefined;
+  return variants.find((v) => v.inventory_quantity == null || v.inventory_quantity > 0) ?? variants[0];
+}
+
 export function paiseToRupees(paise: number): number {
   return paise / 100;
 }

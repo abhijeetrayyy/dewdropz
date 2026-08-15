@@ -91,12 +91,43 @@ export const C = {
   // Moved from #17231D (a desaturated green) toward the web's #0C100D. With
   // forest now doing the CTA job, ink had to stop being green — otherwise
   // "Add to pack" (forest) and "Track order" (ink) read as the same button.
-  ink: "#101512", // primary text, dark panels
+  //
+  // The greys below it are measured against `paper` (#FBF7EF), not eyeballed.
+  // The old scale had four
+  // steps and the bottom two failed WCAG AA for normal text:
+  //
+  //     textMuted #7A8880 → 3.47:1   (needs 4.5)
+  //     textFaint #9AA69F → 2.36:1   (needs 4.5)
+  //
+  // That is not a rounding error. Those two carried the app's whole metadata
+  // layer — order numbers, dates, piece counts, "INCL. ALL TAXES", altitude
+  // labels — at 10–13px, which is exactly where the 4.5 threshold applies and
+  // where legibility matters most. 112 usages between them.
+  //
+  // The fix could not simply darken both, because there is no room for two
+  // visually distinct greys between 4.5:1 and `textMid` at 5.32:1 on a
+  // background this light. So the scale loses a step: below `textMid` there is
+  // now ONE tertiary grey, and the hierarchy under it is carried by size,
+  // weight and face (mono vs sans) rather than by fading further — which is
+  // the honest way to do it, since "lighter" past this point just means
+  // "harder to read".
+  //
+  // `faintIcon` is non-text, so its bar is 3:1 rather than 4.5 — but it was at
+  // 1.53:1, which fails even that by a wide margin. It looked defensible while
+  // it was only chevrons, where the row label carries the meaning and the
+  // glyph is decoration. It isn't: search.tsx sets a `north_west` glyph on
+  // recent queries and `arrow_forward` on collections, and the glyph is the
+  // ONLY thing telling those two rows apart — "put this back in the box" vs
+  // "leave for another screen". So it darkens to 3.17:1, which still sits a
+  // clear step lighter than `textMuted` and keeps the quiet-marginalia read.
+  ink: "#101512", // primary text, dark panels          17.27:1
   inkSoft: "#1C2320", // dark panel gradient partner
-  textMid: "#5C6A62", // secondary text
-  textMuted: "#7A8880", // tertiary text, inactive labels
-  textFaint: "#9AA69F", // quaternary, disabled, struck-through
-  faintIcon: "#C6CCC7", // chevrons, disengaged glyphs
+  textMid: "#5C6A62", // secondary text                  5.32:1
+  textMuted: "#68756E", // tertiary text, labels, mono    4.51:1
+  textFaint: "#68756E", // alias — see note above         4.51:1
+  faintIcon: "#878D88", // chevrons, glyphs (non-text)      3.17:1
+  // 2.04:1, and deliberately left there: WCAG 1.4.3 exempts inactive
+  // components, and a disabled control that meets contrast reads as enabled.
   disabled: "#A9B2AC",
   disabledBg: "#E3DED2",
 
@@ -114,7 +145,10 @@ export const C = {
   // ---- Utility ----
   overlay: "rgba(16,21,18,0.42)",
   scrim: "rgba(12,18,15,0.55)", // over-photo text protection
-  danger: "#C25A45",
+  // 4.51:1 on paper. Was #C25A45 at 4.06 — a fail, and this is the colour on
+  // "Delete account", form errors and the sign-out row: the text a user most
+  // needs to read correctly before doing something irreversible.
+  danger: "#BA523D",
   danger12: "#F7E8E4",
   white: "#FFFFFF",
 

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { auditLog } from '@/lib/audit'
 import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Product, ProductVariant, Collection, ProductWithCollection } from '@/types/database'
@@ -106,9 +107,18 @@ export async function createProduct(input: {
   return data
 }
 
+// Fields where "who changed this, and from what" is a question someone will
+// actually ask. Logging the whole row on every edit would bury those in noise.
+const AUDITED_PRODUCT_FIELDS = ['price', 'compare_at_price', 'inventory_quantity', 'is_active', 'status', 'sku'] as const
+
 export async function updateProduct(id: string, input: Record<string, unknown>) {
-  await requireAdmin()
+  const actor = await requireAdmin()
   const supabase = createAdminSupabaseClient()
+  const { data: prior } = await supabase
+    .from('products')
+    .select(AUDITED_PRODUCT_FIELDS.join(','))
+    .eq('id', id)
+    .single<Record<string, unknown>>()
   const payload: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(input)) {
     if (v !== undefined) payload[k] = v
@@ -116,6 +126,22 @@ export async function updateProduct(id: string, input: Record<string, unknown>) 
   }
   const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single()
   if (error) throw new Error(error.message)
+
+  const before: Record<string, unknown> = {}
+  const after: Record<string, unknown> = {}
+  for (const f of AUDITED_PRODUCT_FIELDS) {
+    if (f in payload && prior?.[f] !== data[f]) {
+      before[f] = prior?.[f]
+      after[f] = data[f]
+    }
+  }
+  if (Object.keys(after).length) {
+    await auditLog({
+      actorId: actor.id, actorEmail: actor.email, action: 'product.updated',
+      entityType: 'product', entityId: id, before, after,
+    })
+  }
+
   revalidatePath('/admin/products')
   revalidatePath(`/products/${data.slug}`)
   return data

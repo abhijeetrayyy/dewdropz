@@ -17,6 +17,13 @@ import {
   ShoppingCart,
   CreditCard,
   TicketPercent,
+  BadgePercent,
+  ShoppingBag,
+  Receipt,
+  ListChecks,
+  Printer,
+  LayoutTemplate,
+  Truck,
   Star,
   Users,
   Mail,
@@ -24,6 +31,7 @@ import {
   Settings,
   ExternalLink,
   ChevronDown,
+  Undo2,
 } from 'lucide-react'
 
 const navGroups = [
@@ -42,6 +50,7 @@ const navGroups = [
       { href: '/admin/categories', label: 'Categories', icon: FolderTree },
       { href: '/admin/tags', label: 'Tags', icon: Hash },
       { href: '/admin/attributes', label: 'Attributes', icon: Shapes },
+      { href: '/admin/homepage', label: 'Homepage', icon: LayoutTemplate },
     ],
   },
   {
@@ -50,6 +59,13 @@ const navGroups = [
       { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
       { href: '/admin/payments', label: 'Payments', icon: CreditCard },
       { href: '/admin/coupons', label: 'Coupons', icon: TicketPercent },
+      { href: '/admin/promotions', label: 'Promotions', icon: BadgePercent },
+      { href: '/admin/production', label: 'Print Queue', icon: Printer },
+      { href: '/admin/returns', label: 'Returns', icon: Undo2 },
+      { href: '/admin/abandoned-carts', label: 'Abandoned Carts', icon: ShoppingBag },
+      { href: '/admin/tax', label: 'Tax Rules', icon: Receipt },
+      { href: '/admin/shipping', label: 'Shipping', icon: Truck },
+      { href: '/admin/jobs', label: 'Background Jobs', icon: ListChecks },
     ],
   },
   {

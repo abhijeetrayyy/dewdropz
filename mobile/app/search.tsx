@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
-import { Image } from "expo-image";
+import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useCollectionsQuery, useProductsQuery } from "@/lib/queries";
 import { getRecentSearches, pushRecentSearch, clearRecentSearches } from "@/lib/recentSearches";
@@ -26,6 +27,13 @@ const TRENDING = ["Hoodies", "Custom prints", "Packs", "Under ₹1,500"];
 //     count and nothing else. There's a real empty state now.
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
+  // A genuine platform split, not a tuning preference. iOS presents a modal as
+  // a sheet already positioned below the status bar, so adding the safe-area
+  // inset there stacks a second one and leaves the field floating in dead ink.
+  // Android presents the same route edge-to-edge, so WITHOUT the inset the
+  // search field runs underneath the clock and the signal icons. No single
+  // value is correct on both.
+  const panelTop = Platform.OS === "android" ? insets.top + S.sm : S.lg;
   const { data: products = [] } = useProductsQuery();
   const { data: collections = [] } = useCollectionsQuery();
   const [query, setQuery] = useState("");
@@ -57,36 +65,56 @@ export default function SearchScreen() {
 
   return (
     <View style={s.root}>
-      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <View style={s.bar}>
-          <Icon name="search" size={20} color={searching ? C.ink : C.textMuted} />
-          <TextInput
-            autoFocus
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => query.trim() && runSearch(query)}
-            placeholder="Search gear, collections, materials"
-            placeholderTextColor={C.textFaint}
-            style={s.input}
-            selectionColor={C.forest}
-            returnKeyType="search"
-          />
-          {query.length > 0 ? (
-            <TouchableOpacity onPress={() => setQuery("")} hitSlop={10}>
-              <Icon name="close" size={19} color={C.textMuted} />
-            </TouchableOpacity>
-          ) : null}
+      {/* The other half of the same platform split as `panelTop` above. Insetting
+          the field stopped it running under the clock, but the PANEL still fills
+          the whole window on Android, so the ink surface sits behind a status bar
+          that is still drawing the root layout's dark glyphs — near-black clock,
+          signal and battery on near-black ink.
+          Android only: on iOS the sheet leaves paper up there, where dark glyphs
+          are the correct ones and asking for light would erase them instead. */}
+      {Platform.OS === "android" ? <StatusBar style="light" /> : null}
+      {/* The field lives INSIDE the ink panel rather than on a cream bar above
+          a hairline. Search is a modal that opens over whatever you were doing,
+          so it needs to read as a distinct surface, not as the previous screen
+          with a text box bolted to the top. */}
+      <View style={[s.panel, { paddingTop: panelTop }]}>
+        <View style={s.panelRow}>
+          <View style={s.bar}>
+            <Icon name="search" size={19} color={searching ? C.paper : "rgba(251,247,239,0.5)"} />
+            <TextInput
+              autoFocus
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={() => query.trim() && runSearch(query)}
+              placeholder="Search gear, collections, materials"
+              placeholderTextColor="rgba(251,247,239,0.4)"
+              style={s.input}
+              selectionColor={C.sage}
+              returnKeyType="search"
+              keyboardAppearance="dark"
+            />
+            {query.length > 0 ? (
+              <TouchableOpacity
+                onPress={() => setQuery("")}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
+                <Icon name="close" size={18} color="rgba(251,247,239,0.6)" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10} accessibilityRole="button">
+            <Text style={s.cancel}>Cancel</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Text style={s.cancel}>Cancel</Text>
-        </TouchableOpacity>
       </View>
-      <Rule weight="ink" style={{ marginHorizontal: S.gutter }} />
 
       {!searching ? (
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.xl, paddingBottom: S.section }}
+          contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: S.section }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {recent.length > 0 ? (
             <View style={{ marginBottom: S.block }}>
@@ -149,8 +177,9 @@ export default function SearchScreen() {
         </ScrollView>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: S.gutter, paddingTop: S.md, paddingBottom: S.section }}
+          contentContainerStyle={{ paddingHorizontal: S.gutter, paddingBottom: S.section }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <Mono color={C.textMuted} style={{ paddingVertical: S.sm }}>
             {results.length} {results.length === 1 ? "RESULT" : "RESULTS"} FOR “{query.trim().toUpperCase()}”
@@ -198,10 +227,27 @@ export default function SearchScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
-  header: { flexDirection: "row", alignItems: "center", gap: S.md, paddingHorizontal: S.gutter, paddingBottom: S.md },
-  bar: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
-  input: { flex: 1, fontFamily: F.body, fontSize: 17, color: C.ink, paddingVertical: 6 },
-  cancel: { fontFamily: F.bodySemiBold, fontSize: 15, color: C.textMid },
+  panel: {
+    backgroundColor: C.ink,
+    borderBottomLeftRadius: R.sheet,
+    borderBottomRightRadius: R.sheet,
+    paddingBottom: S.lg,
+    marginBottom: S.block,
+  },
+  panelRow: { flexDirection: "row", alignItems: "center", gap: S.md, paddingHorizontal: S.gutter },
+  // A filled pill, so the field looks like somewhere you type rather than a
+  // line of text that happens to be editable.
+  bar: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(251,247,239,0.1)",
+    borderRadius: R.chip,
+    paddingHorizontal: 14,
+  },
+  input: { flex: 1, fontFamily: F.body, fontSize: 16, color: C.paper, paddingVertical: 11 },
+  cancel: { fontFamily: F.bodySemiBold, fontSize: 15, color: C.sage },
 
   sectionRow: { flexDirection: "row", alignItems: "center" },
   clear: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.ink },

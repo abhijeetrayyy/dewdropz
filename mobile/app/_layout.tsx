@@ -35,7 +35,7 @@ import { useFonts as useInter, Inter_400Regular } from "@expo-google-fonts/inter
 import { useAuthStore } from "@/stores/auth";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AppSplash } from "@/components/AppSplash";
-import { C, F } from "@/lib/theme";
+import { C } from "@/lib/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -43,22 +43,6 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 });
 
-const stackScreenHeader = {
-  headerStyle: { backgroundColor: C.paper },
-  headerTintColor: C.ink,
-  // Fraunces, matching every screen's own title (ScreenHeader's compact bar
-  // title uses the same face) — a native stack header showing a different
-  // typeface from the page it titles would read as two apps stitched together.
-  headerTitleStyle: { fontFamily: F.displayRegular, fontSize: 17, color: C.ink },
-  // `headerBackTitleVisible: false` is the old React Navigation v6 prop and
-  // is a no-op on the v7 stack this project runs — it was silently falling
-  // back to the previous route's raw segment name as the back-button label,
-  // which is how "(tabs)" (the route group's literal folder name) ended up
-  // rendered as visible UI text next to the back chevron.
-  headerBackButtonDisplayMode: "minimal" as const,
-  headerBackTitle: "",
-  headerShadowVisible: false,
-};
 
 export default function RootLayout() {
   const [frauncesLoaded] = useFraunces({
@@ -144,6 +128,10 @@ export default function RootLayout() {
                 <Stack.Screen name="product/[slug]" options={{ headerShown: false }} />
                 <Stack.Screen name="collections/index" options={{ headerShown: false }} />
                 <Stack.Screen name="collections/[slug]" options={{ headerShown: false }} />
+                {/* The product taxonomy, reachable from the shop's category
+                    rail. Categories have existed since migration 004 and had
+                    no route on mobile at all. */}
+                <Stack.Screen name="category/[slug]" options={{ headerShown: false }} />
                 {/* Long-form content — previously web-only, so the app had no
                     editorial surface at all. */}
                 <Stack.Screen name="journal/index" options={{ headerShown: false }} />
@@ -162,7 +150,9 @@ export default function RootLayout() {
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/login" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
-                <Stack.Screen name="customize/[slug]" options={{ ...stackScreenHeader, title: "Customize" }} />
+                {/* The studio builds its own ink panel like every other screen — it was
+                    the last route still using React Navigation's bar. */}
+                <Stack.Screen name="customize/[slug]" options={{ headerShown: false }} />
               </Stack>
               {showSplash && <AppSplash />}
             </ToastProvider>

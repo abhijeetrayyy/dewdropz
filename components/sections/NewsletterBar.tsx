@@ -42,7 +42,7 @@ export default function NewsletterBar() {
   }
 
   return (
-    <section className="relative bg-forest px-6 md:px-10 py-20 md:py-28 overflow-hidden">
+    <section className="relative bg-forest-deep border-t border-paper/10 px-6 md:px-10 py-20 md:py-28 overflow-hidden">
       {/* Faint contour rings, like the elevation lines on a trek map */}
       <svg
         aria-hidden="true"
