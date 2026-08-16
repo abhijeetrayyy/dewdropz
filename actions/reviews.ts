@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient, createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin, getUser } from './auth'
 import { reviewSchema, newsletterSchema } from '@/lib/validations'
 import { getSession } from './auth'
@@ -82,8 +82,14 @@ export async function getProductReviews(productId: string, approvedOnly = true) 
 // Tested. Reported back." section shows. Returns [] when nothing has been
 // approved yet, and the section hides itself rather than inventing voices:
 // this replaced a hardcoded list of four fabricated customers.
+// Public client, for the same reason as getStoreSettings: an approved review is
+// public by definition — it is printed on the homepage — and the cookie client
+// was making every page that shows one uncacheable.
+//
+// The row set does not move. RLS is "Public read approved reviews"
+// USING (is_approved = TRUE) and this query already asked for exactly that.
 export async function getFeaturedReviews(limit = 8) {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('reviews')
     .select('*, user:profiles(full_name, avatar_url), product:products(name, slug, images)')

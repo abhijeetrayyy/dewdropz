@@ -8,6 +8,9 @@ import NewsletterBar from '@/components/sections/NewsletterBar'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import { getCollections } from '@/actions/products'
 
+// Also renders catalogue data; same window as the rest.
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: 'Collections — DEWDROPZ',
   description: 'Three collections, built for three different kinds of trail.',

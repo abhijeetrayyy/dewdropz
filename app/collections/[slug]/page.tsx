@@ -9,6 +9,9 @@ import CollectionNarrative from '@/components/sections/CollectionNarrative'
 import CollectionCrossSell from '@/components/sections/CollectionCrossSell'
 import { getCollections, getCollectionBySlug, getProducts } from '@/actions/products'
 
+// Prices and stock are on this page; see the note in products/[slug].
+export const revalidate = 60
+
 export async function generateStaticParams() {
   const collections = await getCollections()
   return collections.map((c) => ({ slug: c.slug }))

@@ -8,6 +8,20 @@ import { getRelatedProducts } from '@/lib/recommendations'
 import { getStoreSettings } from '@/actions/settings'
 import { getOffersForProduct } from '@/actions/promotions'
 
+// These pages are prerendered now, so they need a refresh window as well as
+// the on-demand revalidation the admin already triggers. Two different kinds of
+// change reach a product: an edit, which calls revalidatePath and lands
+// immediately, and a SALE, which decrements stock through a database trigger
+// that no application code observes. Without a window, a sold-out size could
+// read as available until someone happened to edit the product.
+//
+// A minute is short enough that stock is never far wrong and long enough that
+// the page is served from cache to essentially everyone. Nothing can be
+// oversold in the meantime regardless: stock is enforced by a CHECK constraint
+// at the table, so the worst a stale page causes is a clear error at checkout
+// rather than an order that cannot be fulfilled.
+export const revalidate = 60
+
 export async function generateStaticParams() {
   const products = await getProducts()
   return products.map((p) => ({ slug: p.slug }))

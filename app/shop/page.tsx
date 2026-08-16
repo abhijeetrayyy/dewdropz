@@ -5,6 +5,9 @@ import ShopContent from '@/components/sections/ShopContent'
 import { getProducts, getCollections } from '@/actions/products'
 import { getCategories } from '@/actions/categories'
 
+// Prices and stock are on this page; see the note in products/[slug].
+export const revalidate = 60
+
 export default async function ShopPage() {
   const [products, collections, categories] = await Promise.all([
     getProducts(),

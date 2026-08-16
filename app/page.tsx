@@ -23,6 +23,9 @@ import { getStoreSettings } from '@/actions/settings'
 import { getFeaturedReviews } from '@/actions/reviews'
 import { getShowcaseRails } from '@/actions/showcase'
 
+// The homepage sells from the same catalogue, so it takes the same window.
+export const revalidate = 60
+
 // The homepage is one day on the mountain, lived by scrolling: pre-dawn start on
 // the summit, first light, the climb, the ridge at midday, pack check, stories on
 // the way down, basecamp at night, and the last radio check before lights out.

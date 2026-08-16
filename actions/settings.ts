@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient, createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { StoreSettings, HomeConfig } from '@/types/database'
 
@@ -50,8 +50,19 @@ function normalizeHomeConfig(raw: Partial<HomeConfig> | null | undefined): HomeC
   }
 }
 
+// Read with the cookie-free public client.
+//
+// Store settings are shop-wide configuration — the free-shipping threshold, the
+// GST fallback, the homepage layout. Nothing here is per-customer, so the
+// cookie-based client bought nothing, and it cost more than it looks: reading
+// cookies makes the calling page dynamic. This one call was the only reason
+// /products/[slug], / and /about could not be cached, which on production
+// measured a 5.35s product page against 0.88s for a static one.
+//
+// RLS already publishes it: "Anyone can read store settings" USING (true),
+// verified against the live database with the anon key.
 export async function getStoreSettings() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single()
 
   if (error) {
