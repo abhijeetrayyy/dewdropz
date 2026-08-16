@@ -7,6 +7,7 @@ import { reviewSchema, newsletterSchema } from '@/lib/validations'
 import { getSession } from './auth'
 import type { Review } from '@/types/database'
 import { rateLimit } from '@/lib/rateLimit'
+import { ensureAdmin } from '@/lib/adminAuth'
 
 export async function createReview(input: {
   product_id: string
@@ -200,6 +201,7 @@ export async function setMyNewsletterSubscription(subscribed: boolean) {
 }
 
 export async function getAllReviews(options?: { approved?: boolean; limit?: number; offset?: number }) {
+  await ensureAdmin()
   const supabase = await createServerSupabaseClient()
   let query = supabase
     .from('reviews')

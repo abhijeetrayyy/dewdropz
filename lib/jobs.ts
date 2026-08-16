@@ -59,7 +59,7 @@ type Handler = (payload: Record<string, unknown>) => Promise<void>
  */
 const HANDLERS: Record<JobType, Handler> = {
   'order.confirmation': async (p) => {
-    const { sendOrderConfirmationIfFirstTime } = await import('@/actions/orders')
+    const { sendOrderConfirmationIfFirstTime } = await import('@/lib/orderEmails')
     await sendOrderConfirmationIfFirstTime(String(p.orderId))
   },
   'order.cancellation': async (p) => {

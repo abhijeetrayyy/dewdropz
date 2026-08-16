@@ -6,6 +6,7 @@ import { requireAdmin } from './auth'
 import { getStoreSettings } from './settings'
 import { stateForPincode } from '@/lib/pincode-zones'
 import type { ShippingZone, ShippingRate, ShippingZoneWithRates } from '@/types/database'
+import { ensureAdmin } from '@/lib/adminAuth'
 
 // Shared zone-matching: a zone matching the destination's state wins over one
 // matching only its country, and a zone with no state/country restrictions acts as
@@ -107,6 +108,7 @@ export async function getDeliveryEstimate(input: {
 }
 
 export async function getShippingZones() {
+  await ensureAdmin()
   const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('shipping_zones')

@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getAllOrders, updateOrderStatus, bulkUpdateOrderStatus, refundOrder, cancelOrderAsAdmin, getRefundAttentionCount, exportOrdersCsv, type OrderView } from '@/actions/orders'
+import { getAllOrders, updateOrderStatus, bulkUpdateOrderStatus, refundOrder, cancelOrderAsAdmin, getRefundAttentionCount, exportOrdersCsv, type OrderView, type OrderListRow } from '@/actions/orders'
 
 const VIEW_KEYS: string[] = ['all','unfulfilled','cod_pending','rto','needs_attention']
 import { createShipment, updateShipmentStatus } from '@/actions/shipments'
@@ -23,7 +23,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { Search, ChevronLeft, ChevronRight, Loader2, AlertTriangle, MoreHorizontal, Palette } from 'lucide-react'
 import { TableSkeleton } from '@/components/admin/CardListSkeleton'
-import type { OrderWithItems, Order } from '@/types/database'
+import type { Order } from '@/types/database'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 
 const PAGE_SIZE = 20
 // Bulk status changes are limited to transitions that don't need per-order data —
@@ -45,7 +46,7 @@ const paymentStatusColors: Record<string, 'default' | 'secondary' | 'destructive
 
 export default function OrdersPage() {
   const router = useRouter()
-  const [orders, setOrders] = useState<OrderWithItems[]>([])
+  const [orders, setOrders] = useState<OrderListRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [filter, setFilter] = useState('all')
@@ -55,13 +56,19 @@ export default function OrdersPage() {
   const [bulkStatus, setBulkStatus] = useState<Order['status']>('processing')
   const [shipDialog, setShipDialog] = useState(false)
   const [refundDialog, setRefundDialog] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<OrderListRow | null>(null)
   const [trackForm, setTrackForm] = useState({ carrier: '', number: '', url: '' })
   const [refundForm, setRefundForm] = useState({ amount: '', reason: '', restock: true })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [attentionCount, setAttentionCount] = useState(0)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+  // Cancelling an order releases stock AND auto-refunds a captured payment.
+  // That was behind a native confirm(), which is a browser dialog people
+  // dismiss by reflex — thin cover for moving money. Both now use the same
+  // ConfirmDialog as every other destructive action in this admin.
+  const [confirmCancel, setConfirmCancel] = useState<OrderListRow | null>(null)
+  const [confirmBulk, setConfirmBulk] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -120,8 +127,8 @@ export default function OrdersPage() {
     catch { toast.error('Failed to update') }
   }
 
-  async function cancelSingleOrder(order: OrderWithItems) {
-    if (!confirm(`Cancel order ${order.order_number}? Stock will be released${order.payment_status === 'paid' || order.payment_status === 'partially_refunded' ? ' and the captured payment will be refunded automatically' : ''}.`)) return
+  async function cancelSingleOrder(order: OrderListRow) {
+    setConfirmCancel(null)
     setCancellingId(order.id)
     try {
       const result = await cancelOrderAsAdmin(order.id)
@@ -160,9 +167,9 @@ export default function OrdersPage() {
     finally { setSaving(false) }
   }
 
-  function openShip(order: OrderWithItems) { setSelectedOrder(order); setTrackForm({ carrier: '', number: '', url: '' }); setShipDialog(true) }
+  function openShip(order: OrderListRow) { setSelectedOrder(order); setTrackForm({ carrier: '', number: '', url: '' }); setShipDialog(true) }
 
-  function openRefund(order: OrderWithItems) {
+  function openRefund(order: OrderListRow) {
     setSelectedOrder(order)
     setRefundForm({ amount: (order.total_amount / 100).toString(), reason: '', restock: true })
     setRefundDialog(true)
@@ -197,7 +204,7 @@ export default function OrdersPage() {
   }
 
   async function handleBulkStatus() {
-    if (!confirm(`Mark ${selected.size} order${selected.size === 1 ? '' : 's'} as ${bulkStatus}?`)) return
+    setConfirmBulk(false)
     try {
       await bulkUpdateOrderStatus([...selected], bulkStatus)
       toast.success(`${selected.size} order${selected.size === 1 ? '' : 's'} updated`)
@@ -209,7 +216,7 @@ export default function OrdersPage() {
 
   /** One line describing the basket, so a row stays a row. The detail page is
    *  one click away for anyone who needs the itemisation. */
-  function summarise(o: OrderWithItems) {
+  function summarise(o: OrderListRow) {
     const items = o.items ?? []
     const units = items.reduce((n, i) => n + i.quantity, 0)
     const first = items[0]
@@ -223,7 +230,7 @@ export default function OrdersPage() {
 
   /** The single move this order is waiting for. Anything else lives in the
    *  overflow menu — a row with five buttons is a row nobody reads. */
-  function primaryAction(o: OrderWithItems) {
+  function primaryAction(o: OrderListRow) {
     if (o.status === 'pending' || o.status === 'confirmed') return { label: 'Ship', run: () => openShip(o) }
     if (o.status === 'processing') return { label: 'Ship', run: () => openShip(o) }
     if (o.status === 'shipped') return { label: 'Delivered', run: () => changeStatus(o.id, 'delivered') }
@@ -291,7 +298,7 @@ export default function OrdersPage() {
                 {BULK_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={handleBulkStatus}>Apply</Button>
+            <Button variant="outline" size="sm" onClick={() => setConfirmBulk(true)}>Apply</Button>
           </div>
         )}
       </div>
@@ -308,22 +315,37 @@ export default function OrdersPage() {
       ) : (
         <Card>
           <CardContent className="p-0 overflow-x-auto">
-            <Table>
+            {/* Same treatment as the products table: fixed layout with every
+                column that holds something of known size given that size, and
+                exactly one unsized column — Items — to absorb the slack. Under
+                auto layout the basket description was taking whatever it liked
+                and squeezing Total and Status, which are the two a person
+                scanning this list is actually reading. */}
+            <Table className="min-w-[940px] table-fixed">
+              <colgroup>
+                <col className="w-[44px]" />
+                <col className="w-[210px]" />
+                <col />
+                <col className="w-[120px]" />
+                <col className="w-[130px]" />
+                <col className="w-[150px]" />
+                <col className="w-[116px]" />
+              </colgroup>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
+                  <TableHead className="h-10 px-3">
                     <Checkbox
                       aria-label="Select all orders on this page"
                       checked={orders.length > 0 && selected.size === orders.length}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[110px]" />
+                  <TableHead className="h-10 px-3">Order</TableHead>
+                  <TableHead className="h-10 px-3">Items</TableHead>
+                  <TableHead className="h-10 px-3 text-right">Total</TableHead>
+                  <TableHead className="h-10 px-3">Payment</TableHead>
+                  <TableHead className="h-10 px-3">Status</TableHead>
+                  <TableHead className="h-10 px-3 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -427,7 +449,7 @@ export default function OrdersPage() {
                                   </DropdownMenuItem>
                                 )}
                                 {canCancel && (
-                                  <DropdownMenuItem onClick={() => cancelSingleOrder(o)} className="text-red-600">
+                                  <DropdownMenuItem onClick={() => setConfirmCancel(o)} className="text-red-600">
                                     Cancel order
                                   </DropdownMenuItem>
                                 )}
@@ -501,6 +523,27 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!confirmCancel}
+        onOpenChange={(open) => { if (!open) setConfirmCancel(null) }}
+        title={`Cancel order ${confirmCancel?.order_number}?`}
+        description={
+          confirmCancel && (confirmCancel.payment_status === 'paid' || confirmCancel.payment_status === 'partially_refunded')
+            ? 'Stock returns to inventory and the captured payment is refunded to the customer automatically. This cannot be undone.'
+            : 'Stock returns to inventory. No payment has been captured, so nothing is refunded.'
+        }
+        confirmLabel="Cancel order"
+        onConfirm={() => { if (confirmCancel) cancelSingleOrder(confirmCancel) }}
+      />
+
+      <ConfirmDialog
+        open={confirmBulk}
+        onOpenChange={setConfirmBulk}
+        title={`Mark ${selected.size} order${selected.size === 1 ? '' : 's'} as ${bulkStatus}?`}
+        description="This changes the status on every selected order at once."
+        confirmLabel="Update"
+        onConfirm={handleBulkStatus}
+      />
     </div>
   )
 }

@@ -1,8 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createAdminSupabaseClient } from '@/lib/supabase'
-import { requireAdmin } from './auth'
+import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase'
+import { requireAdmin, getUser } from './auth'
 import { auditLog } from '@/lib/audit'
 import { resolvePromotions, type Promotion } from '@/lib/promotions'
 import { cartLinesForPromotions, getLivePromotions } from '@/lib/promotions.server'
@@ -99,9 +99,25 @@ export async function deletePromotion(id: string) {
 }
 
 /** What fired on one order, for the customer's own order page. RLS-scoped. */
+// Read by two different people about two different things: an admin looking at
+// any order, and a customer looking at their own. It cannot simply require
+// admin, and it must not stay as it was — the service-role client bypasses RLS,
+// so with no auth check at all, anyone who could POST this action with an order
+// id got back that order's discount labels and amounts.
+//
+// So the client is chosen by who is asking. A customer goes through RLS, where
+// "Users read own order promotions" already scopes the read to their own orders
+// and returns nothing for anyone else's. Only a verified admin gets the
+// service-role client that can see across customers.
 export async function getOrderPromotions(orderId: string) {
-  const supabase = createAdminSupabaseClient()
-  const { data } = await supabase
+  const user = await getUser()
+  if (!user) return []
+
+  const rls = await createServerSupabaseClient()
+  const { data: profile } = await rls.from('profiles').select('role').eq('id', user.id).single()
+
+  const db = profile?.role === 'admin' ? createAdminSupabaseClient() : rls
+  const { data } = await db
     .from('order_promotions')
     .select('label, amount')
     .eq('order_id', orderId)
