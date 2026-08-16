@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code — local agent skills. .claude/launch.json stays tracked, since the
+# dev/prod server definitions are shared; skills are per-machine.
+.claude/skills/
