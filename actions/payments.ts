@@ -419,26 +419,37 @@ export async function getPaymentsOverview(ledger?: Parameters<typeof getPayments
   return { summary, events: events.events, ledger: page }
 }
 
+// Summed in Postgres. This used to select every order ever placed — no filter,
+// no limit — and reduce it in Node to produce four numbers and a short
+// breakdown, so the cost grew with the orders table rather than with anything
+// on screen. Same shape of fix as `promotion_spend()` in migration 037.
+//
+// The SQL is a literal translation of the arithmetic it replaces, checked
+// against it on synthetic rows covering paid sums across several methods, a
+// null payment_method reported as 'unknown', and both refund statuses — the
+// cases the live table does not currently contain. See migration 041.
 export async function getPaymentsSummary() {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
-  const { data } = await supabase.from('orders').select('payment_status, total_amount, payment_method')
+  const { data } = await supabase.rpc('payments_summary')
 
-  const rows = data ?? []
-  const paid = rows.filter((r) => r.payment_status === 'paid')
-  const refunded = rows.filter((r) => r.payment_status === 'refunded' || r.payment_status === 'partially_refunded')
-  const byMethod = new Map<string, number>()
-  for (const r of paid) {
-    const method = r.payment_method ?? 'unknown'
-    byMethod.set(method, (byMethod.get(method) ?? 0) + r.total_amount)
-  }
+  // Postgres BIGINT arrives as a string once it is JSON, so every figure is
+  // coerced rather than trusted to already be a number — `"0" + 1` is `"01"`,
+  // and that would surface as a wrong total rather than an error.
+  const row = (Array.isArray(data) ? data[0] : data) as {
+    total_captured: number | string
+    pending_count: number | string
+    failed_count: number | string
+    refunded_count: number | string
+    by_method: { method: string; amount: number | string }[] | null
+  } | undefined
 
   return {
-    totalCaptured: paid.reduce((sum, r) => sum + r.total_amount, 0),
-    pendingCount: rows.filter((r) => r.payment_status === 'pending').length,
-    failedCount: rows.filter((r) => r.payment_status === 'failed').length,
-    refundedCount: refunded.length,
-    byMethod: Array.from(byMethod.entries()).map(([method, amount]) => ({ method, amount })),
+    totalCaptured: Number(row?.total_captured ?? 0),
+    pendingCount: Number(row?.pending_count ?? 0),
+    failedCount: Number(row?.failed_count ?? 0),
+    refundedCount: Number(row?.refunded_count ?? 0),
+    byMethod: (row?.by_method ?? []).map((m) => ({ method: m.method, amount: Number(m.amount) })),
   }
 }
 
