@@ -17,18 +17,25 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 //
 // This is deliberately NOT in actions/auth.ts: a 'use server' file may only
 // export async functions, and `cache()` returns a plain function.
-export const ensureAdmin = cache(async () => {
+const loadAdmin = cache(async () => {
   const supabase = await createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login?redirected=true')
 
+  // Own row, so RLS ("Users can view own profile") allows it — no service-role
+  // client needed to answer a question about yourself.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, full_name')
     .eq('id', user.id)
     .single()
 
   if (profile?.role !== 'admin') redirect('/')
-  return user
+  return { user, fullName: (profile?.full_name as string | null) ?? null }
 })
+
+export const ensureAdmin = async () => (await loadAdmin()).user
+
+/** Same check, plus the display name the admin shell puts in its header. */
+export const ensureAdminProfile = async () => loadAdmin()
