@@ -88,6 +88,8 @@ export async function getProductByIdAdmin(id: string) {
 // same functions the rest of the admin uses, just started together instead of
 // in single file. There is one definition of each query, and it stays that way.
 // `ensureAdmin` is request-memoised, so the nine inner guards cost one check.
+export type ProductEditorData = Awaited<ReturnType<typeof getProductEditorData>>
+
 export async function getProductEditorData(productId: string) {
   await ensureAdmin()
 

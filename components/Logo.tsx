@@ -50,7 +50,7 @@ export function Logo({
   if (!href) return content
 
   return (
-    <Link href={href} aria-label="DEWDROPZ — home" className="inline-flex">
+    <Link href={href} prefetch={false} aria-label="DEWDROPZ — home" className="inline-flex">
       {content}
     </Link>
   )

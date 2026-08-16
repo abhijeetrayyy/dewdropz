@@ -116,6 +116,16 @@ export function Sidebar() {
                       <Link
                         key={item.href}
                         href={item.href}
+                        // Every one of these routes is dynamic and admin-only,
+                        // so a prefetch is not a cheap cache warm — it makes the
+                        // server authenticate and fully render that page, with
+                        // its database queries, just because the link is on
+                        // screen. With ~23 links always visible, one navigation
+                        // was measured firing 37 background requests alongside
+                        // the single one actually asked for. Multiply by a
+                        // US-East function and an admin in India and the page
+                        // you clicked is queued behind the twenty you did not.
+                        prefetch={false}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                           active ? 'bg-black text-white' : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -135,6 +145,7 @@ export function Sidebar() {
         <div className="pt-2 mt-2 border-t border-gray-100">
           <Link
             href="/admin/settings"
+            prefetch={false}
             className={cn(
               'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
               isActive('/admin/settings') ? 'bg-black text-white' : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -147,7 +158,7 @@ export function Sidebar() {
       </nav>
 
       <div className="px-4 py-3 border-t border-gray-200">
-        <Link href="/" target="_blank">
+        <Link href="/" target="_blank" prefetch={false}>
           <Button variant="ghost" size="sm" className="w-full justify-start text-gray-500 text-xs">
             <ExternalLink className="h-3 w-3 mr-2" />
             View Storefront
