@@ -2,12 +2,13 @@
 
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   getAllProducts, toggleProductActive, archiveProduct, updateProduct,
   bulkSetProductsActive, bulkArchiveProducts,
+  type ProductListRow, type ProductListSort,
 } from '@/actions/products'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
+import { EditableNumber } from '@/components/admin/EditableNumber'
 import { toast } from 'sonner'
 import { Plus, Pencil, Power, PowerOff, Trash2, Search, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { TableSkeleton } from '@/components/admin/TableSkeleton'
@@ -29,84 +31,58 @@ const STATUS_STYLES: Record<Product['status'], { label: string; className: strin
   archived: { label: 'Archived', className: 'bg-amber-100 text-amber-700 hover:bg-amber-100' },
 }
 
-type SortKey = 'name' | 'price' | 'stock'
-type SortState = { key: SortKey; dir: 'asc' | 'desc' } | null
+type SortState = { key: ProductListSort; dir: 'asc' | 'desc' }
 
-// Debounced inline-edit cell for Price/Stock — same optimistic-update +
-// per-field-debounce pattern as VariantRow.tsx, but wrapped in try/catch so a
-// failed save surfaces a toast instead of silently vanishing.
-function EditableCell({
-  value,
-  onCommit,
-  className,
-  prefix,
-}: {
-  value: number
-  onCommit: (next: number) => Promise<void>
-  className?: string
-  prefix?: string
-}) {
-  const [local, setLocal] = useState(String(value))
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => setLocal(String(value)), [value])
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
-
-  function handleChange(next: string) {
-    setLocal(next)
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(async () => {
-      const parsed = parseInt(next, 10)
-      const finalValue = isNaN(parsed) ? 0 : parsed
-      try {
-        await onCommit(finalValue)
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to save')
-        setLocal(String(value))
-      }
-    }, 400)
-  }
-
-  return (
-    <div className="relative inline-flex items-center">
-      {prefix && <span className="absolute left-2 text-xs text-gray-400">{prefix}</span>}
-      <Input
-        type="number"
-        value={local}
-        onChange={(e) => handleChange(e.target.value)}
-        className={`h-7 w-20 text-xs text-right ${prefix ? 'pl-5' : ''} ${className ?? ''}`}
-      />
-    </div>
-  )
-}
+// Auto table layout was giving the price column whatever was left over after
+// the product name, which is why an input sized for a four-digit rupee value
+// kept landing in a cell too narrow to show it. So: fixed layout, and every
+// column that holds a control of known size gets that size.
+//
+// Product is deliberately the one column WITHOUT a width. Under fixed layout an
+// unsized column absorbs whatever is left, so the name gets the slack on a wide
+// screen and the controls never move. Sizing all eight instead put the row at
+// 1080px, which measured 74px wider than the content area on a 1280 laptop and
+// pushed Edit and Delete off the right edge — the two things most often clicked.
+const COLS = [
+  { key: 'select', width: 'w-[44px]' },
+  { key: 'image', width: 'w-[56px]' },
+  { key: 'product', width: undefined },
+  { key: 'sku', width: 'w-[130px]' },
+  { key: 'price', width: 'w-[116px]' },
+  { key: 'stock', width: 'w-[104px]' },
+  { key: 'status', width: 'w-[150px]' },
+  { key: 'actions', width: 'w-[112px]' },
+] as const
 
 function SortHeader({ label, sortKey, sort, onSort, align = 'left' }: {
-  label: string; sortKey: SortKey; sort: SortState; onSort: (k: SortKey) => void; align?: 'left' | 'right'
+  label: string; sortKey: ProductListSort; sort: SortState; onSort: (k: ProductListSort) => void; align?: 'left' | 'right'
 }) {
-  const active = sort?.key === sortKey
-  const Icon = active ? (sort!.dir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown
+  const active = sort.key === sortKey
+  const Icon = active ? (sort.dir === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown
   return (
     <button
       type="button"
       onClick={() => onSort(sortKey)}
-      className={`inline-flex items-center gap-1 hover:text-gray-900 transition-colors ${align === 'right' ? 'flex-row-reverse' : ''} ${active ? 'text-gray-900' : ''}`}
+      className={`inline-flex w-full items-center gap-1 transition-colors hover:text-gray-900 ${align === 'right' ? 'justify-end' : ''} ${active ? 'text-gray-900' : ''}`}
     >
       {label}
-      <Icon className={`h-3 w-3 ${active ? 'opacity-100' : 'opacity-30'}`} />
+      <Icon className={`h-3 w-3 shrink-0 ${active ? 'opacity-100' : 'opacity-30'}`} />
     </button>
   )
 }
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<ProductListRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [sort, setSort] = useState<SortState>(null)
-  const [confirmTarget, setConfirmTarget] = useState<Product | null>(null)
+  // Sorting is now a query parameter, not a client-side array sort, so it
+  // orders the catalogue rather than the twenty rows that happen to be loaded.
+  const [sort, setSort] = useState<SortState>({ key: 'created', dir: 'desc' })
+  const [confirmTarget, setConfirmTarget] = useState<ProductListRow | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
   const router = useRouter()
 
@@ -120,37 +96,33 @@ export default function ProductsPage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { products: prods, total: t } = await getAllProducts({ search: debouncedSearch || undefined, limit: PAGE_SIZE, offset: page * PAGE_SIZE })
+      const { products: prods, total: t } = await getAllProducts({
+        search: debouncedSearch || undefined,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+        sort: sort.key,
+        dir: sort.dir,
+      })
       setProducts(prods)
       setTotal(t)
       setSelected(new Set())
     } catch { toast.error('Failed to load products') }
     finally { setLoading(false) }
+  }, [debouncedSearch, page, sort])
+
+  useEffect(() => { load() }, [load])
+
+  function onSort(key: ProductListSort) {
+    setPage(0)
+    setSort((prev) => (prev.key === key
+      ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+      : { key, dir: key === 'name' ? 'asc' : 'desc' }))
   }
-  useEffect(() => { load() }, [debouncedSearch, page])
 
-  function onSort(key: SortKey) {
-    setSort((prev) => {
-      if (prev?.key !== key) return { key, dir: 'asc' }
-      if (prev.dir === 'asc') return { key, dir: 'desc' }
-      return null
-    })
-  }
-
-  const sortedProducts = (() => {
-    if (!sort) return products
-    const dir = sort.dir === 'asc' ? 1 : -1
-    return [...products].sort((a, b) => {
-      if (sort.key === 'name') return a.name.localeCompare(b.name) * dir
-      if (sort.key === 'price') return (a.price - b.price) * dir
-      return ((a.inventory_quantity ?? 0) - (b.inventory_quantity ?? 0)) * dir
-    })
-  })()
-
-  async function handleToggle(p: Product) {
+  async function handleToggle(p: ProductListRow) {
     try {
       await toggleProductActive(p.id, !p.is_active)
       toast.success(p.is_active ? 'Product deactivated' : 'Product activated')
@@ -195,9 +167,10 @@ export default function ProductsPage() {
     } catch { toast.error('Bulk delete failed') }
   }
 
-  const savePrice = useCallback(async (id: string, next: number) => {
-    await updateProduct(id, { price: next })
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, price: next } : p)))
+  const savePrice = useCallback(async (id: string, rupees: number) => {
+    const paise = Math.round(rupees * 100)
+    await updateProduct(id, { price: paise })
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, price: paise } : p)))
   }, [])
 
   const saveStock = useCallback(async (id: string, next: number) => {
@@ -206,22 +179,28 @@ export default function ProductsPage() {
   }, [])
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const allSelected = products.length > 0 && selected.size === products.length
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-2xl font-bold tracking-tight text-black">Products</h2><p className="text-sm text-gray-500 mt-1">{total} product{total === 1 ? '' : 's'}</p></div>
-        <Button onClick={() => router.push('/admin/products/new')} size="sm"><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-black">Products</h2>
+          <p className="mt-1 text-sm text-gray-500">{total} product{total === 1 ? '' : 's'}</p>
+        </div>
+        <Button onClick={() => router.push('/admin/products/new')} size="sm"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      {/* Fixed height so the bulk bar appearing on selection doesn't shove the
+          table down a row-height and lose the reader's place. */}
+      <div className="flex min-h-9 items-center justify-between gap-4">
         <div className="relative w-full max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, slug, SKU..." className="pl-8" />
         </div>
         {selected.size > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 mr-2">{selected.size} selected</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="mr-1 text-sm text-gray-500">{selected.size} selected</span>
             <Button variant="outline" size="sm" onClick={() => handleBulkActive(true)}>Set Active</Button>
             <Button variant="outline" size="sm" onClick={() => handleBulkActive(false)}>Set Draft</Button>
             <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => setConfirmBulk(true)}>Delete</Button>
@@ -230,95 +209,127 @@ export default function ProductsPage() {
       </div>
 
       {loading ? (
-        <TableSkeleton columns={7} rows={10} />
+        <TableSkeleton columns={8} rows={10} />
       ) : products.length === 0 ? (
         <Card className="border-dashed shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-lg font-medium text-gray-900 mb-1">No products found</p>
-            <p className="text-sm text-gray-500 max-w-sm mb-4">You haven&apos;t added any products yet, or none match your search criteria.</p>
-            <Button onClick={() => router.push('/admin/products/new')}><Plus className="h-4 w-4 mr-2" /> Add your first product</Button>
+            <p className="mb-1 text-lg font-medium text-gray-900">No products found</p>
+            <p className="mb-4 max-w-sm text-sm text-gray-500">
+              {debouncedSearch ? `Nothing matches "${debouncedSearch}".` : "You haven't added any products yet."}
+            </p>
+            {debouncedSearch
+              ? <Button variant="outline" onClick={() => setSearch('')}>Clear search</Button>
+              : <Button onClick={() => router.push('/admin/products/new')}><Plus className="mr-2 h-4 w-4" /> Add your first product</Button>}
           </CardContent>
         </Card>
       ) : (
-        <Card className="shadow-sm border-gray-200">
+        <Card className="border-gray-200 shadow-sm">
           <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox checked={products.length > 0 && selected.size === products.length} onCheckedChange={toggleSelectAll} />
-                </TableHead>
-                <TableHead className="w-14" />
-                <TableHead><SortHeader label="Product" sortKey="name" sort={sort} onSort={onSort} /></TableHead>
-                <TableHead><SortHeader label="Price" sortKey="price" sort={sort} onSort={onSort} /></TableHead>
-                <TableHead><SortHeader label="Stock" sortKey="stock" sort={sort} onSort={onSort} /></TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[160px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedProducts.map((p) => {
-                const stock = p.inventory_quantity ?? 0
-                const outOfStock = stock <= 0
-                const lowStock = !outOfStock && stock <= (p.low_stock_threshold ?? 5)
-                const statusStyle = STATUS_STYLES[p.status] ?? STATUS_STYLES.draft
-                return (
-                <TableRow key={p.id}>
-                  <TableCell><Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelected(p.id)} /></TableCell>
-                  <TableCell>
-                    <div className="h-10 w-10 rounded-md overflow-hidden bg-gray-100 relative shrink-0">
-                      {p.images?.[0] ? (
-                        <Image src={p.images[0]} alt={p.name} fill sizes="40px" className="object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-[9px] text-gray-300 font-medium">No img</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium text-gray-900">
-                    <div className="flex items-center gap-2">{p.name}<span className="text-gray-400 text-xs">{p.slug}</span>{p.is_featured && <Badge variant="secondary" className="text-xs">Featured</Badge>}</div>
-                  </TableCell>
-                  <TableCell>
-                    <EditableCell
-                      value={p.price / 100}
-                      prefix="₹"
-                      onCommit={(nextRupees) => savePrice(p.id, Math.round(nextRupees * 100))}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <EditableCell
-                      value={stock}
-                      onCommit={(next) => saveStock(p.id, next)}
-                      className={outOfStock ? 'text-red-600 font-medium' : lowStock ? 'text-amber-600 font-medium' : ''}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Badge className={statusStyle.className}>{statusStyle.label}</Badge>
-                      {outOfStock && <Badge variant="destructive" className="text-xs">Out of stock</Badge>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => router.push(`/admin/products/${p.id}`)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleToggle(p)}>{p.is_active ? <PowerOff className="h-4 w-4 text-amber-600" /> : <Power className="h-4 w-4 text-green-600" />}</Button>
-                      <Button variant="ghost" size="icon" onClick={() => setConfirmTarget(p)} className="text-red-600"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
+            <Table className="min-w-[900px] table-fixed">
+              <colgroup>{COLS.map((c) => <col key={c.key} className={c.width} />)}</colgroup>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="h-10 px-3">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} aria-label="Select all" />
+                  </TableHead>
+                  <TableHead className="h-10 px-0" />
+                  <TableHead className="h-10 px-3"><SortHeader label="Product" sortKey="name" sort={sort} onSort={onSort} /></TableHead>
+                  <TableHead className="h-10 px-3">SKU</TableHead>
+                  <TableHead className="h-10 px-3"><SortHeader label="Price" sortKey="price" sort={sort} onSort={onSort} align="right" /></TableHead>
+                  <TableHead className="h-10 px-3"><SortHeader label="Stock" sortKey="stock" sort={sort} onSort={onSort} align="right" /></TableHead>
+                  <TableHead className="h-10 px-3">Status</TableHead>
+                  <TableHead className="h-10 px-3 text-right">Actions</TableHead>
                 </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {products.map((p) => {
+                  const stock = p.inventory_quantity ?? 0
+                  const outOfStock = stock <= 0
+                  const lowStock = !outOfStock && stock <= (p.low_stock_threshold ?? 5)
+                  const statusStyle = STATUS_STYLES[p.status] ?? STATUS_STYLES.draft
+                  return (
+                    <TableRow key={p.id} data-state={selected.has(p.id) ? 'selected' : undefined}>
+                      <TableCell className="px-3 py-2">
+                        <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelected(p.id)} aria-label={`Select ${p.name}`} />
+                      </TableCell>
+                      <TableCell className="px-0 py-2">
+                        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-gray-100">
+                          {p.images?.[0] ? (
+                            <Image src={p.images[0]} alt="" fill sizes="36px" className="object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[9px] font-medium text-gray-300">—</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      {/* min-w-0 is what actually lets truncate work inside a
+                          table cell; without it the cell grows to the text. */}
+                      <TableCell className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/admin/products/${p.id}`)}
+                          className="block w-full min-w-0 text-left"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate font-medium text-gray-900 hover:underline">{p.name}</span>
+                            {p.is_featured && <Badge variant="secondary" className="shrink-0 text-[10px]">Featured</Badge>}
+                          </div>
+                          <div className="truncate font-mono text-[11px] text-gray-400">{p.slug}</div>
+                        </button>
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <span className="block truncate font-mono text-xs text-gray-500">{p.sku || '—'}</span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <EditableNumber
+                          mode="rupees"
+                          value={p.price / 100}
+                          ariaLabel={`Price for ${p.name}`}
+                          onCommit={(rupees) => savePrice(p.id, rupees)}
+                        />
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <EditableNumber
+                          mode="integer"
+                          value={stock}
+                          ariaLabel={`Stock for ${p.name}`}
+                          onCommit={(next) => saveStock(p.id, next)}
+                          className={outOfStock ? '[&_input]:text-red-600' : lowStock ? '[&_input]:text-amber-600' : ''}
+                        />
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge className={statusStyle.className}>{statusStyle.label}</Badge>
+                          {outOfStock && <Badge variant="destructive" className="text-[10px]">Out of stock</Badge>}
+                          {!outOfStock && lowStock && <Badge variant="outline" className="border-amber-300 text-[10px] text-amber-700">Low</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <div className="flex justify-end gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => router.push(`/admin/products/${p.id}`)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title={p.is_active ? 'Set to draft' : 'Set active'} onClick={() => handleToggle(p)}>
+                            {p.is_active ? <PowerOff className="h-4 w-4 text-amber-600" /> : <Power className="h-4 w-4 text-green-600" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" title="Delete" onClick={() => setConfirmTarget(p)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
 
       {total > PAGE_SIZE && (
         <div className="flex items-center justify-between text-sm text-gray-500">
-          <span>Page {page + 1} of {pageCount}</span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}><ChevronLeft className="h-4 w-4 mr-1" /> Prev</Button>
-            <Button variant="outline" size="sm" disabled={page + 1 >= pageCount} onClick={() => setPage((p) => p + 1)}>Next <ChevronRight className="h-4 w-4 ml-1" /></Button>
+          <span>
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="mr-1">Page {page + 1} of {pageCount}</span>
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}><ChevronLeft className="mr-1 h-4 w-4" /> Prev</Button>
+            <Button variant="outline" size="sm" disabled={page + 1 >= pageCount} onClick={() => setPage((p) => p + 1)}>Next <ChevronRight className="ml-1 h-4 w-4" /></Button>
           </div>
         </div>
       )}

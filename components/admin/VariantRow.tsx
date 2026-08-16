@@ -1,10 +1,13 @@
 'use client'
 
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
+import { EditableNumber } from '@/components/admin/EditableNumber'
 import { deleteVariant, updateVariant } from '@/actions/variants'
 import type { VariantWithOptions } from '@/types/database'
 
@@ -18,63 +21,117 @@ export function VariantRow({
   onChange: (variants: VariantWithOptions[]) => void
 }) {
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
-    return () => {
-      Object.values(timers.current).forEach(clearTimeout)
-    }
+    const t = timers.current
+    return () => { Object.values(t).forEach(clearTimeout) }
   }, [])
 
-  const debouncedSave = useCallback((field: string, value: string) => {
+  // Text fields only. The numeric columns go through EditableNumber, which
+  // knows the difference between "empty while being retyped" and "zero" — the
+  // distinction this row used to get wrong, saving 0 for any field the user
+  // cleared before typing the replacement.
+  const saveText = useCallback((field: string, value: string) => {
     if (timers.current[field]) clearTimeout(timers.current[field])
-    timers.current[field] = setTimeout(() => {
-      const numFields = ['price_adjustment', 'inventory_quantity', 'low_stock_threshold']
-      let finalValue: string | number = value
-      if (numFields.includes(field)) {
-        const parsed = parseInt(value)
-        finalValue = isNaN(parsed) ? 0 : parsed
+    timers.current[field] = setTimeout(async () => {
+      try {
+        await updateVariant(variant.id, { [field]: value })
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not save')
       }
-      updateVariant(variant.id, { [field]: finalValue })
-    }, 400)
+    }, 500)
   }, [variant.id])
 
-  const update = (field: string, value: string) => {
-    const numFields = ['price_adjustment', 'inventory_quantity', 'low_stock_threshold']
-    const parsed = numFields.includes(field) ? (parseInt(value) || 0) : value
-    const newValue = numFields.includes(field) ? (isNaN(parseInt(value)) ? 0 : parseInt(value)) : value
-    const nv = variants.map((x) => x.id === variant.id ? { ...x, [field]: newValue } : x)
-    onChange(nv)
-    debouncedSave(field, value)
+  function patchLocal(field: string, value: string | number) {
+    onChange(variants.map((x) => (x.id === variant.id ? { ...x, [field]: value } : x)))
   }
 
-  const handleDelete = async () => {
-    if (!confirm(`Delete variant "${variant.name}"? This cannot be undone.`)) return
+  async function commitNumber(field: string, value: number) {
+    await updateVariant(variant.id, { [field]: value })
+    patchLocal(field, value)
+  }
+
+  async function handleDelete() {
+    setConfirmDelete(false)
     try {
       await deleteVariant(variant.id)
       onChange(variants.filter((x) => x.id !== variant.id))
+      toast.success('Variant deleted')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to delete variant')
     }
   }
 
   return (
-    <TableRow>
-      <TableCell className="font-medium text-gray-900">{variant.name}</TableCell>
-      <TableCell>
-        <Input className="h-7 w-28 text-xs" value={variant.sku ?? ''} onChange={(e) => update('sku', e.target.value)} />
-      </TableCell>
-      <TableCell>
-        <Input className="h-7 w-20 text-xs text-right" type="number" value={variant.price_adjustment ?? 0} onChange={(e) => update('price_adjustment', e.target.value)} />
-      </TableCell>
-      <TableCell>
-        <Input className={`h-7 w-16 text-xs text-right ${(variant.inventory_quantity ?? 0) <= (variant.low_stock_threshold ?? 5) ? 'text-amber-600' : ''}`} type="number" value={variant.inventory_quantity ?? 0} onChange={(e) => update('inventory_quantity', e.target.value)} />
-      </TableCell>
-      <TableCell>
-        <Input className="h-7 w-16 text-xs text-right text-gray-400" type="number" value={variant.low_stock_threshold ?? 5} onChange={(e) => update('low_stock_threshold', e.target.value)} />
-      </TableCell>
-      <TableCell>
-        <Button variant="ghost" size="icon" onClick={handleDelete} className="text-red-600 h-7 w-7">×</Button>
-      </TableCell>
-    </TableRow>
+    <>
+      <TableRow>
+        <TableCell className="px-3 py-2">
+          <span className="block truncate font-medium text-gray-900">{variant.name}</span>
+        </TableCell>
+        <TableCell className="px-3 py-2">
+          <Input
+            className="h-8 w-full font-mono text-xs"
+            aria-label={`SKU for ${variant.name}`}
+            defaultValue={variant.sku ?? ''}
+            onChange={(e) => saveText('sku', e.target.value)}
+          />
+        </TableCell>
+        <TableCell className="px-3 py-2">
+          <EditableNumber
+            mode="rupees"
+            value={(variant.price_adjustment ?? 0) / 100}
+            ariaLabel={`Price adjustment for ${variant.name}`}
+            onCommit={(rupees) => commitNumber('price_adjustment', Math.round(rupees * 100))}
+          />
+        </TableCell>
+        <TableCell className="px-3 py-2">
+          <EditableNumber
+            mode="integer"
+            value={variant.inventory_quantity ?? 0}
+            ariaLabel={`Stock for ${variant.name}`}
+            onCommit={(next) => commitNumber('inventory_quantity', next)}
+            className={
+              (variant.inventory_quantity ?? 0) <= 0
+                ? '[&_input]:text-red-600'
+                : (variant.inventory_quantity ?? 0) <= (variant.low_stock_threshold ?? 5)
+                  ? '[&_input]:text-amber-600'
+                  : ''
+            }
+          />
+        </TableCell>
+        <TableCell className="px-3 py-2">
+          <EditableNumber
+            mode="integer"
+            value={variant.low_stock_threshold ?? 5}
+            ariaLabel={`Low stock threshold for ${variant.name}`}
+            onCommit={(next) => commitNumber('low_stock_threshold', next)}
+            className="[&_input]:text-gray-500"
+          />
+        </TableCell>
+        <TableCell className="px-3 py-2">
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfirmDelete(true)}
+              className="h-8 w-8 text-red-600"
+              title={`Delete ${variant.name}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete variant "${variant.name}"?`}
+        description="Its stock and SKU go with it. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+      />
+    </>
   )
 }

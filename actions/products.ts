@@ -5,6 +5,11 @@ import { auditLog } from '@/lib/audit'
 import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Product, ProductVariant, Collection, ProductWithCollection } from '@/types/database'
+import { ensureAdmin } from '@/lib/adminAuth'
+import { getCategoryTree, getProductCategories } from './categories'
+import { getTags, getProductTags } from './tags'
+import { getAttributes, getProductAttributes } from './attributes'
+import { getProductVariantsAdmin, getInventoryMovements } from './variants'
 
 // -- Public reads --
 
@@ -61,12 +66,50 @@ export async function getProductById(id: string) {
 
 // Admin: get any product by ID (bypasses active-only RLS)
 export async function getProductByIdAdmin(id: string) {
+  await ensureAdmin()
   const supabase = createAdminSupabaseClient()
   const { data, error } = await supabase.from('products')
     .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
     .eq('id', id).maybeSingle()
   if (error) return null
   return data as unknown as ProductWithCollection
+}
+
+// Everything the product editor opens with, in one call.
+//
+// The editor used to `await` nine separate actions one after another. Each is a
+// POST from the browser, and Next runs server actions from a client one at a
+// time, so they could not even overlap: measured against the real database that
+// was 2,348ms of query time to do 706ms of work, before counting nine
+// round-trips and nine auth checks.
+//
+// Note what this does NOT do: reimplement any of those queries. Calling a
+// server action from server code is an ordinary function call, so these are the
+// same functions the rest of the admin uses, just started together instead of
+// in single file. There is one definition of each query, and it stays that way.
+// `ensureAdmin` is request-memoised, so the nine inner guards cost one check.
+export async function getProductEditorData(productId: string) {
+  await ensureAdmin()
+
+  const [
+    product, categories, productCategories, tags, productTags,
+    attributes, productAttributes, variants, movements,
+  ] = await Promise.all([
+    getProductByIdAdmin(productId),
+    getCategoryTree(),
+    getProductCategories(productId),
+    getTags(),
+    getProductTags(productId),
+    getAttributes(),
+    getProductAttributes(productId),
+    getProductVariantsAdmin(productId),
+    getInventoryMovements(productId),
+  ])
+
+  return {
+    product, categories, productCategories, tags, productTags,
+    attributes, productAttributes, variants, movements,
+  }
 }
 
 export async function getCollections() {
@@ -204,12 +247,48 @@ export async function updateProductVariant(id: string, input: Partial<{
   if (slug) revalidatePath(`/products/${slug}`)
 }
 
-export async function getAllProducts(opts?: { search?: string; limit?: number; offset?: number }) {
+// The columns the list actually renders. `select('*')` was pulling description,
+// story_blocks, meta fields and the whole customization_config JSONB to draw a
+// name, a price and a thumbnail — 4.4KB per 20 rows against 0.9KB for this.
+const PRODUCT_LIST_COLUMNS =
+  'id, name, slug, sku, price, compare_at_price, inventory_quantity, low_stock_threshold, status, is_active, is_featured, images, created_at'
+
+/** Exactly what PRODUCT_LIST_COLUMNS returns — so the table cannot quietly
+ *  start reading a field the query no longer fetches. */
+export type ProductListRow = Pick<
+  Product,
+  | 'id' | 'name' | 'slug' | 'sku' | 'price' | 'compare_at_price'
+  | 'inventory_quantity' | 'low_stock_threshold' | 'status'
+  | 'is_active' | 'is_featured' | 'images' | 'created_at'
+>
+
+export type ProductListSort = 'name' | 'price' | 'stock' | 'created'
+
+// Sorting belongs in the database. It used to happen in the browser over the
+// twenty rows already on screen, so "sort by price" reordered a page rather
+// than the catalogue — the answer looked right and was wrong as soon as there
+// was a second page.
+const SORT_COLUMNS: Record<ProductListSort, string> = {
+  name: 'name',
+  price: 'price',
+  stock: 'inventory_quantity',
+  created: 'created_at',
+}
+
+export async function getAllProducts(opts?: {
+  search?: string; limit?: number; offset?: number
+  sort?: ProductListSort; dir?: 'asc' | 'desc'
+}) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
   // archiveProduct() sets deleted_at as a distinct concept from deleteProduct()'s
   // is_active toggle — without this filter, archived products still show in the list.
-  let query = supabase.from('products').select('*', { count: 'exact' }).is('deleted_at', null).order('created_at', { ascending: false })
+  const sortColumn = SORT_COLUMNS[opts?.sort ?? 'created']
+  let query = supabase
+    .from('products')
+    .select(PRODUCT_LIST_COLUMNS, { count: 'exact' })
+    .is('deleted_at', null)
+    .order(sortColumn, { ascending: (opts?.dir ?? 'desc') === 'asc' })
   if (opts?.search) {
     const s = opts.search.replace(/[%_]/g, '')
     query = query.or(`name.ilike.%${s}%,slug.ilike.%${s}%,sku.ilike.%${s}%`)
@@ -221,7 +300,7 @@ export async function getAllProducts(opts?: { search?: string; limit?: number; o
   }
   const { data, error, count } = await query
   if (error) throw new Error(error.message)
-  return { products: (data ?? []) as Product[], total: count ?? 0 }
+  return { products: (data ?? []) as unknown as ProductListRow[], total: count ?? 0 }
 }
 
 export async function toggleProductActive(id: string, active: boolean) {

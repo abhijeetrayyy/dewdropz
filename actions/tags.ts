@@ -4,8 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Tag } from '@/types/database'
+import { ensureAdmin } from '@/lib/adminAuth'
 
 export async function getTags() {
+  await ensureAdmin()
   const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from('tags')
@@ -17,6 +19,7 @@ export async function getTags() {
 }
 
 export async function getProductTags(productId: string) {
+  await ensureAdmin()
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase
     .from('product_tags')

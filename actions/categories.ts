@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Category, ProductCategory, CategoryWithChildren } from '@/types/database'
+import { ensureAdmin } from '@/lib/adminAuth'
 
 // -- Public reads --
 
@@ -30,6 +31,7 @@ export async function getCategories(options?: { parentId?: string | null; active
 }
 
 export async function getCategoryTree() {
+  await ensureAdmin()
   const categories = await getCategories({ activeOnly: false })
   return buildTree(categories)
 }
@@ -64,6 +66,7 @@ export async function getCategoryBySlug(slug: string) {
 }
 
 export async function getProductCategories(productId: string) {
+  await ensureAdmin()
   const supabase = createPublicSupabaseClient()
   const { data } = await supabase
     .from('product_categories')

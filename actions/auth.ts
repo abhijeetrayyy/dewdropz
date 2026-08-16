@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { ensureAdmin } from '@/lib/adminAuth'
 import { loginSchema, signupSchema, passwordResetSchema, updatePasswordSchema, profileUpdateSchema } from '@/lib/validations'
 import type { LoginInput, SignupInput, PasswordResetInput, UpdatePasswordInput, ProfileUpdateInput } from '@/lib/validations'
 
@@ -145,15 +146,10 @@ export async function requireAuth() {
   return user
 }
 
+// Delegates to the request-memoised check in lib/adminAuth.ts so that a page
+// running several admin actions pays for the auth round-trips once, not once
+// per action. Kept as an export here because it is what every action already
+// calls, and because callers want it as a server action.
 export async function requireAdmin() {
-  const user = await requireAuth()
-  const supabase = await createServerSupabaseClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') redirect('/')
-  return user
+  return ensureAdmin()
 }

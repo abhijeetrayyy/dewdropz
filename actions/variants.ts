@@ -5,10 +5,12 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/sup
 import { requireAdmin } from './auth'
 import type { VariantWithOptions, InventoryMovement, InventoryMovementWithDetails } from '@/types/database'
 import { auditLog } from '@/lib/audit'
+import { ensureAdmin } from '@/lib/adminAuth'
 
 // -- Public reads --
 
 export async function getProductVariantsAdmin(productId: string) {
+  await ensureAdmin()
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase
     .from('product_variants')
@@ -125,7 +127,15 @@ export async function deleteAllVariantsForProduct(productId: string) {
 
 // -- Inventory --
 
-export async function getInventoryMovements(productId: string, variantId?: string | null) {
+// `limit` defaults to 100 rather than being unbounded. Movements accumulate for
+// the life of a product — one row per sale, restock, return and adjustment —
+// so an untrimmed read grows without limit on a tab nobody scrolls to the end
+// of. The editor asks for the recent window and says so on screen.
+export async function getInventoryMovements(
+  productId: string,
+  variantId?: string | null,
+  limit = 100,
+) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
   let query = supabase
@@ -133,6 +143,7 @@ export async function getInventoryMovements(productId: string, variantId?: strin
     .select('*, product:products(name, sku), variant:product_variants(name, sku), admin:profiles(full_name)')
     .eq('product_id', productId)
     .order('created_at', { ascending: false })
+    .limit(limit)
 
   if (variantId) {
     query = query.eq('variant_id', variantId)

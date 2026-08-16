@@ -4,10 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { Attribute, AttributeValue, AttributeWithValues, ProductAttributeValue } from '@/types/database'
+import { ensureAdmin } from '@/lib/adminAuth'
 
 // -- Public reads --
 
 export async function getAttributes(options?: { variantOnly?: boolean; filterableOnly?: boolean }) {
+  await ensureAdmin()
   const supabase = createPublicSupabaseClient()
   let query = supabase
     .from('attributes')
@@ -36,6 +38,7 @@ export async function getAttributeById(id: string) {
 }
 
 export async function getProductAttributes(productId: string) {
+  await ensureAdmin()
   const supabase = createPublicSupabaseClient()
   const { data } = await supabase
     .from('product_attribute_values')
