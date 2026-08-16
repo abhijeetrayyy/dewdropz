@@ -24,11 +24,16 @@ Checked against the live database and the running app.
 | Webhook replay | Idempotent by unique index, 23505 as dedupe signal | Read; same pattern reused for shipment events |
 | Privilege escalation | `profiles.role` pinned by BEFORE UPDATE trigger | `021_stock_integrity.sql` |
 | Coupon races | UNIQUE `(coupon_id,user_id)` + conditional increment | `021_stock_integrity.sql` |
-| RLS | **33/33 tables** | Live query against `pg_class.relrowsecurity` |
-| Admin auth | `requireAdmin` reads role from DB, not a client claim | Read `actions/auth.ts` |
+| RLS | **33/33 tables** at the time of the audit; 40 tables today, each shipped with its policies in the same migration | Live query against `pg_class.relrowsecurity` |
+| Admin auth | Role read from the DB, never a client claim; memoised per request so a page checks once | Read `lib/adminAuth.ts` |
 | Cancellation | Compound: restores stock, releases coupon, refunds | Read `cancelOrderInternal` |
 | Rate limiting | Postgres-backed, row-locked, fails open | Live: 3 allowed, 4th refused, other caller unaffected |
 | Shipping (manual) | Multi-parcel, status derived, event history | Live end-to-end: admin Ship → customer sees parcel |
+| Action reachability | Every admin-only action guarded; no unguarded reads | Enumerated all exports against their callers; 0 left |
+| Session refresh | Refreshed in middleware, where cookies can be written | Live: stale-cookie request 200s and emits `Set-Cookie` |
+| Money aggregates | Payment and analytics totals summed in Postgres | Field-by-field equality vs the JS they replaced |
+| Inline edits | A cleared price or stock cell cannot save `0` | Live: field emptied past the debounce, DB still 25 |
+| Storefront cache | Catalogue pages static + ISR 60s, admin edits revalidate | Live: `x-vercel-cache: HIT`, 5.35s → 0.22s |
 
 ### Shipping — verified end to end
 Clicked **Ship** in admin → `shipments` row created (`provider=manual`,
@@ -271,6 +276,28 @@ rejected (23505), invalid status rejected (23514), replayed event deduped.
       an orphaned job was reclaimed and completed; a live one was untouched; and
       the admin Retry button took a failed job back through to done.
 
+### Open — surfaced while doing the above, not yet fixed
+- [ ] **Every product weighs 200g.** All three carry the same placeholder, which
+      is fine today because shipping resolves on a flat rate, and wrong the
+      moment a weight-based rate is switched on — `shipping_rates` already
+      supports `weight_based`, so this is a live trap rather than a future one.
+      Noticed while assigning attributes; the real GSM figures are in the copy.
+- [ ] **`getProducts` still selects `*`.** The unused `attributes` embed is gone
+      and the sitemap has its own two-column query, but description and
+      `customization_config` still travel to pages that render neither. Left
+      alone because the honest measurement said it saves ~0.1KB of 8.4KB on this
+      catalogue — a scale fix with nothing to show for it yet, and narrowing the
+      columns is the kind of change that breaks a page for a field nobody
+      noticed was in use.
+- [ ] **41 pre-existing lint errors** across the storefront (`any`, unescaped
+      entities, an effect setting state synchronously). Unchanged by this work —
+      counted before and after precisely so the number stays honest — but they
+      are noise that hides the next real one.
+- [ ] **Functions run in `iad1`, the shop is operated from India.** See §5. The
+      database is co-located with the functions, so moving the functions closer
+      to the team would move them away from the data; the fix is fewer
+      round-trips, which is what was done, not a region change.
+
 ---
 
 ## 3. Shipping roadmap
@@ -308,8 +335,187 @@ Not styling — operability. The team lives here.
 
 ---
 
+## 5. Where the time goes
+
+The single most useful fact about this deployment, and the one that made two
+earlier performance guesses wrong: **the functions run in `iad1` (US East) and
+the people operating the shop are in India.** Confirm it any time with
+`x-vercel-id: bom1::iad1::…` — the first segment is the edge, the second is
+where the code actually ran.
+
+The database is in the same region as the functions, so function-to-database is
+cheap. What is expensive is every hop between the browser and the server. From
+India, measured against production:
+
+| | |
+|---|---|
+| Static page from the Mumbai edge | 0.22s |
+| Dynamic route, rendered in US East | 2.27s |
+
+Two consequences shape how anything here should be written.
+
+**Server actions from a client queue.** Next runs them one at a time, so N
+actions fired on mount are N sequential Atlantic crossings, even when the code
+looks concurrent — three `.then()` calls with no awaits between them still
+serialise. The product editor's nine measured 2,348ms of query time to do 706ms
+of work. Fetch on the server, in one call, and pass the result down.
+
+**Prefetch is not free when the target is dynamic.** `<Link>` prefetches
+everything on screen, and a prefetch of a dynamic route makes the server
+authenticate and fully render that page. The admin sidebar's 23 links turned one
+navigation into **38 requests, 37 of them for pages nobody asked for**. It is
+`prefetch={false}` there now. On the storefront the opposite fix applied: the
+targets were made static, so prefetching them costs nothing.
+
+**What is cached.** `/`, `/shop`, `/cart`, `/about`, `/collections` and
+`/products/[slug]` are prerendered with `revalidate = 60`. Two calls used to
+prevent that by reading cookies for data that is not per-customer —
+`getStoreSettings` and `getFeaturedReviews` — and both now use the anon client.
+The 60-second window exists because an edit revalidates its own path
+immediately, but a **sale** moves stock through a database trigger no
+application code observes, so without a window a sold-out size could read as
+available indefinitely. Nothing can be oversold in the meantime regardless: the
+CHECK constraint is the real guarantee, so a stale page costs a clear error at
+checkout rather than an order that cannot be filled.
+
+---
+
+## 6. Reachability
+
+A `'use server'` file exposes **every exported async function as a public POST
+endpoint**, whether or not any UI calls it. Server action ids are discoverable
+in the client bundle, so "nothing links to it" is not a control.
+
+Every action was enumerated against its callers. The writes were already
+correct. The reads were not, and two were real exposure rather than hygiene:
+
+- `getOrderPromotions` — no auth, service-role client (so RLS bypassed), and an
+  arbitrary order id. It could not simply require admin, because a customer
+  reads it for their own order, so the **client is chosen by who is asking**:
+  customers go through RLS, only a verified admin gets the service role.
+- `sendOrderConfirmationIfFirstTime` — no auth, service-role, arbitrary order
+  id, and it **sends mail**. Moved to `lib/`, which removes the endpoint rather
+  than guarding something that should never have been reachable.
+
+The rule this leaves behind: **if it is not called from a client, it does not
+belong in `actions/`.** And an admin read needs a guard even when RLS would
+cover it, because the next edit may switch it to the service-role client.
+
+---
+
 ## Changelog
 
+- **2026-08-17** — **Attributes existed and had never been assigned.** The
+  Specifications panel had therefore never rendered on any product page, on any
+  visit, since the feature was built — `product_attribute_values` was empty.
+  Material and Weight are now set on all three garments, taken from each
+  product's own description rather than invented (Capacity and Waterproof Rating
+  left unset; they belong to the bottles and shells the catalogue is heading
+  toward). Verified live on production, reading the opened accordion rather than
+  the HTML: 380/340/240 GSM on the right products.
+  **The bug it exposed matters more than the data.** `setProductAttributes`
+  called no `revalidatePath` at all, and `setProductCategories` and
+  `setProductTags` refreshed only the admin list — never the storefront page
+  they change. Harmless while product pages rendered per request; not harmless
+  once they were cached the day before, which is a fair warning about caching
+  something before checking what invalidates it. All three now go through
+  `revalidateProductPaths`.
+- **2026-08-17** — Analytics aggregated in Postgres (migration `042`). It read
+  every order in the range **together with all their line items** and reduced
+  them five ways in Node. The SQL reproduces the JavaScript exactly, quirks
+  included: cancelled orders are excluded from revenue but present in the status
+  mix, the trend is zero-filled and buckets by UTC date because the old code
+  keyed on `created_at.slice(0, 10)`, and top products fall back to
+  `product_name` so a product deleted after the sale keeps its sales attributed.
+  Checked field-by-field at 7/30/90 days, then on synthetic orders inside a
+  transaction that was **rolled back** — eight orders, three products competing
+  for the ranking, a cancelled order, a deleted-product line. All identical;
+  nothing written.
+  Learned in the process: an `order_items` row cannot be INSERTed with a null
+  `product_id`, because `record_inventory_movement_on_order` writes a movement
+  whose `product_id` is NOT NULL. Null product ids only ever arrive later, via
+  ON DELETE SET NULL.
+- **2026-08-16** — Payment totals aggregated in Postgres (migration `041`).
+  `getPaymentsSummary` selected **every order ever placed**, no filter, no limit,
+  to produce four numbers. Same shape as `promotion_spend()` in `037`. The live
+  table holds two pending orders, so a before/after comparison would have
+  exercised neither SUM nor GROUP BY — the arithmetic was instead checked
+  against the old JavaScript over synthetic rows in a CTE shadowing `orders`,
+  covering paid sums across methods, a null method reported as `unknown`, and
+  both refund statuses. Identical. `SECURITY INVOKER`, EXECUTE to `service_role`
+  only; anon gets 42501.
+- **2026-08-16** — **The admin was establishing identity twice per page.**
+  `app/admin/layout.tsx` carried its own copy of the admin check — its own
+  `getUser()`, its own profiles read through the service-role client — while
+  every page also ran `ensureAdmin` inside its actions. Four round-trips to
+  answer one question; two now, via a request-memoised check. It also removed
+  that file's only reason to hold the service-role client: reading your *own*
+  profile row is something RLS already permits.
+  Alongside: the last eight admin list pages take their first page from the
+  server render instead of fetching on mount. Search and paging are untouched —
+  they skip only the mount fetch — so there was no URL plumbing and nothing to
+  re-learn. Verified that search still filters, which is the check that matters:
+  a skip guard that is too greedy leaves the page frozen on its first result.
+- **2026-08-16** — Native `confirm()` removed from the admin. Eleven destructive
+  actions across nine pages were guarded by the browser's grey box, including
+  "delete all rates in this zone" and, on orders, **cancel — which releases stock
+  and auto-refunds a captured payment**. `useConfirm()` returns a promise so a
+  call site stays a one-liner, which is what made converting all eleven safe
+  rather than a rewrite. The copy now says what actually happens: deleting a
+  category moves its children up, deleting a coupon leaves past orders charged
+  as they were.
+- **2026-08-16** — **Storefront made cacheable.** `/products/[slug]` measured
+  5.35s from India against 0.88s for a static page, for no reason: two calls read
+  cookies for data that is not per-customer, and reading cookies makes the page
+  dynamic. Switching `getStoreSettings` and `getFeaturedReviews` to the anon
+  client made `/`, `/shop`, `/cart`, `/about` and the collection and product
+  pages static. **5.35s → 0.22s, `x-vercel-cache: HIT`.** `revalidate = 60` on
+  everything showing a price or stock level; see §5 for why the window exists.
+  The build failing was useful: `/cart` became prerenderable and its
+  `useSearchParams` had no Suspense boundary, a latent bug the dynamic rendering
+  had been hiding.
+- **2026-08-16** — **One click into a product cost 38 requests.** Thirty-seven
+  were sidebar prefetches of dynamic admin routes, each making the server
+  authenticate and fully render a page nobody asked for. Now 3, two of which are
+  7ms. The editor also became a server component, folding two Atlantic crossings
+  (fetch the page, then fetch its data) into one.
+- **2026-08-16** — Admin product screens rebuilt. The editor awaited **nine**
+  server actions in sequence — 2,348ms of query time to do 706ms of work, before
+  counting nine round-trips and nine auth checks — and is one call now that
+  reimplements none of those queries, because calling a server action from
+  server code is an ordinary function call.
+  **The bug that was costing money:** clearing a price or stock cell saved
+  ZERO. `parseInt('') || 0` on a 400ms debounce, so select-all-and-retype could
+  publish a product free before the new digits landed. The same code was in
+  `VariantRow`. `parseInt` also truncated `1899.50` to `1899` on every edit.
+  Sorting was client-side over the loaded page, so "sort by price" reordered
+  twenty rows rather than the catalogue. Eight of nine admin reads had no auth
+  guard, one of them using the service-role client. Fixed table layout with one
+  unsized column to absorb slack — sizing all eight put the row 74px wider than
+  a 1280 laptop and pushed Edit and Delete off screen. Seven Save buttons became
+  one, with dirty tracking, because switching tabs used to discard edits in
+  silence.
+- **2026-08-16** — **Production was down on every product page and the cause was
+  a missing environment variable.** `SUPABASE_SERVICE_ROLE_KEY` was absent from
+  the deployment, so `createClient` threw `supabaseKey is required`. Only
+  `/products/[slug]` failed, because it was the one public page reaching for the
+  service role — via the offers strip, `getOffersForProduct` →
+  `getLivePromotions`. It reads with the anon key now: `promotions` has carried
+  an "Anyone reads active promotions" policy since `034`, the row set is
+  identical, and a public page no longer depends on a server-only secret.
+  Two real bugs found on the way, neither of them this one: a Server Component
+  cannot write cookies, and supabase-js refreshes an expiring token from an
+  async callback nothing awaits — so the throw escaped as an **unhandled
+  rejection** and took the whole invocation down; and the middleware returned
+  early for public routes, so the refresh happened where it could not be saved,
+  which with rotating refresh tokens signs a browsing customer out. Both fixed;
+  the redirects now carry their `Set-Cookie` across, since a redirect is a new
+  response and was discarding it.
+  **Recorded because the diagnosis was wrong twice:** I read a chunk hash and an
+  error digest as evidence of "no new build" when neither measures that, and
+  concluded auto-deploy was broken. It was not — every push had built within 90
+  seconds. Check the deployments API, not artefacts that only look like
+  fingerprints.
 - **2026-08-15** — **Print files were being produced at the wrong resolution.**
   Two renderers disagreed and nothing recorded the result. The web studio
   derived its export scale from the zone's physical size and hit 300 DPI; the
