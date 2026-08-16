@@ -34,6 +34,7 @@ Checked against the live database and the running app.
 | Money aggregates | Payment and analytics totals summed in Postgres | Field-by-field equality vs the JS they replaced |
 | Inline edits | A cleared price or stock cell cannot save `0` | Live: field emptied past the debounce, DB still 25 |
 | Storefront cache | Catalogue pages static + ISR 60s, admin edits revalidate | Live: `x-vercel-cache: HIT`, 5.35s → 0.22s |
+| Admin lists | All ten server-rendered; no page fetches its first rows on mount | Rows present in the server HTML, search still filters |
 
 ### Shipping — verified end to end
 Clicked **Ship** in admin → `shipments` row created (`provider=manual`,
@@ -41,6 +42,24 @@ Delhivery, AWB) → status `in_transit`, `shipped_at` stamped, 1 event → order
 status derived to `shipped` → customer page shows *1 parcel*, AWB, track link and
 scan history. Constraints proven live: two parcels on one order OK, duplicate AWB
 rejected (23505), invalid status rejected (23514), replayed event deduped.
+
+### How the admin was checked, and what that does not cover
+Worth stating plainly, because "verified" is doing a lot of work in this
+document. Admin screens sit behind a login, so they were exercised through a
+**temporary local auth bypass** — an env-gated short-circuit in `ensureAdmin`
+and `proxy.ts`, applied to a local production build, then restored from backup
+and confirmed removed by checksum and a repo-wide grep every time. It was never
+committed and never ran against production.
+
+What that proves: the pages render, the queries return the right rows, the
+tables lay out, the confirm dialogs open and cancel cleanly, an emptied number
+field does not save zero.
+
+What it does **not** prove: that a real admin session behaves identically —
+above all `ensureAdmin`'s own redirect paths, which the bypass replaces. The
+storefront, the database and the cron endpoints were all checked normally and
+carry no such caveat. **A human click-through while genuinely signed in is still
+the last mile on anything admin-side.**
 
 ---
 
@@ -433,8 +452,11 @@ cover it, because the next edit may switch it to the service-role client.
   line, including one you did not mean to silence — and the shipping rate form
   holds the union the actions declare, so the two `as any` casts on save are
   gone. `/admin/shipping` also became server-seeded like the other nine lists,
-  which removed its mount effect rather than suppressing it. Warnings unchanged
-  at 28, checked against HEAD at the same scope.
+  which removed its mount effect rather than suppressing it — verified after
+  deploying: both zones and their rates render from the server with no spinner,
+  and the zone-delete dialog opens with its real copy and leaves both zones in
+  place on Cancel. Warnings unchanged at 28, checked against HEAD at the same
+  scope.
 - **2026-08-17** — Weight fallback unified. The delivery estimate assumed 500g
   for a product with no weight and `createOrder` assumed 0, so the two would
   have quoted and charged on different bases the moment a weight-based rate
