@@ -277,11 +277,23 @@ rejected (23505), invalid status rejected (23514), replayed event deduped.
       the admin Retry button took a failed job back through to done.
 
 ### Open — surfaced while doing the above, not yet fixed
-- [ ] **Every product weighs 200g.** All three carry the same placeholder, which
-      is fine today because shipping resolves on a flat rate, and wrong the
-      moment a weight-based rate is switched on — `shipping_rates` already
-      supports `weight_based`, so this is a live trap rather than a future one.
-      Noticed while assigning attributes; the real GSM figures are in the copy.
+- [ ] **Product weights are calculated, not weighed.** They were all 200g — the
+      same placeholder on a tee and a hoodie — which is harmless while shipping
+      resolves on a flat rate and wrong the moment `weight_based` is switched
+      on, which `shipping_rates` already supports. Now 230 / 420 / 590g, derived
+      from the GSM each product already publishes against a size-M panel area
+      (0.95 / 1.18 / 1.51 m²). Confirmed no customer charge moved: both live
+      rates are `flat`, and the quote is identical at 200g and 1,200g.
+      **Still worth weighing one of each before enabling weight-based rates.**
+      A calculation cannot know about trims, ribbing density or the packaging
+      the courier bills for, and per-product weight cannot express that an XL
+      is heavier than an S.
+- [ ] **Two different fallbacks for a missing weight.** `ProductDetail` passes
+      `product.weight ?? 500` to the delivery estimate; `createOrder` sums
+      `?? 0`. A product with no weight would therefore be quoted on one basis
+      and charged on another — the kind of quiet disagreement between an
+      estimate and an invoice this engine is supposed to not have. Dormant now
+      that every product has a weight, and worth reconciling before it is not.
 - [ ] **`getProducts` still selects `*`.** The unused `attributes` embed is gone
       and the sitemap has its own two-column query, but description and
       `customization_config` still travel to pages that render neither. Left
@@ -405,6 +417,14 @@ cover it, because the next edit may switch it to the service-role client.
 
 ## Changelog
 
+- **2026-08-17** — Product weights set: 230 / 420 / 590g, replacing the 200g
+  placeholder every product shared. Derived from the GSM each already publishes,
+  not weighed — the distinction is recorded in §2 because the number looks
+  authoritative either way. Checked first that both live shipping rates are
+  `flat`, so nothing a customer is charged could move; the quote is identical at
+  200g and 1,200g. Found while doing it: the delivery estimate falls back to
+  `?? 500` for a missing weight while `createOrder` sums `?? 0`, so the two
+  would disagree on a product with none.
 - **2026-08-17** — **Attributes existed and had never been assigned.** The
   Specifications panel had therefore never rendered on any product page, on any
   visit, since the feature was built — `product_attribute_values` was empty.
