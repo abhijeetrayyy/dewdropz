@@ -13,12 +13,24 @@ import { getProductVariantsAdmin, getInventoryMovements } from './variants'
 
 // -- Public reads --
 
+// No `attributes` embed here, unlike getProductBySlug.
+//
+// Resolving it is a three-level join per product — product_attribute_values,
+// then attributes and attribute_values — and nothing that calls this reads it.
+// The only place attributes are rendered is the specifications panel on the
+// product page, which loads its own product through getProductBySlug and keeps
+// the embed. Every other caller (the homepage, shop, cart, wishlist, customize,
+// collection pages, related products) was paying that join to throw the result
+// away.
+const PRODUCT_LIST_EMBEDS =
+  '*, collection:collections(*), variants:product_variants(*), categories:product_categories(*)'
+
 export async function getProducts(options?: {
   collection?: string; featured?: boolean; limit?: number; offset?: number
 }) {
   const supabase = createPublicSupabaseClient()
   let query = supabase.from('products')
-    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
+    .select(PRODUCT_LIST_EMBEDS)
     .eq('is_active', true).order('created_at', { ascending: false })
     // Without this, embedded variants come back in arbitrary order and size
     // pickers render as e.g. "L XL M S". `sort_order` exists for exactly this.
@@ -30,6 +42,20 @@ export async function getProducts(options?: {
   const { data, error } = await query
   if (error) throw new Error(error.message)
   return data as unknown as ProductWithCollection[]
+}
+
+// Just the two fields a sitemap entry has. It used to call getProducts(), which
+// meant loading every product with its collection, variants and categories — a
+// few kilobytes per product — to read a slug and a timestamp.
+export async function getProductsForSitemap() {
+  const supabase = createPublicSupabaseClient()
+  const { data, error } = await supabase
+    .from('products')
+    .select('slug, updated_at')
+    .eq('is_active', true)
+    .is('deleted_at', null)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as { slug: string; updated_at: string }[]
 }
 
 export async function getProductBySlug(slug: string) {
@@ -45,11 +71,12 @@ export async function getProductBySlug(slug: string) {
 
 // Batch-hydrates a list of product slugs into real product records — used by
 // RecentlyViewed and the wishlist, both of which only ever persist slugs.
+// Cards, so no attributes embed — same reasoning as getProducts.
 export async function getProductsBySlugs(slugs: string[]) {
   if (slugs.length === 0) return []
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('products')
-    .select('*, collection:collections(*), variants:product_variants(*), categories:product_categories(*), attributes:product_attribute_values(*, attribute:attributes(*), value:attribute_values(*))')
+    .select(PRODUCT_LIST_EMBEDS)
     .in('slug', slugs).eq('is_active', true)
   if (error) throw new Error(error.message)
   return data as unknown as ProductWithCollection[]
@@ -116,8 +143,13 @@ export async function getProductEditorData(productId: string) {
 
 export async function getCollections() {
   const supabase = createPublicSupabaseClient()
+  // `products:products(id)`, not `(*)`. The embedded array has exactly one
+  // consumer — the collections index, which renders `products?.length` as a
+  // count — so every other column on every product in every collection was
+  // being fetched to be counted and discarded. Ids keep `.length` identical,
+  // including the fact that it counts inactive products too.
   const { data, error } = await supabase.from('collections')
-    .select('*, products:products(*)').eq('is_active', true).order('sort_order', { ascending: true })
+    .select('*, products:products(id)').eq('is_active', true).order('sort_order', { ascending: true })
   if (error) throw new Error(error.message)
   return data as unknown as (Collection & { products: Product[] })[]
 }

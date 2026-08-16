@@ -590,7 +590,12 @@ export interface ProductWithCollection extends Product {
   collection: Collection | null
   variants: ProductVariant[]
   categories: ProductCategory[]
-  attributes: (ProductAttributeValue & { attribute: Attribute; value: AttributeValue | null })[]
+  /** Only loaded where it is actually rendered — the product page, via
+   *  getProductBySlug. List reads (getProducts) leave it out, because resolving
+   *  it costs a three-level join per product for a panel no list ever shows.
+   *  Optional rather than absent so the one consumer, ProductDetail, keeps its
+   *  existing null-guard and needs no change. */
+  attributes?: (ProductAttributeValue & { attribute: Attribute; value: AttributeValue | null })[]
 }
 
 export interface ProductWithVariants extends Product {
