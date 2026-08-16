@@ -15,10 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { Coupon } from '@/types/database'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 function fmtAmount(p: number) { return `₹${(p / 100).toLocaleString('en-IN')}` }
 
 export default function CouponsPage() {
+  const { confirm, dialog } = useConfirm()
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -84,7 +86,11 @@ export default function CouponsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this coupon?')) return
+    if (!(await confirm({
+      title: 'Delete this coupon?',
+      description: 'Anyone still holding the code will find it no longer works. Orders that already used it keep what they were charged.',
+      confirmLabel: 'Delete',
+    }))) return
     try { await deleteCoupon(id); toast.success('Coupon deleted'); load() }
     catch { toast.error('Failed to delete') }
   }
@@ -172,6 +178,7 @@ export default function CouponsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

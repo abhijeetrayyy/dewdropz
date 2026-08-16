@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, FolderPlus, ChevronUp, ChevronDown, Loader2 } from 'lucide-react'
 import { TableSkeleton } from '@/components/admin/TableSkeleton'
 import type { Category, CategoryWithChildren } from '@/types/database'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 type FlatCategory = Category & { depth: number }
 
@@ -31,6 +32,7 @@ function flatten(cats: CategoryWithChildren[], depth = 0): FlatCategory[] {
 }
 
 export default function CategoriesPage() {
+  const { confirm, dialog } = useConfirm()
   const [categories, setCategories] = useState<CategoryWithChildren[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -70,7 +72,11 @@ export default function CategoriesPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this category? Children will move up one level.')) return
+    if (!(await confirm({
+      title: 'Delete this category?',
+      description: 'Its child categories move up one level rather than being deleted. Products stay, but lose this category.',
+      confirmLabel: 'Delete',
+    }))) return
     try { await deleteCategory(id); toast.success('Category deleted'); load() }
     catch { toast.error('Failed to delete') }
   }
@@ -190,6 +196,7 @@ export default function CategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

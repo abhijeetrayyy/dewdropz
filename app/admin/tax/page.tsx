@@ -18,12 +18,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import TaxSettingsCard from './TaxSettingsCard'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
 const emptyForm = { name: '', hsn_code: '', min_price: '0', max_price: '', rate: '', is_active: true }
 
 export default function TaxPage() {
+  const { confirm, dialog } = useConfirm()
   const [rates, setRates] = useState<TaxRateRow[]>([])
   const [unclassified, setUnclassified] = useState<{ id: string; name: string; slug: string; price: number }[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -80,7 +82,11 @@ export default function TaxPage() {
   }
 
   async function remove(r: TaxRateRow) {
-    if (!confirm(`Delete "${r.name}"?`)) return
+    if (!(await confirm({
+      title: `Delete "${r.name}"?`,
+      description: 'Products in this HSN and price band fall back to the store-wide GST rate until another rule covers them.',
+      confirmLabel: 'Delete',
+    }))) return
     try { await deleteTaxRate(r.id); toast.success('Rate deleted'); load() }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Failed to delete') }
   }
@@ -243,6 +249,7 @@ export default function TaxPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

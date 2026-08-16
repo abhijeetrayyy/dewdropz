@@ -2,8 +2,41 @@
 
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
+import { getLowStockReport } from './variants'
 
 const CANCELLED_STATUSES = new Set(['cancelled'])
+
+// Everything the dashboard opens with, in one call.
+//
+// It used to fire four server actions on mount — and Next runs a client's
+// actions one at a time, so they queued. Two of the four were the SAME call:
+// getLowStockReport ran once for the headline count and again inside the
+// low-stock table, fetching identical rows twice.
+//
+// The third was worse than a duplicate. "Active products" was `getProducts()`
+// — the entire catalogue, with collections, variants, categories and attributes
+// embedded — read across the wire so the page could take `.length` of it. It is
+// a COUNT now, which Postgres answers from an index without returning a row.
+export async function getDashboardSummary() {
+  await requireAdmin()
+  const supabase = createAdminSupabaseClient()
+
+  const [lowStock, pendingOrders, activeProducts] = await Promise.all([
+    getLowStockReport(),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('products').select('id', { count: 'exact', head: true })
+      .eq('is_active', true).is('deleted_at', null),
+  ])
+
+  return {
+    lowStock,
+    counts: {
+      lowStock: lowStock.products.length + lowStock.variants.length,
+      pendingOrders: pendingOrders.count ?? 0,
+      activeProducts: activeProducts.count ?? 0,
+    },
+  }
+}
 
 export async function getAnalyticsSummary(days: 7 | 30 | 90 = 30) {
   await requireAdmin()

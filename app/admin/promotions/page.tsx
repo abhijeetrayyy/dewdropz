@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -33,6 +34,7 @@ const emptyForm = {
 }
 
 export default function PromotionsPage() {
+  const { confirm, dialog } = useConfirm()
   const [promotions, setPromotions] = useState<PromotionRow[]>([])
   const [collections, setCollections] = useState<{ slug: string; name: string }[]>([])
   const [products, setProducts] = useState<{ slug: string; name: string }[]>([])
@@ -120,7 +122,11 @@ export default function PromotionsPage() {
   }
 
   async function remove(p: PromotionRow) {
-    if (!confirm(`Delete "${p.name}"?`)) return
+    if (!(await confirm({
+      title: `Delete "${p.name}"?`,
+      description: 'Deleting is blocked once an offer has discounted a real order — deactivate it instead to keep what those orders were charged.',
+      confirmLabel: 'Delete',
+    }))) return
     try { await deletePromotion(p.id); toast.success('Promotion deleted'); load() }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Failed to delete') }
   }
@@ -355,6 +361,7 @@ export default function PromotionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

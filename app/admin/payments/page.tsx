@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from 'react'
-import { getPaymentsLedger, getPaymentsSummary, getWebhookEvents, getWebhookEventPayload } from '@/actions/payments'
+import { getPaymentsLedger, getPaymentsOverview, getPaymentsSummary, getWebhookEvents, getWebhookEventPayload } from '@/actions/payments'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -55,23 +55,40 @@ export default function PaymentsPage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  useEffect(() => {
-    getPaymentsSummary().then(setSummary).catch(() => {})
-    getWebhookEvents({ limit: 30 }).then((r) => setEvents(r.events)).catch(() => {})
-  }, [])
+  // First paint takes one round-trip, not three: the summary cards, the webhook
+  // list and the first page of the ledger arrive together. Filtering and paging
+  // afterwards only need the ledger, so they ask for just that.
+  const [primed, setPrimed] = useState(false)
 
   useEffect(() => {
-    setLoading(true)
-    getPaymentsLedger({
+    const query = {
       paymentStatus: statusFilter !== 'all' ? statusFilter : undefined,
       paymentMethod: methodFilter !== 'all' ? methodFilter : undefined,
       search: debouncedSearch || undefined,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
-    }).then((r) => { setPayments(r.payments); setTotal(r.total) })
+    }
+    setLoading(true)
+
+    if (!primed) {
+      getPaymentsOverview(query)
+        .then((r) => {
+          setSummary(r.summary)
+          setEvents(r.events)
+          setPayments(r.ledger.payments)
+          setTotal(r.ledger.total)
+          setPrimed(true)
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false))
+      return
+    }
+
+    getPaymentsLedger(query)
+      .then((r) => { setPayments(r.payments); setTotal(r.total) })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [statusFilter, methodFilter, debouncedSearch, page])
+  }, [statusFilter, methodFilter, debouncedSearch, page, primed])
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

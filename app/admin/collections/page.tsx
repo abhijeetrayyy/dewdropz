@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { TableSkeleton } from '@/components/admin/TableSkeleton'
 import type { Collection } from '@/types/database'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 const PAGE_SIZE = 20
 
@@ -26,6 +27,7 @@ type Row = Collection & { products: { count: number }[] }
 const emptyForm = { slug: '', name: '', tagline: '', description: '', gradient: '', image_url: '', sort_order: '0', is_active: true }
 
 export default function CollectionsPage() {
+  const { confirm, dialog } = useConfirm()
   const [collections, setCollections] = useState<Row[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
@@ -95,10 +97,13 @@ export default function CollectionsPage() {
 
   async function handleDelete(c: Row) {
     const productCount = c.products?.[0]?.count ?? 0
-    const warning = productCount > 0
-      ? `Delete "${c.name}"? ${productCount} product${productCount === 1 ? '' : 's'} will become uncategorized.`
-      : `Delete "${c.name}"?`
-    if (!confirm(warning)) return
+    if (!(await confirm({
+      title: `Delete "${c.name}"?`,
+      description: productCount > 0
+        ? `${productCount} product${productCount === 1 ? '' : 's'} will become uncategorized. The products themselves are kept.`
+        : 'Nothing is currently in this collection.',
+      confirmLabel: 'Delete',
+    }))) return
     try { await deleteCollection(c.id); toast.success('Collection deleted'); load() }
     catch { toast.error('Failed to delete') }
   }
@@ -206,6 +211,7 @@ export default function CollectionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

@@ -11,8 +11,10 @@ import { toast } from 'sonner'
 import { Globe, Plus, Pencil, Trash2, Loader2, DollarSign, Weight, MapPin } from 'lucide-react'
 import { getShippingZones, createShippingZone, updateShippingZone, deleteShippingZone, createShippingRate, updateShippingRate, deleteShippingRate } from '@/actions/shipping'
 import type { ShippingZoneWithRates, ShippingRate } from '@/types/database'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 export function ShippingEngine() {
+  const { confirm, dialog } = useConfirm()
   const [zones, setZones] = useState<ShippingZoneWithRates[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -74,7 +76,11 @@ export function ShippingEngine() {
   }
 
   async function handleDeleteZone(id: string) {
-    if (!confirm('Are you sure? This will delete all rates in this zone.')) return
+    if (!(await confirm({
+      title: 'Delete this zone?',
+      description: 'Every rate inside it is deleted too. Orders shipping to these states fall back to the flat rate.',
+      confirmLabel: 'Delete zone',
+    }))) return
     try {
       await deleteShippingZone(id)
       toast.success('Zone deleted')
@@ -126,7 +132,11 @@ export function ShippingEngine() {
   }
 
   async function handleDeleteRate(id: string) {
-    if (!confirm('Delete this rate?')) return
+    if (!(await confirm({
+      title: 'Delete this rate?',
+      description: 'Carts that matched it fall through to the next rate in the zone, or the flat rate.',
+      confirmLabel: 'Delete',
+    }))) return
     try {
       await deleteShippingRate(id)
       toast.success('Rate deleted')
@@ -298,6 +308,7 @@ export function ShippingEngine() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

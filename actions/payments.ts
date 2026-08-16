@@ -403,6 +403,22 @@ export async function getPaymentsLedger(options?: {
   return { payments: data ?? [], total: count ?? 0 }
 }
 
+// The three reads the payments page opens with, started together.
+//
+// They were three separate server actions fired from a useEffect. They look
+// concurrent — three `.then()` calls, no awaits between them — but Next runs a
+// client's server actions one at a time, so in practice they queued into three
+// sequential round-trips before anything appeared.
+export async function getPaymentsOverview(ledger?: Parameters<typeof getPaymentsLedger>[0]) {
+  await requireAdmin()
+  const [summary, events, page] = await Promise.all([
+    getPaymentsSummary(),
+    getWebhookEvents({ limit: 30 }),
+    getPaymentsLedger(ledger),
+  ])
+  return { summary, events: events.events, ledger: page }
+}
+
 export async function getPaymentsSummary() {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()

@@ -10,10 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Check, Trash2, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 const PAGE_SIZE = 20
 
 export default function ReviewsPage() {
+  const { confirm, dialog } = useConfirm()
   const [reviews, setReviews] = useState<Array<Record<string, unknown>>>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
@@ -47,7 +49,11 @@ export default function ReviewsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this review?')) return
+    if (!(await confirm({
+      title: 'Delete this review?',
+      description: "The customer's rating and words are removed for good. This cannot be undone.",
+      confirmLabel: 'Delete',
+    }))) return
     try { await deleteReview(id); toast.success('Deleted'); reload() }
     catch { toast.error('Failed') }
   }
@@ -119,6 +125,7 @@ export default function ReviewsPage() {
           </div>
         </div>
       )}
+      {dialog}
     </div>
   )
 }

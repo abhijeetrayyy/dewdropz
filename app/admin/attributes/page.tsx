@@ -15,8 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Pencil, Trash2, List } from 'lucide-react'
 import type { AttributeWithValues } from '@/types/database'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 export default function AttributesPage() {
+  const { confirm, dialog } = useConfirm()
   const [attrs, setAttrs] = useState<AttributeWithValues[]>([])
   const [attrDialog, setAttrDialog] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -111,7 +113,14 @@ export default function AttributesPage() {
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openValues(a)}><List className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => openAttr(a.id)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Delete this attribute? This may affect products using it.')) return; await deleteAttribute(a.id); load() }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={async () => {
+                        if (!(await confirm({
+                          title: `Delete "${a.name}"?`,
+                          description: 'Its values go with it, and any product using them loses that attribute. Variants generated from it are not removed.',
+                          confirmLabel: 'Delete',
+                        }))) return
+                        await deleteAttribute(a.id); load()
+                      }} className="text-red-600"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -166,7 +175,14 @@ export default function AttributesPage() {
                     <span className="text-sm text-gray-900">{v.value} <span className="text-gray-400 ml-2 text-xs">({v.slug})</span></span>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => { setEditingValId(v.id); setValForm({ id: v.id, value: v.value, slug: v.slug }) }}><Pencil className="h-3 w-3" /></Button>
-                      <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Delete this value? This may affect products using it.')) return; await deleteAttributeValue(v.id); refreshValues() }} className="text-red-600"><Trash2 className="h-3 w-3" /></Button>
+                      <Button variant="ghost" size="icon" onClick={async () => {
+                        if (!(await confirm({
+                          title: `Delete "${v.value}"?`,
+                          description: 'Any product set to this value loses it. Variants already generated from it are not removed.',
+                          confirmLabel: 'Delete',
+                        }))) return
+                        await deleteAttributeValue(v.id); refreshValues()
+                      }} className="text-red-600"><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   </div>
                 ))
@@ -186,6 +202,7 @@ export default function AttributesPage() {
           )}
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }

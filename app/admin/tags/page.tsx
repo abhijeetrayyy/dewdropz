@@ -13,8 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { Tag } from '@/types/database'
+import { useConfirm } from '@/components/admin/useConfirm'
 
 export default function TagsPage() {
+  const { confirm, dialog } = useConfirm()
   const [tags, setTags] = useState<Tag[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -40,7 +42,11 @@ export default function TagsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this tag?')) return
+    if (!(await confirm({
+      title: 'Delete this tag?',
+      description: 'It is removed from every product currently tagged with it.',
+      confirmLabel: 'Delete',
+    }))) return
     try { await deleteTag(id); toast.success('Tag deleted'); load() }
     catch { toast.error('Failed to delete') }
   }
@@ -101,6 +107,7 @@ export default function TagsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   )
 }
