@@ -222,7 +222,7 @@ export async function updateShippingRate(id: string, input: Partial<{
   const supabase = createAdminSupabaseClient()
   
   // ensure we map max_value undefined to no-op, but if they pass explicit null, we set it to null
-  const updatePayload: Record<string, any> = { ...input }
+  const updatePayload: Record<string, unknown> = { ...input }
   if (input.max_value === null) {
     updatePayload.max_value = null
   }

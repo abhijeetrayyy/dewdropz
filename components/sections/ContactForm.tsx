@@ -8,13 +8,13 @@ import { submitContactMessage } from '@/actions/contact'
 import { SITE } from '@/lib/constants'
 
 function InfoRow({ label, value, href }: { label: string; value: string; href?: string }) {
-  const magnetic = useMagneticHover(0.3, 8)
+  const { ref: magneticRef, x: magneticX, y: magneticY, onMouseMove: magneticMove, onMouseLeave: magneticLeave } = useMagneticHover(0.3, 8)
   const content = (
     <motion.span
-      ref={magnetic.ref as React.RefObject<HTMLSpanElement>}
-      onMouseMove={magnetic.onMouseMove}
-      onMouseLeave={magnetic.onMouseLeave}
-      style={{ x: magnetic.x, y: magnetic.y }}
+      ref={magneticRef as React.RefObject<HTMLSpanElement>}
+      onMouseMove={magneticMove}
+      onMouseLeave={magneticLeave}
+      style={{ x: magneticX, y: magneticY }}
       className="font-body text-lg text-white inline-block"
     >
       {value}
@@ -38,7 +38,7 @@ export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false)
   const [sending, setSending] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', message: '' })
-  const submitBtn = useMagneticHover(0.35, 10)
+  const { ref: submitBtnRef, x: submitBtnX, y: submitBtnY, onMouseMove: submitBtnMove, onMouseLeave: submitBtnLeave } = useMagneticHover(0.35, 10)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,10 +139,10 @@ export default function ContactForm() {
                   />
                 </div>
                 <motion.button
-                  ref={submitBtn.ref as React.RefObject<HTMLButtonElement>}
-                  onMouseMove={submitBtn.onMouseMove}
-                  onMouseLeave={submitBtn.onMouseLeave}
-                  style={{ x: submitBtn.x, y: submitBtn.y }}
+                  ref={submitBtnRef as React.RefObject<HTMLButtonElement>}
+                  onMouseMove={submitBtnMove}
+                  onMouseLeave={submitBtnLeave}
+                  style={{ x: submitBtnX, y: submitBtnY }}
                   type="submit"
                   disabled={sending}
                   className="mt-2 bg-sage text-ink font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 w-fit rounded-sm hover:bg-white transition-colors duration-300 disabled:opacity-50"

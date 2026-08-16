@@ -45,8 +45,11 @@ export default function CustomCursor() {
     }
   }, [active, opacity, scale])
 
+  // matchMedia is browser-only. Rendering the custom cursor before knowing the
+  // pointer type would put it on touch devices for a frame.
   useEffect(() => {
     const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
     setPointerFine(mq.matches)
     const listener = (e: MediaQueryListEvent) => setPointerFine(e.matches)
     mq.addEventListener('change', listener)

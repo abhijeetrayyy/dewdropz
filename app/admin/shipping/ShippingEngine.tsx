@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,15 +8,16 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Globe, Plus, Pencil, Trash2, Loader2, DollarSign, Weight, MapPin } from 'lucide-react'
+import { Globe, Plus, Pencil, Trash2, DollarSign, Weight, MapPin } from 'lucide-react'
 import { getShippingZones, createShippingZone, updateShippingZone, deleteShippingZone, createShippingRate, updateShippingRate, deleteShippingRate } from '@/actions/shipping'
 import type { ShippingZoneWithRates, ShippingRate } from '@/types/database'
 import { useConfirm } from '@/components/admin/useConfirm'
 
-export function ShippingEngine() {
+type RateType = 'flat' | 'weight_based' | 'price_based'
+
+export function ShippingEngine({ initial }: { initial: ShippingZoneWithRates[] }) {
   const { confirm, dialog } = useConfirm()
-  const [zones, setZones] = useState<ShippingZoneWithRates[]>([])
-  const [loading, setLoading] = useState(true)
+  const [zones, setZones] = useState<ShippingZoneWithRates[]>(initial)
   
   // Modals
   const [zoneModalOpen, setZoneModalOpen] = useState(false)
@@ -27,22 +28,25 @@ export function ShippingEngine() {
   const [zoneForm, setZoneForm] = useState({ name: '', countries: '', states: '' })
   
   const [activeRate, setActiveRate] = useState<ShippingRate | null>(null)
-  const [rateForm, setRateForm] = useState({ name: '', type: 'flat', price: '', min_value: '', max_value: '', estimated_min_days: '', estimated_max_days: '' })
+  // Typed at the source rather than cast at each call site: `type` is a union
+  // the actions already declare, so inferring it as plain `string` is what
+  // forced the two `as any` casts on save.
+  const [rateForm, setRateForm] = useState<{
+    name: string; type: RateType; price: string; min_value: string
+    max_value: string; estimated_min_days: string; estimated_max_days: string
+  }>({ name: '', type: 'flat', price: '', min_value: '', max_value: '', estimated_min_days: '', estimated_max_days: '' })
   
   const [saving, setSaving] = useState(false)
 
+  // Reloads after an edit; the FIRST load came down with the page, so there is
+  // no fetch on mount to suppress.
   async function load() {
     try {
-      const data = await getShippingZones()
-      setZones(data)
+      setZones(await getShippingZones())
     } catch {
       toast.error('Failed to load shipping zones')
-    } finally {
-      setLoading(false)
     }
   }
-
-  useEffect(() => { load() }, [])
 
   // Zone Actions
   function openZoneModal(zone?: ShippingZoneWithRates) {
@@ -119,10 +123,10 @@ export function ShippingEngine() {
       const estimated_max_days = rateForm.estimated_max_days ? parseInt(rateForm.estimated_max_days) : null
 
       if (activeRate) {
-        await updateShippingRate(activeRate.id, { name: rateForm.name, type: rateForm.type as any, price, min_value, max_value, estimated_min_days, estimated_max_days })
+        await updateShippingRate(activeRate.id, { name: rateForm.name, type: rateForm.type, price, min_value, max_value, estimated_min_days, estimated_max_days })
         toast.success('Rate updated')
       } else {
-        await createShippingRate({ zone_id: activeZone.id, name: rateForm.name, type: rateForm.type as any, price, min_value, max_value, estimated_min_days, estimated_max_days })
+        await createShippingRate({ zone_id: activeZone.id, name: rateForm.name, type: rateForm.type, price, min_value, max_value, estimated_min_days, estimated_max_days })
         toast.success('Rate created')
       }
       setRateModalOpen(false)
@@ -144,8 +148,6 @@ export function ShippingEngine() {
     } catch { toast.error('Failed to delete rate') }
   }
 
-  if (loading) return <div className="py-12 flex justify-center text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -161,7 +163,7 @@ export function ShippingEngine() {
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Globe className="h-12 w-12 text-gray-200 mb-4" />
             <div className="text-lg font-medium text-gray-900 mb-1">No shipping zones</div>
-            <div className="text-sm text-gray-500 max-w-md mb-4">You haven't set up any shipping regions yet. Customers won't be able to checkout until you add a zone and rates.</div>
+            <div className="text-sm text-gray-500 max-w-md mb-4">You haven&apos;t set up any shipping regions yet. Customers won&apos;t be able to checkout until you add a zone and rates.</div>
             <Button onClick={() => openZoneModal()}>Create your first zone</Button>
           </CardContent>
         </Card>
@@ -266,7 +268,10 @@ export function ShippingEngine() {
               </div>
               <div>
                 <Label>Condition Type</Label>
-                <Select value={rateForm.type} onValueChange={v => setRateForm({...rateForm, type: v, min_value: '', max_value: ''})}>
+                {/* Radix hands back a plain string; narrowing here is what lets
+                    the form state hold the union the actions expect, instead of
+                    casting at every point the value is used. */}
+                <Select value={rateForm.type} onValueChange={v => setRateForm({...rateForm, type: v as RateType, min_value: '', max_value: ''})}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="flat">No Conditions (Flat)</SelectItem>

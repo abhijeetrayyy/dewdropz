@@ -12,13 +12,13 @@ export function SocialLink({
   label: string
   children: React.ReactNode
 }) {
-  const magnetic = useMagneticHover(0.45, 10)
+  const { ref, x, y, onMouseMove, onMouseLeave } = useMagneticHover(0.45, 10)
   return (
     <motion.a
-      ref={magnetic.ref as React.RefObject<HTMLAnchorElement>}
-      onMouseMove={magnetic.onMouseMove}
-      onMouseLeave={magnetic.onMouseLeave}
-      style={{ x: magnetic.x, y: magnetic.y }}
+      ref={ref as React.RefObject<HTMLAnchorElement>}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      style={{ x, y }}
       href={href}
       aria-label={label}
       className="hover:text-white transition-colors"

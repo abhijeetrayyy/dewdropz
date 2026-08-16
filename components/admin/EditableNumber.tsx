@@ -41,7 +41,12 @@ export function EditableNumber({
   // fall back to that is not zero.
   const committed = useRef(value)
 
-  useEffect(() => { committed.current = value; setLocal(format(value)) }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-sync when the row's value changes underneath the field — after a save,
+  // or a reload. Deliberately an effect and not a render-time adjustment: the
+  // baseline lives in a ref so async callbacks can read it without re-rendering,
+  // and writing a ref during render is its own violation.
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- prop sync
+  useEffect(() => { committed.current = value; setLocal(format(value)) }, [value])
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
   function parse(text: string): number | null {

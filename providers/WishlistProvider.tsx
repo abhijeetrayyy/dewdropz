@@ -13,10 +13,14 @@ const WishlistContext = createContext<WishlistContextType | null>(null)
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<string[]>([])
 
+  // localStorage does not exist on the server, so the first render MUST be the
+  // empty list and this MUST correct it afterwards — the extra pass is what
+  // keeps the markup identical on both sides and avoids a hydration mismatch.
   useEffect(() => {
     const stored = localStorage.getItem('dewdropz_wishlist')
     if (stored) {
       try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
         setItems(JSON.parse(stored))
       } catch (e) {}
     }

@@ -107,7 +107,7 @@ export default function ProductDetail({
   const rotateY = useMotionValue(0)
   const springRotateX = useSpring(rotateX, { stiffness: 150, damping: 20 })
   const springRotateY = useSpring(rotateY, { stiffness: 150, damping: 20 })
-  const addBtn = useMagneticHover(0.25, 8)
+  const { ref: addBtnRef, x: addBtnX, y: addBtnY, onMouseMove: addBtnMove, onMouseLeave: addBtnLeave } = useMagneticHover(0.25, 8)
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const el = imgRef.current
@@ -509,10 +509,10 @@ export default function ProductDetail({
                   </Link>
                 ) : (
                   <motion.button
-                    ref={addBtn.ref as React.RefObject<HTMLButtonElement>}
-                    onMouseMove={addBtn.onMouseMove}
-                    onMouseLeave={addBtn.onMouseLeave}
-                    style={{ x: addBtn.x, y: addBtn.y }}
+                    ref={addBtnRef as React.RefObject<HTMLButtonElement>}
+                    onMouseMove={addBtnMove}
+                    onMouseLeave={addBtnLeave}
+                    style={{ x: addBtnX, y: addBtnY }}
                     onClick={handleAddToCart}
                     disabled={!inStock}
                     data-cursor="magnetic"

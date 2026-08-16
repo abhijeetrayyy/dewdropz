@@ -47,8 +47,11 @@ const SplitText: React.FC<SplitTextProps> = ({
     onCompleteRef.current = onLetterAnimationComplete;
   }, [onLetterAnimationComplete]);
 
+  // Splitting text before the webfont resolves measures the fallback face and
+  // animates letters to the wrong positions, so this waits and then re-renders.
   useEffect(() => {
     if (document.fonts.status === 'loaded') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
       setFontsLoaded(true);
     } else {
       document.fonts.ready.then(() => {

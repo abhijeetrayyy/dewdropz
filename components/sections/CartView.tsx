@@ -25,7 +25,7 @@ export default function CartView({
   freeShippingThreshold: number
 }) {
   const { items, updateQuantity, removeItem, subtotal } = useCart()
-  const checkoutBtn = useMagneticHover(0.3, 10)
+  const { ref: checkoutBtnRef, x: checkoutBtnX, y: checkoutBtnY, onMouseMove: checkoutBtnMove, onMouseLeave: checkoutBtnLeave } = useMagneticHover(0.3, 10)
   // Set by the recovery-email landing page. Arriving from an inbox to a cart
   // that silently repopulated itself is disorienting; one line explains it.
   const recovered = useSearchParams().get('recovered') === '1'
@@ -233,10 +233,10 @@ export default function CartView({
               </div>
 
               <motion.a
-                ref={checkoutBtn.ref as React.RefObject<HTMLAnchorElement>}
-                onMouseMove={checkoutBtn.onMouseMove}
-                onMouseLeave={checkoutBtn.onMouseLeave}
-                style={{ x: checkoutBtn.x, y: checkoutBtn.y }}
+                ref={checkoutBtnRef as React.RefObject<HTMLAnchorElement>}
+                onMouseMove={checkoutBtnMove}
+                onMouseLeave={checkoutBtnLeave}
+                style={{ x: checkoutBtnX, y: checkoutBtnY }}
                 href="/checkout"
                 onClick={() => {
                   import('@/lib/analytics').then(({ trackEvent }) => {

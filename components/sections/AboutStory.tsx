@@ -10,7 +10,7 @@ import { BLUR_DATA_URL, BRAND_STORY_IMAGE } from '@/lib/constants'
 export default function AboutStory() {
   const sectionRef = useRef<HTMLElement>(null)
   const imageRef = useRef<HTMLDivElement>(null)
-  const collectionsLink = useMagneticHover(0.4, 10)
+  const { ref: collectionsLinkRef, x: collectionsLinkX, y: collectionsLinkY, onMouseMove: collectionsLinkMove, onMouseLeave: collectionsLinkLeave } = useMagneticHover(0.4, 10)
 
   useEffect(() => {
     const tween = gsap.to(imageRef.current, {
@@ -85,10 +85,10 @@ export default function AboutStory() {
           </motion.p>
 
           <motion.a
-            ref={collectionsLink.ref as React.RefObject<HTMLAnchorElement>}
-            onMouseMove={collectionsLink.onMouseMove}
-            onMouseLeave={collectionsLink.onMouseLeave}
-            style={{ x: collectionsLink.x, y: collectionsLink.y }}
+            ref={collectionsLinkRef as React.RefObject<HTMLAnchorElement>}
+            onMouseMove={collectionsLinkMove}
+            onMouseLeave={collectionsLinkLeave}
+            style={{ x: collectionsLinkX, y: collectionsLinkY }}
             data-cursor="magnetic"
             data-cursor-text="View"
             href="/collections"

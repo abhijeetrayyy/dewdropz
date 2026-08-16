@@ -304,10 +304,16 @@ rejected (23505), invalid status rejected (23514), replayed event deduped.
       catalogue — a scale fix with nothing to show for it yet, and narrowing the
       columns is the kind of change that breaks a page for a field nobody
       noticed was in use.
-- [ ] **41 pre-existing lint errors** across the storefront (`any`, unescaped
-      entities, an effect setting state synchronously). Unchanged by this work —
-      counted before and after precisely so the number stays honest — but they
-      are noise that hides the next real one.
+- [x] **Lint errors.** ~~41 across the storefront.~~ Zero. Thirty of them were
+      one pattern in five files: reading members off the object
+      `useMagneticHover` returns, during render, which the compiler treats as
+      touching a ref — destructuring at the call site clears it. The rest were
+      real: `any` where a union already existed, four `@ts-ignore`s hiding
+      whatever came next rather than declaring `window.gtag`, and two
+      apostrophes. The six remaining are browser-only reads on mount
+      (localStorage, matchMedia, document.fonts) where the second render pass is
+      the point — those carry a one-line reason each, not a file-wide disable,
+      so the next genuine violation still fails. 28 warnings remain, unchanged.
 - [ ] **Functions run in `iad1`, the shop is operated from India.** See §5. The
       database is co-located with the functions, so moving the functions closer
       to the team would move them away from the data; the fix is fewer
@@ -420,6 +426,15 @@ cover it, because the next edit may switch it to the service-role client.
 
 ## Changelog
 
+- **2026-08-17** — Lint errors to zero, from 41. Most of it was one mistaken
+  pattern repeated five times rather than 41 separate problems. Two fixes were
+  worth more than the count: `window.gtag`/`window.fbq` are declared now instead
+  of being `@ts-ignore`d — a suppression hides whatever error lands on the next
+  line, including one you did not mean to silence — and the shipping rate form
+  holds the union the actions declare, so the two `as any` casts on save are
+  gone. `/admin/shipping` also became server-seeded like the other nine lists,
+  which removed its mount effect rather than suppressing it. Warnings unchanged
+  at 28, checked against HEAD at the same scope.
 - **2026-08-17** — Weight fallback unified. The delivery estimate assumed 500g
   for a product with no weight and `createOrder` assumed 0, so the two would
   have quoted and charged on different bases the moment a weight-based rate

@@ -1,9 +1,11 @@
+import { getShippingZones } from '@/actions/shipping'
 import { ShippingEngine } from './ShippingEngine'
 
 // Shipping used to be a tab inside Settings, which put zones, rates and the
 // free-shipping threshold — things the team touches often — three clicks and a
 // tab behind a page about the store's name.
-export default function ShippingPage() {
+export default async function ShippingPage() {
+  const zones = await getShippingZones()
   return (
     <div className="space-y-6">
       <div>
@@ -12,7 +14,7 @@ export default function ShippingPage() {
           Zones, rates and the free-shipping threshold. Parcels themselves live on each order.
         </p>
       </div>
-      <ShippingEngine />
+      <ShippingEngine initial={zones} />
     </div>
   )
 }

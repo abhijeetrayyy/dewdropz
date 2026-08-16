@@ -39,9 +39,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartLine[]>([])
   const [hydrated, setHydrated] = useState(false)
 
+  // Same as the wishlist: the cart lives in localStorage, which the server
+  // cannot read, so the first paint is empty and this fills it in. `hydrated`
+  // exists precisely so consumers can tell "empty cart" from "not read yet".
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
       if (raw) setItems(JSON.parse(raw))
     } catch {
       // ignore malformed local storage
