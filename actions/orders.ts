@@ -9,6 +9,7 @@ import { cartLinesForPromotions, getLivePromotions } from '@/lib/promotions.serv
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import { checkoutSchema } from '@/lib/validations'
+import { ASSUMED_PRODUCT_WEIGHT_GRAMS } from '@/lib/constants'
 import { getCart, validateCoupon } from './cart'
 import { getStoreSettings } from './settings'
 import { calculateShippingCost } from './shipping'
@@ -130,7 +131,10 @@ export async function createOrder(input: {
     const price = item.product.price + (item.variant?.price_adjustment ?? 0)
     return sum + price * item.quantity
   }, 0)
-  const weightGrams = cart.items.reduce((sum, item) => sum + (item.product.weight ?? 0) * item.quantity, 0)
+  const weightGrams = cart.items.reduce(
+    (sum, item) => sum + (item.product.weight ?? ASSUMED_PRODUCT_WEIGHT_GRAMS) * item.quantity,
+    0,
+  )
 
   const settings = await getStoreSettings()
   const shipping_cost = await calculateShippingCost({

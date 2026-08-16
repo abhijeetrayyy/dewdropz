@@ -288,12 +288,15 @@ rejected (23505), invalid status rejected (23514), replayed event deduped.
       A calculation cannot know about trims, ribbing density or the packaging
       the courier bills for, and per-product weight cannot express that an XL
       is heavier than an S.
-- [ ] **Two different fallbacks for a missing weight.** `ProductDetail` passes
-      `product.weight ?? 500` to the delivery estimate; `createOrder` sums
-      `?? 0`. A product with no weight would therefore be quoted on one basis
-      and charged on another — the kind of quiet disagreement between an
-      estimate and an invoice this engine is supposed to not have. Dormant now
-      that every product has a weight, and worth reconciling before it is not.
+- [x] **Two different fallbacks for a missing weight.** ~~`ProductDetail` passed
+      `product.weight ?? 500` to the delivery estimate while `createOrder` summed
+      `?? 0`.~~ One constant now, `ASSUMED_PRODUCT_WEIGHT_GRAMS`, read by both,
+      so a quote and an invoice cannot be computed on different bases — the same
+      discipline the promotions and tax paths already follow by sharing one
+      resolver. 500 rather than 0 because a missing weight is missing data, not
+      a weightless product: assuming zero drops a heavy parcel into the cheapest
+      band and the shop quietly absorbs the difference. A backstop, not a
+      substitute for a weight.
 - [ ] **`getProducts` still selects `*`.** The unused `attributes` embed is gone
       and the sitemap has its own two-column query, but description and
       `customization_config` still travel to pages that render neither. Left
@@ -417,6 +420,11 @@ cover it, because the next edit may switch it to the service-role client.
 
 ## Changelog
 
+- **2026-08-17** — Weight fallback unified. The delivery estimate assumed 500g
+  for a product with no weight and `createOrder` assumed 0, so the two would
+  have quoted and charged on different bases the moment a weight-based rate
+  existed. Both read `ASSUMED_PRODUCT_WEIGHT_GRAMS` now. Nothing changes today:
+  every product has a weight, and both live rates are flat.
 - **2026-08-17** — Product weights set: 230 / 420 / 590g, replacing the 200g
   placeholder every product shared. Derived from the GSM each already publishes,
   not weighed — the distinction is recorded in §2 because the number looks

@@ -18,7 +18,7 @@ import SizeGuideModal from '@/components/SizeGuideModal'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { trackEvent } from '@/lib/analytics'
 import { formatPrice } from '@/lib/utils'
-import { BLUR_DATA_URL } from '@/lib/constants'
+import { BLUR_DATA_URL, ASSUMED_PRODUCT_WEIGHT_GRAMS } from '@/lib/constants'
 import type { ProductWithCollection, Collection } from '@/types/database'
 
 const PAYMENT_METHODS = [
@@ -548,7 +548,7 @@ export default function ProductDetail({
                 ))}
               </div>
 
-              <ProductDeliveryCheck subtotal={price * quantity} weightGrams={product.weight ?? 500} />
+              <ProductDeliveryCheck subtotal={price * quantity} weightGrams={product.weight ?? ASSUMED_PRODUCT_WEIGHT_GRAMS} />
 
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Built from the real setting, so changing the threshold in

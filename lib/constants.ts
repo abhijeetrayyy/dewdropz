@@ -1,3 +1,24 @@
+/**
+ * What to assume a product weighs when nothing is recorded, in grams.
+ *
+ * There were two answers to this and they disagreed: the delivery estimate on
+ * the product page assumed 500g, `createOrder` assumed 0. With a weight-based
+ * rate that is a quote and an invoice computed on different bases — the exact
+ * thing the pricing path is otherwise careful to avoid, since the checkout
+ * preview and the charge deliberately run the same resolver.
+ *
+ * 500 rather than 0, because a missing weight is missing data, not a weightless
+ * product. Assuming zero drops a heavy parcel into the cheapest band and the
+ * shop silently absorbs the courier's difference; assuming a plausible figure
+ * keeps quote and charge in the same band, which is the property that matters.
+ * It also leaves the customer-facing estimate behaving exactly as it did, and
+ * moves only the charge into line with it.
+ *
+ * This is a backstop, not a substitute for a weight. Every product in the
+ * catalogue has one today.
+ */
+export const ASSUMED_PRODUCT_WEIGHT_GRAMS = 500
+
 export const BLUR_DATA_URL =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiMxYTJlMTciLz48L3N2Zz4='
 
