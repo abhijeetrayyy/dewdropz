@@ -4,8 +4,6 @@ import { createAdminSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import { getLowStockReport } from './variants'
 
-const CANCELLED_STATUSES = new Set(['cancelled'])
-
 // Everything the dashboard opens with, in one call.
 //
 // It used to fire four server actions on mount — and Next runs a client's
@@ -42,69 +40,45 @@ export async function getAnalyticsSummary(days: 7 | 30 | 90 = 30) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
 
-  const since = new Date()
-  since.setDate(since.getDate() - days)
+  // Aggregated in Postgres. This used to select every order in the range
+  // TOGETHER WITH ALL THEIR LINE ITEMS and reduce them five ways in Node —
+  // revenue, count, a zero-filled daily trend, top products and the status mix.
+  // The items were the bulk of the payload and existed only to be summed.
+  //
+  // Checked field-by-field against the implementation it replaces, over the
+  // live data at 7/30/90 days and over synthetic orders covering what the live
+  // data cannot: several products competing for the top-eight, revenue spread
+  // across days, a cancelled order, and a line whose product was deleted after
+  // the sale. See migration 042.
+  const [summary, customers] = await Promise.all([
+    supabase.rpc('analytics_summary', { p_days: days }),
+    supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', new Date(Date.now() - days * 86_400_000).toISOString()),
+  ])
 
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('id, status, subtotal, total_amount, created_at, items:order_items(product_id, product_name, quantity, total_price)')
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: true })
+  const s = summary.data as {
+    totalRevenue: number | string
+    orderCount: number | string
+    avgOrderValue: number | string
+    revenueTrend: { date: string; revenue: number | string }[]
+    topProducts: { name: string; revenue: number | string; quantity: number | string }[]
+    statusMix: { status: string; count: number | string }[]
+  } | null
 
-  const rows = orders ?? []
-  const counted = rows.filter((o) => !CANCELLED_STATUSES.has(o.status))
-
-  const totalRevenue = counted.reduce((sum, o) => sum + o.total_amount, 0)
-  const orderCount = counted.length
-  const avgOrderValue = orderCount > 0 ? Math.round(totalRevenue / orderCount) : 0
-
-  // Daily revenue trend — zero-filled so the chart doesn't skip days with no orders.
-  const byDay = new Map<string, number>()
-  for (let i = 0; i < days; i++) {
-    const d = new Date(since)
-    d.setDate(d.getDate() + i)
-    byDay.set(d.toISOString().slice(0, 10), 0)
-  }
-  for (const o of counted) {
-    const key = o.created_at.slice(0, 10)
-    if (byDay.has(key)) byDay.set(key, (byDay.get(key) ?? 0) + o.total_amount)
-  }
-  const revenueTrend = Array.from(byDay.entries()).map(([date, revenue]) => ({ date, revenue }))
-
-  // Top products by revenue, aggregated from order_items across the range.
-  const productTotals = new Map<string, { name: string; revenue: number; quantity: number }>()
-  for (const o of counted) {
-    for (const item of o.items ?? []) {
-      const key = item.product_id ?? item.product_name
-      const existing = productTotals.get(key) ?? { name: item.product_name, revenue: 0, quantity: 0 }
-      existing.revenue += item.total_price
-      existing.quantity += item.quantity
-      productTotals.set(key, existing)
-    }
-  }
-  const topProducts = Array.from(productTotals.values())
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 8)
-
-  // Order status mix across the same range (includes cancelled, unlike the revenue figures above).
-  const statusCounts = new Map<string, number>()
-  for (const o of rows) {
-    statusCounts.set(o.status, (statusCounts.get(o.status) ?? 0) + 1)
-  }
-  const statusMix = Array.from(statusCounts.entries()).map(([status, count]) => ({ status, count }))
-
-  const { count: customerCount } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', since.toISOString())
-
+  // BIGINT comes back as a string once it has been through JSON; every figure
+  // is coerced rather than assumed, since a string would propagate silently
+  // into a chart axis instead of failing.
   return {
-    totalRevenue,
-    orderCount,
-    avgOrderValue,
-    newCustomers: customerCount ?? 0,
-    revenueTrend,
-    topProducts,
-    statusMix,
+    totalRevenue: Number(s?.totalRevenue ?? 0),
+    orderCount: Number(s?.orderCount ?? 0),
+    avgOrderValue: Number(s?.avgOrderValue ?? 0),
+    newCustomers: customers.count ?? 0,
+    revenueTrend: (s?.revenueTrend ?? []).map((t) => ({ date: t.date, revenue: Number(t.revenue) })),
+    topProducts: (s?.topProducts ?? []).map((p) => ({
+      name: p.name, revenue: Number(p.revenue), quantity: Number(p.quantity),
+    })),
+    statusMix: (s?.statusMix ?? []).map((m) => ({ status: m.status, count: Number(m.count) })),
   }
 }
