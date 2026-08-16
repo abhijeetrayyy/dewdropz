@@ -5,6 +5,7 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/sup
 import { requireAdmin } from './auth'
 import type { Tag } from '@/types/database'
 import { ensureAdmin } from '@/lib/adminAuth'
+import { revalidateProductPaths } from '@/lib/revalidateProduct'
 
 export async function getTags() {
   await ensureAdmin()
@@ -80,5 +81,5 @@ export async function setProductTags(productId: string, tagIds: string[]) {
 
     if (error) throw new Error(error.message)
   }
-  revalidatePath('/admin/products')
+  await revalidateProductPaths(productId)
 }

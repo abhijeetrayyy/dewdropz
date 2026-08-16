@@ -5,6 +5,7 @@ import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/sup
 import { requireAdmin } from './auth'
 import type { Category, ProductCategory, CategoryWithChildren } from '@/types/database'
 import { ensureAdmin } from '@/lib/adminAuth'
+import { revalidateProductPaths } from '@/lib/revalidateProduct'
 
 // -- Public reads --
 
@@ -201,7 +202,7 @@ export async function setProductCategories(productId: string, categories: { cate
     )
 
   if (error) throw new Error(error.message)
-  revalidatePath('/admin/products')
+  await revalidateProductPaths(productId)
 }
 
 export async function reorderCategories(orderedIds: string[]) {

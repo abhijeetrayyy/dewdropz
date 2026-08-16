@@ -5,6 +5,7 @@ import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/sup
 import { requireAdmin } from './auth'
 import type { Attribute, AttributeValue, AttributeWithValues, ProductAttributeValue } from '@/types/database'
 import { ensureAdmin } from '@/lib/adminAuth'
+import { revalidateProductPaths } from '@/lib/revalidateProduct'
 
 // -- Public reads --
 
@@ -187,5 +188,5 @@ export async function setProductAttributes(productId: string, attributes: {
 
     if (error) throw new Error(error.message)
   }
-  revalidatePath('/admin/products')
+  await revalidateProductPaths(productId)
 }
