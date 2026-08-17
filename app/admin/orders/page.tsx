@@ -287,7 +287,7 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="relative w-full max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order # or email..." className="pl-8" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Order #, email, phone or name..." className="pl-8" />
         </div>
         {selected.size > 0 && (
           <div className="flex items-center gap-2 text-sm">

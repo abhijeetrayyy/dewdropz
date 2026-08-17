@@ -197,7 +197,7 @@ export async function getLowStockReport() {
   const { data: prodData } = await supabase
     .from('products')
     .select('id, name, sku, inventory_quantity, low_stock_threshold, status')
-    .neq('status', 'archived')
+    .is('deleted_at', null)
     .order('inventory_quantity', { ascending: true })
 
   const { data: varData } = await supabase

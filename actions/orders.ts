@@ -516,7 +516,7 @@ const UNFULFILLED: string[] = ['pending', 'confirmed', 'processing']
 const ORDER_LIST_COLUMNS =
   'id, order_number, email, phone, status, payment_status, payment_method, ' +
   'subtotal, shipping_cost, tax_amount, discount_amount, total_amount, ' +
-  'created_at, refund_needs_attention, shipping_address, ' +
+  'created_at, refund_needs_attention, shipping_address, phone_digits, ' +
   'items:order_items(quantity, product_name, custom_design_id)'
 
 /** Exactly what ORDER_LIST_COLUMNS returns, so the table cannot start reading a
@@ -551,8 +551,24 @@ export async function getAllOrders(options?: { status?: string; needsAttention?:
     query = query.in('id', ids)
   } else if (options?.status) query = query.eq('status', options.status)
   if (options?.search) {
-    const s = options.search.replace(/[%_]/g, '')
-    query = query.or(`order_number.ilike.%${s}%,email.ilike.%${s}%`)
+    // Strip the LIKE wildcards so a stray % cannot turn a search into a table
+    // scan, and the comma too — PostgREST's `.or()` is comma-delimited, so an
+    // unescaped one would be read as another filter.
+    const term = options.search.replace(/[%_,]/g, '').trim()
+    const filters = [
+      `order_number.ilike.%${term}%`,
+      `email.ilike.%${term}%`,
+      `shipping_address->>full_name.ilike.%${term}%`,
+    ]
+    // A phone is matched on its last ten digits — the national number, however
+    // the customer wrote it. See migration 046: the stored value has a leading
+    // zero and the column `phone` is usually null, the number living in the
+    // address JSON. Six digits is enough to be a deliberate phone fragment
+    // rather than an order-number stub.
+    const digits = term.replace(/\D/g, '')
+    if (digits.length >= 6) filters.push(`phone_digits.like.%${digits.slice(-10)}%`)
+
+    query = query.or(filters.join(','))
   }
   if (options?.limit != null && options?.offset != null) {
     query = query.range(options.offset, options.offset + options.limit - 1)

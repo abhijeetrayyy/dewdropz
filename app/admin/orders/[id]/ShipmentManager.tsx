@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { createShipment, updateShipmentStatus, type ShipmentStatus } from '@/actions/shipments'
+import { createShipment, updateShipment, updateShipmentStatus, type ShipmentStatus } from '@/actions/shipments'
 
 // Parcel management. Until now the team could CREATE a shipment from the orders
 // list and then nothing — no way to step its status, correct an AWB, or add a
@@ -53,6 +53,12 @@ export default function ShipmentManager({
   const [pending, start] = useTransition()
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ courier: '', awb: '', url: '' })
+  // Correcting a parcel. `updateShipment` has existed and been admin-guarded
+  // since shipping was built, with zero callers — so a mistyped digit in a
+  // 12-digit AWB, the most routine packing-desk error there is, could only be
+  // fixed with a SQL client.
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ courier: '', awb: '', url: '' })
   const [error, setError] = useState<string | null>(null)
   // Which lines go in THIS box. Defaults to everything still owed, because
   // shipping the whole remainder is the common case and should need no clicks.
@@ -94,6 +100,34 @@ export default function ShipmentManager({
       setForm({ courier: '', awb: '', url: '' })
       setPack({})
       setAdding(false)
+      router.refresh()
+    })
+  }
+
+  function beginEdit(shipment: Shipment) {
+    setEditing(shipment.id)
+    setEditForm({
+      courier: shipment.courier_name ?? '',
+      awb: shipment.awb ?? '',
+      url: shipment.tracking_url ?? '',
+    })
+    setError(null)
+  }
+
+  function saveEdit(shipmentId: string) {
+    if (!editForm.courier || !editForm.awb) { setError('Courier and AWB are required'); return }
+    setError(null)
+    start(async () => {
+      const res = await updateShipment(shipmentId, {
+        courierName: editForm.courier,
+        awb: editForm.awb,
+        trackingUrl: editForm.url || undefined,
+      })
+      // Surfaced rather than assumed. The case someone actually hits here is
+      // correcting a typo to a number that is already on another parcel — the
+      // unique index rejects it and this is where they need to be told.
+      if (res && 'error' in res) { setError(res.error ?? 'Could not update parcel'); return }
+      setEditing(null)
       router.refresh()
     })
   }
@@ -193,10 +227,50 @@ export default function ShipmentManager({
                 {s.courier_name ?? 'Parcel'}
                 {s.awb && <span className="ml-2 font-mono text-xs text-neutral-500">{s.awb}</span>}
               </div>
-              <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-700">
-                {LABEL[s.status] ?? s.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-700">
+                  {LABEL[s.status] ?? s.status}
+                </span>
+                <button
+                  type="button" onClick={() => beginEdit(s)} disabled={pending}
+                  title="Correct courier or AWB"
+                  className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-50"
+                >
+                  Edit
+                </button>
+              </div>
             </div>
+
+            {editing === s.id && (
+              <div className="mt-3 grid gap-2 border-t border-neutral-100 pt-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <input
+                  value={editForm.courier} onChange={(e) => setEditForm({ ...editForm, courier: e.target.value })}
+                  placeholder="Courier *" className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+                <input
+                  value={editForm.awb} onChange={(e) => setEditForm({ ...editForm, awb: e.target.value })}
+                  placeholder="AWB *" className="rounded border border-neutral-300 px-2 py-1.5 font-mono text-sm"
+                />
+                <input
+                  value={editForm.url} onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                  placeholder="Tracking URL" className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button" onClick={() => saveEdit(s.id)} disabled={pending}
+                    className="rounded bg-neutral-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                  >
+                    {pending ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button" onClick={() => setEditing(null)} disabled={pending}
+                    className="rounded border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Only forward moves are offered — a parcel cannot un-deliver. */}
             {NEXT[s.status]?.length > 0 && (

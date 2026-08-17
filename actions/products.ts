@@ -232,11 +232,30 @@ export async function deleteProduct(id: string) {
   revalidatePath('/admin/products')
 }
 
+/** A soft archive, despite being labelled Delete. The row and every variant,
+ *  order line and design attached to it survive — which is right, since an
+ *  order must keep pointing at what was bought. See restoreProduct. */
 export async function archiveProduct(id: string) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
   const { error } = await supabase.from('products')
     .update({ is_active: false, deleted_at: new Date().toISOString() }).eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/admin/products')
+}
+
+/** Bring an archived product back.
+ *
+ *  Archiving was reachable and reversal was not: the list filters
+ *  `deleted_at IS NULL`, so an archived product vanished from the only screen
+ *  that could act on it, and getting it back meant a SQL client. It comes back
+ *  as a DRAFT rather than live — restoring something into the storefront
+ *  unannounced is not a decision this button should make for you. */
+export async function restoreProduct(id: string) {
+  await requireAdmin()
+  const supabase = createAdminSupabaseClient()
+  const { error } = await supabase.from('products')
+    .update({ deleted_at: null, is_active: false }).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/products')
 }
@@ -312,6 +331,9 @@ const SORT_COLUMNS: Record<ProductListSort, string> = {
 export async function getAllProducts(opts?: {
   search?: string; limit?: number; offset?: number
   sort?: ProductListSort; dir?: 'asc' | 'desc'
+  /** 'live' hides archived products (the default, and what the team wants 99%
+   *  of the time); 'archived' is what makes restore reachable at all. */
+  view?: 'live' | 'archived'
 }) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
@@ -321,8 +343,10 @@ export async function getAllProducts(opts?: {
   let query = supabase
     .from('products')
     .select(PRODUCT_LIST_COLUMNS, { count: 'exact' })
-    .is('deleted_at', null)
     .order(sortColumn, { ascending: (opts?.dir ?? 'desc') === 'asc' })
+  query = opts?.view === 'archived'
+    ? query.not('deleted_at', 'is', null)
+    : query.is('deleted_at', null)
   if (opts?.search) {
     const s = opts.search.replace(/[%_]/g, '')
     query = query.or(`name.ilike.%${s}%,slug.ilike.%${s}%,sku.ilike.%${s}%`)

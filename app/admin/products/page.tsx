@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
-  getAllProducts, toggleProductActive, archiveProduct, updateProduct,
+  getAllProducts, toggleProductActive, archiveProduct, restoreProduct, updateProduct,
   bulkSetProductsActive, bulkArchiveProducts,
   type ProductListRow, type ProductListSort,
 } from '@/actions/products'
@@ -82,6 +82,10 @@ export default function ProductsPage() {
   // Sorting is now a query parameter, not a client-side array sort, so it
   // orders the catalogue rather than the twenty rows that happen to be loaded.
   const [sort, setSort] = useState<SortState>({ key: 'created', dir: 'desc' })
+  // Archiving was reachable and reversal was not — the list only ever showed
+  // live products, so an archived one disappeared from the one screen that
+  // could bring it back.
+  const [view, setView] = useState<'live' | 'archived'>('live')
   const [confirmTarget, setConfirmTarget] = useState<ProductListRow | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
   const router = useRouter()
@@ -105,13 +109,14 @@ export default function ProductsPage() {
         offset: page * PAGE_SIZE,
         sort: sort.key,
         dir: sort.dir,
+        view,
       })
       setProducts(prods)
       setTotal(t)
       setSelected(new Set())
     } catch { toast.error('Failed to load products') }
     finally { setLoading(false) }
-  }, [debouncedSearch, page, sort])
+  }, [debouncedSearch, page, sort, view])
 
   useEffect(() => { load() }, [load])
 
@@ -134,8 +139,13 @@ export default function ProductsPage() {
     if (!confirmTarget) return
     const p = confirmTarget
     setConfirmTarget(null)
-    try { await archiveProduct(p.id); toast.success('Product deleted'); load() }
-    catch { toast.error('Failed to delete') }
+    try { await archiveProduct(p.id); toast.success(`${p.name} archived`); load() }
+    catch { toast.error('Could not archive') }
+  }
+
+  async function handleRestore(p: ProductListRow) {
+    try { await restoreProduct(p.id); toast.success(`${p.name} restored as a draft`); load() }
+    catch { toast.error('Could not restore') }
   }
 
   function toggleSelected(id: string) {
@@ -162,9 +172,9 @@ export default function ProductsPage() {
     setConfirmBulk(false)
     try {
       await bulkArchiveProducts([...selected])
-      toast.success(`${selected.size} product${selected.size === 1 ? '' : 's'} deleted`)
+      toast.success(`${selected.size} product${selected.size === 1 ? '' : 's'} archived`)
       load()
-    } catch { toast.error('Bulk delete failed') }
+    } catch { toast.error('Bulk archive failed') }
   }
 
   const savePrice = useCallback(async (id: string, rupees: number) => {
@@ -198,12 +208,24 @@ export default function ProductsPage() {
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, slug, SKU..." className="pl-8" />
         </div>
+        <div className="flex shrink-0 rounded-md border border-gray-300 p-0.5">
+          {(['live', 'archived'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => { setView(v); setPage(0) }}
+              className={`rounded px-3 py-1 text-xs font-medium capitalize transition-colors ${view === v ? 'bg-black text-white' : 'text-gray-600 hover:text-black'}`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
         {selected.size > 0 && (
           <div className="flex shrink-0 items-center gap-2">
             <span className="mr-1 text-sm text-gray-500">{selected.size} selected</span>
             <Button variant="outline" size="sm" onClick={() => handleBulkActive(true)}>Set Active</Button>
             <Button variant="outline" size="sm" onClick={() => handleBulkActive(false)}>Set Draft</Button>
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => setConfirmBulk(true)}>Delete</Button>
+            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => setConfirmBulk(true)}>Archive</Button>
           </div>
         )}
       </div>
@@ -213,13 +235,21 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <Card className="border-dashed shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="mb-1 text-lg font-medium text-gray-900">No products found</p>
+            <p className="mb-1 text-lg font-medium text-gray-900">
+              {view === 'archived' ? 'Nothing archived' : 'No products found'}
+            </p>
             <p className="mb-4 max-w-sm text-sm text-gray-500">
-              {debouncedSearch ? `Nothing matches "${debouncedSearch}".` : "You haven't added any products yet."}
+              {debouncedSearch
+                ? `Nothing matches "${debouncedSearch}".`
+                : view === 'archived'
+                  ? 'Archived products are hidden from the storefront but kept here, and can be restored at any time.'
+                  : "You haven't added any products yet."}
             </p>
             {debouncedSearch
               ? <Button variant="outline" onClick={() => setSearch('')}>Clear search</Button>
-              : <Button onClick={() => router.push('/admin/products/new')}><Plus className="mr-2 h-4 w-4" /> Add your first product</Button>}
+              : view === 'archived'
+                ? <Button variant="outline" onClick={() => setView('live')}>Back to live products</Button>
+                : <Button onClick={() => router.push('/admin/products/new')}><Plus className="mr-2 h-4 w-4" /> Add your first product</Button>}
           </CardContent>
         </Card>
       ) : (
@@ -305,11 +335,17 @@ export default function ProductsPage() {
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <div className="flex justify-end gap-0.5">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => router.push(`/admin/products/${p.id}`)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title={p.is_active ? 'Set to draft' : 'Set active'} onClick={() => handleToggle(p)}>
-                            {p.is_active ? <PowerOff className="h-4 w-4 text-amber-600" /> : <Power className="h-4 w-4 text-green-600" />}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" title="Delete" onClick={() => setConfirmTarget(p)}><Trash2 className="h-4 w-4" /></Button>
+                          {view === 'archived' ? (
+                            <Button variant="outline" size="sm" className="h-8" onClick={() => handleRestore(p)}>Restore</Button>
+                          ) : (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => router.push(`/admin/products/${p.id}`)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title={p.is_active ? 'Set to draft' : 'Set active'} onClick={() => handleToggle(p)}>
+                                {p.is_active ? <PowerOff className="h-4 w-4 text-amber-600" /> : <Power className="h-4 w-4 text-green-600" />}
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" title="Archive" onClick={() => setConfirmTarget(p)}><Trash2 className="h-4 w-4" /></Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -337,18 +373,18 @@ export default function ProductsPage() {
       <ConfirmDialog
         open={!!confirmTarget}
         onOpenChange={(open) => { if (!open) setConfirmTarget(null) }}
-        title={`Delete "${confirmTarget?.name}"?`}
-        description="This removes the product from the storefront. This cannot be undone."
-        confirmLabel="Delete"
+        title={`Archive "${confirmTarget?.name}"?`}
+        description="It comes off the storefront immediately. Past orders keep it, and you can bring it back from the Archived tab — it returns as a draft."
+        confirmLabel="Archive"
         onConfirm={handleArchiveConfirmed}
       />
 
       <ConfirmDialog
         open={confirmBulk}
         onOpenChange={setConfirmBulk}
-        title={`Delete ${selected.size} product${selected.size === 1 ? '' : 's'}?`}
-        description="This removes the selected products from the storefront. This cannot be undone."
-        confirmLabel="Delete"
+        title={`Archive ${selected.size} product${selected.size === 1 ? '' : 's'}?`}
+        description="They come off the storefront immediately. Past orders keep them, and they can be restored from the Archived tab."
+        confirmLabel="Archive"
         onConfirm={handleBulkArchiveConfirmed}
       />
     </div>
