@@ -586,14 +586,39 @@ export default function SummitHero({
           duration: POINT_IN[1] - POINT_IN[0], ease: 'power2.inOut' }, POINT_IN[0])
       }
 
-      // The step caption, which names what you are watching. Without it the
-      // sequence is pretty and unreadable.
-      const steps = qa('[data-step]')
-      if (steps.length === 4) {
-        const marks = [PLAN_IN[0], ASKS_IN[0], CONFIRM_IN[0], POINT_IN[0]]
-        steps.forEach((el, i) => {
-          tl.to(el, { opacity: 1, duration: 0.012 }, marks[i])
-          if (i < 3) tl.to(el, { opacity: 0, duration: 0.012 }, marks[i + 1])
+      // The four steps, as a sequence you can see the shape of. Each one
+      // lights when its beat starts and stays lit — so the spine reads as
+      // progress rather than as a spotlight moving over a list.
+      const segs   = qa('[data-step-seg]')
+      const titles = qa('[data-step-title]')
+      const bodies = qa('[data-step-body]')
+      const marks  = [PLAN_IN[0], ASKS_IN[0], CONFIRM_IN[0], POINT_IN[0]]
+      if (segs.length === 4 && titles.length === 4 && bodies.length === 4) {
+        marks.forEach((at, i) => {
+          tl.to(segs[i], { scaleY: 1, duration: 0.018, ease: 'power2.out' }, at)
+          tl.to(titles[i], { color: '#F8F5ED', duration: 0.015 }, at)
+          // Height, not grid-template-rows. GSAP resolves `0fr` to a pixel
+          // value and then cannot interpolate it back to a fractional unit, so
+          // the tween renders garbage on the way. `height: auto` is a case its
+          // CSS plugin handles properly.
+          tl.to(bodies[i], { opacity: 1, height: 'auto', duration: 0.02 }, at)
+          if (i < 3) {
+            tl.to(bodies[i], { opacity: 0, height: 0, duration: 0.02 }, marks[i + 1])
+            // Past steps dim but stay legible — done, not gone.
+            tl.to(titles[i], { color: 'rgba(248,245,237,0.6)', duration: 0.015 }, marks[i + 1])
+          }
+        })
+      }
+
+      // The host accepting each request, one at a time, inside the beat that
+      // claims it happens.
+      const ticks = qa('[data-ask-tick]')
+      if (ticks.length) {
+        const per = (CONFIRM_IN[1] - CONFIRM_IN[0]) / ticks.length
+        ticks.forEach((t, i) => {
+          tl.fromTo(t, { opacity: 0, scale: 0.6 },
+            { opacity: 1, scale: 1, duration: per * 0.7, ease: 'back.out(2.5)' },
+            CONFIRM_IN[0] + i * per)
         })
       }
 
@@ -1045,23 +1070,53 @@ export default function SummitHero({
                 decide who comes.
               </p>
 
-              {/* The caption for the beat you are watching, on a rail so it
-                  reads as narration of the card rather than as more copy. */}
-              <div className="relative mt-9 h-[92px] max-w-sm border-l border-paper/25 pl-5">
+              {/* All four steps, always visible.
+                  They used to be one line swapping in a fixed box, which meant
+                  you could never see that there ARE four, or which one you were
+                  on — a viewer landing mid-act read a single orphan sentence.
+                  Shown as a list, each with its own rail segment, the act
+                  explains its own shape: past steps stay lit, the live one is
+                  full strength and carries the detail, the rest wait. */}
+              <ol className="mt-9 max-w-sm space-y-0">
                 {[
                   ['01', 'Somebody posts a walk', 'The place, the hour, and how many can come.'],
                   ['02', 'People ask to come', 'Not a join button — a request, with a message.'],
                   ['03', 'The host decides', 'They pick the group they are spending the day with.'],
                   ['04', 'The meeting point unlocks', 'Only for the confirmed party, and only once it is big enough.'],
                 ].map(([n, title, body]) => (
-                  <div key={n} data-step className="absolute inset-x-0 top-0 pl-5 opacity-0" style={{ left: 0 }}>
-                    <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper">
-                      <span className="text-sage">{n}</span> · {title}
-                    </p>
-                    <p className="mt-2 font-body text-[13px] leading-relaxed text-paper/60">{body}</p>
-                  </div>
+                  <li key={n} data-step className="flex gap-4">
+                    {/* The spine. One segment per step, filling as you pass it,
+                        so progress through the act is a thing you can see. */}
+                    <span aria-hidden="true" className="relative flex w-px shrink-0 justify-center">
+                      <span className="absolute inset-0 bg-paper/15" />
+                      <span data-step-seg className="absolute inset-0 origin-top scale-y-0 bg-sage" />
+                    </span>
+
+                    <span className="min-w-0 flex-1 pb-4">
+                      <span
+                        data-step-title
+                        className="block font-mono text-[11px] uppercase tracking-[0.16em] text-paper/35"
+                      >
+                        <span className="tabular-nums">{n}</span> · {title}
+                      </span>
+                      {/* Only the live step carries its detail. Four bodies at
+                          once is a paragraph, not a sequence.
+                          Height, not grid-template-rows: GSAP resolves `0fr` to
+                          a pixel value and then cannot interpolate it back to a
+                          fractional unit, which renders garbage mid-tween.
+                          `height: auto` is a case its CSS plugin handles. */}
+                      <span
+                        data-step-body
+                        className="block h-0 overflow-hidden opacity-0"
+                      >
+                        <span className="block pt-1.5 font-body text-[13px] leading-relaxed text-paper/65">
+                          {body}
+                        </span>
+                      </span>
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ol>
 
               <div className="pointer-events-auto mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <Link
@@ -1139,7 +1194,17 @@ export default function SummitHero({
                         >
                           {who[0]}
                         </span>
-                        {who} asked to come
+                        <span className="min-w-0 flex-1 truncate">{who} asked to come</span>
+                        {/* The host deciding, made visible. Step 03 narrated a
+                            decision that nothing on screen actually performed —
+                            the dots filled, which is a consequence, not the act. */}
+                        <span
+                          data-ask-tick
+                          aria-hidden="true"
+                          className="shrink-0 font-mono text-[13px] leading-none text-[#9BC08C] opacity-0"
+                        >
+                          ✓
+                        </span>
                       </li>
                     ))}
                   </ul>
