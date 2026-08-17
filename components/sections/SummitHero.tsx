@@ -98,13 +98,19 @@ const RANGE_OUT = [0.62, 0.74] as const
 const RANGE_DARK = 0.76
 
 // Four things people go up there to do, which are really four times of day.
-// Real ground near Dehradun. Illustrative and marked as a preview on the frame —
-// Trek Buddy has not launched, so these are not live posts by real people.
+// Real ground near Dehradun, and the hours are the ones the board actually
+// enforces for each kind.
+//
+// These used to carry participant counts — "3 going, 2 spots" — invented for
+// the frame while Trek Buddy was unbuilt. It is built now, and a homepage
+// showing fabricated activity on a board that has a real one is a different
+// thing entirely from a placeholder. So the numbers are gone and what is left
+// is true: these are the kinds of outing you can post, at the hours they run.
 const DAY = [
-  { time: '05:20', activity: 'Bird watching', place: 'Benog Sanctuary', alt: '2,100 m', going: 2, spots: 4 },
-  { time: '09:00', activity: 'Trekking', place: 'Nag Tibba', alt: '3,022 m', going: 3, spots: 2 },
-  { time: '17:30', activity: 'Camping', place: 'Har Ki Dun', alt: '3,566 m', going: 4, spots: 0 },
-  { time: '21:40', activity: 'Stargazing', place: 'George Everest', alt: '2,024 m', going: 3, spots: 1 },
+  { time: '05:20', activity: 'Bird watching', place: 'Benog Sanctuary', alt: '2,100 m', note: 'Before the birds move' },
+  { time: '09:00', activity: 'Trekking', place: 'Nag Tibba', alt: '3,022 m', note: 'Out and back in a day' },
+  { time: '17:30', activity: 'Camping', place: 'Har Ki Dun', alt: '3,566 m', note: 'One night, back next morning' },
+  { time: '21:40', activity: 'Stargazing', place: 'George Everest', alt: '2,024 m', note: 'Down again the same night' },
 ] as const
 
 // "Mobile" here means how the page is *consumed*, not just how wide it is: on a
@@ -1114,22 +1120,28 @@ export default function SummitHero({
                 <h2 className="mt-5 font-display text-[clamp(28px,3.2vw,46px)] font-light leading-[1.04] text-paper">
                   Never go <span className="italic text-sage">alone.</span>
                 </h2>
-                <p className="mt-4 max-w-sm font-body text-sm leading-relaxed text-paper/60">
-                  Post your hour and whoever else is going that day finds you.
+                <p className="mt-4 max-w-sm font-body text-sm leading-relaxed text-paper/70">
+                  Post the hour you are leaving. Whoever else is going that day finds you, and
+                  you decide who comes.
                 </p>
               </div>
 
+              {/* It said "Coming soon" and pointed at the customiser. Trek
+                  Buddy is live, so this is a real door now — and the third act
+                  of the hero is the only place on the homepage that was
+                  carrying it at all. */}
               <div className="pointer-events-auto flex flex-wrap items-center gap-x-5 gap-y-3 pb-1">
-                {/* Not a link: nothing is behind it yet, and a button that goes
-                    nowhere is worse than one that admits it. */}
-                <span className="inline-flex items-center gap-2 rounded-full border border-paper/25 px-5 py-2.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/70">
-                  Coming soon
-                </span>
                 <Link
-                  href="/customize"
-                  className="border-b border-paper/20 pb-0.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/50 transition-colors duration-300 hover:text-paper"
+                  href="/trek-buddy"
+                  className="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 font-body text-[10px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
                 >
-                  Meanwhile — design yours ↗
+                  See the board <span aria-hidden="true">↗</span>
+                </Link>
+                <Link
+                  href="/trek-buddy/people"
+                  className="border-b border-paper/25 pb-0.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/60 transition-colors duration-300 hover:text-paper"
+                >
+                  Who is out there
                 </Link>
               </div>
             </div>
@@ -1152,23 +1164,9 @@ export default function SummitHero({
                       {d.alt}
                     </span>
 
-                    <div className="mt-4 flex items-center gap-2.5">
-                      <div className="flex -space-x-1.5">
-                        {Array.from({ length: d.going }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="h-[17px] w-[17px] rounded-full border border-[#101E17] bg-sage/55"
-                          />
-                        ))}
-                      </div>
-                      <span
-                        className={`font-mono text-[9px] uppercase tracking-[0.1em] tabular-nums ${
-                          d.spots > 0 ? 'text-sage' : 'text-paper/30'
-                        }`}
-                      >
-                        {d.spots > 0 ? `${d.spots} spot${d.spots > 1 ? 's' : ''}` : 'Full'}
-                      </span>
-                    </div>
+                    <span className="mt-4 font-body text-[11px] leading-snug text-paper/45">
+                      {d.note}
+                    </span>
 
                     {/* The tick down to the hour this happens in. */}
                     <span className="mt-6 h-7 w-px bg-gradient-to-b from-transparent to-paper/35" />
