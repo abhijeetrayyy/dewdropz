@@ -14,7 +14,11 @@ const chip = (on: boolean, dark: boolean) =>
     on
       ? dark ? 'border-sage bg-sage text-ink' : 'border-forest bg-forest text-paper'
       : dark
-        ? 'border-paper/25 text-paper/60 hover:border-paper/60 hover:text-paper'
+        // A real surface, not a hairline over a photograph. backdrop-blur is
+        // the part that matters: it is a low-pass filter, so it collapses the
+        // local variance that makes small type unreadable even where the
+        // average contrast measures fine.
+        ? 'border-paper/30 bg-ink/55 text-paper/80 backdrop-blur-sm hover:border-paper/70 hover:bg-ink/70 hover:text-paper'
         : 'border-rule text-mid hover:border-text hover:text-text'
   }`
 
@@ -79,7 +83,11 @@ export default function BoardFilters({
           placeholder="Search a place — Nag Tibba, Mussoorie, Benog…"
           className={
             dark
-              ? 'w-full rounded-sm border border-paper/20 bg-paper/[0.07] px-3.5 py-3 font-body text-sm text-paper placeholder:text-paper/40 focus:border-sage focus:outline-none'
+              // Was border-paper/20 on bg-paper/[0.07] — effectively nothing —
+              // and it spans the full content width, so its right half floated
+              // over the open part of the photograph. Measured at 2.46:1
+              // against the placeholder, well under the 4.5:1 small text needs.
+              ? 'w-full rounded-sm border border-paper/30 bg-ink/70 px-3.5 py-3 font-body text-sm text-paper shadow-[0_2px_20px_-8px_rgba(0,0,0,0.6)] backdrop-blur-md placeholder:text-paper/60 focus:border-sage focus:bg-ink/80 focus:outline-none'
               : 'w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/70 focus:border-forest focus:outline-none'
           }
         />
@@ -113,16 +121,16 @@ export default function BoardFilters({
             one. */}
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
           className={`ml-auto shrink-0 whitespace-nowrap border-b pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
-            dark ? 'border-paper/25 text-paper/70 hover:text-paper' : 'border-rule text-mid hover:text-text'
+            dark ? 'border-paper/40 text-paper/85 hover:text-paper' : 'border-rule text-mid hover:text-text'
           }`}>
           {refined > 0 ? `Refined · ${refined}` : 'More filters'} {open ? '−' : '+'}
         </button>
       </div>
 
       {open && (
-        <div className={`space-y-3 border-t pt-3 ${dark ? 'border-paper/15' : 'border-rule'}`}>
+        <div className={`space-y-3 border-t pt-3 ${dark ? 'border-paper/25' : 'border-rule'}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`font-mono text-[10px] uppercase tracking-[0.14em] ${dark ? 'text-paper/45' : 'text-mid'}`}>
+            <span className={`font-mono text-[10px] uppercase tracking-[0.14em] ${dark ? 'text-paper/65' : 'text-mid'}`}>
               How hard
             </span>
             <button type="button" onClick={() => set('difficulty', 'all')} className={chip(difficulty === 'all', dark)}>
@@ -136,7 +144,7 @@ export default function BoardFilters({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`font-mono text-[10px] uppercase tracking-[0.14em] ${dark ? 'text-paper/45' : 'text-mid'}`}>
+            <span className={`font-mono text-[10px] uppercase tracking-[0.14em] ${dark ? 'text-paper/65' : 'text-mid'}`}>
               Speaks
             </span>
             <button type="button" onClick={() => set('language', 'all')} className={chip(language === 'all', dark)}>
@@ -164,7 +172,7 @@ export default function BoardFilters({
                   router.replace(`${pathname}?${next.toString()}`, { scroll: false })
                 }}
                 className={`border-b pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
-                  dark ? 'border-paper/25 text-paper/60 hover:text-paper' : 'border-rule text-mid hover:text-text'
+                  dark ? 'border-paper/40 text-paper/80 hover:text-paper' : 'border-rule text-mid hover:text-text'
                 }`}>
                 Clear
               </button>

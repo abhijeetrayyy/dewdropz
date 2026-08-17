@@ -58,14 +58,35 @@ export default function TrekHero({
         blurDataURL={BLUR_DATA_URL}
         className="object-cover object-center opacity-80"
       />
-      {/* The photograph is already dark — two figures leaving the treeline by
-          headlamp — so the wash only has to carry type, not create the mood. A
-          heavier gradient crushed it to a black rectangle and the picture may as
-          well not have been there. Vertical for legibility at the top and
-          bottom, plus a left-weighted pass so the headline has something solid
-          behind it while the right of the frame stays open. */}
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/25 to-ink/85" />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-ink/70 via-ink/20 to-transparent" />
+      {/* Two scrims, shaped to where the content actually is.
+          Measured behind the old ones, the photograph runs from luminance 0 to
+          238 with a standard deviation of 55 under the search field — that is
+          not a background, it is noise, and no single alpha fixes it because
+          some letters land on near-black and others on near-white. The scrim
+          was also lightest (ink/25) at exactly the height the controls sit at.
+
+          So: the top third stays open, because that is where the picture is
+          worth looking at and no small type sits there; from the headline down
+          it deepens steadily, and the bottom band that carries the tabs, the
+          search and the filters is dark enough to be a ground rather than a
+          suggestion. The left weight is gentler than before because the
+          vertical pass is now doing the work. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(12,16,13,0.72) 0%, rgba(12,16,13,0.20) 28%, rgba(12,16,13,0.42) 58%, rgba(12,16,13,0.70) 80%, rgba(12,16,13,0.80) 100%)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(12,16,13,0.55) 0%, rgba(12,16,13,0.18) 45%, rgba(12,16,13,0.02) 78%, rgba(12,16,13,0) 100%)',
+        }}
+      />
 
       <div className="relative mx-auto max-w-5xl px-6 pb-8 pt-32 md:px-10 md:pt-36">
         {/* The argument on the left, you on the right. The frame was empty on
@@ -96,14 +117,14 @@ export default function TrekHero({
 
         {/* The three pages, named. Somebody arriving should be able to see the
             whole shape of this thing without clicking to find out. */}
-        <nav className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-b border-paper/15 pb-3">
+        <nav className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-b border-paper/25 pb-3">
           {tabs.map((t) => (
             <Link
               key={t.key}
               href={t.href}
               aria-current={active === t.key ? 'page' : undefined}
               className={`relative pb-2 font-body text-[11px] uppercase tracking-[0.14em] transition-colors ${
-                active === t.key ? 'text-paper' : 'text-paper/50 hover:text-paper/85'
+                active === t.key ? 'text-paper' : 'text-paper/70 hover:text-paper'
               }`}
             >
               {t.label}
