@@ -409,10 +409,13 @@ export async function getPaymentsLedger(options?: {
 // concurrent — three `.then()` calls, no awaits between them — but Next runs a
 // client's server actions one at a time, so in practice they queued into three
 // sequential round-trips before anything appeared.
-export async function getPaymentsOverview(ledger?: Parameters<typeof getPaymentsLedger>[0]) {
+export async function getPaymentsOverview(
+  ledger?: Parameters<typeof getPaymentsLedger>[0],
+  range?: PaymentsRange
+) {
   await requireAdmin()
   const [summary, events, page] = await Promise.all([
-    getPaymentsSummary(),
+    getPaymentsSummary(range),
     getWebhookEvents({ limit: 30 }),
     getPaymentsLedger(ledger),
   ])
@@ -428,28 +431,90 @@ export async function getPaymentsOverview(ledger?: Parameters<typeof getPayments
 // against it on synthetic rows covering paid sums across several methods, a
 // null payment_method reported as 'unknown', and both refund statuses — the
 // cases the live table does not currently contain. See migration 041.
-export async function getPaymentsSummary() {
+/** An IST calendar window, half-open: [from, to). `null` means "all time". */
+export type PaymentsRange = { from: string | null; to: string | null }
+
+export async function getPaymentsSummary(range?: PaymentsRange) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
-  const { data } = await supabase.rpc('payments_summary')
+  const { data, error } = await supabase.rpc('payments_summary', {
+    p_from: range?.from ?? null,
+    p_to: range?.to ?? null,
+  })
+  if (error) throw new Error(error.message)
 
   // Postgres BIGINT arrives as a string once it is JSON, so every figure is
   // coerced rather than trusted to already be a number — `"0" + 1` is `"01"`,
   // and that would surface as a wrong total rather than an error.
-  const row = (Array.isArray(data) ? data[0] : data) as {
-    total_captured: number | string
-    pending_count: number | string
-    failed_count: number | string
-    refunded_count: number | string
-    by_method: { method: string; amount: number | string }[] | null
-  } | undefined
+  const r = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined
+  const n = (k: string) => Number(r?.[k] ?? 0)
+
+  type MethodRow = { method: string; gross: number | string; net: number | string; refunded: number | string; orders: number | string }
+  type GatewayRow = { gateway: string; succeeded: number | string; failed: number | string; failedCount: number | string }
 
   return {
-    totalCaptured: Number(row?.total_captured ?? 0),
-    pendingCount: Number(row?.pending_count ?? 0),
-    failedCount: Number(row?.failed_count ?? 0),
-    refundedCount: Number(row?.refunded_count ?? 0),
-    byMethod: (row?.by_method ?? []).map((m) => ({ method: m.method, amount: Number(m.amount) })),
+    // The window that actually produced these numbers, echoed back from the
+    // database. If the UI asks for the wrong month, that shows up as a wrong
+    // label rather than as numbers nobody can place.
+    rangeFrom: (r?.range_from_ist as string | null) ?? null,
+    rangeTo: (r?.range_to_ist as string | null) ?? null,
+
+    // Band A — gateway money, each side counted on its own date.
+    grossCaptured: n('gross_captured'),
+    refundsSucceeded: n('refunds_succeeded'),
+    netCaptured: n('net_captured'),
+    capturedOrderCount: n('captured_order_count'),
+    refundedOrderCount: n('refunded_order_count'),
+    refundsPriorPeriod: n('refunds_prior_period_amount'),
+
+    // Band B — cash on delivery. Flow is ranged; the balances are as-of-now.
+    codCollected: n('cod_collected'),
+    codCollectedCount: n('cod_collected_count'),
+    codOutstanding: n('cod_outstanding'),
+    codOutstandingCount: n('cod_outstanding_count'),
+    codRtoAmount: n('cod_rto_amount'),
+    codRtoCount: n('cod_rto_count'),
+    codReturnedUncredited: n('cod_returned_uncredited_amount'),
+    codReturnedUncreditedCount: n('cod_returned_uncredited_count'),
+
+    netInflow: n('net_inflow'),
+
+    // Band C — counts.
+    pendingPrepaidCount: n('pending_prepaid_count'),
+    abandonedCount: n('abandoned_count'),
+    failedPaymentCount: n('failed_payment_count'),
+    refundAttemptsFailedCount: n('refund_attempts_failed_count'),
+
+    // Band D — exceptions. Anything here means a figure above is incomplete.
+    refundsUnresolvedAmount: n('refunds_unresolved_amount'),
+    refundsUnresolvedCount: n('refunds_unresolved_count'),
+    refundLedgerVariance: n('refund_ledger_variance'),
+    refundLedgerVarianceInRange: n('refund_ledger_variance_in_range'),
+    overRefundedCount: n('over_refunded_count'),
+    capturedWithoutPaidAtCount: n('captured_without_paid_at_count'),
+    nonInrOrderCount: n('non_inr_order_count'),
+    uncreditedRefundCount: n('uncredited_refund_count'),
+    unhandledRefundEvents: n('unhandled_refund_events'),
+    disputeEventsSeen: n('dispute_events_seen'),
+
+    // Both carry more than one figure per row — a method's gross and its net
+    // differ by whatever was refunded against it, and that difference is the
+    // interesting part. Mapped explicitly rather than through a shared helper,
+    // because the two shapes are genuinely different and a generic mapper
+    // silently produced NaN for every badge until a screenshot caught it.
+    byMethod: ((r?.by_method ?? []) as MethodRow[]).map((m) => ({
+      method: m.method,
+      gross: Number(m.gross),
+      net: Number(m.net),
+      refunded: Number(m.refunded),
+      orders: Number(m.orders),
+    })),
+    refundsByGateway: ((r?.refunds_by_gateway ?? []) as GatewayRow[]).map((g) => ({
+      gateway: g.gateway,
+      succeeded: Number(g.succeeded),
+      failed: Number(g.failed),
+      failedCount: Number(g.failedCount),
+    })),
   }
 }
 

@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getPaymentsLedger, getPaymentsOverview, getPaymentsSummary, getWebhookEvents, getWebhookEventPayload } from '@/actions/payments'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Search, ChevronLeft, ChevronRight, Wallet, Clock, XCircle, Undo2, Eye, Loader2 } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Wallet, Clock, Undo2, Eye, Loader2, Banknote, TrendingDown, Truck, AlertTriangle } from 'lucide-react'
 import { TableSkeleton } from '@/components/admin/TableSkeleton'
 import { StatCard, StatCardSkeleton } from '@/components/admin/StatCard'
 
@@ -23,6 +23,30 @@ type Summary = Awaited<ReturnType<typeof getPaymentsSummary>>
 type Events = Awaited<ReturnType<typeof getWebhookEvents>>['events']
 
 function fmtAmount(p: number) { return `₹${(p / 100).toLocaleString('en-IN')}` }
+
+// The last 12 IST calendar months plus all-time.
+//
+// Calendar months, not the analytics page's rolling "last 30 days": books close
+// on a month boundary, and a window that slides every second can never be
+// reconciled against a statement twice and give the same answer. The bounds are
+// half-open [from, to) and the database reads them as Asia/Kolkata wall-clock.
+function monthOptions() {
+  const now = new Date()
+  const opts: { key: string; label: string; from: string | null; to: string | null }[] = []
+  for (let i = 0; i < 12; i++) {
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 1))
+    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    opts.push({
+      key: iso(start),
+      label: start.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' }),
+      from: iso(start),
+      to: iso(end),
+    })
+  }
+  opts.push({ key: 'all', label: 'All time', from: null, to: null })
+  return opts
+}
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
 
 const paymentStatusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'success' | 'warning'> = {
@@ -43,6 +67,9 @@ export default function PaymentsPage() {
   const [payloadDialog, setPayloadDialog] = useState(false)
   const [payload, setPayload] = useState<unknown>(null)
   const [payloadLoading, setPayloadLoading] = useState(false)
+  const MONTHS = useMemo(() => monthOptions(), [])
+  const [rangeKey, setRangeKey] = useState(MONTHS[0].key)
+  const range = MONTHS.find((m) => m.key === rangeKey) ?? MONTHS[0]
 
   function viewPayload(id: string) {
     setPayloadDialog(true)
@@ -71,7 +98,7 @@ export default function PaymentsPage() {
     setLoading(true)
 
     if (!primed) {
-      getPaymentsOverview(query)
+      getPaymentsOverview(query, { from: range.from, to: range.to })
         .then((r) => {
           setSummary(r.summary)
           setEvents(r.events)
@@ -88,38 +115,133 @@ export default function PaymentsPage() {
       .then((r) => { setPayments(r.payments); setTotal(r.total) })
       .catch(() => {})
       .finally(() => setLoading(false))
+    // `range` is deliberately absent: it changes only the summary, which the
+    // effect below refetches on its own. Including it here would re-fetch the
+    // ledger — a different, unfiltered dataset — on every month change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, methodFilter, debouncedSearch, page, primed])
+
+  // The month picker moves the figures, not the ledger. Skipped on mount
+  // because the priming call above already fetched this range's summary.
+  useEffect(() => {
+    if (!primed) return
+    getPaymentsSummary({ from: range.from, to: range.to }).then(setSummary).catch(() => {})
+  }, [rangeKey, primed, range.from, range.to])
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const cards = summary ? [
-    { label: 'Total Captured', value: fmtAmount(summary.totalCaptured), icon: Wallet, tone: 'success' as const },
-    { label: 'Pending', value: summary.pendingCount, icon: Clock, tone: 'warning' as const },
-    { label: 'Failed', value: summary.failedCount, icon: XCircle, tone: 'neutral' as const },
-    { label: 'Refunded', value: summary.refundedCount, icon: Undo2, tone: 'info' as const },
-  ] : []
+  // Every exception that is currently non-zero. Each one means a figure above
+  // it is incomplete, so they are listed by name rather than rolled into a
+  // single "issues" count nobody can act on.
+  const exceptions = summary ? ([
+    [summary.refundLedgerVariance, `Refund ledger disagrees with order totals by ${fmtAmount(Math.abs(summary.refundLedgerVariance))} — a refund was recorded in one place and not the other`],
+    [summary.refundsUnresolvedCount, `${summary.refundsUnresolvedCount} refund(s) failed at the gateway and are still owed to a customer (${fmtAmount(summary.refundsUnresolvedAmount)})`],
+    [summary.codReturnedUncreditedCount, `${summary.codReturnedUncreditedCount} COD order(s) came back and were restocked, but no refund was recorded (${fmtAmount(summary.codReturnedUncredited)}) — COD collected is overstated by that much`],
+    [summary.overRefundedCount, `${summary.overRefundedCount} order(s) refunded for more than they were charged`],
+    [summary.unhandledRefundEvents, `${summary.unhandledRefundEvents} refund webhook(s) arrived that this app has no handler for — money may have moved without being recorded`],
+    [summary.disputeEventsSeen, `${summary.disputeEventsSeen} dispute/chargeback event(s) seen — nothing here accounts for them`],
+    [summary.nonInrOrderCount, `${summary.nonInrOrderCount} order(s) are not in INR and are excluded from every figure above`],
+    [summary.capturedWithoutPaidAtCount, `${summary.capturedWithoutPaidAtCount} captured order(s) have no capture date — they are dated from confirmation instead`],
+    [summary.uncreditedRefundCount, `${summary.uncreditedRefundCount} refund(s) have no GST credit note`],
+  ] as [number, string][]).filter(([n]) => n > 0) : []
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-black">Payments</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Money in and out, for one calendar month. Not revenue and not profit — this screen
+            knows nothing about gateway fees or what anything cost to make.
+          </p>
+        </div>
+        <Select value={rangeKey} onValueChange={setRangeKey}>
+          <SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {MONTHS.map((m) => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Band A — gateway money. Gross and refunds are counted on their OWN
+          dates, so a November refund against an October sale reduces November
+          without ever moving October's cash figure. */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-black">Payments</h2>
-        <p className="text-sm text-gray-500 mt-1">Transaction ledger and gateway webhook activity</p>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Gateway money · {range.label}
+        </h3>
+        <div className="grid gap-4 md:grid-cols-4">
+          {!summary ? Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />) : (
+            <>
+              <StatCard label="Gross captured" value={fmtAmount(summary.grossCaptured)} icon={Wallet} tone="success"
+                sub={`${summary.capturedOrderCount} order(s) captured in this month`} />
+              <StatCard label="Refunded" value={fmtAmount(summary.refundsSucceeded)} icon={TrendingDown} tone="warning"
+                sub={summary.refundsPriorPeriod > 0
+                  ? `${fmtAmount(summary.refundsPriorPeriod)} of this reverses earlier months`
+                  : 'Counted on the refund date, not the sale date'} />
+              <StatCard label="Net captured" value={fmtAmount(summary.netCaptured)} icon={Banknote} tone="info"
+                sub="Gross captured less refunds paid this month" />
+              <StatCard label="Net inflow" value={fmtAmount(summary.netInflow)} icon={Banknote} tone="success"
+                sub="Net captured plus COD cash collected" />
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {!summary ? (
-          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
-        ) : cards.map((c) => (
-          <StatCard key={c.label} label={c.label} value={c.value} icon={c.icon} tone={c.tone} />
-        ))}
-      </div>
+      {/* Band B — COD. Kept apart from gateway money on purpose: a gateway
+          capture will appear on a Razorpay statement, cash at the door will
+          not, and mixing them makes the total tie to nothing. */}
+      {summary && (
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Cash on delivery</h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            <StatCard label="Collected at the door" value={fmtAmount(summary.codCollected)} icon={Truck} tone="success"
+              sub={`${summary.codCollectedCount} delivered this month. Cash the courier holds — not yet remitted.`} />
+            <StatCard label="Out with couriers" value={fmtAmount(summary.codOutstanding)} icon={Clock} tone="warning"
+              sub={`${summary.codOutstandingCount} undelivered COD order(s). A running balance, not this month.`} />
+            <StatCard label="Returned to sender" value={fmtAmount(summary.codRtoAmount)} icon={Undo2} tone="neutral"
+              sub={`${summary.codRtoCount} RTO order(s) — never collected, and the shipping is spent.`} />
+          </div>
+        </div>
+      )}
 
-      {summary && summary.byMethod.length > 0 && (
-        <div className="flex gap-2">
+      {/* Band C — counts, kept away from the money cards. "Refunded: 4" sitting
+          between two rupee figures was the old layout's worst readability
+          problem: it reads as an amount. */}
+      {summary && (
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">Awaiting payment: {summary.pendingPrepaidCount}</Badge>
+          <Badge variant="outline">Abandoned checkouts: {summary.abandonedCount}</Badge>
+          <Badge variant="outline">Failed payments: {summary.failedPaymentCount}</Badge>
+          <Badge variant="outline">Orders refunded: {summary.refundedOrderCount}</Badge>
           {summary.byMethod.map((m) => (
-            <Badge key={m.method} variant="outline" className="capitalize">{m.method}: {fmtAmount(m.amount)}</Badge>
+            <Badge key={m.method} variant="secondary" className="capitalize">
+              {m.method}: {fmtAmount(m.net)}
+              {m.refunded > 0 && (
+                <span className="ml-1 font-normal opacity-70">
+                  ({fmtAmount(m.gross)} less {fmtAmount(m.refunded)})
+                </span>
+              )}
+            </Badge>
           ))}
         </div>
+      )}
+
+      {/* Band D — exceptions. The point of a reconciliation screen is that every
+          difference it cannot explain is named, rather than quietly absorbed
+          into a total that then looks tidy and is wrong. */}
+      {exceptions.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/60">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-900">
+              <AlertTriangle className="h-4 w-4" />
+              Needs looking at before these figures balance
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-amber-800">
+              {exceptions.map(([, text]) => <li key={text}>· {text}</li>)}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       <Tabs defaultValue="transactions">

@@ -14,12 +14,16 @@ export function StatCard({
   value,
   icon: Icon,
   tone = 'neutral',
+  sub,
   className,
 }: {
   label: string
   value: string | number
   icon: LucideIcon
   tone?: keyof typeof toneClasses
+  /** One line under the figure saying what it is counted on. A money card whose
+   *  basis is not stated invites the reader to assume the basis they wanted. */
+  sub?: string
   className?: string
 }) {
   return (
@@ -32,6 +36,7 @@ export function StatCard({
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold text-black">{value}</div>
+        {sub && <p className="mt-1 text-xs leading-snug text-gray-500">{sub}</p>}
       </CardContent>
     </Card>
   )

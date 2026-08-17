@@ -31,8 +31,19 @@ export default function AnalyticsPage() {
     getAnalyticsSummary(range).then(setData).finally(() => setLoading(false))
   }, [range])
 
+  // "Revenue" was the wrong word and it made this screen contradict /admin/payments.
+  //
+  // This figure is SUM(total_amount) over every non-cancelled order, regardless
+  // of whether the money ever arrived and without subtracting a single refund
+  // (042_analytics_summary.sql:43-49). It therefore counts gateway orders that
+  // never paid, all COD whether delivered or not, and every refunded rupee — so
+  // it is reliably LARGER than the cash figures on the payments page, which is
+  // alarming to read on two adjacent nav items. It is a useful number, just not
+  // revenue: it is the value of orders booked. Named accordingly, with its basis
+  // stated, rather than left to be misread.
   const cards = data ? [
-    { label: 'Revenue', value: fmtAmount(data.totalRevenue), icon: TrendingUp, tone: 'success' as const },
+    { label: 'Order value booked', value: fmtAmount(data.totalRevenue), icon: TrendingUp, tone: 'success' as const,
+      sub: 'All non-cancelled orders, paid or not, before refunds. See Payments for cash.' },
     { label: 'Orders', value: data.orderCount.toLocaleString('en-IN'), icon: ShoppingCart, tone: 'info' as const },
     { label: 'Avg. Order Value', value: fmtAmount(data.avgOrderValue), icon: Receipt, tone: 'neutral' as const },
     { label: 'New Customers', value: data.newCustomers.toLocaleString('en-IN'), icon: UserPlus, tone: 'warning' as const },
@@ -59,7 +70,7 @@ export default function AnalyticsPage() {
         {loading || !data ? (
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : cards.map((c) => (
-          <StatCard key={c.label} label={c.label} value={c.value} icon={c.icon} tone={c.tone} />
+          <StatCard key={c.label} label={c.label} value={c.value} icon={c.icon} tone={c.tone} sub={c.sub} />
         ))}
       </div>
 
