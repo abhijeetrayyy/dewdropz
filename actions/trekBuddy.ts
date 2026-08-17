@@ -612,6 +612,77 @@ export async function getPerson(userId: string): Promise<PersonCard | null> {
  * that rises for filling in something nobody looks at is a scoreboard, not a
  * prompt.
  */
+// ── The inbox ────────────────────────────────────────────────────────────────
+
+export type TrekNotification = {
+  id: string
+  kind: string
+  body: string
+  planId: string | null
+  createdAt: string
+  read: boolean
+}
+
+/**
+ * What has happened to you since you last looked.
+ *
+ * Bodies are read straight off the row rather than assembled here — they were
+ * written at the moment the thing happened (060), so a walk that has since been
+ * cancelled or a host who has since been suspended still reads correctly
+ * instead of the past quietly changing.
+ */
+export async function getNotifications(limit = 30) {
+  const user = await getUser()
+  if (!user) return { items: [] as TrekNotification[], unread: 0 }
+
+  const db = createAdminSupabaseClient()
+  const [{ data }, { count }] = await Promise.all([
+    db.from('trek_notifications')
+      .select('id, kind, body, plan_id, created_at, read_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    db.from('trek_notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .is('read_at', null),
+  ])
+
+  return {
+    items: (data ?? []).map((n): TrekNotification => ({
+      id: n.id as string,
+      kind: n.kind as string,
+      body: n.body as string,
+      planId: (n.plan_id as string) ?? null,
+      createdAt: n.created_at as string,
+      read: Boolean(n.read_at),
+    })),
+    unread: count ?? 0,
+  }
+}
+
+/** Just the badge. Cheap enough to run in the header of every page. */
+export async function getUnreadCount() {
+  const user = await getUser()
+  if (!user) return 0
+  const { count } = await createAdminSupabaseClient()
+    .from('trek_notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .is('read_at', null)
+  return count ?? 0
+}
+
+export async function markNotificationsRead() {
+  const user = await requireAuth()
+  const { error } = await createAdminSupabaseClient()
+    .rpc('trek_mark_notifications_read', { p_actor: user.id })
+  if (error) return { error: error.message }
+  revalidatePath('/trek-buddy/yours')
+  revalidatePath('/trek-buddy')
+  return { success: true as const }
+}
+
 export type MyTrekCard = {
   userId: string
   displayName: string

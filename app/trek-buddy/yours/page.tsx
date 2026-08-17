@@ -5,7 +5,10 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
-import { getMyTreks, getTrekMembership, getTrekBoard, getMyTrekCard } from '@/actions/trekBuddy'
+import {
+  getMyTreks, getTrekMembership, getTrekBoard, getMyTrekCard, getNotifications,
+} from '@/actions/trekBuddy'
+import Inbox from '@/components/trek/Inbox'
 
 export const metadata: Metadata = {
   title: 'Your walks — DEWDROPZ',
@@ -21,7 +24,9 @@ export default async function YourTreksPage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/yours')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [mine, all, me] = await Promise.all([getMyTreks(), getTrekBoard(), getMyTrekCard()])
+  const [mine, all, me, inbox] = await Promise.all([
+    getMyTreks(), getTrekBoard(), getMyTrekCard(), getNotifications(),
+  ])
   const waiting = mine.going.filter((g) => g.status === 'requested')
   const confirmed = mine.going.filter((g) => g.status === 'confirmed')
 
@@ -29,10 +34,13 @@ export default async function YourTreksPage() {
     <>
       <NavBar />
       <main>
-        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" me={me} />
+        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" me={me} unread={inbox.unread} />
 
         <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
           <div className="mx-auto max-w-5xl space-y-12">
+            {/* First on the page, because it is the only thing here that is
+                new since you last looked. */}
+            <Inbox items={inbox.items} unread={inbox.unread} />
             <div>
               <div className="flex flex-wrap items-baseline justify-between gap-3 pb-4">
                 <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">

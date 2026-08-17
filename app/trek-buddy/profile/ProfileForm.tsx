@@ -3,8 +3,9 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { saveTrekPerson, vouchFor, type PersonCard } from '@/actions/trekBuddy'
-import { ACTIVITIES } from '@/lib/trek'
+import { saveTrekPerson, vouchFor, type PersonCard, type TrekKind } from '@/actions/trekBuddy'
+import PersonCardTile from '@/components/trek/PersonCardTile'
+import { EXPERIENCE_LABEL } from '@/components/trek/PersonCardTile'
 
 const TOWNS = ['Dehradun', 'Mussoorie', 'Rishikesh', 'Haridwar', 'Sahastradhara', 'Chakrata', 'Elsewhere']
 const PACES = [
@@ -48,9 +49,13 @@ const chip = (on: boolean) =>
 export default function ProfileForm({
   person,
   vouchable,
+  kinds,
 }: {
   person: PersonCard
   vouchable: Vouchable[]
+  /** From the kinds table (057), not a frozen list — an activity an admin adds
+      has to be selectable here too, or profiles cannot describe the board. */
+  kinds: TrekKind[]
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -95,8 +100,31 @@ export default function ProfileForm({
     })
   }
 
+  // What a stranger would see, built from the form's own state rather than
+  // from the saved row — so the preview answers the question you actually have
+  // while editing ("what does this look like to them?") instead of the one you
+  // do not ("what did it look like before I started?").
+  const preview = {
+    userId: person.userId,
+    displayName: f.displayName || 'Your name',
+    homeBase: f.homeBase || null,
+    intro: f.intro || null,
+    pace: f.pace || null,
+    activities: f.activities,
+    languages: f.languages,
+    experience: f.experience || null,
+    yearsOut: f.yearsOut,
+    mentor: person.mentor,
+    canHost: person.canHost,
+    memberSince: person.memberSince,
+    walksHosted: person.walksHosted,
+    walksJoined: person.walksJoined,
+    vouches: person.vouches,
+  }
+
   return (
-    <div className="mx-auto max-w-2xl space-y-12">
+    <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_310px]">
+      <div className="min-w-0 space-y-12">
       <form onSubmit={submit}>
         <div className="space-y-8">
           <div>
@@ -131,7 +159,7 @@ export default function ProfileForm({
           <div>
             <span className={label}>What you go out for</span>
             <div className="mt-2 flex flex-wrap gap-2">
-              {ACTIVITIES.map((a) => (
+              {kinds.filter((a) => !a.isOpenEnded).map((a) => (
                 <button key={a.key} type="button" onClick={() => toggle('activities', a.key)}
                   aria-pressed={f.activities.includes(a.key)} className={chip(f.activities.includes(a.key))}>
                   {a.label}
@@ -319,6 +347,49 @@ export default function ProfileForm({
           </div>
         </section>
       )}
+      </div>
+
+      {/* The other half of the page, and the reason it is one page now: the
+          public view lived at a different URL, so seeing the effect of an edit
+          meant saving, navigating away, and navigating back. */}
+      <aside className="lg:sticky lg:top-24 lg:self-start">
+        <p className={label}>How you look on the board</p>
+        <div className="mt-3">
+          <PersonCardTile person={preview} />
+        </div>
+
+        <div className="mt-5 border-t border-rule pt-4">
+          <p className={label}>On your profile</p>
+          <dl className="mt-3 space-y-2">
+            {[
+              ['Experience', f.experience ? EXPERIENCE_LABEL[f.experience] ?? f.experience : null],
+              ['Going out for', f.yearsOut != null ? `${f.yearsOut} year${f.yearsOut === 1 ? '' : 's'}` : null],
+              ['Highest been', f.highestM != null ? `${f.highestM.toLocaleString('en-IN')} m` : null],
+              ['Usually goes', f.usualDays.length ? f.usualDays.join(', ') : null],
+              ['Carries', f.carries.length ? f.carries.join(', ') : null],
+              ['Speaks', f.languages.length ? f.languages.join(', ') : null],
+            ].map(([k, v]) => (
+              <div key={k as string} className="flex gap-3">
+                <dt className="w-24 shrink-0 font-body text-xs text-mid">{k}</dt>
+                <dd className={`font-body text-xs ${v ? 'text-text' : 'text-mid/45'}`}>
+                  {(v as string) ?? 'Not said'}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <p className="mt-4 font-body text-xs leading-relaxed text-mid">
+          This updates as you type. Nothing is saved until you press the button.
+        </p>
+
+        <Link
+          href={`/trek-buddy/people/${person.userId}`}
+          className="mt-3 inline-block border-b border-rule pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+        >
+          Open the real page →
+        </Link>
+      </aside>
     </div>
   )
 }

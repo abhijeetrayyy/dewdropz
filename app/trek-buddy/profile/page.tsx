@@ -6,7 +6,8 @@ import TrekHero from '@/components/trek/TrekHero'
 import Evidence from '@/components/trek/Evidence'
 import ProfileForm from './ProfileForm'
 import {
-  getMyTrekCard, getPerson, getTrekBoard, getTrekMembership, getVouchable,
+  getMyTrekCard, getPerson, getTrekBoard, getTrekKinds, getTrekMembership,
+  getVouchable, getUnreadCount
 } from '@/actions/trekBuddy'
 
 export const metadata: Metadata = {
@@ -19,11 +20,13 @@ export default async function TrekProfilePage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/profile')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [person, vouchable, all, me] = await Promise.all([
+  const [person, vouchable, all, me, unread, kinds] = await Promise.all([
     getPerson(membership.userId!),
     getVouchable(),
     getTrekBoard(),
     getMyTrekCard(),
+    getUnreadCount(),
+    getTrekKinds(),
   ])
   if (!person) redirect('/trek-buddy/setup')
 
@@ -40,7 +43,7 @@ export default async function TrekProfilePage() {
           openCount={all.length}
           canHost={membership.canHost}
           active="profile"
-          me={me}
+          me={me} unread={unread}
         />
 
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
@@ -61,7 +64,7 @@ export default async function TrekProfilePage() {
           </div>
 
           <div className="mt-12">
-            <ProfileForm person={person} vouchable={vouchable} />
+            <ProfileForm person={person} vouchable={vouchable} kinds={kinds} />
           </div>
         </section>
       </main>

@@ -5,7 +5,7 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
 import TrekGate from '@/components/trek/TrekGate'
-import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks, getMyTrekCard } from '@/actions/trekBuddy'
+import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks, getMyTrekCard, getUnreadCount, type TrekPlanRow } from '@/actions/trekBuddy'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import QuickStart from '@/components/trek/QuickStart'
 import BoardFilters from '@/components/trek/BoardFilters'
@@ -26,6 +26,50 @@ export const metadata: Metadata = {
 // list of walks — there is no anonymous read policy on any Trek Buddy table, so
 // that is enforced in the database rather than by this component choosing not
 // to render.
+/**
+ * The board, cut into the buckets people actually think in.
+ *
+ * A flat list ordered by date makes you read every row to answer "is there
+ * anything this weekend?", which is the question almost everybody arrives
+ * with. Buckets answer it before you read a single card, and an empty one is
+ * simply not drawn — a heading over nothing is worse than no heading.
+ *
+ * Boundaries are IST days, because a walk starting 06:00 Saturday is on
+ * Saturday regardless of where the server is standing.
+ */
+function bucketPlans(plans: TrekPlanRow[]) {
+  const istNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const startOfToday = new Date(istNow); startOfToday.setHours(0, 0, 0, 0)
+  const day = 86400000
+  // Saturday of the current week. getDay(): 0 Sun … 6 Sat.
+  const toSat = (6 - istNow.getDay() + 7) % 7
+  const satStart = new Date(startOfToday.getTime() + toSat * day)
+  const monStart = new Date(satStart.getTime() + 2 * day)
+  const inSeven = new Date(startOfToday.getTime() + 7 * day)
+
+  const buckets: { key: string; label: string; note?: string; plans: TrekPlanRow[] }[] = [
+    { key: 'weekend', label: 'This weekend', plans: [] },
+    { key: 'week', label: 'In the next few days', plans: [] },
+    { key: 'later', label: 'Further out', plans: [] },
+  ]
+
+  for (const p of plans) {
+    const at = new Date(new Date(p.starts_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+    if (at >= satStart && at < monStart) buckets[0].plans.push(p)
+    else if (at < inSeven) buckets[1].plans.push(p)
+    else buckets[2].plans.push(p)
+  }
+  // Ordered by their own earliest walk, not by the order they are declared.
+  // Fixed left as written, a Wednesday walk sat under "In the next few days"
+  // BELOW a Saturday one under "This weekend" — the board is a timeline, and a
+  // timeline that runs backwards for half a week is worse than no grouping.
+  // `plans` arrives sorted ascending, so each bucket's first entry is its
+  // earliest.
+  return buckets
+    .filter((b) => b.plans.length > 0)
+    .sort((a, b) => a.plans[0].starts_at.localeCompare(b.plans[0].starts_at))
+}
+
 export default async function TrekBuddyPage({
   searchParams,
 }: {
@@ -113,7 +157,7 @@ export default async function TrekBuddyPage({
   // The unfiltered board is fetched alongside the filtered one so the chips can
   // carry honest counts — a filter that says "Camping 0" is more useful than a
   // filter that has quietly disappeared.
-  const [plans, all, mine, me] = await Promise.all([
+  const [plans, all, mine, me, unread] = await Promise.all([
     getTrekBoard({
       activity: sp.activity,
       when: sp.when as 'all' | 'week' | 'weekend',
@@ -127,6 +171,7 @@ export default async function TrekBuddyPage({
     getTrekBoard(),
     getMyTreks(),
     getMyTrekCard(),
+    getUnreadCount(),
   ])
 
   const counts: Record<string, number> = { all: all.length }
@@ -142,7 +187,7 @@ export default async function TrekBuddyPage({
     <>
       <NavBar />
       <main>
-        <TrekHero counts={counts} openCount={all.length} canHost={membership.canHost} active="board" me={me} />
+        <TrekHero counts={counts} openCount={all.length} canHost={membership.canHost} active="board" me={me} unread={unread} />
 
         <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
           <div className="mx-auto max-w-5xl space-y-10">
@@ -199,13 +244,28 @@ export default async function TrekBuddyPage({
                   )}
                 </div>
               ) : (
-                <ul className="grid gap-3">
-                  {plans.map((p) => (
-                    <li key={p.id}>
-                      <TrekPlanCard plan={p} />
-                    </li>
+                <div className="space-y-8">
+                  {bucketPlans(plans).map((bucket) => (
+                    <div key={bucket.key}>
+                      <div className="flex items-baseline gap-3 pb-3">
+                        <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-text">
+                          {bucket.label}
+                        </h3>
+                        <span aria-hidden="true" className="h-px flex-1 bg-rule" />
+                        <span className="font-mono text-[10px] text-mid tabular-nums">
+                          {bucket.plans.length}
+                        </span>
+                      </div>
+                      <ul className="grid gap-3">
+                        {bucket.plans.map((p) => (
+                          <li key={p.id}>
+                            <TrekPlanCard plan={p} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
 

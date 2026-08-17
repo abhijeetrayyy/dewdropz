@@ -99,6 +99,20 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
 
           <h3 className="mt-1 font-display text-xl leading-tight text-text">{plan.place}</h3>
 
+          {/* Whose walk it is. The board is a list of people as much as a list
+              of places, and until now the host's name appeared nowhere on it —
+              you had to open a walk to find out who you would be spending the
+              day with. */}
+          <p className="mt-1.5 flex items-center gap-1.5 font-body text-xs text-mid">
+            <span
+              aria-hidden="true"
+              className="grid h-4 w-4 place-items-center rounded-full bg-forest/12 font-mono text-[8px] text-forest"
+            >
+              {plan.host_name.trim().charAt(0).toUpperCase()}
+            </span>
+            {plan.host_name}
+          </p>
+
           {/* Days, not hours, once a trek runs over more than one. */}
           <p className="mt-1 font-body text-xs text-mid">
             {plan.activity_label} · from {plan.meet_area}

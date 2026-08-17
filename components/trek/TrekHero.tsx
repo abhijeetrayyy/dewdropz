@@ -23,6 +23,7 @@ export default function TrekHero({
   canHost,
   active,
   me,
+  unread = 0,
 }: {
   counts: Record<string, number>
   openCount: number
@@ -31,6 +32,8 @@ export default function TrekHero({
   active: 'board' | 'people' | 'yours' | 'new' | 'profile'
   /** The viewer, when they have finished joining. Drives the presence card. */
   me?: MyTrekCard | null
+  /** Unread notifications, shown on the Yours tab. */
+  unread?: number
 }) {
   const tabs = [
     { key: 'board', label: 'The board', href: '/trek-buddy' },
@@ -104,6 +107,13 @@ export default function TrekHero({
               }`}
             >
               {t.label}
+              {/* The count rides the tab it belongs to, so "something happened"
+                  and "where it happened" are the same glance. */}
+              {t.key === 'yours' && unread > 0 && (
+                <span className="ml-1.5 inline-flex min-w-[15px] items-center justify-center rounded-full bg-sage px-1 py-px font-mono text-[9px] leading-none text-ink tabular-nums">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
               {active === t.key && (
                 <span aria-hidden="true" className="absolute -bottom-[13px] left-0 h-px w-full bg-sage" />
               )}
