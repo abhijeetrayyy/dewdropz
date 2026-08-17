@@ -335,12 +335,29 @@ export async function getUserOrders(userId: string, limit = 10, offset = 0) {
   const supabase = await createServerSupabaseClient()
   const { data, error, count } = await supabase
     .from('orders')
-    .select('*, items:order_items(*)', { count: 'exact' })
+    // The line already carried a product NAME and nothing to look at, so the
+    // order list was a wall of text — and for a shop where every piece is
+    // printed to order, the thing a customer recognises is their own artwork,
+    // not the blank it went on. Both are fetched: the design preview first,
+    // the catalogue photo as the fallback for a plain item.
+    .select(
+      '*, items:order_items(*, product:products(images), design:custom_designs(front_preview_url))',
+      { count: 'exact' }
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
   if (error) throw new Error(error.message)
-  return { orders: (data ?? []) as unknown as OrderListRow[], total: count ?? 0 }
+  return { orders: (data ?? []) as unknown as CustomerOrderRow[], total: count ?? 0 }
+}
+
+/** The customer's own order list. Distinct from OrderListRow, which the admin
+ *  list uses and which deliberately does NOT pay for the image joins. */
+export type CustomerOrderRow = OrderListRow & {
+  items: (Pick<OrderItem, 'id' | 'quantity' | 'product_name' | 'custom_design_id'> & {
+    product: { images: unknown } | null
+    design: { front_preview_url: string | null } | null
+  })[]
 }
 
 export async function updateOrderStatus(orderId: string, status: Order['status']) {

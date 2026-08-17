@@ -5,17 +5,17 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import { getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
 import PlanActions from './PlanActions'
+import SafetyNotes from '@/components/trek/SafetyNotes'
+import { DAY_PART_LABEL, ACTIVITY_BY_KEY, EFFORT_LABEL, type TrekActivity } from '@/lib/trek'
 
 export const metadata: Metadata = {
   title: 'A walk — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 
-const ACTIVITY_LABEL: Record<string, string> = {
-  trekking: 'Trekking',
-  bird_watching: 'Bird watching',
-}
-const EFFORT_LABEL: Record<string, string> = { easy: 'Easy', moderate: 'Moderate', hard: 'Hard' }
+/** One label map, shared with the board and the form — a local copy here is how
+ *  camping ended up rendering as "camping". */
+const activityLabel = (a: string) => ACTIVITY_BY_KEY[a as TrekActivity]?.label ?? a
 
 function istDay(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', {
@@ -59,7 +59,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
           )}
 
           <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-forest">
-            {ACTIVITY_LABEL[plan.activity] ?? plan.activity} · {EFFORT_LABEL[plan.effort]}
+            {activityLabel(plan.activity)} · {EFFORT_LABEL[plan.effort]}
           </p>
           <h1 className="mt-3 font-display text-[clamp(30px,5vw,46px)] leading-tight text-text">
             {plan.place}
@@ -98,6 +98,19 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             <p className="mt-6 font-body text-sm leading-relaxed text-mid">{plan.note}</p>
           )}
 
+          {/* What the host wrote about getting back in the dark. Shown to
+              everyone looking at the plan, not just to confirmed walkers: it is
+              the single most useful thing for deciding whether to ask at all,
+              and hiding it behind a join would be exactly backwards. */}
+          {plan.night_note && (
+            <div className="mt-6 border-l-2 border-clay pl-4">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-clay">
+                {DAY_PART_LABEL[plan.day_part]} · how everyone gets back
+              </h2>
+              <p className="mt-2 font-body text-sm leading-relaxed text-text">{plan.night_note}</p>
+            </div>
+          )}
+
           {/* The exact spot.
               This is not conditional rendering hiding a value the page already
               fetched — `meetingPoint` is read through the viewer's own session,
@@ -115,8 +128,8 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             ) : (
               <p className="mt-2 font-body text-sm leading-relaxed text-mid">
                 {confirmed
-                  ? 'Shown once three people are going. Right now this walk has fewer than that.'
-                  : 'Only shown to walkers the host has confirmed, and only once three people are going.'}
+                  ? `Shown once ${plan.min_party} people are going. Right now this walk has ${plan.going_count}.`
+                  : `Only shown to walkers the host has confirmed, and only once ${plan.min_party} people are going.`}
               </p>
             )}
           </div>
@@ -142,7 +155,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                 Send this to a friend or someone at home before you set off.
               </p>
               <p className="mt-3 rounded-sm bg-paper-warm p-3 font-body text-xs leading-relaxed text-text">
-                I&apos;m going {ACTIVITY_LABEL[plan.activity]?.toLowerCase() ?? plan.activity} at{' '}
+                I&apos;m going {activityLabel(plan.activity).toLowerCase()} at{' '}
                 {plan.place} on {istDay(plan.starts_at)}. Meeting around {plan.meet_area} at{' '}
                 {hhmm(plan.start_time)}, expecting to be back by {hhmm(plan.back_by)}. Organised
                 through DEWDROPZ Trek Buddy by {plan.host_name}.
@@ -150,7 +163,9 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             </div>
           )}
 
-          <p className="mt-10 border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
+          <SafetyNotes variant="compact" className="mt-10" />
+
+          <p className="mt-6 border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
             DEWDROPZ does not organise, lead, vet or supervise this walk and has not checked who
             anyone on it is. Go at your own risk and turn back if conditions change. Emergency:{' '}
             <span className="text-text">112</span>. Something wrong with this walk?{' '}

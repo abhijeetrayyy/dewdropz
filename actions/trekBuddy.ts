@@ -19,20 +19,29 @@ import { sendSlackAlert } from '@/lib/slack'
 // the service-role client, where auth.uid() is NULL — the same trap that made
 // every admin control in the first draft a silent no-op.
 
-export type TrekActivity = 'trekking' | 'bird_watching'
+// NOT re-exported: a 'use server' file may only export async functions, and a
+// re-exported type becomes a runtime export the bundler then cannot find.
+// Import TrekActivity from '@/lib/trek' directly.
+import type { TrekActivity } from '@/lib/trek'
+
 export type TrekEffort = 'easy' | 'moderate' | 'hard'
 
 export type TrekPlanRow = {
   id: string
   host_id: string
   host_name: string
-  activity: TrekActivity
+  activity: string
   place: string
   meet_area: string
   starts_on: string
+  ends_on: string
   start_time: string
   back_by: string
   starts_at: string
+  ends_at: string
+  day_part: 'day' | 'evening' | 'overnight'
+  min_party: number
+  night_note: string | null
   capacity: number
   going_count: number
   spots_left: number
@@ -114,11 +123,17 @@ export async function saveTrekProfile(input: {
 }
 
 /** The board. Members only — there is no anonymous read policy on any of this. */
-export async function getTrekBoard() {
+export async function getTrekBoard(filters?: {
+  activity?: string
+  when?: 'all' | 'week' | 'weekend'
+  effort?: string
+  q?: string
+  mine?: boolean
+}) {
   const user = await getUser()
   if (!user) return []
 
-  const { data } = await createAdminSupabaseClient()
+  let query = createAdminSupabaseClient()
     .from('trek_plans')
     .select('*')
     .eq('status', 'open')
@@ -127,7 +142,89 @@ export async function getTrekBoard() {
     .order('starts_at', { ascending: true })
     .limit(60)
 
-  return (data ?? []) as TrekPlanRow[]
+  if (filters?.activity && filters.activity !== 'all') query = query.eq('activity', filters.activity)
+  if (filters?.effort && filters.effort !== 'all') query = query.eq('effort', filters.effort)
+
+  // Search covers the place and the rendezvous town — the two things somebody
+  // actually types. Not the note, which is where hosts put chatter.
+  if (filters?.q) {
+    const q = filters.q.replace(/[%_,()]/g, '').trim()
+    if (q) query = query.or(`place.ilike.%${q}%,meet_area.ilike.%${q}%`)
+  }
+
+  if (filters?.when === 'week') {
+    const wk = new Date(); wk.setDate(wk.getDate() + 7)
+    query = query.lt('starts_at', wk.toISOString())
+  }
+
+  const { data } = await query
+  let rows = (data ?? []) as TrekPlanRow[]
+
+  // Saturday and Sunday in IST, worked out on the stored instant rather than on
+  // the server's own day, which is a different one for five and a half hours.
+  if (filters?.when === 'weekend') {
+    rows = rows.filter((r) => {
+      const ist = new Date(new Date(r.starts_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+      const d = ist.getDay()
+      return d === 0 || d === 6
+    })
+  }
+
+  if (filters?.mine) rows = rows.filter((r) => r.host_id === user.id)
+  return rows
+}
+
+/** Everything this member is involved in — hosting or going. */
+export async function getMyTreks() {
+  const user = await getUser()
+  if (!user) return { hosting: [], going: [] }
+
+  const admin = createAdminSupabaseClient()
+  const [{ data: hosting }, { data: joined }] = await Promise.all([
+    admin.from('trek_plans').select('*').eq('host_id', user.id)
+      .neq('status', 'cancelled').gt('starts_at', new Date().toISOString())
+      .order('starts_at'),
+    admin.from('trek_plan_requests').select('status, plan:trek_plans(*)')
+      .eq('user_id', user.id).in('status', ['requested', 'confirmed']),
+  ])
+
+  const going = (joined ?? [])
+    .map((r) => ({ status: r.status as string, plan: r.plan as unknown as TrekPlanRow }))
+    .filter((r) => r.plan && r.plan.status !== 'cancelled' && new Date(r.plan.starts_at) > new Date())
+    .sort((a, b) => a.plan.starts_at.localeCompare(b.plan.starts_at))
+
+  return { hosting: (hosting ?? []) as TrekPlanRow[], going }
+}
+
+/**
+ * The public shape of another member.
+ *
+ * Deliberately thin: a display name, when they joined the board, and how many
+ * outings they have hosted or been confirmed on. No photograph, no bio, no
+ * contact, nothing free-text — a profile page on a product that introduces
+ * strangers is an attack surface, and every field is one more thing to
+ * impersonate somebody with or to be judged on.
+ */
+export async function getTrekMemberCard(userId: string) {
+  const viewer = await getUser()
+  if (!viewer) return null
+
+  const admin = createAdminSupabaseClient()
+  const [{ data: p }, { count: hosted }, { count: joined }] = await Promise.all([
+    admin.from('profiles').select('trek_display_name, trek_terms_at').eq('id', userId).maybeSingle(),
+    admin.from('trek_plans').select('id', { count: 'exact', head: true })
+      .eq('host_id', userId).lt('starts_at', new Date().toISOString()).neq('status', 'cancelled'),
+    admin.from('trek_plan_requests').select('plan_id', { count: 'exact', head: true })
+      .eq('user_id', userId).eq('status', 'confirmed'),
+  ])
+
+  if (!p?.trek_display_name) return null
+  return {
+    displayName: p.trek_display_name as string,
+    memberSince: p.trek_terms_at as string | null,
+    hosted: hosted ?? 0,
+    joined: joined ?? 0,
+  }
 }
 
 /**
@@ -220,6 +317,8 @@ export async function createTrekPlan(input: {
   effort: TrekEffort
   note?: string
   logistics?: string
+  endsOn?: string
+  nightNote?: string
 }) {
   const user = await requireAuth()
   const result = await callTrek('trek_create_plan', {
@@ -235,6 +334,8 @@ export async function createTrekPlan(input: {
     p_note: input.note || null,
     p_logistics: input.logistics || null,
     p_actor: user.id,
+    p_ends_on: input.endsOn || input.startsOn,
+    p_night_note: input.nightNote || null,
   }, ['/trek-buddy'])
 
   if ('success' in result) {

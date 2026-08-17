@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { requireAuth } from '@/actions/auth'
 import { getUserOrders } from '@/actions/orders'
 import { formatPrice } from '@/lib/utils'
+import OrderThumbs from '@/components/account/OrderThumbs'
 
 const PAGE_SIZE = 10
 
@@ -40,7 +41,9 @@ export default async function OrderHistoryPage({ searchParams }: { searchParams:
               className="block p-6 border border-rule rounded-sm hover:border-forest/30 transition-colors"
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
+                <div className="flex items-center gap-4">
+                  <OrderThumbs items={order.items ?? []} />
+                  <div>
                   <span className="font-body text-xs font-bold text-text bg-rule px-2 py-1 rounded-sm">
                     {order.order_number}
                   </span>
@@ -50,6 +53,7 @@ export default async function OrderHistoryPage({ searchParams }: { searchParams:
                   <span className="ml-3 font-body text-xs text-mid">
                     {order.items?.length ?? 0} item{(order.items?.length ?? 0) === 1 ? '' : 's'}
                   </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={`font-body text-xs tracking-wider uppercase ${

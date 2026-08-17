@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireAuth, getProfile } from '@/actions/auth'
 import { getUserOrders } from '@/actions/orders'
+import OrderThumbs from '@/components/account/OrderThumbs'
 import { formatPrice } from '@/lib/utils'
 import RecentlyViewed from '@/components/sections/RecentlyViewed'
 
@@ -65,13 +66,16 @@ export default async function AccountPage() {
                 className="block p-6 border border-rule rounded-sm hover:border-forest/30 transition-colors"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <span className="font-body text-xs font-bold text-text bg-rule px-2 py-1 rounded-sm">
-                      {order.order_number}
-                    </span>
-                    <span className="ml-3 font-body text-xs text-mid">
-                      {new Date(order.created_at || '').toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    <OrderThumbs items={order.items ?? []} size={40} />
+                    <div>
+                      <span className="font-body text-xs font-bold text-text bg-rule px-2 py-1 rounded-sm">
+                        {order.order_number}
+                      </span>
+                      <span className="ml-3 font-body text-xs text-mid">
+                        {new Date(order.created_at || '').toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className={`font-body text-xs tracking-wider uppercase ${

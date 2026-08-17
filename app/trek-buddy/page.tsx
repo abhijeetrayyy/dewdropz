@@ -3,8 +3,12 @@ import Link from 'next/link'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import PageHeader from '@/components/PageHeader'
-import { getTrekBoard, getTrekMembership, getOpenPlanCount } from '@/actions/trekBuddy'
+import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks } from '@/actions/trekBuddy'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
+import QuickStart from '@/components/trek/QuickStart'
+import BoardFilters from '@/components/trek/BoardFilters'
+import SafetyNotes from '@/components/trek/SafetyNotes'
+import { ACTIVITIES } from '@/lib/trek'
 
 export const metadata: Metadata = {
   title: 'Trek Buddy — DEWDROPZ',
@@ -20,7 +24,12 @@ export const metadata: Metadata = {
 // list of walks — there is no anonymous read policy on any Trek Buddy table, so
 // that is enforced in the database rather than by this component choosing not
 // to render.
-export default async function TrekBuddyPage() {
+export default async function TrekBuddyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ activity?: string; when?: string; q?: string }>
+}) {
+  const sp = await searchParams
   const membership = await getTrekMembership()
 
   if (!membership.signedIn) {
@@ -96,7 +105,19 @@ export default async function TrekBuddyPage() {
     )
   }
 
-  const plans = await getTrekBoard()
+  // The unfiltered board is fetched alongside the filtered one so the chips can
+  // carry honest counts — a filter that says "Camping 0" is more useful than a
+  // filter that has quietly disappeared.
+  const [plans, all, mine] = await Promise.all([
+    getTrekBoard({ activity: sp.activity, when: sp.when as 'all' | 'week' | 'weekend', q: sp.q }),
+    getTrekBoard(),
+    getMyTreks(),
+  ])
+
+  const counts: Record<string, number> = { all: all.length }
+  for (const a of ACTIVITIES) counts[a.key] = all.filter((p) => p.activity === a.key).length
+
+  const filtering = Boolean(sp.activity || sp.q || (sp.when && sp.when !== 'all'))
 
   return (
     <>
@@ -105,69 +126,107 @@ export default async function TrekBuddyPage() {
         <PageHeader
           eyebrow="Trek Buddy"
           title="Never go alone."
-          subtitle="Day walks near Dehradun, posted by members. Ask to come, and the host decides."
+          subtitle="Day walks, early birding, evenings under the stars and one night out — posted by members near Dehradun. Ask to come, and the host decides."
           variant="altitude"
         />
 
-        <section className="bg-paper px-6 pb-24 pt-14 md:px-10">
-          <div className="mx-auto max-w-5xl">
-            <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-4">
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
-                {plans.length === 0
-                  ? 'Nothing on the board'
-                  : `${plans.length} walk${plans.length === 1 ? '' : 's'} coming up`}
-              </span>
-              {membership.canHost ? (
-                <Link
-                  href="/trek-buddy/new"
-                  className="rounded-sm bg-forest px-5 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
-                >
-                  Post a walk
-                </Link>
-              ) : (
-                <span className="font-body text-xs text-mid">
-                  Hosting is invite-only for now —{' '}
-                  <Link href="/contact" className="text-forest underline underline-offset-4">
-                    ask us
-                  </Link>
+        <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
+          <div className="mx-auto max-w-5xl space-y-8">
+            <QuickStart canHost={membership.canHost} />
+
+            {/* What this member is already part of, before what everyone else is
+                doing. A board that opens on other people's plans buries the one
+                thing you came back to check. */}
+            {(mine.hosting.length > 0 || mine.going.length > 0) && (
+              <div className="rounded-sm border border-forest/25 bg-forest/[0.03] p-5">
+                <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+                  Yours
+                </h2>
+                <ul className="mt-3 divide-y divide-rule/70">
+                  {mine.hosting.map((p) => (
+                    <li key={p.id} className="flex items-baseline justify-between gap-4 py-2">
+                      <Link href={`/trek-buddy/${p.id}`} className="min-w-0 font-body text-sm text-text hover:underline">
+                        {p.place}
+                      </Link>
+                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-forest">
+                        Hosting · {p.going_count}/{p.capacity}
+                      </span>
+                    </li>
+                  ))}
+                  {mine.going.map(({ plan, status }) => (
+                    <li key={plan.id} className="flex items-baseline justify-between gap-4 py-2">
+                      <Link href={`/trek-buddy/${plan.id}`} className="min-w-0 font-body text-sm text-text hover:underline">
+                        {plan.place}
+                      </Link>
+                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
+                        {status === 'confirmed' ? 'Going' : 'Asked'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div>
+              <BoardFilters counts={counts} />
+
+              <div className="mt-5 flex flex-wrap items-baseline justify-between gap-3 border-b border-rule pb-3">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                  {plans.length === 0
+                    ? filtering ? 'Nothing matches' : 'Nothing on the board'
+                    : `${plans.length} walk${plans.length === 1 ? '' : 's'} coming up`}
                 </span>
+                {!membership.canHost && (
+                  <span className="font-body text-xs text-mid">
+                    Hosting is invite-only —{' '}
+                    <Link href="/contact" className="text-forest underline underline-offset-4">ask us</Link>
+                  </span>
+                )}
+              </div>
+
+              {plans.length === 0 ? (
+                <div className="py-14 text-center">
+                  <h2 className="font-display text-[clamp(20px,2.6vw,28px)] text-text">
+                    {filtering ? 'Nothing matches that yet.' : 'Nobody has posted a walk yet.'}
+                  </h2>
+                  <p className="mx-auto mt-3 max-w-md font-body text-sm leading-relaxed text-mid">
+                    {filtering
+                      ? 'Try a wider date range, or clear the filters to see everything on the board.'
+                      : 'This board only works when it is real, so there is nothing invented on it. The first walks will be ones the DEWDROPZ team are actually going on.'}
+                  </p>
+                  {filtering ? (
+                    <Link
+                      href="/trek-buddy"
+                      className="mt-6 inline-block border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+                    >
+                      Clear filters
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/treks"
+                      className="mt-6 inline-block border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+                    >
+                      Read the trail guide
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <ul className="divide-y divide-rule">
+                  {plans.map((p) => (
+                    <li key={p.id}>
+                      <TrekPlanCard plan={p} />
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
-            {plans.length === 0 ? (
-              // An empty board is the honest day-one state. Saying so, and
-              // pointing somewhere useful, beats a fake list of walks nobody
-              // is actually going on.
-              <div className="py-16 text-center">
-                <h2 className="font-display text-[clamp(22px,3vw,30px)] text-text">
-                  Nobody has posted a walk yet.
-                </h2>
-                <p className="mx-auto mt-3 max-w-md font-body text-sm leading-relaxed text-mid">
-                  This board only works when it is real, so there is nothing invented on it. The
-                  first walks will be ones the DEWDROPZ team are actually going on.
-                </p>
-                <Link
-                  href="/treks"
-                  className="mt-6 inline-block border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
-                >
-                  Read the trail guide
-                </Link>
-              </div>
-            ) : (
-              <ul className="divide-y divide-rule">
-                {plans.map((p) => (
-                  <li key={p.id}>
-                    <TrekPlanCard plan={p} />
-                  </li>
-                ))}
-              </ul>
-            )}
+            <SafetyNotes />
 
-            <p className="mt-12 border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
+            <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
               DEWDROPZ does not organise, lead, vet or supervise these walks, and does not check
-              who anyone is. You are meeting strangers in the hills at your own risk. Tell someone
-              not on the walk where you are going and when you expect to be back. In an emergency
-              call <span className="text-text">112</span>.
+              who anyone is. You are meeting strangers in the hills at your own risk. In an
+              emergency call <span className="text-text">112</span>.
             </p>
           </div>
         </section>

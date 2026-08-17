@@ -1,16 +1,6 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-
-const ACTIVITY_LABEL: Record<string, string> = {
-  trekking: 'Trekking',
-  bird_watching: 'Bird watching',
-}
-
-const EFFORT_LABEL: Record<string, string> = {
-  easy: 'Easy',
-  moderate: 'Moderate',
-  hard: 'Hard',
-}
+import { ACTIVITY_BY_KEY, EFFORT_LABEL, DAY_PART_LABEL, type TrekActivity } from '@/lib/trek'
 
 /** IST, because the walk happens in India and the server does not. */
 function istDay(iso: string) {
@@ -46,12 +36,20 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
 
       <div className="min-w-0 flex-1">
         <h3 className="font-display text-lg leading-tight text-text">
-          {ACTIVITY_LABEL[plan.activity] ?? plan.activity}
+          {ACTIVITY_BY_KEY[plan.activity as TrekActivity]?.label ?? plan.activity}
           <span className="text-mid"> · {plan.place}</span>
         </h3>
         <p className="mt-0.5 font-body text-xs text-mid">
-          Meet around {plan.meet_area} · back by {hhmm(plan.back_by)} · {EFFORT_LABEL[plan.effort]}
+          Meet around {plan.meet_area} · back by {hhmm(plan.back_by)}
+          {plan.ends_on !== plan.starts_on ? ' next day' : ''} · {EFFORT_LABEL[plan.effort]}
         </p>
+        {plan.day_part !== 'day' && (
+          // Flagged on the card, not buried on the plan page: an outing that
+          // runs in the dark is a different decision from one that does not.
+          <span className="mt-1.5 inline-block rounded-full border border-clay/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-clay">
+            {DAY_PART_LABEL[plan.day_part]} · needs {plan.min_party}
+          </span>
+        )}
         <p className="mt-0.5 font-body text-xs text-mid/70">Posted by {plan.host_name}</p>
       </div>
 
