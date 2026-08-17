@@ -3,10 +3,9 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
-import { getTrekBoard } from '@/actions/trekBuddy'
+import { getTrekBoard, getTrekKinds } from '@/actions/trekBuddy'
 import { getTrekMembership } from '@/actions/trekBuddy'
 import NewPlanForm from './NewPlanForm'
-import { ACTIVITY_BY_KEY, type TrekActivity } from '@/lib/trek'
 
 export const metadata: Metadata = {
   title: 'Post a walk — DEWDROPZ',
@@ -26,13 +25,11 @@ export default async function NewTrekPlanPage({
   // trek_create_plan, which is the one that actually decides.
   if (!membership.canHost) redirect('/trek-buddy')
 
-  // Only an activity the app actually knows survives the URL — a hand-typed
-  // ?activity=anything must not reach the form as a broken spec lookup.
-  const initial = activity && activity in ACTIVITY_BY_KEY
-    ? (activity as TrekActivity)
-    : undefined
+  const [all, kinds] = await Promise.all([getTrekBoard(), getTrekKinds()])
 
-  const all = await getTrekBoard()
+  // Only a kind the board is actually taking survives the URL — a hand-typed
+  // ?activity=anything must not reach the form as a broken lookup.
+  const initial = kinds.some((k) => k.key === activity) ? activity : undefined
 
   return (
     <>
@@ -50,7 +47,7 @@ export default async function NewTrekPlanPage({
             </p>
           </div>
           <div className="mt-8">
-            <NewPlanForm initialActivity={initial} trekGender={membership.trekGender} />
+            <NewPlanForm kinds={kinds} initialActivity={initial} trekGender={membership.trekGender} />
           </div>
         </section>
       </main>

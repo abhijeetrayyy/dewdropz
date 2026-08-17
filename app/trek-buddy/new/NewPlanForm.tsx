@@ -3,8 +3,8 @@
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createTrekPlan } from '@/actions/trekBuddy'
-import { ACTIVITIES, ACTIVITY_BY_KEY, lightForTime, type TrekActivity } from '@/lib/trek'
+import { createTrekPlan, type TrekKind } from '@/actions/trekBuddy'
+import { lightForTime } from '@/lib/trek'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 
 /**
@@ -65,10 +65,13 @@ const STEPS = ['What', 'Where', 'How long', 'The details'] as const
 // beside it. The preview is the point: you are not filling in a form, you are
 // writing the thing other people will read, and you can see it the whole time.
 export default function NewPlanForm({
+  kinds,
   initialActivity,
   trekGender,
 }: {
-  initialActivity?: TrekActivity
+  /** What the board is taking today, straight from the database (057). */
+  kinds: TrekKind[]
+  initialActivity?: string
   trekGender: string | null
 }) {
   const router = useRouter()
@@ -77,9 +80,11 @@ export default function NewPlanForm({
   // Arriving from a quick-start button means question one is already answered.
   const [step, setStep] = useState(initialActivity ? 1 : 0)
 
-  const initial = ACTIVITY_BY_KEY[initialActivity ?? 'trekking']
+  const byKey = useMemo(() => Object.fromEntries(kinds.map((k) => [k.key, k])), [kinds])
+  const initial = byKey[initialActivity ?? ''] ?? kinds[0]
   const [f, setF] = useState({
     activity: initial.key,
+    activityOther: '',
     place: '',
     meetArea: '',
     startsOn: tomorrowIst(),
@@ -102,7 +107,7 @@ export default function NewPlanForm({
   })
   // Functional, so two changes in one tick cannot clobber each other.
   const set = (p: Partial<typeof f>) => setF((prev) => ({ ...prev, ...p }))
-  const spec = ACTIVITY_BY_KEY[f.activity]
+  const spec = byKey[f.activity] ?? initial
   const light = useMemo(() => lightForTime(f.timed ? f.startTime : '06:00'), [f.timed, f.startTime])
   const days = daysBetween(f.startsOn, f.endsOn)
   const canBeWomenOnly = trekGender === 'woman'
@@ -135,8 +140,9 @@ export default function NewPlanForm({
   // Changing the kind of outing re-seeds its hours. Somebody switching from
   // trekking to camping should not have to work out that 07:00 is no longer a
   // legal start — the database would refuse it and they would have to guess why.
-  function pickActivity(key: TrekActivity) {
-    const a = ACTIVITY_BY_KEY[key]
+  function pickActivity(key: string) {
+    const a = byKey[key]
+    if (!a) return
     setF((prev) => ({
       ...prev,
       activity: key,
@@ -153,7 +159,9 @@ export default function NewPlanForm({
 
   const canPost = Boolean(
     f.place.trim() && f.meetArea.trim() && f.meetingPoint.trim() &&
-    (!spec.needsNightNote || f.nightNote.trim().length >= 10)
+    (!spec.needsNightNote || f.nightNote.trim().length >= 10) &&
+    // A host-named outing has to actually be named.
+    (!spec.isOpenEnded || f.activityOther.trim().length >= 3)
   )
 
   function submit(e: React.FormEvent) {
@@ -166,6 +174,7 @@ export default function NewPlanForm({
         startTime: f.timed ? f.startTime : undefined,
         backBy: f.timed ? f.backBy : undefined,
         languages: f.languages.length ? f.languages : undefined,
+        activityOther: spec.isOpenEnded ? f.activityOther.trim() : undefined,
         nightNote: spec.needsNightNote ? f.nightNote : undefined,
       })
       if ('error' in r) { setError(r.error); return }
@@ -200,24 +209,76 @@ export default function NewPlanForm({
           {step === 0 && (
             <div>
               <h2 className="font-display text-2xl text-text">What are you doing?</h2>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                {ACTIVITIES.map((a) => (
-                  <button key={a.key} type="button" onClick={() => pickActivity(a.key)}
-                    className="flex items-baseline justify-between gap-3 rounded-sm border border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
-                    <span>
-                      <span className="block font-body text-sm text-text">{a.label}</span>
-                      <span className="block font-body text-xs text-mid">{a.blurb}</span>
+              <p className="mt-1.5 font-body text-sm text-mid">
+                Pick the closest thing. The hours and the group size fill themselves in from it,
+                and the board refuses anything that disagrees.
+              </p>
+
+              {/* Grouped by when it happens, because that is the fact that
+                  changes what the outing IS — a walk at 05:20 and one at 21:40
+                  are different undertakings, not two rows in a list. */}
+              {(['day', 'evening', 'overnight'] as const).map((part) => {
+                const group = kinds.filter((k) => k.dayPart === part && !k.isOpenEnded)
+                if (!group.length) return null
+                return (
+                  <div key={part} className="mt-6">
+                    <p className={label}>
+                      {part === 'day' ? 'In daylight' : part === 'evening' ? 'After dark' : 'Overnight'}
+                    </p>
+                    <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                      {group.map((a) => (
+                        <button key={a.key} type="button" onClick={() => pickActivity(a.key)}
+                          className="flex items-baseline justify-between gap-3 rounded-sm border border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
+                          <span>
+                            <span className="block font-body text-sm text-text">{a.label}</span>
+                            <span className="block font-body text-xs text-mid">{a.blurb}</span>
+                          </span>
+                          <span className="shrink-0 font-mono text-[10px] text-mid tabular-nums">
+                            {a.defaultStart}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* The host-named kind, kept apart from the list. It is a
+                  different sort of choice: everything else tells you what you
+                  are getting, this one asks you. */}
+              {kinds.filter((k) => k.isOpenEnded).map((a) => (
+                <button key={a.key} type="button" onClick={() => pickActivity(a.key)}
+                  className="mt-6 flex w-full items-baseline justify-between gap-3 rounded-sm border border-dashed border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
+                  <span>
+                    <span className="block font-body text-sm text-text">{a.label}</span>
+                    <span className="block font-body text-xs text-mid">
+                      None of those fit? Name it yourself.
                     </span>
-                    <span className="shrink-0 font-mono text-[10px] text-mid tabular-nums">{a.defaultStart}</span>
-                  </button>
-                ))}
-              </div>
+                  </span>
+                  <span className="shrink-0 font-mono text-[10px] text-mid">+</span>
+                </button>
+              ))}
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-6">
               <h2 className="font-display text-2xl text-text">Where?</h2>
+
+              {spec.isOpenEnded && (
+                <label className="block">
+                  <span className={label}>What is it?</span>
+                  <input value={f.activityOther}
+                    onChange={(e) => set({ activityOther: e.target.value })}
+                    required minLength={3} maxLength={40}
+                    placeholder="Fossil hunting" className={field} />
+                  <span className={hint}>
+                    Two or three words. This is what people see on the board, so it is scanned
+                    like everything else anyone writes here.
+                  </span>
+                </label>
+              )}
+
               <label className="block">
                 <span className={label}>The place</span>
                 <input value={f.place} onChange={(e) => set({ place: e.target.value })}
@@ -487,7 +548,7 @@ export default function NewPlanForm({
               {f.place || <span className="text-mid/50">Where are you going?</span>}
             </h3>
             <p className="mt-1 font-body text-xs text-mid">
-              {spec.label} · from {f.meetArea || '…'}
+              {spec.isOpenEnded ? f.activityOther || 'Something else' : spec.label} · from {f.meetArea || '…'}
               {days > 1 ? ` · ${days} days` : f.timed ? ` · back ${f.backBy}` : ''}
             </p>
             <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-mid tabular-nums">

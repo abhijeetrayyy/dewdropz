@@ -31,6 +31,9 @@ export type TrekPlanRow = {
   host_id: string
   host_name: string
   activity: string
+  activity_other: string | null
+  /** The kind's label, or the host's own name for an 'other' outing. */
+  activity_label: string
   place: string
   meet_area: string
   starts_on: string
@@ -132,6 +135,31 @@ export async function saveTrekProfile(input: {
 }
 
 /** The board. Members only — there is no anonymous read policy on any of this. */
+/**
+ * Put a readable name on each row.
+ *
+ * Kinds live in a table now, so a component cannot look a label up from a
+ * frozen map without going stale the first time an admin adds one — it would
+ * render the raw key, `sunrise_point`, on the board. One lookup per request,
+ * shared by every row it decorates.
+ */
+async function withKindLabels<T extends { activity: string; activity_other?: string | null }>(
+  rows: T[]
+): Promise<(T & { activity_label: string })[]> {
+  if (!rows.length) return []
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_activity_kinds')
+    .select('key, label')
+  const label = new Map((data ?? []).map((k) => [k.key, k.label as string]))
+  return rows.map((r) => ({
+    ...r,
+    activity_label:
+      r.activity_other?.trim() ||
+      label.get(r.activity) ||
+      r.activity.replace(/_/g, ' '),
+  }))
+}
+
 export async function getTrekBoard(filters?: {
   activity?: string
   when?: 'all' | 'week' | 'weekend'
@@ -189,7 +217,7 @@ export async function getTrekBoard(filters?: {
 
   if (filters?.hasSpots) rows = rows.filter((r) => r.spots_left > 0)
   if (filters?.mine) rows = rows.filter((r) => r.host_id === user.id)
-  return rows
+  return withKindLabels(rows)
 }
 
 /** Everything this member is involved in — hosting or going. */
@@ -211,7 +239,14 @@ export async function getMyTreks() {
     .filter((r) => r.plan && r.plan.status !== 'cancelled' && new Date(r.plan.starts_at) > new Date())
     .sort((a, b) => a.plan.starts_at.localeCompare(b.plan.starts_at))
 
-  return { hosting: (hosting ?? []) as TrekPlanRow[], going }
+  const [hostingLabelled, goingLabelled] = await Promise.all([
+    withKindLabels((hosting ?? []) as TrekPlanRow[]),
+    withKindLabels(going.map((g) => g.plan)),
+  ])
+  return {
+    hosting: hostingLabelled as TrekPlanRow[],
+    going: going.map((g, i) => ({ ...g, plan: goingLabelled[i] as TrekPlanRow })),
+  }
 }
 
 /**
@@ -298,8 +333,10 @@ export async function getTrekPlan(planId: string) {
         .order('created_at')
     : { data: null }
 
+  const [labelled] = await withKindLabels([p as TrekPlanRow])
+
   return {
-    plan: p,
+    plan: labelled as TrekPlanRow,
     isHost,
     myStatus: (mine?.status as string) ?? null,
     meetingPoint: (details?.meeting_point as string) ?? null,
@@ -323,8 +360,91 @@ async function callTrek(fn: string, args: Record<string, unknown>, paths: string
   return { success: true }
 }
 
+/**
+ * The kinds of outing the board is currently taking.
+ *
+ * Read from the database rather than from lib/trek.ts, because since 057 the
+ * kinds ARE data — an admin can add one or switch one off without a deploy,
+ * and a composer built from a hardcoded list would quietly disagree with what
+ * the database will accept.
+ */
+export type TrekKind = {
+  key: string
+  label: string
+  blurb: string
+  dayPart: 'day' | 'evening' | 'overnight'
+  startMin: string
+  startMax: string
+  defaultStart: string
+  defaultBackBy: string
+  endsNextDay: boolean
+  minParty: number
+  needsNightNote: boolean
+  isOpenEnded: boolean
+}
+
+export async function getTrekKinds(): Promise<TrekKind[]> {
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_activity_kinds')
+    .select('*')
+    .eq('active', true)
+    .order('sort')
+
+  return (data ?? []).map((k) => ({
+    key: k.key,
+    label: k.label,
+    blurb: k.blurb,
+    dayPart: k.day_part,
+    startMin: (k.start_min as string).slice(0, 5),
+    startMax: (k.start_max as string).slice(0, 5),
+    defaultStart: (k.default_start as string).slice(0, 5),
+    defaultBackBy: (k.default_back_by as string).slice(0, 5),
+    endsNextDay: k.ends_next_day,
+    minParty: k.min_party,
+    needsNightNote: k.needs_night_note,
+    isOpenEnded: k.is_open_ended,
+  }))
+}
+
+/**
+ * The guidance that applies right now.
+ *
+ * `activity` narrows to one kind plus the general notes; `audience` is filtered
+ * to what the viewer actually is, so a first-timer's page is not also carrying
+ * the host advice. Women-audience notes are shown to everyone on a women-only
+ * walk and to women elsewhere — a man reading how a woman decides whether a
+ * group is safe is not a leak, it is the point.
+ */
+export type Guidance = {
+  id: string
+  activity: string
+  audience: 'all' | 'women' | 'first_time' | 'host'
+  title: string
+  body: string
+}
+
+export async function getGuidance(opts?: {
+  activity?: string
+  audiences?: ('all' | 'women' | 'first_time' | 'host')[]
+  limit?: number
+}): Promise<Guidance[]> {
+  let q = createAdminSupabaseClient()
+    .from('trek_guidance')
+    .select('id, activity, audience, title, body')
+    .eq('active', true)
+    .order('sort')
+    .limit(opts?.limit ?? 40)
+
+  if (opts?.activity) q = q.in('activity', [opts.activity, 'general'])
+  if (opts?.audiences?.length) q = q.in('audience', opts.audiences)
+
+  const { data } = await q
+  return (data ?? []) as Guidance[]
+}
+
 export async function createTrekPlan(input: {
-  activity: TrekActivity
+  /** A kind key. The database owns the list (057), so this is not a union. */
+  activity: string
   place: string
   meetArea: string
   startsOn: string
@@ -341,6 +461,8 @@ export async function createTrekPlan(input: {
   seniorFriendly?: boolean
   languages?: string[]
   coverUrls?: string[]
+  /** Only when activity is 'other' — the name the host gave it. */
+  activityOther?: string
 }) {
   const user = await requireAuth()
   const result = await callTrek('trek_create_plan', {
@@ -363,6 +485,7 @@ export async function createTrekPlan(input: {
     p_senior_friendly: input.seniorFriendly ?? false,
     p_languages: input.languages ?? [],
     p_cover_urls: input.coverUrls ?? [],
+    p_activity_other: input.activityOther?.trim() || null,
     p_actor: user.id,
   }, ['/trek-buddy'])
 
@@ -425,6 +548,15 @@ export type PersonCard = {
   languages: string[]
   memberSince: string | null
   canHost: boolean
+  /** Granted by an admin, never claimed. */
+  mentor: boolean
+  mentorBio: string | null
+  /** Self-declared, and labelled as such wherever it is shown. */
+  experience: string | null
+  yearsOut: number | null
+  highestM: number | null
+  usualDays: string[]
+  carries: string[]
   /** The four facts. Each says exactly what it proves — see migration 054. */
   emailOk: boolean
   isCustomer: boolean
@@ -452,6 +584,13 @@ export async function getPerson(userId: string): Promise<PersonCard | null> {
     languages: (r.languages as string[]) ?? [],
     memberSince: (r.member_since as string) ?? null,
     canHost: Boolean(r.can_host),
+    mentor: Boolean(r.mentor),
+    mentorBio: (r.mentor_bio as string) ?? null,
+    experience: (r.experience as string) ?? null,
+    yearsOut: r.years_out == null ? null : Number(r.years_out),
+    highestM: r.highest_m == null ? null : Number(r.highest_m),
+    usualDays: (r.usual_days as string[]) ?? [],
+    carries: (r.carries as string[]) ?? [],
     emailOk: Boolean(r.email_ok),
     isCustomer: Boolean(r.is_customer),
     walksHosted: Number(r.walks_hosted ?? 0),
@@ -460,17 +599,56 @@ export async function getPerson(userId: string): Promise<PersonCard | null> {
   }
 }
 
-/** Everyone who has actually hosted or been on something. Not a user directory. */
-export async function getPeople(limit = 40) {
+export type PersonSummary = {
+  userId: string
+  displayName: string
+  homeBase: string | null
+  intro: string | null
+  pace: string | null
+  activities: string[]
+  languages: string[]
+  experience: string | null
+  yearsOut: number | null
+  mentor: boolean
+  canHost: boolean
+  memberSince: string | null
+  walksHosted: number
+  walksJoined: number
+  vouches: number
+}
+
+/**
+ * Everyone on the board. Not a user directory — only people who finished
+ * joining, and never anybody suspended.
+ *
+ * `walks` used to be read off `r.walks`, a field trek_people has never
+ * returned, so every card in the directory said 0 walks no matter who it was.
+ * The RPC returns hosted and joined separately and both are carried now.
+ */
+export async function getPeople(opts?: { activity?: string; homeBase?: string; limit?: number }) {
   const viewer = await getUser()
   if (!viewer) return []
-  const { data } = await createAdminSupabaseClient().rpc('trek_people', { p_limit: limit })
-  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+  const { data } = await createAdminSupabaseClient().rpc('trek_people', {
+    p_activity: opts?.activity ?? null,
+    p_home: opts?.homeBase ?? null,
+    p_limit: opts?.limit ?? 60,
+  })
+  return ((data ?? []) as Record<string, unknown>[]).map((r): PersonSummary => ({
     userId: r.user_id as string,
     displayName: r.display_name as string,
     homeBase: (r.home_base as string) ?? null,
+    intro: (r.intro as string) ?? null,
+    pace: (r.pace as string) ?? null,
     activities: (r.activities as string[]) ?? [],
-    walks: Number(r.walks ?? 0),
+    languages: (r.languages as string[]) ?? [],
+    experience: (r.experience as string) ?? null,
+    yearsOut: r.years_out == null ? null : Number(r.years_out),
+    mentor: Boolean(r.mentor),
+    canHost: Boolean(r.can_host),
+    memberSince: (r.member_since as string) ?? null,
+    walksHosted: Number(r.walks_hosted ?? 0),
+    walksJoined: Number(r.walks_joined ?? 0),
+    vouches: Number(r.vouches ?? 0),
   }))
 }
 
@@ -490,6 +668,12 @@ export async function saveTrekPerson(input: {
   pace?: string
   activities: string[]
   languages: string[]
+  experience?: string
+  yearsOut?: number | null
+  highestM?: number | null
+  usualDays?: string[]
+  carries?: string[]
+  gender?: string
 }) {
   const user = await requireAuth()
 
@@ -507,6 +691,15 @@ export async function saveTrekPerson(input: {
       trek_pace: input.pace || null,
       trek_activities: input.activities,
       trek_languages: input.languages,
+      trek_experience: input.experience || null,
+      trek_years_out: input.yearsOut ?? null,
+      trek_highest_m: input.highestM ?? null,
+      trek_usual_days: input.usualDays ?? [],
+      trek_carries: input.carries ?? [],
+      // Only ever set, never cleared by a save: it gates women-only walks, and
+      // a profile edit that silently dropped it would lock somebody out of
+      // their own trips.
+      ...(input.gender ? { trek_gender: input.gender } : {}),
     })
     .eq('id', user.id)
 

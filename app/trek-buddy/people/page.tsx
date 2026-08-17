@@ -4,26 +4,50 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
-import { getPeople, getTrekMembership, getTrekBoard } from '@/actions/trekBuddy'
-import { ACTIVITY_BY_KEY, type TrekActivity } from '@/lib/trek'
+import PersonCardTile from '@/components/trek/PersonCardTile'
+import Guidance from '@/components/trek/Guidance'
+import {
+  getGuidance, getPeople, getTrekBoard, getTrekKinds, getTrekMembership,
+} from '@/actions/trekBuddy'
 
 export const metadata: Metadata = {
   title: 'Who is out there — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 
+const TOWNS = ['Dehradun', 'Mussoorie', 'Rishikesh', 'Haridwar', 'Sahastradhara', 'Chakrata']
+
 // Who is on the board.
 //
-// Only people who have actually hosted or been confirmed on something — a
-// directory of everyone who ever ticked the terms box is a list of strangers to
-// approach, which is the opposite of what this is for. That filter lives in the
-// database (trek_people), not here.
-export default async function PeoplePage() {
+// Ordered mentors first, then people with vouches, then the newest — set in
+// trek_people (059), not here. A directory sorted by signup date leads with the
+// emptiest profiles on it, which is the worst possible first impression of a
+// board whose entire question is "who would I go with".
+export default async function PeoplePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ activity?: string; home?: string }>
+}) {
+  const sp = await searchParams
   const membership = await getTrekMembership()
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/people')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [people, all] = await Promise.all([getPeople(), getTrekBoard()])
+  const [people, all, kinds, mentorNotes] = await Promise.all([
+    getPeople({ activity: sp.activity, homeBase: sp.home }),
+    getTrekBoard(),
+    getTrekKinds(),
+    getGuidance({ audiences: ['first_time'], limit: 4 }),
+  ])
+
+  const mentors = people.filter((p) => p.mentor)
+  const rest = people.filter((p) => !p.mentor)
+  const filtering = Boolean(sp.activity || sp.home)
+
+  const chip = (on: boolean) =>
+    `whitespace-nowrap rounded-full border px-3.5 py-1.5 font-body text-xs transition-colors ${
+      on ? 'border-forest bg-forest text-paper' : 'border-rule text-mid hover:border-text hover:text-text'
+    }`
 
   return (
     <>
@@ -32,45 +56,110 @@ export default async function PeoplePage() {
         <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="people" />
 
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
-          <div className="mx-auto max-w-5xl">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
-              {people.length === 0
-                ? 'Nobody has been out yet'
-                : `${people.length} ${people.length === 1 ? 'person has' : 'people have'} been out`}
-            </h2>
+          <div className="mx-auto max-w-5xl space-y-10">
+            {/* Filters that answer the two questions people actually arrive
+                with: does anyone near me go out, and does anyone do the thing
+                I do. Anything else is a facet nobody uses. */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                  Sets off from
+                </span>
+                <Link href="/trek-buddy/people" className={chip(!sp.home)}>Anywhere</Link>
+                {TOWNS.map((t) => (
+                  <Link
+                    key={t}
+                    href={`/trek-buddy/people?${new URLSearchParams({ ...(sp.activity ? { activity: sp.activity } : {}), home: t })}`}
+                    className={chip(sp.home === t)}
+                  >
+                    {t}
+                  </Link>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                  Goes out for
+                </span>
+                <Link
+                  href={`/trek-buddy/people${sp.home ? `?home=${encodeURIComponent(sp.home)}` : ''}`}
+                  className={chip(!sp.activity)}
+                >
+                  Anything
+                </Link>
+                {kinds.filter((k) => !k.isOpenEnded).slice(0, 10).map((k) => (
+                  <Link
+                    key={k.key}
+                    href={`/trek-buddy/people?${new URLSearchParams({ ...(sp.home ? { home: sp.home } : {}), activity: k.key })}`}
+                    className={chip(sp.activity === k.key)}
+                  >
+                    {k.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
 
             {people.length === 0 ? (
-              <p className="mt-4 rounded-sm border border-dashed border-rule px-6 py-12 text-center font-body text-sm text-mid">
-                People appear here once they have hosted or been on a walk. Nobody is listed just
-                for making an account.
-              </p>
+              <div className="rounded-sm border border-dashed border-rule px-6 py-16 text-center">
+                <p className="font-display text-xl text-text">
+                  {filtering ? 'Nobody matches that yet.' : 'Nobody has joined the board yet.'}
+                </p>
+                <p className="mx-auto mt-2 max-w-sm font-body text-sm leading-relaxed text-mid">
+                  {filtering
+                    ? 'Try a wider filter — the board is small, and most people do more than one thing.'
+                    : 'People appear here once they finish a profile. Yours is the one that makes it worth somebody else joining.'}
+                </p>
+                <Link
+                  href="/trek-buddy/profile"
+                  className="mt-6 inline-flex rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
+                >
+                  Set up how you look
+                </Link>
+              </div>
             ) : (
-              <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                {people.map((p) => (
-                  <li key={p.userId}>
-                    <Link
-                      href={`/trek-buddy/people/${p.userId}`}
-                      className="flex items-center justify-between gap-4 rounded-sm border border-rule bg-white px-5 py-4 transition-all hover:-translate-y-0.5 hover:border-forest/50"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-display text-lg leading-tight text-text">{p.displayName}</p>
-                        <p className="mt-0.5 font-body text-xs text-mid">
-                          {p.homeBase ?? 'Somewhere near'}
-                          {p.activities.length > 0 && (
-                            <> · {p.activities.map((a) => ACTIVITY_BY_KEY[a as TrekActivity]?.label ?? a).join(', ')}</>
-                          )}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-right">
-                        <span className="block font-mono text-lg text-text tabular-nums">{p.walks}</span>
-                        <span className="block font-mono text-[9px] uppercase tracking-[0.14em] text-mid">
-                          {p.walks === 1 ? 'walk' : 'walks'}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* Mentors lead, and the page says why they are up here.
+                    A badge nobody explains is decoration. */}
+                {mentors.length > 0 && (
+                  <div>
+                    <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-clay">
+                      People who have done a lot of this
+                    </h2>
+                    <p className="mt-2 max-w-lg font-body text-sm leading-relaxed text-mid">
+                      Appointed by DEWDROPZ, not self-claimed. They know these hills and are
+                      happy to be asked — start here if you are working out where to begin.
+                    </p>
+                    <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                      {mentors.map((p) => (
+                        <li key={p.userId}><PersonCardTile person={p} /></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {rest.length > 0 && (
+                  <div>
+                    <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                      {rest.length} {rest.length === 1 ? 'other person' : 'others'} on the board
+                    </h2>
+                    <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                      {rest.map((p) => (
+                        <li key={p.userId}><PersonCardTile person={p} /></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+
+            {mentorNotes.length > 0 && (
+              <div className="border-t border-rule pt-8">
+                <Guidance
+                  notes={mentorNotes}
+                  title="If you are working out who to ask"
+                  intro="Nobody on this board has been checked by anybody. These are the things that actually tell you something."
+                />
+              </div>
             )}
           </div>
         </section>

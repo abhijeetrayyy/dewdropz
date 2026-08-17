@@ -13,6 +13,17 @@ const PACES = [
   ['fast', 'Fast', 'Expects a pace'],
 ] as const
 const LANGUAGES = ['Hindi', 'English', 'Garhwali', 'Punjabi', 'Bengali']
+const EXPERIENCE = [
+  ['new', 'New to this', 'First few times out'],
+  ['some', 'Been out a few times', 'Comfortable on a day walk'],
+  ['seasoned', 'Seasoned', 'Multi-day, most seasons'],
+  ['veteran', 'Years of it', 'Been doing this a long time'],
+] as const
+const DAYS = ['Weekends', 'Weekdays', 'Either']
+const CARRIES = [
+  'First aid kit', 'Head torch', 'Extra water', 'Extra layer', 'Power bank',
+  'Offline map', 'Whistle', 'Rope', 'Stove', 'Tent',
+]
 
 type Vouchable = {
   planId: string
@@ -52,6 +63,11 @@ export default function ProfileForm({
     pace: person.pace ?? '',
     activities: person.activities,
     languages: person.languages,
+    experience: person.experience ?? '',
+    yearsOut: person.yearsOut,
+    highestM: person.highestM,
+    usualDays: person.usualDays,
+    carries: person.carries,
   })
   // Functional updates, not { ...f, ...p }.
   //
@@ -60,7 +76,7 @@ export default function ProfileForm({
   // activity silently threw the town away. Caught by filling the form in a
   // test and finding three fields missing from the row afterwards.
   const set = (p: Partial<typeof f>) => { setF((prev) => ({ ...prev, ...p })); setSaved(false) }
-  const toggle = (key: 'activities' | 'languages', v: string) => {
+  const toggle = (key: 'activities' | 'languages' | 'usualDays' | 'carries', v: string) => {
     setF((prev) => ({
       ...prev,
       [key]: prev[key].includes(v) ? prev[key].filter((x) => x !== v) : [...prev[key], v],
@@ -153,6 +169,76 @@ export default function ProfileForm({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* The self-declared half.
+              Everything below is a claim, and the profile page says so where it
+              shows it — it sits next to four counted facts the board can
+              actually prove, and blurring that line would make the proven ones
+              worthless. Nobody is asked to justify any of it. */}
+          <div>
+            <span className={label}>How much you have done</span>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {EXPERIENCE.map(([k, t, d]) => (
+                <button key={k} type="button"
+                  onClick={() => set({ experience: f.experience === k ? '' : k })}
+                  aria-pressed={f.experience === k}
+                  className={`rounded-sm border px-3.5 py-3 text-left transition-colors ${
+                    f.experience === k ? 'border-forest bg-forest/[0.06]' : 'border-rule hover:border-text'
+                  }`}>
+                  <span className="block font-body text-sm text-text">{t}</span>
+                  <span className="block font-body text-xs text-mid">{d}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <label className="block">
+              <span className={label}>Years going out</span>
+              <input type="number" min={0} max={60} value={f.yearsOut ?? ''}
+                onChange={(e) => set({ yearsOut: e.target.value === '' ? null : Number(e.target.value) })}
+                className="mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text focus:border-forest focus:outline-none" />
+            </label>
+            <label className="block">
+              <span className={label}>Highest you have been (m)</span>
+              <input type="number" min={0} max={8849} value={f.highestM ?? ''}
+                onChange={(e) => set({ highestM: e.target.value === '' ? null : Number(e.target.value) })}
+                placeholder="3022"
+                className="mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text placeholder:text-mid/50 focus:border-forest focus:outline-none" />
+              <span className="mt-1.5 block font-body text-xs text-mid">
+                Nobody checks this. It is here because it tells another walker more than
+                &ldquo;experienced&rdquo; does.
+              </span>
+            </label>
+          </div>
+
+          <div>
+            <span className={label}>When you usually go</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {DAYS.map((d) => (
+                <button key={d} type="button" onClick={() => toggle('usualDays', d)}
+                  aria-pressed={f.usualDays.includes(d)} className={chip(f.usualDays.includes(d))}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className={label}>What you carry</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CARRIES.map((c) => (
+                <button key={c} type="button" onClick={() => toggle('carries', c)}
+                  aria-pressed={f.carries.includes(c)} className={chip(f.carries.includes(c))}>
+                  {c}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 font-body text-xs text-mid">
+              The most useful thing on a profile, and the one people skip. Somebody deciding
+              whether to join a long day wants to know who has the first aid kit.
+            </p>
           </div>
 
           <div>

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
+import { DIFFICULTY_LABEL, lightForTime } from '@/lib/trek'
 
 /** IST, because the walk happens in India and the server does not. */
 function istParts(iso: string) {
@@ -56,7 +56,6 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
   // A trek with no stated hour still needs a rail colour; 06:00 reads as a
   // morning departure, which is what a multi-day trek almost always is.
   const light = lightForTime(plan.start_time ?? '06:00')
-  const spec = ACTIVITY_BY_KEY[plan.activity as TrekActivity]
   const { day, month, weekday } = istParts(plan.starts_at)
   const full = plan.spots_left <= 0
   const nights = Math.round(
@@ -102,7 +101,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
 
           {/* Days, not hours, once a trek runs over more than one. */}
           <p className="mt-1 font-body text-xs text-mid">
-            {spec?.label ?? plan.activity} · from {plan.meet_area}
+            {plan.activity_label} · from {plan.meet_area}
             {nights > 0 ? ` · ${nights + 1} days` : plan.back_by ? ` · back ${hhmm(plan.back_by)}` : ''}
           </p>
 

@@ -2,20 +2,18 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
-import { getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
+import { getGuidance, getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
 import PlanActions from './PlanActions'
 import PlanMasthead from '@/components/trek/PlanMasthead'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import SafetyActions from '@/components/trek/SafetyActions'
-import { ACTIVITY_BY_KEY, DAY_PART_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
+import Guidance from '@/components/trek/Guidance'
+import { DAY_PART_LABEL, lightForTime } from '@/lib/trek'
 
 export const metadata: Metadata = {
   title: 'A walk — DEWDROPZ',
   robots: { index: false, follow: false },
 }
-
-/** One label map, shared with the board and the form. */
-const activityLabel = (a: string) => ACTIVITY_BY_KEY[a as TrekActivity]?.label ?? a
 
 function istDay(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', {
@@ -49,6 +47,18 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   const confirmed = myStatus === 'confirmed'
   const light = lightForTime(plan.start_time ?? '06:00')
   const multiDay = plan.ends_on !== plan.starts_on
+
+  // What applies to THIS outing. Host notes are for the host; the women notes
+  // ride along on a women-only walk because that is where they are load-bearing.
+  const notes = await getGuidance({
+    activity: plan.activity,
+    audiences: isHost
+      ? ['all', 'host']
+      : plan.women_only
+        ? ['all', 'first_time', 'women']
+        : ['all', 'first_time'],
+    limit: 12,
+  })
 
   return (
     <>
@@ -136,7 +146,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                     no stated hour must not produce "at —, back by —" in the one
                     message somebody sends home before walking into the hills. */}
                 <p className="mt-3 rounded-sm bg-paper-warm px-4 py-3 font-body text-sm leading-relaxed text-text">
-                  I&apos;m going {activityLabel(plan.activity).toLowerCase()} at {plan.place} on{' '}
+                  I&apos;m going {plan.activity_label.toLowerCase()} at {plan.place} on{' '}
                   {istDay(plan.starts_at)}
                   {multiDay
                     ? `, back on ${istDay(plan.ends_at)}`
@@ -148,6 +158,16 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                   DEWDROPZ Trek Buddy by {plan.host_name}.
                 </p>
               </Block>
+            )}
+
+            {notes.length > 0 && (
+              <div className="border-t border-rule pt-6">
+                <Guidance
+                  notes={notes}
+                  title={`Before you go ${plan.activity_label.toLowerCase()}`}
+                  intro="From people who have done this around here. Not rules — the things that are only obvious afterwards."
+                />
+              </div>
             )}
 
             <SafetyNotes variant="compact" />

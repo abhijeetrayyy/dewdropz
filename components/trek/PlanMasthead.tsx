@@ -23,7 +23,6 @@ function istLong(iso: string) {
 // underneath that.
 export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
   const light = lightForTime(plan.start_time ?? '06:00')
-  const spec = ACTIVITY_BY_KEY[plan.activity as TrekActivity]
   const overnight = plan.ends_on !== plan.starts_on
 
   const nights = Math.round(
@@ -60,7 +59,7 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
         </Link>
 
         <p className="mt-7 font-mono text-[10px] uppercase tracking-[0.22em] text-paper/70">
-          {spec?.label ?? plan.activity} · {plan.start_time ? light.label : `${nights + 1} days out`} · {istLong(plan.starts_at)}
+          {plan.activity_label} · {plan.start_time ? light.label : `${nights + 1} days out`} · {istLong(plan.starts_at)}
         </p>
 
         <h1 className="mt-3 font-display text-[clamp(34px,6vw,60px)] font-light leading-[0.95] text-paper">
