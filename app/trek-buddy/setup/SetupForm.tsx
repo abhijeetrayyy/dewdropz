@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveTrekProfile } from '@/actions/trekBuddy'
+import SafetyNotes from '@/components/trek/SafetyNotes'
 
 // The four questions. Deliberately not buried in account settings: someone
 // should read what this is before they can post or join, and the terms box is
@@ -60,7 +61,12 @@ export default function SetupForm({ suggestedName }: { suggestedName: string }) 
         </span>
       </label>
 
-      <label className="mt-6 flex cursor-pointer items-start gap-3">
+      {/* The rules of the place, before the box that says you accept them.
+          A tick-box above unread guidance is a tick-box; below it, it is at
+          least an acknowledgement of something the person has seen. */}
+      <SafetyNotes variant="compact" className="mt-8" />
+
+      <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-sm border border-rule bg-white p-4">
         <input
           type="checkbox"
           checked={accept}

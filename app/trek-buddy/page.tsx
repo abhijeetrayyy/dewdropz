@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
-import PageHeader from '@/components/PageHeader'
 import TrekHero from '@/components/trek/TrekHero'
+import TrekGate from '@/components/trek/TrekGate'
 import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks } from '@/actions/trekBuddy'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import QuickStart from '@/components/trek/QuickStart'
@@ -39,25 +40,48 @@ export default async function TrekBuddyPage({
       <>
         <NavBar />
         <main>
-          <PageHeader
-            eyebrow="Trek Buddy"
-            title="Never go alone."
-            subtitle="Post the hour you're going, and other members heading that way that day can ask to come. Not a booking platform, and nobody pays for a place."
-            variant="altitude"
+          <TrekGate
+            eyebrow="Trek Buddy · Dehradun and around"
+            title={<>Never go <span className="italic text-sage">alone.</span></>}
+            lede="Members post the hour they are going, and other members ask to come. Not a booking platform, and nobody pays for a place."
           />
-          <section className="bg-paper px-6 pb-24 pt-16 md:px-10">
-            <div className="mx-auto max-w-2xl text-center">
+          <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
+            <div className="mx-auto max-w-2xl">
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">
-                {open === 0 ? 'No walks on the board yet' : `${open} walk${open === 1 ? '' : 's'} on the board`}
+                {open === 0
+                  ? 'Nothing on the board yet'
+                  : `${open} walk${open === 1 ? '' : 's'} on the board`}
               </p>
-              <h2 className="mt-4 font-display text-[clamp(24px,3.4vw,36px)] leading-tight text-text">
+              <h2 className="mt-3 font-display text-[clamp(22px,3.2vw,32px)] leading-tight text-text">
                 You need an account to see who is going where.
               </h2>
-              <p className="mx-auto mt-4 max-w-md font-body text-sm leading-relaxed text-mid">
-                Walks are only visible to signed-in members, and the exact meeting point is only
-                ever shown to people the host has confirmed. That is deliberate.
+              <p className="mt-3 max-w-md font-body text-sm leading-relaxed text-mid">
+                Walks are visible to signed-in members only, and the exact meeting point is shown
+                to nobody but the people the host has confirmed. That is deliberate, and it is the
+                reason this page is not a list.
               </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-4">
+
+              {/* What they are signing in TO. Three lines, so the decision is
+                  informed rather than a leap. */}
+              <ol className="mt-8 space-y-4 border-t border-rule pt-6">
+                {[
+                  ['Find one', 'Browse walks near Dehradun by day, by hour and by activity.'],
+                  ['Ask to come', 'The host confirms or declines. Nobody joins automatically.'],
+                  ['Meet the group', 'The exact spot arrives once enough people are going.'],
+                ].map(([t, d], i) => (
+                  <li key={t} className="flex gap-4">
+                    <span className="mt-0.5 font-mono text-[10px] text-mid tabular-nums">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span>
+                      <span className="block font-body text-sm text-text">{t}</span>
+                      <span className="block font-body text-xs text-mid">{d}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-8 flex flex-wrap gap-4">
                 <Link
                   href="/auth/login?redirect=/trek-buddy"
                   className="rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
@@ -66,7 +90,7 @@ export default async function TrekBuddyPage({
                 </Link>
                 <Link
                   href="/treks"
-                  className="border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+                  className="self-center border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
                 >
                   Read the trail guide instead
                 </Link>
@@ -79,32 +103,8 @@ export default async function TrekBuddyPage({
     )
   }
 
-  if (!membership.onboarded) {
-    return (
-      <>
-        <NavBar />
-        <main>
-          <PageHeader
-            eyebrow="Trek Buddy"
-            title="Four questions first."
-            subtitle="A name to show other walkers, your date of birth, and how this works. It takes a minute."
-            variant="altitude"
-          />
-          <section className="bg-paper px-6 pb-24 pt-16 md:px-10">
-            <div className="mx-auto max-w-md text-center">
-              <Link
-                href="/trek-buddy/setup"
-                className="inline-block rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
-              >
-                Set up Trek Buddy
-              </Link>
-            </div>
-          </section>
-        </main>
-        <FooterSection />
-      </>
-    )
-  }
+  // A page whose only content is a button to another page is a wasted click.
+  if (!membership.onboarded) redirect('/trek-buddy/setup')
 
   // The unfiltered board is fetched alongside the filtered one so the chips can
   // carry honest counts — a filter that says "Camping 0" is more useful than a

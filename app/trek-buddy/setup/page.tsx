@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
-import PageHeader from '@/components/PageHeader'
+import TrekGate from '@/components/trek/TrekGate'
 import { requireAuth } from '@/actions/auth'
 import { getProfile } from '@/actions/auth'
 import { getTrekMembership } from '@/actions/trekBuddy'
@@ -27,13 +27,12 @@ export default async function TrekSetupPage() {
     <>
       <NavBar />
       <main>
-        <PageHeader
-          eyebrow="Trek Buddy"
-          title="Before you go anywhere."
-          subtitle="A name for the board, your age, and what you are agreeing to."
-          variant="altitude"
+        <TrekGate
+          eyebrow="Trek Buddy · Setting up"
+          title={<>Before you go <span className="italic text-sage">anywhere.</span></>}
+          lede="A name for the board, your age, and what you are agreeing to. It takes a minute and you only do it once."
         />
-        <section className="bg-paper px-6 pb-24 pt-14 md:px-10">
+        <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
           <SetupForm suggestedName={suggested} />
         </section>
       </main>

@@ -5,16 +5,16 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import { getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
 import PlanActions from './PlanActions'
+import PlanMasthead from '@/components/trek/PlanMasthead'
 import SafetyNotes from '@/components/trek/SafetyNotes'
-import { DAY_PART_LABEL, ACTIVITY_BY_KEY, EFFORT_LABEL, type TrekActivity } from '@/lib/trek'
+import { ACTIVITY_BY_KEY, DAY_PART_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
 
 export const metadata: Metadata = {
   title: 'A walk — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 
-/** One label map, shared with the board and the form — a local copy here is how
- *  camping ended up rendering as "camping". */
+/** One label map, shared with the board and the form. */
 const activityLabel = (a: string) => ACTIVITY_BY_KEY[a as TrekActivity]?.label ?? a
 
 function istDay(iso: string) {
@@ -23,6 +23,16 @@ function istDay(iso: string) {
   })
 }
 const hhmm = (t: string) => t.slice(0, 5)
+
+/** A section on this page. Ruled and labelled, so the page scans. */
+function Block({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-rule pt-6">
+      <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">{label}</h2>
+      <div className="mt-3">{children}</div>
+    </section>
+  )
+}
 
 export default async function TrekPlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -37,143 +47,109 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   const full = plan.spots_left <= 0
   const cancelled = plan.status === 'cancelled'
   const confirmed = myStatus === 'confirmed'
+  const light = lightForTime(plan.start_time)
 
   return (
     <>
       <NavBar />
-      <main className="min-h-screen bg-paper px-6 pb-24 pt-32 md:px-10">
-        <div className="mx-auto max-w-2xl">
-          <Link
-            href="/trek-buddy"
-            className="font-body text-[10px] uppercase tracking-[0.14em] text-mid transition-colors hover:text-text"
-          >
-            ← All walks
-          </Link>
+      <main>
+        <PlanMasthead plan={plan} />
 
-          {cancelled && (
-            <div className="mt-6 border-l-2 border-clay bg-clay/5 px-4 py-3">
-              <p className="font-body text-sm text-text">
-                This walk was cancelled{plan.cancel_reason ? ` — ${plan.cancel_reason}` : '.'}
-              </p>
-            </div>
-          )}
-
-          <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-forest">
-            {activityLabel(plan.activity)} · {EFFORT_LABEL[plan.effort]}
-          </p>
-          <h1 className="mt-3 font-display text-[clamp(30px,5vw,46px)] leading-tight text-text">
-            {plan.place}
-          </h1>
-
-          <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-rule py-6 sm:grid-cols-3">
-            <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">Date</dt>
-              <dd className="mt-1 font-body text-sm text-text">{istDay(plan.starts_at)}</dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">Start</dt>
-              <dd className="mt-1 font-body text-sm text-text tabular-nums">{hhmm(plan.start_time)}</dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">Back by</dt>
-              <dd className="mt-1 font-body text-sm text-text tabular-nums">{hhmm(plan.back_by)}</dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">Meet around</dt>
-              <dd className="mt-1 font-body text-sm text-text">{plan.meet_area}</dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">Going</dt>
-              <dd className="mt-1 font-body text-sm text-text tabular-nums">
-                {plan.going_count} of {plan.capacity}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">Host</dt>
-              <dd className="mt-1 font-body text-sm text-text">{plan.host_name}</dd>
-            </div>
-          </dl>
-
-          {plan.note && (
-            <p className="mt-6 font-body text-sm leading-relaxed text-mid">{plan.note}</p>
-          )}
-
-          {/* What the host wrote about getting back in the dark. Shown to
-              everyone looking at the plan, not just to confirmed walkers: it is
-              the single most useful thing for deciding whether to ask at all,
-              and hiding it behind a join would be exactly backwards. */}
-          {plan.night_note && (
-            <div className="mt-6 border-l-2 border-clay pl-4">
-              <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-clay">
-                {DAY_PART_LABEL[plan.day_part]} · how everyone gets back
-              </h2>
-              <p className="mt-2 font-body text-sm leading-relaxed text-text">{plan.night_note}</p>
-            </div>
-          )}
-
-          {/* The exact spot.
-              This is not conditional rendering hiding a value the page already
-              fetched — `meetingPoint` is read through the viewer's own session,
-              so RLS decides whether it arrives at all. A stranger, or a walker
-              the host has not confirmed, gets null from the database. */}
-          <div className="mt-8 rounded-sm border border-rule bg-white p-5">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
-              Exact meeting point
-            </h2>
-            {meetingPoint ? (
-              <>
-                <p className="mt-2 font-body text-sm text-text">{meetingPoint}</p>
-                {logistics && <p className="mt-2 font-body text-sm text-mid">{logistics}</p>}
-              </>
-            ) : (
-              <p className="mt-2 font-body text-sm leading-relaxed text-mid">
-                {confirmed
-                  ? `Shown once ${plan.min_party} people are going. Right now this walk has ${plan.going_count}.`
-                  : `Only shown to walkers the host has confirmed, and only once ${plan.min_party} people are going.`}
-              </p>
+        <div className="bg-paper px-6 pb-24 pt-10 md:px-10">
+          <div className="mx-auto max-w-3xl space-y-8">
+            {cancelled && (
+              <div className="border-l-2 border-clay bg-clay/5 px-4 py-3">
+                <p className="font-body text-sm text-text">
+                  This walk was called off{plan.cancel_reason ? ` — ${plan.cancel_reason}` : '.'}
+                </p>
+              </div>
             )}
+
+            {/* What happens next for THIS viewer, at the top, because it is the
+                only thing they came to do. Host, joiner and stranger each get a
+                different first thing to look at. */}
+            <PlanActions
+              planId={plan.id}
+              isHost={isHost}
+              myStatus={myStatus}
+              full={full}
+              cancelled={cancelled}
+              roster={roster as { user_id: string; display_name: string; status: string; message: string | null }[]}
+            />
+
+            {/* The exact spot. Not conditional rendering hiding a value the page
+                already has — `meetingPoint` is read through the viewer's own
+                session, so RLS decides whether it arrives at all. */}
+            <Block label="Exact meeting point">
+              {meetingPoint ? (
+                <div style={{ borderColor: light.bar }} className="border-l-2 pl-4">
+                  <p className="font-body text-base text-text">{meetingPoint}</p>
+                  {logistics && <p className="mt-1.5 font-body text-sm text-mid">{logistics}</p>}
+                </div>
+              ) : (
+                <div className="rounded-sm border border-dashed border-rule px-4 py-5">
+                  <p className="font-body text-sm leading-relaxed text-mid">
+                    {confirmed
+                      ? `Unlocks when ${plan.min_party} people are going. Right now there are ${plan.going_count}.`
+                      : `Shown to walkers the host has confirmed, once ${plan.min_party} people are going.`}
+                  </p>
+                  {/* The wait, made countable. "Two more people" is something you
+                      can act on; "not yet" is not. */}
+                  <div className="mt-3 flex items-center gap-2" aria-hidden="true">
+                    {Array.from({ length: plan.min_party }).map((_, i) => (
+                      <span
+                        key={i}
+                        style={{ background: i < plan.going_count ? light.bar : 'transparent' }}
+                        className="h-1.5 flex-1 rounded-full border border-rule"
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-mid tabular-nums">
+                    {plan.going_count} of {plan.min_party}
+                  </p>
+                </div>
+              )}
+            </Block>
+
+            {plan.note && (
+              <Block label="From the host">
+                <p className="font-body text-sm leading-relaxed text-text">{plan.note}</p>
+              </Block>
+            )}
+
+            {plan.night_note && (
+              <Block label={`${DAY_PART_LABEL[plan.day_part]} · getting back`}>
+                <p className="font-body text-sm leading-relaxed text-text">{plan.night_note}</p>
+              </Block>
+            )}
+
+            {/* The loudest safety control on the page, and the one with no
+                platform obligation attached: somebody off the platform knowing
+                where you are beats anything this shop can enforce. */}
+            {confirmed && (
+              <Block label="Tell someone who is not coming">
+                <p className="font-body text-sm text-mid">
+                  Copy this to a friend or someone at home before you set off.
+                </p>
+                <p className="mt-3 rounded-sm bg-paper-warm px-4 py-3 font-body text-sm leading-relaxed text-text">
+                  I&apos;m going {activityLabel(plan.activity).toLowerCase()} at {plan.place} on{' '}
+                  {istDay(plan.starts_at)}. Meeting around {plan.meet_area} at{' '}
+                  {hhmm(plan.start_time)}, back by {hhmm(plan.back_by)}
+                  {plan.ends_on !== plan.starts_on ? ' the next day' : ''}. Organised through
+                  DEWDROPZ Trek Buddy by {plan.host_name}.
+                </p>
+              </Block>
+            )}
+
+            <SafetyNotes variant="compact" />
+
+            <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
+              DEWDROPZ does not organise, lead, vet or supervise this walk and has not checked who
+              anyone on it is. Go at your own risk and turn back if conditions change. Emergency:{' '}
+              <span className="text-text">112</span>. Something wrong with this walk?{' '}
+              <Link href="/contact" className="text-forest underline underline-offset-4">Tell us</Link>.
+            </p>
           </div>
-
-          <PlanActions
-            planId={plan.id}
-            isHost={isHost}
-            myStatus={myStatus}
-            full={full}
-            cancelled={cancelled}
-            roster={roster as { user_id: string; display_name: string; status: string; message: string | null }[]}
-          />
-
-          {/* The loudest safety control on the page, and the one with no platform
-              obligation attached: somebody off the platform knowing where you
-              are is worth more than anything this shop can enforce. */}
-          {confirmed && (
-            <div className="mt-8 border-l-2 border-forest pl-4">
-              <h2 className="font-body text-xs uppercase tracking-[0.12em] text-text">
-                Tell someone where you are going
-              </h2>
-              <p className="mt-2 font-body text-sm leading-relaxed text-mid">
-                Send this to a friend or someone at home before you set off.
-              </p>
-              <p className="mt-3 rounded-sm bg-paper-warm p-3 font-body text-xs leading-relaxed text-text">
-                I&apos;m going {activityLabel(plan.activity).toLowerCase()} at{' '}
-                {plan.place} on {istDay(plan.starts_at)}. Meeting around {plan.meet_area} at{' '}
-                {hhmm(plan.start_time)}, expecting to be back by {hhmm(plan.back_by)}. Organised
-                through DEWDROPZ Trek Buddy by {plan.host_name}.
-              </p>
-            </div>
-          )}
-
-          <SafetyNotes variant="compact" className="mt-10" />
-
-          <p className="mt-6 border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
-            DEWDROPZ does not organise, lead, vet or supervise this walk and has not checked who
-            anyone on it is. Go at your own risk and turn back if conditions change. Emergency:{' '}
-            <span className="text-text">112</span>. Something wrong with this walk?{' '}
-            <Link href="/contact" className="text-forest underline underline-offset-4">
-              Tell us
-            </Link>
-            .
-          </p>
         </div>
       </main>
       <FooterSection />
