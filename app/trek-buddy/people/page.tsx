@@ -7,7 +7,7 @@ import TrekHero from '@/components/trek/TrekHero'
 import PersonCardTile from '@/components/trek/PersonCardTile'
 import Guidance from '@/components/trek/Guidance'
 import {
-  getGuidance, getPeople, getTrekBoard, getTrekKinds, getTrekMembership,
+  getGuidance, getPeople, getTrekBoard, getTrekKinds, getTrekMembership, getMyTrekCard
 } from '@/actions/trekBuddy'
 
 export const metadata: Metadata = {
@@ -33,11 +33,12 @@ export default async function PeoplePage({
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/people')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [people, all, kinds, mentorNotes] = await Promise.all([
+  const [people, all, kinds, mentorNotes, me] = await Promise.all([
     getPeople({ activity: sp.activity, homeBase: sp.home }),
     getTrekBoard(),
     getTrekKinds(),
     getGuidance({ audiences: ['first_time'], limit: 4 }),
+    getMyTrekCard(),
   ])
 
   const mentors = people.filter((p) => p.mentor)
@@ -53,7 +54,7 @@ export default async function PeoplePage({
     <>
       <NavBar />
       <main>
-        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="people" />
+        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="people" me={me} />
 
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
           <div className="mx-auto max-w-5xl space-y-10">

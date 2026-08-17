@@ -599,6 +599,78 @@ export async function getPerson(userId: string): Promise<PersonCard | null> {
   }
 }
 
+/**
+ * You, for the header on every Trek Buddy page.
+ *
+ * A profile nobody can find is a profile nobody fills in, and a board of empty
+ * profiles is a board nobody trusts — so this exists to put the viewer's own
+ * presence in front of them, with the one thing that actually moves the
+ * behaviour: what is still missing, named.
+ *
+ * Completeness counts the seven fields another walker actually reads when
+ * deciding whether to spend a day with you. Not every column — a percentage
+ * that rises for filling in something nobody looks at is a scoreboard, not a
+ * prompt.
+ */
+export type MyTrekCard = {
+  userId: string
+  displayName: string
+  homeBase: string | null
+  mentor: boolean
+  canHost: boolean
+  experience: string | null
+  yearsOut: number | null
+  walksHosted: number
+  walksJoined: number
+  vouches: number
+  done: number
+  total: number
+  nextUp: { field: string; prompt: string } | null
+}
+
+export async function getMyTrekCard(): Promise<MyTrekCard | null> {
+  const user = await getUser()
+  if (!user) return null
+  const me = await getPerson(user.id)
+  if (!me) return null
+
+  // Ordered by how much each one tells a stranger, so the prompt always names
+  // the most useful missing thing rather than the first one alphabetically.
+  const checks: { field: string; filled: boolean; prompt: string }[] = [
+    { field: 'Activities', filled: me.activities.length > 0,
+      prompt: 'Say what you actually go out for' },
+    { field: 'Home base', filled: Boolean(me.homeBase),
+      prompt: 'Add the town you set off from' },
+    { field: 'Pace', filled: Boolean(me.pace),
+      prompt: 'Say how fast you walk — somebody will plan their day around it' },
+    { field: 'Intro', filled: Boolean(me.intro),
+      prompt: 'Write a line about yourself' },
+    { field: 'Experience', filled: Boolean(me.experience),
+      prompt: 'Say how much of this you have done' },
+    { field: 'Kit', filled: me.carries.length > 0,
+      prompt: 'List what you carry — the most useful thing on a profile' },
+    { field: 'Languages', filled: me.languages.length > 0,
+      prompt: 'Add the languages you speak' },
+  ]
+  const missing = checks.find((c) => !c.filled)
+
+  return {
+    userId: me.userId,
+    displayName: me.displayName,
+    homeBase: me.homeBase,
+    mentor: me.mentor,
+    canHost: me.canHost,
+    experience: me.experience,
+    yearsOut: me.yearsOut,
+    walksHosted: me.walksHosted,
+    walksJoined: me.walksJoined,
+    vouches: me.vouches,
+    done: checks.filter((c) => c.filled).length,
+    total: checks.length,
+    nextUp: missing ? { field: missing.field, prompt: missing.prompt } : null,
+  }
+}
+
 export type PersonSummary = {
   userId: string
   displayName: string

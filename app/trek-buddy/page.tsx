@@ -5,7 +5,7 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
 import TrekGate from '@/components/trek/TrekGate'
-import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks } from '@/actions/trekBuddy'
+import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks, getMyTrekCard } from '@/actions/trekBuddy'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import QuickStart from '@/components/trek/QuickStart'
 import BoardFilters from '@/components/trek/BoardFilters'
@@ -113,7 +113,7 @@ export default async function TrekBuddyPage({
   // The unfiltered board is fetched alongside the filtered one so the chips can
   // carry honest counts — a filter that says "Camping 0" is more useful than a
   // filter that has quietly disappeared.
-  const [plans, all, mine] = await Promise.all([
+  const [plans, all, mine, me] = await Promise.all([
     getTrekBoard({
       activity: sp.activity,
       when: sp.when as 'all' | 'week' | 'weekend',
@@ -126,6 +126,7 @@ export default async function TrekBuddyPage({
     }),
     getTrekBoard(),
     getMyTreks(),
+    getMyTrekCard(),
   ])
 
   const counts: Record<string, number> = { all: all.length }
@@ -141,7 +142,7 @@ export default async function TrekBuddyPage({
     <>
       <NavBar />
       <main>
-        <TrekHero counts={counts} openCount={all.length} canHost={membership.canHost} active="board" />
+        <TrekHero counts={counts} openCount={all.length} canHost={membership.canHost} active="board" me={me} />
 
         <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
           <div className="mx-auto max-w-5xl space-y-10">

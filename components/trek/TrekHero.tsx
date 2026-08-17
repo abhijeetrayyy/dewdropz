@@ -2,6 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { BLUR_DATA_URL, DAY_ARC } from '@/lib/constants'
 import BoardFilters from './BoardFilters'
+import YouCard from './YouCard'
+import type { MyTrekCard } from '@/actions/trekBuddy'
 
 // The way in.
 //
@@ -20,18 +22,25 @@ export default function TrekHero({
   openCount,
   canHost,
   active,
+  me,
 }: {
   counts: Record<string, number>
   openCount: number
   canHost: boolean
-  /** Which of the three Trek Buddy pages you are on. */
-  active: 'board' | 'people' | 'yours' | 'new'
+  /** Which Trek Buddy page you are on. */
+  active: 'board' | 'people' | 'yours' | 'new' | 'profile'
+  /** The viewer, when they have finished joining. Drives the presence card. */
+  me?: MyTrekCard | null
 }) {
   const tabs = [
     { key: 'board', label: 'The board', href: '/trek-buddy' },
     { key: 'people', label: 'Who is out there', href: '/trek-buddy/people' },
     { key: 'yours', label: 'Yours', href: '/trek-buddy/yours' },
     ...(canHost ? [{ key: 'new', label: 'Post a walk', href: '/trek-buddy/new' }] : []),
+    // Was missing entirely. The profile page existed and nothing in the
+    // navigation pointed at it, so the one thing a member controls was the one
+    // thing they could not reach.
+    { key: 'profile', label: 'Your profile', href: '/trek-buddy/profile' },
   ]
 
   return (
@@ -56,19 +65,31 @@ export default function TrekHero({
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-ink/70 via-ink/20 to-transparent" />
 
       <div className="relative mx-auto max-w-5xl px-6 pb-8 pt-32 md:px-10 md:pt-36">
-        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
-          Trek Buddy · Dehradun and around
-        </p>
+        {/* The argument on the left, you on the right. The frame was empty on
+            that side and the member's own presence had nowhere to live. */}
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
+              Trek Buddy · Dehradun and around
+            </p>
 
-        <h1 className="mt-4 max-w-xl font-display text-[clamp(32px,5.2vw,54px)] font-light leading-[0.98] text-paper">
-          Never go <span className="italic text-sage">alone.</span>
-        </h1>
+            <h1 className="mt-4 max-w-xl font-display text-[clamp(32px,5.2vw,54px)] font-light leading-[0.98] text-paper">
+              Never go <span className="italic text-sage">alone.</span>
+            </h1>
 
-        <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-paper/70">
-          {openCount === 0
-            ? 'Nobody has posted a walk yet. When they do, this is where you will find them.'
-            : `${openCount} walk${openCount === 1 ? '' : 's'} on the board right now. Ask to come, and the host decides.`}
-        </p>
+            <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-paper/70">
+              {openCount === 0
+                ? 'Nobody has posted a walk yet. When they do, this is where you will find them.'
+                : `${openCount} walk${openCount === 1 ? '' : 's'} on the board right now. Ask to come, and the host decides.`}
+            </p>
+          </div>
+
+          {me && (
+            <div className="w-full shrink-0 lg:w-[290px]">
+              <YouCard me={me} />
+            </div>
+          )}
+        </div>
 
         {/* The three pages, named. Somebody arriving should be able to see the
             whole shape of this thing without clicking to find out. */}

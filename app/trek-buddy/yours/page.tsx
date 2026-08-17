@@ -5,7 +5,7 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
-import { getMyTreks, getTrekMembership, getTrekBoard } from '@/actions/trekBuddy'
+import { getMyTreks, getTrekMembership, getTrekBoard, getMyTrekCard } from '@/actions/trekBuddy'
 
 export const metadata: Metadata = {
   title: 'Your walks — DEWDROPZ',
@@ -21,7 +21,7 @@ export default async function YourTreksPage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/yours')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [mine, all] = await Promise.all([getMyTreks(), getTrekBoard()])
+  const [mine, all, me] = await Promise.all([getMyTreks(), getTrekBoard(), getMyTrekCard()])
   const waiting = mine.going.filter((g) => g.status === 'requested')
   const confirmed = mine.going.filter((g) => g.status === 'confirmed')
 
@@ -29,7 +29,7 @@ export default async function YourTreksPage() {
     <>
       <NavBar />
       <main>
-        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" />
+        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" me={me} />
 
         <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
           <div className="mx-auto max-w-5xl space-y-12">
