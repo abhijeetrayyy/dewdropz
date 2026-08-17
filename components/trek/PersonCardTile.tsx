@@ -79,6 +79,28 @@ export default function PersonCardTile({ person }: { person: PersonSummary }) {
         <p className="line-clamp-2 font-body text-sm leading-relaxed text-mid">{person.intro}</p>
       )}
 
+      {/* What they go out for. The card never showed this, which made it the
+          one field the profile preview could not reflect — and it is ranked
+          first by the completeness meter, so the page was asking for the thing
+          it then refused to show. */}
+      {person.activities.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5">
+          {person.activities.slice(0, 4).map((a) => (
+            <li
+              key={a}
+              className="rounded-full border border-rule px-2.5 py-0.5 font-body text-[11px] capitalize text-mid"
+            >
+              {a.replace(/_/g, ' ')}
+            </li>
+          ))}
+          {person.activities.length > 4 && (
+            <li className="self-center font-mono text-[10px] text-mid/70">
+              +{person.activities.length - 4}
+            </li>
+          )}
+        </ul>
+      )}
+
       {/* The counted half. Mono and tabular because these are readings, not
           claims — the difference between them and the line above is the whole
           trust model of this board. */}

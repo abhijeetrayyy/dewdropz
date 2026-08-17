@@ -1,6 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+/* eslint-disable react-hooks/set-state-in-effect -- reading the clock is the
+   one thing that must NOT happen during render here: this component is
+   prerendered on the server and hydrated on the client, so a Date.now() in
+   render is a guaranteed mismatch. Same established pattern as SummitHero's
+   matchMedia read. */
+
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { markNotificationsRead, type TrekNotification } from '@/actions/trekBuddy'
@@ -23,8 +29,25 @@ const KIND: Record<string, { label: string; tone: 'good' | 'bad' | 'plain' }> = 
   vouched:           { label: 'Vouched',       tone: 'good' },
 }
 
-function ago(iso: string) {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+/**
+ * When it happened.
+ *
+ * `now` is passed in rather than read from Date.now() inside render, and it is
+ * null until the component has mounted. This is a client component rendered
+ * from an async server page, so Next prerenders it with the SERVER clock and
+ * then hydrates with the CLIENT one — a bare Date.now() in render makes every
+ * one of these a hydration mismatch, and "just now" against "1m ago" is
+ * exactly the kind of off-by-one that produces it. Before mount it prints the
+ * absolute IST time instead, which is deterministic on both sides.
+ */
+function when(iso: string, now: number | null) {
+  if (now === null) {
+    return new Date(iso).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short',
+      hour: 'numeric', minute: '2-digit',
+    })
+  }
+  const mins = Math.round((now - new Date(iso).getTime()) / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
   const h = Math.round(mins / 60)
@@ -53,6 +76,9 @@ export default function Inbox({
   const router = useRouter()
   const [pending, start] = useTransition()
   const [showAll, setShowAll] = useState(false)
+  // Set once, after mount. See `when` above.
+  const [now, setNow] = useState<number | null>(null)
+  useEffect(() => { setNow(Date.now()) }, [])
 
   if (items.length === 0) {
     return (
@@ -131,7 +157,7 @@ export default function Inbox({
                   >
                     {meta.label}
                   </span>
-                  <span className="font-mono text-[10px] text-mid/70">{ago(n.createdAt)}</span>
+                  <span className="font-mono text-[10px] text-mid/70">{when(n.createdAt, now)}</span>
                 </div>
                 <p className={`mt-1 font-body text-sm leading-snug ${n.read ? 'text-mid' : 'text-text'}`}>
                   {n.body}
