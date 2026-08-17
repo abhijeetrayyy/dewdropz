@@ -4,9 +4,16 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ACTIVITIES } from '@/lib/trek'
 
-const chip = (on: boolean) =>
+// Two grounds: the filters sit inside the dark header on the board, and on
+// paper elsewhere. Same control, so it keeps one implementation rather than
+// growing a second copy that drifts.
+const chip = (on: boolean, dark: boolean) =>
   `whitespace-nowrap rounded-full border px-3 py-1.5 font-body text-[11px] uppercase tracking-[0.08em] transition-colors ${
-    on ? 'border-forest bg-forest text-paper' : 'border-rule text-mid hover:border-text hover:text-text'
+    on
+      ? dark ? 'border-sage bg-sage text-ink' : 'border-forest bg-forest text-paper'
+      : dark
+        ? 'border-paper/25 text-paper/60 hover:border-paper/60 hover:text-paper'
+        : 'border-rule text-mid hover:border-text hover:text-text'
   }`
 
 // Filters live in the URL, not in component state.
@@ -15,7 +22,14 @@ const chip = (on: boolean) =>
 // someone, the back button behaves, and a refresh does not dump you back at
 // "everything". The shop's own filter rail keeps its state internally and is
 // the poorer for it.
-export default function BoardFilters({ counts }: { counts: Record<string, number> }) {
+export default function BoardFilters({
+  counts,
+  tone = 'light',
+}: {
+  counts: Record<string, number>
+  tone?: 'light' | 'dark'
+}) {
+  const dark = tone === 'dark'
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -48,16 +62,20 @@ export default function BoardFilters({ counts }: { counts: Record<string, number
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search a place — Nag Tibba, Mussoorie, Benog…"
-          className="w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/70 focus:border-forest focus:outline-none"
+          className={
+            dark
+              ? 'w-full rounded-sm border border-paper/20 bg-paper/[0.07] px-3.5 py-3 font-body text-sm text-paper placeholder:text-paper/40 focus:border-sage focus:outline-none'
+              : 'w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/70 focus:border-forest focus:outline-none'
+          }
         />
       </label>
 
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <button type="button" onClick={() => set('activity', 'all')} className={chip(activity === 'all')}>
+        <button type="button" onClick={() => set('activity', 'all')} className={chip(activity === 'all', dark)}>
           All{counts.all ? ` ${counts.all}` : ''}
         </button>
         {ACTIVITIES.filter((a) => counts[a.key] > 0 || activity === a.key).map((a) => (
-          <button key={a.key} type="button" onClick={() => set('activity', a.key)} className={chip(activity === a.key)}>
+          <button key={a.key} type="button" onClick={() => set('activity', a.key)} className={chip(activity === a.key, dark)}>
             {a.label}
             {counts[a.key] ? <span className="ml-1.5 opacity-60">{counts[a.key]}</span> : null}
           </button>
@@ -70,7 +88,7 @@ export default function BoardFilters({ counts }: { counts: Record<string, number
           ['week', 'Next 7 days'],
           ['weekend', 'This weekend'],
         ].map(([k, label]) => (
-          <button key={k} type="button" onClick={() => set('when', k)} className={chip(when === k)}>
+          <button key={k} type="button" onClick={() => set('when', k)} className={chip(when === k, dark)}>
             {label}
           </button>
         ))}

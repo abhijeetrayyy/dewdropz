@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
-import PageHeader from '@/components/PageHeader'
+import TrekHero from '@/components/trek/TrekHero'
+import { getTrekBoard } from '@/actions/trekBuddy'
 import { getTrekMembership } from '@/actions/trekBuddy'
 import NewPlanForm from './NewPlanForm'
 import { ACTIVITY_BY_KEY, type TrekActivity } from '@/lib/trek'
@@ -31,18 +32,26 @@ export default async function NewTrekPlanPage({
     ? (activity as TrekActivity)
     : undefined
 
+  const all = await getTrekBoard()
+
   return (
     <>
       <NavBar />
       <main>
-        <PageHeader
-          eyebrow="Trek Buddy"
-          title="Post a walk."
-          subtitle="Pick what you are doing, say where and when, and people ask to come. You decide who does."
-          variant="altitude"
-        />
-        <section className="bg-paper px-6 pb-24 pt-14 md:px-10">
-          <NewPlanForm initialActivity={initial} />
+        <TrekHero counts={{}} openCount={all.length} canHost active="new" />
+        <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
+          <div className="mx-auto max-w-xl">
+            <h2 className="font-display text-[clamp(24px,3.2vw,32px)] leading-tight text-text">
+              Where are you going?
+            </h2>
+            <p className="mt-2 font-body text-sm leading-relaxed text-mid">
+              Pick what you are doing and the hours fill themselves in. People ask to come, and
+              you decide who does.
+            </p>
+          </div>
+          <div className="mt-8">
+            <NewPlanForm initialActivity={initial} />
+          </div>
         </section>
       </main>
       <FooterSection />

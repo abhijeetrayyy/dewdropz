@@ -3,6 +3,7 @@ import Link from 'next/link'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import PageHeader from '@/components/PageHeader'
+import TrekHero from '@/components/trek/TrekHero'
 import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks } from '@/actions/trekBuddy'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import QuickStart from '@/components/trek/QuickStart'
@@ -118,100 +119,70 @@ export default async function TrekBuddyPage({
   for (const a of ACTIVITIES) counts[a.key] = all.filter((p) => p.activity === a.key).length
 
   const filtering = Boolean(sp.activity || sp.q || (sp.when && sp.when !== 'all'))
+  const involved = mine.hosting.length + mine.going.length
 
   return (
     <>
       <NavBar />
       <main>
-        <PageHeader
-          eyebrow="Trek Buddy"
-          title="Never go alone."
-          subtitle="Day walks, early birding, evenings under the stars and one night out — posted by members near Dehradun. Ask to come, and the host decides."
-          variant="altitude"
-        />
+        <TrekHero counts={counts} openCount={all.length} canHost={membership.canHost} active="board" />
 
-        <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
-          <div className="mx-auto max-w-5xl space-y-8">
-            <QuickStart canHost={membership.canHost} />
-
-            {/* What this member is already part of, before what everyone else is
-                doing. A board that opens on other people's plans buries the one
-                thing you came back to check. */}
-            {(mine.hosting.length > 0 || mine.going.length > 0) && (
-              <div className="rounded-sm border border-forest/25 bg-forest/[0.03] p-5">
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
-                  Yours
-                </h2>
-                <ul className="mt-3 divide-y divide-rule/70">
-                  {mine.hosting.map((p) => (
-                    <li key={p.id} className="flex items-baseline justify-between gap-4 py-2">
-                      <Link href={`/trek-buddy/${p.id}`} className="min-w-0 font-body text-sm text-text hover:underline">
-                        {p.place}
-                      </Link>
-                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-forest">
-                        Hosting · {p.going_count}/{p.capacity}
-                      </span>
-                    </li>
-                  ))}
-                  {mine.going.map(({ plan, status }) => (
-                    <li key={plan.id} className="flex items-baseline justify-between gap-4 py-2">
-                      <Link href={`/trek-buddy/${plan.id}`} className="min-w-0 font-body text-sm text-text hover:underline">
-                        {plan.place}
-                      </Link>
-                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
-                        {status === 'confirmed' ? 'Going' : 'Asked'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
+          <div className="mx-auto max-w-5xl space-y-10">
+            {/* One line, not a panel — what you are already part of belongs at
+                the top of the board but must not push the board off the screen. */}
+            {involved > 0 && (
+              <Link
+                href="/trek-buddy/yours"
+                className="flex items-center justify-between gap-4 rounded-sm border border-forest/25 bg-forest/[0.04] px-4 py-3 transition-colors hover:border-forest/50"
+              >
+                <span className="font-body text-sm text-text">
+                  You are on {involved} {involved === 1 ? 'walk' : 'walks'}
+                  {mine.hosting.length > 0 && (
+                    <span className="text-mid"> · hosting {mine.hosting.length}</span>
+                  )}
+                </span>
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-forest">
+                  See yours →
+                </span>
+              </Link>
             )}
 
             <div>
-              <BoardFilters counts={counts} />
-
-              <div className="mt-5 flex flex-wrap items-baseline justify-between gap-3 border-b border-rule pb-3">
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+              <div className="flex flex-wrap items-baseline justify-between gap-3 pb-4">
+                <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
                   {plans.length === 0
                     ? filtering ? 'Nothing matches' : 'Nothing on the board'
-                    : `${plans.length} walk${plans.length === 1 ? '' : 's'} coming up`}
-                </span>
-                {!membership.canHost && (
-                  <span className="font-body text-xs text-mid">
-                    Hosting is invite-only —{' '}
-                    <Link href="/contact" className="text-forest underline underline-offset-4">ask us</Link>
-                  </span>
+                    : `${plans.length} coming up`}
+                </h2>
+                {filtering && (
+                  <Link href="/trek-buddy" className="font-mono text-[10px] uppercase tracking-[0.14em] text-forest underline underline-offset-4">
+                    Clear filters
+                  </Link>
                 )}
               </div>
 
               {plans.length === 0 ? (
-                <div className="py-14 text-center">
-                  <h2 className="font-display text-[clamp(20px,2.6vw,28px)] text-text">
-                    {filtering ? 'Nothing matches that yet.' : 'Nobody has posted a walk yet.'}
-                  </h2>
-                  <p className="mx-auto mt-3 max-w-md font-body text-sm leading-relaxed text-mid">
+                <div className="rounded-sm border border-dashed border-rule px-6 py-16 text-center">
+                  <h3 className="font-display text-[clamp(20px,2.6vw,28px)] text-text">
+                    {filtering ? 'Nothing matches that yet.' : 'The board is empty.'}
+                  </h3>
+                  <p className="mx-auto mt-3 max-w-sm font-body text-sm leading-relaxed text-mid">
                     {filtering
-                      ? 'Try a wider date range, or clear the filters to see everything on the board.'
-                      : 'This board only works when it is real, so there is nothing invented on it. The first walks will be ones the DEWDROPZ team are actually going on.'}
+                      ? 'Try a wider date range, or clear the filters to see everything.'
+                      : 'Nothing here is invented, so it stays empty until someone posts a real walk. If you know where you are going this week, that someone is you.'}
                   </p>
-                  {filtering ? (
+                  {!filtering && membership.canHost && (
                     <Link
-                      href="/trek-buddy"
-                      className="mt-6 inline-block border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+                      href="/trek-buddy/new"
+                      className="mt-6 inline-block rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
                     >
-                      Clear filters
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/treks"
-                      className="mt-6 inline-block border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
-                    >
-                      Read the trail guide
+                      Post the first one
                     </Link>
                   )}
                 </div>
               ) : (
-                <ul className="divide-y divide-rule">
+                <ul className="grid gap-3">
                   {plans.map((p) => (
                     <li key={p.id}>
                       <TrekPlanCard plan={p} />
@@ -220,6 +191,20 @@ export default async function TrekBuddyPage({
                 </ul>
               )}
             </div>
+
+            {/* Below the board, not above it: someone who came to browse should
+                reach the walks first, and someone who came to post scrolls once. */}
+            <QuickStart canHost={membership.canHost} />
+
+            {!membership.canHost && (
+              <p className="rounded-sm border border-rule bg-white px-4 py-3 font-body text-sm text-mid">
+                Hosting is invite-only while this is new.{' '}
+                <Link href="/contact" className="text-forest underline underline-offset-4">
+                  Ask us
+                </Link>{' '}
+                and we will turn it on for you.
+              </p>
+            )}
 
             <SafetyNotes />
 

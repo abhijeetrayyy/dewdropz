@@ -1,68 +1,129 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { ACTIVITY_BY_KEY, EFFORT_LABEL, DAY_PART_LABEL, type TrekActivity } from '@/lib/trek'
+import { ACTIVITY_BY_KEY, EFFORT_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
 
 /** IST, because the walk happens in India and the server does not. */
-function istDay(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', {
-    timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short',
-  })
+function istParts(iso: string) {
+  const d = new Date(iso)
+  const f = (o: Intl.DateTimeFormatOptions) =>
+    d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', ...o })
+  return { day: f({ day: '2-digit' }), month: f({ month: 'short' }), weekday: f({ weekday: 'short' }) }
 }
 
-/** 'HH:MM:SS' from Postgres TIME — the wall-clock the host chose, printed as-is. */
-function hhmm(t: string) {
-  return t.slice(0, 5)
+const hhmm = (t: string) => t.slice(0, 5)
+
+/** Initials for the people going. A face is a person; a number is a row. */
+function Party({ count, capacity }: { count: number; capacity: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex">
+        {Array.from({ length: Math.min(count, 4) }).map((_, i) => (
+          <span
+            key={i}
+            style={{ marginLeft: i === 0 ? 0 : -6 }}
+            className="h-5 w-5 rounded-full border border-paper bg-forest/85"
+            aria-hidden="true"
+          />
+        ))}
+        {Array.from({ length: Math.max(0, Math.min(capacity - count, 4)) }).map((_, i) => (
+          <span
+            key={`o-${i}`}
+            style={{ marginLeft: count === 0 && i === 0 ? 0 : -6 }}
+            className="h-5 w-5 rounded-full border border-dashed border-mid/40 bg-transparent"
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-mid tabular-nums">
+        {count}/{capacity}
+      </span>
+    </div>
+  )
 }
 
-// One row on the board.
+// One plan.
 //
-// It shows the town-level rendezvous ("Dehradun ISBT"), never the exact meeting
-// point — that lives in a separate table behind an RLS floor and is not fetched
-// here at all, so there is nothing on this page to leak.
+// Built around the departure hour, because that is the fact that decides
+// everything else about an outing. The rail down the left is coloured by it, so
+// a board of these reads as a day: indigo before light, green through the
+// middle, clay at dusk, ink after dark.
+//
+// Numbers are mono throughout and words are not. Times, altitude, capacity and
+// the date are instrument readings off a logbook; the place is a name on a map.
+// Keeping those two registers apart is what stops the card reading as a form.
 export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
+  const light = lightForTime(plan.start_time)
+  const spec = ACTIVITY_BY_KEY[plan.activity as TrekActivity]
+  const { day, month, weekday } = istParts(plan.starts_at)
   const full = plan.spots_left <= 0
 
   return (
     <Link
       href={`/trek-buddy/${plan.id}`}
-      className="group flex flex-wrap items-baseline gap-x-6 gap-y-2 py-5 transition-opacity hover:opacity-80"
+      style={{ background: light.wash }}
+      className="group relative flex overflow-hidden rounded-sm border border-rule transition-all duration-300 hover:-translate-y-0.5 hover:border-forest/50 hover:shadow-[0_10px_30px_-18px_rgba(12,16,13,0.45)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
     >
-      <div className="w-16 shrink-0">
-        <div className="font-mono text-sm text-text tabular-nums">{hhmm(plan.start_time)}</div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
-          {istDay(plan.starts_at)}
-        </div>
-      </div>
+      {/* The hour rail. */}
+      <span
+        aria-hidden="true"
+        style={{ background: light.bar }}
+        className="w-1 shrink-0"
+      />
 
-      <div className="min-w-0 flex-1">
-        <h3 className="font-display text-lg leading-tight text-text">
-          {ACTIVITY_BY_KEY[plan.activity as TrekActivity]?.label ?? plan.activity}
-          <span className="text-mid"> · {plan.place}</span>
-        </h3>
-        <p className="mt-0.5 font-body text-xs text-mid">
-          Meet around {plan.meet_area} · back by {hhmm(plan.back_by)}
-          {plan.ends_on !== plan.starts_on ? ' next day' : ''} · {EFFORT_LABEL[plan.effort]}
-        </p>
-        {plan.day_part !== 'day' && (
-          // Flagged on the card, not buried on the plan page: an outing that
-          // runs in the dark is a different decision from one that does not.
-          <span className="mt-1.5 inline-block rounded-full border border-clay/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-clay">
-            {DAY_PART_LABEL[plan.day_part]} · needs {plan.min_party}
+      <div className="flex min-w-0 flex-1 flex-col gap-4 p-5 sm:flex-row sm:items-start">
+        {/* The date block — a torn calendar corner, not a sentence. */}
+        <div className="flex shrink-0 flex-row items-baseline gap-2 sm:w-14 sm:flex-col sm:items-start sm:gap-0">
+          <span className="font-display text-3xl leading-none text-text tabular-nums">{day}</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">
+            {month} · {weekday}
           </span>
-        )}
-        <p className="mt-0.5 font-body text-xs text-mid/70">Posted by {plan.host_name}</p>
-      </div>
-
-      <div className="shrink-0 text-right">
-        <div className="font-mono text-sm text-text tabular-nums">
-          {plan.going_count}/{plan.capacity}
         </div>
-        <div
-          className={`font-mono text-[10px] uppercase tracking-[0.14em] ${
-            full ? 'text-clay' : 'text-forest'
-          }`}
-        >
-          {full ? 'Full' : `${plan.spots_left} space${plan.spots_left === 1 ? '' : 's'}`}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span
+              style={{ color: light.ink }}
+              className="font-mono text-sm tabular-nums"
+            >
+              {hhmm(plan.start_time)}
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
+              {light.label}
+            </span>
+          </div>
+
+          <h3 className="mt-1 font-display text-xl leading-tight text-text">{plan.place}</h3>
+
+          <p className="mt-1 font-body text-xs text-mid">
+            {spec?.label ?? plan.activity} · from {plan.meet_area} · back{' '}
+            <span className="tabular-nums">{hhmm(plan.back_by)}</span>
+            {plan.ends_on !== plan.starts_on ? ' next day' : ''}
+          </p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Party count={plan.going_count} capacity={plan.capacity} />
+            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
+              {EFFORT_LABEL[plan.effort]}
+            </span>
+            {plan.day_part !== 'day' && (
+              <span
+                style={{ color: light.ink, borderColor: light.bar }}
+                className="rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em]"
+              >
+                needs {plan.min_party}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="shrink-0 self-end sm:self-center">
+          <span
+            className={`font-mono text-[10px] uppercase tracking-[0.14em] ${
+              full ? 'text-clay' : 'text-forest'
+            }`}
+          >
+            {full ? 'Full' : `${plan.spots_left} space${plan.spots_left === 1 ? '' : 's'}`}
+          </span>
         </div>
       </div>
     </Link>
