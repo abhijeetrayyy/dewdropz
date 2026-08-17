@@ -219,36 +219,47 @@
      LADDER: the artboard sits below everything, panels sit on it, controls sit
      on the panels, and the one you are touching lifts again.
 
-     Held as variables so the whole studio moves together, and so there is a
-     single place to answer "which grey is that". */
+     NEUTRAL, AND DELIBERATELY SO. The rest of the site is green — forest,
+     sage, a green-black ink — and that is right for a brand about mountains.
+     It is wrong for the one screen whose entire job is to judge colour. A
+     green cast on the chrome sits next to the garment and the artwork and
+     quietly lies about both: a warm print looks warmer against it, a grey
+     marl looks green. So these are achromatic, with only enough warmth to keep
+     company with the paper-toned type rather than going blue.
+
+     Selection carries no hue either. It is shown with luminance and an edge —
+     a lifted surface and a bone hairline — which is how a tool signals "this
+     one" without spending a colour it may need to show you honestly. */
   .studio {
-    --st-well:   #080B09;  /* the stage the garment sits in — the floor      */
-    --st-panel:  #101512;  /* rails and header                                */
-    --st-raise:  #171E19;  /* buttons, inputs, swatch wells                   */
-    --st-hover:  #212A25;  /* the one under the pointer                       */
-    --st-edge:   rgba(237, 239, 232, 0.09);  /* hairline between things       */
-    --st-rule:   rgba(237, 239, 232, 0.16);  /* a real divider                */
-    --st-line:   rgba(237, 239, 232, 0.30);  /* an input you can find         */
-    --st-ink:    #EDEFE8;  /* primary type                                    */
-    --st-ink-2:  rgba(237, 239, 232, 0.68);  /* secondary                     */
+    --st-well:   #0B0B0A;  /* the stage the garment sits in — the floor      */
+    --st-panel:  #151513;  /* rails and header                                */
+    --st-raise:  #1F1F1C;  /* buttons, inputs, swatch wells                   */
+    --st-hover:  #2B2B27;  /* the one under the pointer                       */
+    --st-edge:   rgba(240, 238, 232, 0.09);  /* hairline between things       */
+    --st-rule:   rgba(240, 238, 232, 0.16);  /* a real divider                */
+    --st-line:   rgba(240, 238, 232, 0.30);  /* an input you can find         */
+    --st-ink:    #F0EEE8;  /* primary type                                    */
+    --st-ink-2:  rgba(240, 238, 232, 0.68);  /* secondary                     */
     /* 0.44 measured 3.94:1 on the panel — under AA, and these are the 10px
        and 11px labels, the ones that most need to be readable. 0.60 puts them
        at about 6:1. */
-    --st-ink-3:  rgba(237, 239, 232, 0.60);  /* labels, and nothing smaller   */
-    --st-accent: #8FB87F;  /* selection only — lifted off sage so it holds
-                              its own against the near-black ground          */
+    --st-ink-3:  rgba(240, 238, 232, 0.60);  /* labels, and nothing smaller   */
+    /* Selection. A bone mid-tone: obviously not the white of the primary
+       action, obviously not the grey of an idle control, and no hue to
+       contaminate the thing being judged. */
+    --st-accent: #C6C1B4;
     --st-warn:   #C89272;
   }
 
-  /* The artboard. A faint grid and a vignette, so the stage reads as a
+  /* The artboard. A faint grid and a neutral lift, so the stage reads as a
      surface the garment is placed ON rather than as a hole it floats in —
      which is the whole reason a bright mockup photo looked pasted on. */
   .studio-stage {
     background-color: var(--st-well);
     background-image:
-      radial-gradient(ellipse 70% 60% at 50% 45%, rgba(143, 184, 127, 0.05), transparent 70%),
-      linear-gradient(rgba(237, 239, 232, 0.028) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(237, 239, 232, 0.028) 1px, transparent 1px);
+      radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255, 255, 255, 0.035), transparent 70%),
+      linear-gradient(rgba(240, 238, 232, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240, 238, 232, 0.028) 1px, transparent 1px);
     background-size: 100% 100%, 32px 32px, 32px 32px;
   }
 

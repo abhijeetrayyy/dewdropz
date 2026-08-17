@@ -272,7 +272,7 @@ export default function Toolbar({
             className="w-full rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2 font-body text-[12px] text-[var(--st-ink)] outline-none transition-colors focus:border-[var(--st-accent)]"
           >
             {FONTS.map((f) => (
-              <option key={f} value={f} className="bg-[#171E19]">
+              <option key={f} value={f} className="bg-[#1F1F1C]">
                 {f}
               </option>
             ))}
@@ -317,7 +317,7 @@ export default function Toolbar({
                   aria-label={`Ink ${hex}`}
                   className={`h-6 w-6 rounded-full border transition-all ${
                     (textbox.fill as string)?.toUpperCase() === hex
-                      ? 'border-sage ring-1 ring-sage ring-offset-1 ring-offset-[#131A15]'
+                      ? 'border-[var(--st-ink)] ring-1 ring-[var(--st-accent)] ring-offset-1 ring-offset-[var(--st-panel)]'
                       : 'border-paper/20 hover:border-paper/50'
                   }`}
                   style={{ backgroundColor: hex }}
@@ -374,7 +374,9 @@ export default function Toolbar({
                 type="button"
                 onClick={() => selectLayer(obj)}
                 className={`flex w-full items-center gap-2 truncate rounded-sm px-2.5 py-2 text-left font-body text-[12px] transition-colors ${
-                  selected === obj ? 'bg-sage/15 text-paper' : 'text-paper/50 hover:bg-paper/5 hover:text-paper/80'
+                  selected === obj
+                    ? 'bg-[var(--st-hover)] text-[var(--st-ink)] shadow-[inset_0_0_0_1px_var(--st-line)]'
+                    : 'text-[var(--st-ink-2)] hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]'
                 }`}
               >
                 {obj.type === 'textbox' ? <Type className="h-3 w-3 flex-shrink-0" /> : <ImagePlus className="h-3 w-3 flex-shrink-0" />}
@@ -520,7 +522,7 @@ function MobileTabButton({
       aria-pressed={active}
       className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-sm transition-colors duration-200 ${
         active
-          ? 'bg-[var(--st-raise)] text-[var(--st-accent)] shadow-[inset_0_0_0_1px_var(--st-edge)]'
+          ? 'bg-[var(--st-raise)] text-[var(--st-ink)] shadow-[inset_0_0_0_1px_var(--st-line)]'
           : dimmed
           ? 'text-[var(--st-ink-3)]/60'
           : 'text-[var(--st-ink-2)] hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]'
@@ -580,7 +582,7 @@ function IconButton({
       aria-pressed={active}
       className={`flex h-9 w-9 items-center justify-center rounded-sm border transition-colors duration-200 disabled:opacity-30 ${
         active
-          ? 'border-[var(--st-accent)] bg-[var(--st-accent)]/18 text-[var(--st-ink)]'
+          ? 'border-[var(--st-accent)] bg-[var(--st-hover)] text-[var(--st-ink)]'
           : 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-line)] hover:bg-[var(--st-hover)] hover:text-[var(--st-ink)]'
       }`}
     >

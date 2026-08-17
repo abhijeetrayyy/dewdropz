@@ -247,7 +247,7 @@ export default function CustomizerStudio({
                   onClick={() => setVariantId(v.id)}
                   className={`min-w-[44px] rounded-sm border px-3 py-2 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 lg:min-w-[40px] lg:px-2.5 lg:py-1.5 ${
                     variantId === v.id
-                      ? 'border-[var(--st-accent)] bg-[var(--st-accent)]/15 text-[var(--st-ink)]'
+                      ? 'border-[var(--st-accent)] bg-[var(--st-hover)] text-[var(--st-ink)]'
                       : oos
                       ? 'cursor-not-allowed border-[var(--st-edge)] text-[var(--st-ink-3)]/50 line-through'
                       : 'border-[var(--st-line)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-ink-2)] hover:text-[var(--st-ink)]'
@@ -309,7 +309,7 @@ export default function CustomizerStudio({
         </div>
 
         <div className="min-w-0 text-center">
-          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--st-accent)]">The Studio</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--st-ink-3)]">The Studio</div>
           <h1 className="truncate font-display text-sm leading-tight text-[var(--st-ink)] sm:text-base">{product.name}</h1>
         </div>
 
@@ -319,7 +319,7 @@ export default function CustomizerStudio({
             type="button"
             onClick={handleContinue}
             disabled={saving}
-            className="flex items-center gap-2 rounded-sm bg-[var(--st-ink)] px-4 py-2.5 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-[#0A0D0B] transition-all duration-300 hover:bg-white disabled:opacity-50 sm:px-5"
+            className="flex items-center gap-2 rounded-sm bg-[var(--st-ink)] px-4 py-2.5 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--st-well)] transition-all duration-300 hover:bg-white disabled:opacity-50 sm:px-5"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             {saving ? 'Saving…' : 'Add to bag'}
@@ -359,7 +359,7 @@ export default function CustomizerStudio({
                         that there's work over there — without it, a design on
                         the back is invisible from the front. */}
                     {filled > 0 && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--st-accent)]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--st-ink)]" />
                     )}
                   </button>
                 )
@@ -411,7 +411,7 @@ function RailLabel({ n, label, value }: { n: string; label: string; value?: stri
   return (
     <div className="flex items-baseline justify-between gap-2 border-b border-[var(--st-edge)] pb-2">
       <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--st-ink-3)]">
-        <span className="text-[var(--st-accent)]">{n}</span> {label}
+        <span className="text-[var(--st-ink-2)]">{n}</span> {label}
       </span>
       {value && (
         <span className="truncate font-body text-[12px] text-[var(--st-ink)]">{value}</span>
