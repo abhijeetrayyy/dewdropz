@@ -11,68 +11,96 @@ import { useWishlist } from '@/providers/WishlistProvider'
 import { Logo } from '@/components/Logo'
 import { createBrowserSupabaseClient } from '@/lib/supabase/client'
 import { logout } from '@/actions/auth'
+import { getNavCollections } from '@/actions/products'
+import Image from 'next/image'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-// The launch navigation, per the client brief:
-//   SHOP | COLLECTIONS | CUSTOMIZE | TREK BUDDY | TRAILS | ABOUT | CONTACT
+// The launch navigation:
+//   SHOP | COLLECTIONS | CUSTOMIZE | TREK BUDDY | TRAILS
 //
-// Journal leaves the bar — "we will not keep this for now". The route and its
-// posts are untouched, and the footer still links to it, so nothing is deleted
-// on the strength of a nav decision.
+// About and Contact have left the bar. They are not what anybody comes here to
+// do, and five items is the number at which a centred nav still reads as one
+// line instead of a queue — the footer keeps both, which is where people go
+// looking for them anyway. Journal left earlier on the same reasoning.
 //
 // Two of these carry a menu, and they are two different ways in: SHOP is
 // product-first (what garment do you want), COLLECTIONS is story-first (which
-// world do you like). The brief draws that distinction explicitly, so the menus
-// are not the same list twice.
+// world do you like). So the panels are not the same list twice — one is a
+// taxonomy, the other is three names with what each one is.
+type MenuItem = { label: string; href: string; note?: string }
 type NavLink = {
   label: string
   href: string
-  menu?: { heading?: string; items: { label: string; href: string }[] }[]
+  menu?: {
+    groups: { heading?: string; items: MenuItem[] }[]
+    /** The way out of the menu and into the whole thing. */
+    all: { label: string; href: string }
+    /** Which shape the panel takes. */
+    layout: 'columns' | 'stack'
+  }
 }
 
 const NAV_LINKS: NavLink[] = [
   {
     label: 'Shop',
     href: '/shop',
-    menu: [
-      {
-        heading: 'Apparel',
-        items: [
-          { label: 'T-Shirts', href: '/shop?category=t-shirts' },
-          { label: 'Hoodies', href: '/shop?category=hoodies' },
-          { label: 'Sweatshirts', href: '/shop?category=sweatshirts' },
-        ],
-      },
-      {
-        heading: 'Drinkware',
-        items: [
-          { label: 'Mugs', href: '/shop?category=mugs' },
-          { label: 'Tumblers & Bottles', href: '/shop?category=tumblers' },
-        ],
-      },
-    ],
+    menu: {
+      layout: 'columns',
+      all: { label: 'Everything in the shop', href: '/shop' },
+      groups: [
+        {
+          heading: 'Apparel',
+          items: [
+            { label: 'T-Shirts', href: '/shop?category=t-shirts' },
+            { label: 'Hoodies', href: '/shop?category=hoodies' },
+            { label: 'Sweatshirts', href: '/shop?category=sweatshirts' },
+          ],
+        },
+        {
+          heading: 'Drinkware',
+          items: [
+            { label: 'Mugs', href: '/shop?category=mugs' },
+            { label: 'Tumblers & Bottles', href: '/shop?category=tumblers' },
+          ],
+        },
+      ],
+    },
   },
   {
     label: 'Collections',
     href: '/collections',
-    menu: [
-      {
-        items: [
-          { label: 'O Collection', href: '/collections/o-collection' },
-          { label: 'Mist & Morning', href: '/collections/mist-and-morning' },
-          { label: 'Silent Altitude', href: '/collections/silent-altitude' },
-        ],
-      },
-    ],
+    menu: {
+      layout: 'stack',
+      all: { label: 'All three collections', href: '/collections' },
+      groups: [
+        {
+          items: [
+            {
+              label: 'O Collection',
+              href: '/collections/o-collection',
+              note: 'Where the trail becomes a way of life.',
+            },
+            {
+              label: 'Mist & Morning',
+              href: '/collections/mist-and-morning',
+              note: 'Fog, dew, first light.',
+            },
+            {
+              label: 'Silent Altitude',
+              href: '/collections/silent-altitude',
+              note: 'Alpine stillness. Deep quiet.',
+            },
+          ],
+        },
+      ],
+    },
   },
   { label: 'Customize', href: '/customize' },
   { label: 'Trek Buddy', href: '/trek-buddy' },
   { label: 'Trails', href: '/treks' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
 ]
 
 export default function NavBar() {
@@ -84,6 +112,42 @@ export default function NavBar() {
   const { items: wishlistItems } = useWishlist()
   const pathname = usePathname()
   const [authEmail, setAuthEmail] = useState<string | null>(null)
+  // Which panel is down. Held in state rather than done with :hover so the
+  // pointer can cross the gap between a label and its panel without the panel
+  // vanishing underneath it — the single most common way a hover menu feels
+  // broken — and so keyboard and Escape can drive the same thing a mouse does.
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const closeTimer = useRef<number | null>(null)
+  // The collections, with their pictures, fetched the first time somebody opens
+  // that menu and never again. The static list below renders instantly and is
+  // what shows if this never arrives — so the menu is never empty, never
+  // shifts, and costs nothing on a page nobody hovers.
+  const [navCollections, setNavCollections] = useState<
+    { slug: string; name: string; tagline: string | null; image_url: string | null }[]
+  >([])
+  const askedForCollections = useRef(false)
+
+  const openNow = (label: string) => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current)
+    setOpenMenu(label)
+    if (label === 'Collections' && !askedForCollections.current) {
+      askedForCollections.current = true
+      getNavCollections().then(setNavCollections).catch(() => {})
+    }
+  }
+  // Long enough to cross the gap, short enough that it never feels stuck open.
+  const closeSoon = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current)
+    closeTimer.current = window.setTimeout(() => setOpenMenu(null), 140)
+  }
+  useEffect(() => () => { if (closeTimer.current) window.clearTimeout(closeTimer.current) }, [])
+
+  useEffect(() => {
+    if (!openMenu) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenMenu(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openMenu])
 
   // NavBar is mounted per-page (not from one root layout), so it keeps its
   // own lightweight auth check rather than requiring every page to fetch and
@@ -107,7 +171,13 @@ export default function NavBar() {
   // nav start transparent with light text. Every other page's first section can be
   // light (PageHeader's paper variant), so the solid bar is always on to stay legible.
   const isHome = pathname === '/'
-  const solid = scrolled || !isHome
+  // The bar goes solid while a panel is down, so the panel hangs off something
+  // instead of floating over the hero with a seam of video between them.
+  const solid = scrolled || !isHome || Boolean(openMenu)
+
+  // No effect closing this on `pathname`: NavBar is mounted per page, so a
+  // navigation remounts it and the state is gone anyway. The trigger and every
+  // item close it themselves, which covers a same-page link.
 
   useEffect(() => {
     const trigger = ScrollTrigger.create({
@@ -128,15 +198,29 @@ export default function NavBar() {
   return (
     <header
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 transition-all duration-500 ease-[var(--ease-out)] ${
+      // A grid, not justify-between. With three flex children the nav sat
+      // wherever the logo and the icon cluster left room, which is why it
+      // collided with the wordmark at exactly 1024px. Equal 1fr rails put the
+      // nav in the true centre of the bar and keep it there at every width.
+      className={`fixed top-0 left-0 right-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center px-6 md:px-10 transition-all duration-500 ease-[var(--ease-out)] ${
         solid
           ? 'h-14 bg-ink/95 backdrop-blur-md border-b border-white/[0.06] shadow-[0_2px_24px_rgba(0,0,0,0.2)]'
           : 'h-[72px] bg-transparent'
       }`}
     >
-      <Logo markHeight={26} priority wordmarkClassName="font-display text-base tracking-widest text-paper" />
+      <div className="justify-self-start">
+        {/* The wordmark stands down on a phone. Mark + wordmark + three icons
+            + the menu button came to more than 375px, so DEWDROPZ ran into the
+            wishlist heart. The Link keeps its aria-label, so the name is still
+            announced with the mark alone. */}
+        <Logo
+          markHeight={26}
+          priority
+          wordmarkClassName="hidden font-display text-base tracking-widest text-paper sm:inline"
+        />
+      </div>
 
-      <nav className="hidden lg:flex items-center gap-8">
+      <nav className="hidden items-center gap-7 justify-self-center lg:flex xl:gap-9">
         {NAV_LINKS.map((link) => {
           // While the hero's studio act holds the frame, this link is where the
           // eye should go next — the frame is showing the tool, and this is the
@@ -144,19 +228,35 @@ export default function NavBar() {
           // <body> at the act boundaries and the arbitrary variant below reads
           // it, so the cue costs no state, no context and no re-render up here.
           const isStudioDoor = link.href === '/customize'
+          const open = openMenu === link.label
+          // Where you are, marked. A nav that never says which section you are
+          // in makes every page feel like it arrived from nowhere.
+          const active =
+            link.href === '/' ? pathname === '/' : pathname.startsWith(link.href)
+
           const trigger = (
             <Link
               href={link.href}
-              className={`group relative font-body text-xs tracking-[0.12em] uppercase text-paper/80 hover:text-paper transition-colors duration-300 ${
-                isStudioDoor ? '[body[data-hero-act=studio]_&]:text-paper' : ''
-              }`}
+              onClick={() => setOpenMenu(null)}
+              aria-expanded={link.menu ? open : undefined}
+              className={`group relative block py-2 font-body text-xs uppercase tracking-[0.12em] transition-colors duration-300 ${
+                active || open ? 'text-paper' : 'text-paper/70 hover:text-paper'
+              } ${isStudioDoor ? '[body[data-hero-act=studio]_&]:text-paper' : ''}`}
             >
               {link.label}
-              <span className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-sage transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-x-100" />
+              {/* One rule under the label doing two jobs: it is drawn for the
+                  section you are in, and it draws itself on hover for the ones
+                  you are not. Same line, so the bar never has two kinds of
+                  underline arguing with each other. */}
+              <span
+                className={`absolute -bottom-0.5 left-0 h-px w-full origin-left bg-sage transition-transform duration-300 ease-[var(--ease-out)] ${
+                  active || open ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`}
+              />
               {isStudioDoor && (
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute -inset-x-3 -inset-y-2 rounded-full border border-sage/60 opacity-0 transition-opacity duration-500 [body[data-hero-act=studio]_&]:animate-pulse [body[data-hero-act=studio]_&]:opacity-100 motion-reduce:animate-none"
+                  className="pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full border border-sage/60 opacity-0 transition-opacity duration-500 [body[data-hero-act=studio]_&]:animate-pulse [body[data-hero-act=studio]_&]:opacity-100 motion-reduce:animate-none"
                 />
               )}
             </Link>
@@ -164,38 +264,136 @@ export default function NavBar() {
 
           if (!link.menu) return <div key={link.label}>{trigger}</div>
 
-          // Opens on hover for a mouse and on focus for a keyboard, and the
-          // label itself stays a real link — so Shop and Collections are still
-          // reachable in one click without going through the menu, which is how
-          // people actually use a top-level category.
+          const menu = link.menu
           return (
-            <div key={link.label} className="group/menu relative">
+            <div
+              key={link.label}
+              className="relative"
+              onMouseEnter={() => openNow(link.label)}
+              onMouseLeave={closeSoon}
+              onFocus={() => openNow(link.label)}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpenMenu(null)
+              }}
+            >
               {trigger}
-              <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-4 opacity-0 transition-[opacity,visibility] duration-200 group-hover/menu:visible group-hover/menu:opacity-100 group-focus-within/menu:visible group-focus-within/menu:opacity-100">
-                <div className="min-w-[190px] rounded-sm border border-white/10 bg-ink/95 p-4 shadow-lg backdrop-blur-sm">
-                  {link.menu.map((group, gi) => (
-                    <div key={group.heading ?? gi} className={gi > 0 ? 'mt-4 border-t border-white/10 pt-4' : ''}>
-                      {group.heading && (
-                        <div className="mb-2 font-body text-[9px] uppercase tracking-[0.2em] text-sage">
-                          {group.heading}
-                        </div>
-                      )}
-                      <ul className="flex flex-col gap-1.5">
-                        {group.items.map((item) => (
-                          <li key={item.href}>
-                            <Link
-                              href={item.href}
-                              className="block whitespace-nowrap font-body text-xs text-paper/70 transition-colors duration-200 hover:text-paper"
-                            >
-                              {item.label}
-                            </Link>
-                          </li>
+
+              <AnimatePresence>
+                {open && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    // pt-3 is the bridge the pointer crosses. Without it the
+                    // gap between label and panel is a dead zone that closes
+                    // the menu halfway to the thing you were reaching for.
+                    className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3"
+                  >
+                    <div
+                      className={`relative overflow-hidden rounded-sm border border-white/10 bg-ink/97 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.85)] backdrop-blur-md ${
+                        menu.layout === 'columns' ? 'min-w-[430px]' : 'min-w-[350px]'
+                      }`}
+                    >
+                      {/* The one flourish on the whole bar: a sage hairline
+                          that draws across the top edge as the panel lands, so
+                          the menu arrives rather than appearing. */}
+                      <motion.span
+                        aria-hidden="true"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.04 }}
+                        className="absolute inset-x-0 top-0 h-px origin-left bg-sage"
+                      />
+
+                      <div
+                        className={`p-5 ${
+                          menu.layout === 'columns' ? 'grid grid-cols-2 gap-x-8 gap-y-1' : ''
+                        }`}
+                      >
+                        {menu.groups.map((group, gi) => (
+                          <div key={group.heading ?? gi} className={menu.layout === 'stack' ? '' : ''}>
+                            {group.heading && (
+                              <p className="mb-2.5 font-mono text-[9px] uppercase tracking-[0.22em] text-sage">
+                                {group.heading}
+                              </p>
+                            )}
+                            <ul className={menu.layout === 'stack' ? 'flex flex-col' : 'flex flex-col gap-0.5'}>
+                              {(menu.layout === 'stack' && navCollections.length
+                                ? navCollections.map((c) => ({
+                                    label: c.name,
+                                    href: `/collections/${c.slug}`,
+                                    note: c.tagline ?? undefined,
+                                    image: c.image_url ?? undefined,
+                                  }))
+                                : group.items
+                              ).map((item: MenuItem & { image?: string }) => (
+                                <li key={item.href}>
+                                  <Link
+                                    href={item.href}
+                                    onClick={() => setOpenMenu(null)}
+                                    className="group/i flex items-start gap-3 rounded-[3px] py-1.5 pl-0.5 pr-2 transition-colors duration-200"
+                                  >
+                                    {item.image ? (
+                                      // The collection itself, not a bullet.
+                                      // Desaturated until you reach for it, so
+                                      // three photographs in a dark panel read
+                                      // as one object rather than three.
+                                      <span className="relative block h-11 w-14 shrink-0 overflow-hidden rounded-[3px] border border-white/10">
+                                        <Image
+                                          src={item.image}
+                                          alt=""
+                                          fill
+                                          sizes="56px"
+                                          className="object-cover opacity-70 saturate-[0.5] transition-all duration-500 group-hover/i:scale-105 group-hover/i:opacity-100 group-hover/i:saturate-100"
+                                        />
+                                      </span>
+                                    ) : (
+                                      /* The same growing rule the hour rail and
+                                         the weather tiles use. One idiom for
+                                         "this is the one", used everywhere. */
+                                      <span
+                                        aria-hidden="true"
+                                        className="mt-[9px] h-px w-1.5 shrink-0 bg-paper/25 transition-all duration-300 group-hover/i:w-4 group-hover/i:bg-sage"
+                                      />
+                                    )}
+                                    <span className={`min-w-0 ${item.image ? 'pt-0.5' : ''}`}>
+                                      <span
+                                        className={`block whitespace-nowrap text-paper/75 transition-colors duration-200 group-hover/i:text-paper ${
+                                          item.note ? 'font-display text-[15px] leading-snug' : 'font-body text-xs'
+                                        }`}
+                                      >
+                                        {item.label}
+                                      </span>
+                                      {item.note && (
+                                        <span className="mt-0.5 block font-body text-[11px] leading-snug text-paper/40">
+                                          {item.note}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
+
+                      {/* The way out of the menu and into the whole thing. */}
+                      <Link
+                        href={menu.all.href}
+                        onClick={() => setOpenMenu(null)}
+                        className="group/a flex items-center justify-between gap-6 border-t border-white/10 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-paper/50 transition-colors duration-200 hover:bg-white/[0.03] hover:text-paper"
+                      >
+                        {menu.all.label}
+                        <span aria-hidden="true" className="transition-transform duration-300 group-hover/a:translate-x-1">
+                          →
+                        </span>
+                      </Link>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )
         })}
@@ -207,7 +405,7 @@ export default function NavBar() {
           the only two flex children, and their combined width already
           exceeded the available space. Tighter below sm, back to the
           original spacing once the row has room to breathe. */}
-      <div className="flex items-center gap-2.5 sm:gap-6">
+      <div className="flex items-center gap-2.5 justify-self-end sm:gap-5">
         <Link
           href="/wishlist"
           aria-label="Wishlist"
@@ -285,7 +483,7 @@ export default function NavBar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 top-0 h-screen w-screen bg-ink flex flex-col items-center justify-center gap-8"
+            className="fixed inset-0 top-0 flex h-screen w-screen flex-col items-center justify-center gap-7 overflow-y-auto bg-ink px-6 py-20"
           >
             <button
               aria-label="Close menu"
@@ -301,6 +499,11 @@ export default function NavBar() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 40, opacity: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                // Bounded and centred. Without a width the block grew to fit
+                // its widest child, so a long sub-item row ran off both edges
+                // of a phone and dragged its own heading out of the centre
+                // with it.
+                className="w-full max-w-sm text-center"
               >
                 <Link
                   href={link.href}
@@ -313,13 +516,13 @@ export default function NavBar() {
                     under their parent rather than hiding behind a tap-to-expand
                     the customer has to discover. */}
                 {link.menu && (
-                  <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
-                    {link.menu.flatMap((g) => g.items).map((item) => (
+                  <div className="mt-2.5 flex flex-wrap justify-center gap-x-3.5 gap-y-1.5">
+                    {link.menu.groups.flatMap((g) => g.items).map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setMenuOpen(false)}
-                        className="font-body text-xs uppercase tracking-[0.1em] text-paper/50 transition-colors hover:text-paper"
+                        className="font-body text-[11px] uppercase tracking-[0.08em] text-paper/50 transition-colors hover:text-paper"
                       >
                         {item.label}
                       </Link>

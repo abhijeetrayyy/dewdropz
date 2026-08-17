@@ -154,6 +154,26 @@ export async function getCollections() {
   return data as unknown as (Collection & { products: Product[] })[]
 }
 
+/**
+ * Just enough of each collection for the header menu.
+ *
+ * Four columns rather than `*` with an embedded product array: this is fetched
+ * from the navigation, which sits on every page, so it has no business pulling
+ * a row's worth of copy and a list of product ids to render a name and a
+ * thumbnail. Called lazily — nothing runs until somebody actually opens the
+ * menu — so the cost is paid by the people who want it.
+ */
+export async function getNavCollections() {
+  const supabase = createPublicSupabaseClient()
+  const { data } = await supabase
+    .from('collections')
+    .select('slug, name, tagline, image_url')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .limit(6)
+  return (data ?? []) as { slug: string; name: string; tagline: string | null; image_url: string | null }[]
+}
+
 export async function getCollectionBySlug(slug: string) {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase.from('collections')
