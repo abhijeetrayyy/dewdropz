@@ -120,50 +120,197 @@ function clampRange(value: number, min: number, max: number) {
 
 const SEASONS = ['clear', 'fog', 'rain', 'snow'] as const
 
-// The weather, as an instrument on the left edge rather than four pills stacked
-// on the headline.
+/**
+ * What each condition does to the range, said as a thing you would notice
+ * rather than as a measurement.
+ *
+ * Not "visibility 200 m". This sits under a real coordinate on a real hero,
+ * and a fabricated reading beside a true one reads as a live weather report
+ * for Dehradun, which it is not — it is a switch on a 3D scene.
+ */
+const SEASON_NOTE: Record<(typeof SEASONS)[number], string> = {
+  clear: 'The whole range in view.',
+  fog:   'The ridge comes and goes.',
+  rain:  'Everything darker, and louder.',
+  snow:  'Quiet, and the light goes flat.',
+}
+
+/**
+ * One tile: a small window showing the weather it switches to.
+ *
+ * The point of drawing the weather rather than labelling it is that a person
+ * scanning a hero does not read a four-item list, but they do notice something
+ * moving in the corner — and once they have noticed, a tile that visibly
+ * *contains* rain is an obvious thing to press. The inactive ones are still
+ * until hovered, so the row rewards a cursor going near it and costs nothing
+ * while nobody is.
+ */
+function WeatherTile({ season, live }: { season: (typeof SEASONS)[number]; live: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative block h-[42px] w-[58px] shrink-0 overflow-hidden rounded-[3px] border transition-all duration-500 ${
+        live
+          ? 'border-sage/70 shadow-[0_0_0_1px_rgba(123,164,111,0.25),0_6px_18px_-10px_rgba(123,164,111,0.5)]'
+          : 'border-paper/15 group-hover:border-paper/40'
+      }`}
+      style={{
+        // A sliver of the same sky the scene uses, so the tile reads as a
+        // window onto the range and not as an icon sitting on top of it.
+        background:
+          season === 'clear'
+            ? 'linear-gradient(180deg, #22314C 0%, #6E5A52 62%, #101E17 100%)'
+            : season === 'snow'
+              ? 'linear-gradient(180deg, #2A3344 0%, #4A5361 70%, #141C18 100%)'
+              : 'linear-gradient(180deg, #1B2430 0%, #2B3436 65%, #0D1512 100%)',
+      }}
+    >
+      {season === 'clear' && (
+        <>
+          <span
+            className="wx-anim absolute left-1/2 top-[28%] h-3.5 w-3.5 -translate-x-1/2 rounded-full"
+            style={{
+              background: 'radial-gradient(circle, #F3D9A8 0%, rgba(243,217,168,0.35) 60%, transparent 72%)',
+              animationName: 'wx-sun',
+              animationDuration: '3.2s',
+              animationTimingFunction: 'ease-in-out',
+              animationIterationCount: 'infinite',
+            }}
+          />
+          {/* The ridge, so "clear" is clear *of* something. */}
+          <span
+            className="absolute inset-x-0 bottom-0 h-3.5"
+            style={{ background: '#0C130F', clipPath: 'polygon(0 100%,0 55%,22% 18%,42% 62%,62% 26%,84% 70%,100% 42%,100% 100%)' }}
+          />
+        </>
+      )}
+
+      {season === 'fog' && (
+        <>
+          <span
+            className="absolute inset-x-0 bottom-0 h-3.5"
+            style={{ background: '#0C130F', clipPath: 'polygon(0 100%,0 55%,22% 18%,42% 62%,62% 26%,84% 70%,100% 42%,100% 100%)' }}
+          />
+          {[
+            { top: '34%', dur: '7s', o: 0.5 },
+            { top: '52%', dur: '5s', o: 0.38 },
+            { top: '68%', dur: '9s', o: 0.28 },
+          ].map((b, i) => (
+            <span
+              key={i}
+              className="wx-anim absolute h-[4px] w-[160%]"
+              style={{
+                top: b.top,
+                left: '-30%',
+                opacity: b.o,
+                background: 'linear-gradient(90deg, transparent, #D8DDD4 35%, #D8DDD4 65%, transparent)',
+                filter: 'blur(1.5px)',
+                animationName: 'wx-drift',
+                animationDuration: b.dur,
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+                animationDirection: 'alternate',
+              }}
+            />
+          ))}
+        </>
+      )}
+
+      {season === 'rain' &&
+        [8, 20, 30, 40, 15, 35].map((x, i) => (
+          <span
+            key={i}
+            className="wx-anim absolute top-0 h-2.5 w-px"
+            style={{
+              left: `${x}%`,
+              background: 'linear-gradient(180deg, transparent, #BCD2E8)',
+              animationName: 'wx-fall',
+              animationDuration: `${0.62 + (i % 3) * 0.12}s`,
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+              animationDelay: `${i * 0.11}s`,
+            }}
+          />
+        ))}
+
+      {season === 'snow' &&
+        [10, 22, 34, 44, 16, 38].map((x, i) => (
+          <span
+            key={i}
+            className="wx-anim absolute top-0 h-[3px] w-[3px] rounded-full bg-[#EEF2EA]"
+            style={{
+              left: `${x}%`,
+              animationName: 'wx-flake',
+              animationDuration: `${2.1 + (i % 3) * 0.5}s`,
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+              animationDelay: `${i * 0.35}s`,
+            }}
+          />
+        ))}
+    </span>
+  )
+}
+
+// The weather, as four windows on the left of the frame.
 //
 // HeroWeather has always known how to render all four — real particle profiles
-// for rain and snow, a haze pass for fog — but the only way to reach any of them
-// was to type ?season=snow into the address bar. Centred above the h1 the picker
-// worked, but it sat in the headline's light and pushed the whole frame down.
+// for rain and snow, a haze pass for fog — but the only way to reach any of
+// them was to type ?season=snow into the address bar, so in practice every
+// visitor saw `clear` and the whole layer was invisible work.
 //
-// Off to the left it becomes what it actually is: a reading of conditions on the
-// range, in the same register as the coordinate above the headline and the
-// altitudes in act 3. A hairline rule with ticks growing off it — the longest
-// one is the live condition. Same device as the hour rail on Trek Buddy, which
-// is this brand's one established signature, so it lands as part of a system
-// rather than as another control.
-function WeatherRail({ season, onPick }: { season: Season; onPick: (s: Season) => void }) {
+// Four ticks in a rail fixed the reaching; it did not fix the noticing. A row
+// of small live windows does, because the eye goes to the one thing moving in
+// an otherwise still corner, and a tile with rain falling in it explains what
+// pressing it will do without a word of instruction. It sits high and left,
+// clear of the headline, where the scrim already buys it a legible ground.
+function WeatherRail({
+  season,
+  onPick,
+}: {
+  season: Season
+  onPick: (s: Season) => void
+}) {
   return (
     <div data-summit-reveal className="invisible" role="group" aria-label="Weather on the range">
-      <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/35">Conditions</p>
-      <div className="mt-3 flex flex-col items-stretch border-l border-paper/15">
+      {/* Named for what it does, not for what it is. "Conditions" is a
+          heading; "Change the weather" is an offer, and this control's whole
+          problem was that nobody knew it was one. */}
+      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/50">
+        Change the weather
+      </p>
+
+      <div className="mt-3.5 flex flex-col gap-2">
         {SEASONS.map((s) => {
-          const on = season === s
+          const live = season === s
           return (
             <button
               key={s}
               type="button"
               onClick={() => onPick(s)}
-              aria-pressed={on}
-              className={`group flex items-center gap-2.5 py-[7px] text-left font-mono text-[10px] uppercase tracking-[0.18em] transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage ${
-                on ? 'text-sage' : 'text-paper/45 hover:text-paper/85'
+              aria-pressed={live}
+              className={`wx-tile group flex items-center gap-2.5 rounded-sm py-0.5 pr-2 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage ${
+                live ? 'wx-on' : ''
               }`}
             >
-              {/* The tick is the state. Length reads before colour does, which
-                  matters on a frame where the ground behind it is moving. */}
+              <WeatherTile season={s} live={live} />
               <span
-                aria-hidden="true"
-                className={`h-px shrink-0 transition-all duration-500 ${
-                  on ? 'w-5 bg-sage' : 'w-2 bg-paper/25 group-hover:w-3.5 group-hover:bg-paper/45'
+                className={`font-mono text-[11px] uppercase tracking-[0.16em] transition-colors duration-300 ${
+                  live ? 'text-sage' : 'text-paper/50 group-hover:text-paper/90'
                 }`}
-              />
-              {s}
+              >
+                {s}
+              </span>
             </button>
           )
         })}
       </div>
+
+      {/* The reward for pressing one. Changes with the choice, so the row
+          answers back instead of just looking different. */}
+      <p className="mt-4 max-w-[10.5rem] font-body text-[11px] leading-relaxed text-paper/50">
+        {SEASON_NOTE[season as (typeof SEASONS)[number]] ?? ''}
+      </p>
     </div>
   )
 }
@@ -659,9 +806,13 @@ export default function SummitHero({
         {/* Three columns so the headline stays optically centred while the rail
             sits hard against the frame's left edge. Equal-width side columns are
             what guarantee that — a rail absolutely positioned over a centred
-            column collides with it the moment the window narrows. */}
-        <div className="flex w-full items-center">
-          <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+            column collides with it the moment the window narrows.
+            `items-start` puts the rail high rather than beside the headline:
+            level with the eyebrow, in the upper-left quiet of the frame, where
+            it reads as an instrument on the scene instead of a caption on the
+            type. */}
+        <div className="flex w-full items-start">
+          <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center lg:-mt-2">
             <div className="flex flex-col items-center">
               <p data-summit-reveal className="invisible font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
                 Printed in Dehradun · 30.3165° N
@@ -708,8 +859,8 @@ export default function SummitHero({
                   role="group"
                   aria-label="Weather on the range"
                 >
-                  <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/30">
-                    Conditions
+                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/40">
+                    Change the weather
                   </span>
                   {SEASONS.map((s) => (
                     <button
@@ -732,12 +883,12 @@ export default function SummitHero({
           </div>
 
           {/* Balances the rail so the column above stays centred in the frame. */}
-          <div aria-hidden="true" className="hidden w-[136px] shrink-0 lg:block" />
+          <div aria-hidden="true" className="hidden w-[176px] shrink-0 lg:block" />
 
           {/* Last in the DOM, first in the layout. The intro staggers on document
               order, so putting the rail here lets the headline lead and the
               control arrive after it — while `order-first` keeps it on the left. */}
-          <div className="order-first hidden w-[136px] shrink-0 lg:block">
+          <div className="order-first hidden w-[176px] shrink-0 lg:block">
             {weather && <WeatherRail season={season} onPick={setSeason} />}
           </div>
         </div>
