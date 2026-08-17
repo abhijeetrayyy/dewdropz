@@ -82,8 +82,8 @@ export default function CustomizerStudio({
 
   if (sides.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0B0F0C] px-6 text-center">
-        <p className="font-body text-paper/60">
+      <div className="studio flex min-h-screen items-center justify-center bg-[var(--st-well)] px-6 text-center">
+        <p className="font-body text-[var(--st-ink-2)]">
           {colorways.length > 0
             ? 'None of this product’s colours are available to customize right now.'
             : 'This product isn’t set up for customization yet.'}
@@ -212,10 +212,10 @@ export default function CustomizerStudio({
                   aria-pressed={selected}
                   className={`relative h-8 w-8 rounded-full border transition-all duration-300 lg:h-7 lg:w-7 ${
                     selected
-                      ? 'border-sage ring-2 ring-sage ring-offset-2 ring-offset-[#0B0F0C]'
+                      ? 'border-[var(--st-accent)] ring-2 ring-[var(--st-accent)] ring-offset-2 ring-offset-[var(--st-panel)]'
                       : selectable
-                      ? 'border-paper/25 hover:border-paper/60'
-                      : 'cursor-not-allowed border-paper/10 opacity-30'
+                      ? 'border-[var(--st-line)] hover:border-[var(--st-ink-2)]'
+                      : 'cursor-not-allowed border-[var(--st-edge)] opacity-25'
                   }`}
                   style={{ backgroundColor: c.hex }}
                 >
@@ -247,10 +247,10 @@ export default function CustomizerStudio({
                   onClick={() => setVariantId(v.id)}
                   className={`min-w-[44px] rounded-sm border px-3 py-2 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 lg:min-w-[40px] lg:px-2.5 lg:py-1.5 ${
                     variantId === v.id
-                      ? 'border-sage bg-sage/15 text-paper'
+                      ? 'border-[var(--st-accent)] bg-[var(--st-accent)]/15 text-[var(--st-ink)]'
                       : oos
-                      ? 'cursor-not-allowed border-paper/10 text-paper/20 line-through'
-                      : 'border-paper/20 text-paper/60 hover:border-paper/50 hover:text-paper'
+                      ? 'cursor-not-allowed border-[var(--st-edge)] text-[var(--st-ink-3)]/50 line-through'
+                      : 'border-[var(--st-line)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-ink-2)] hover:text-[var(--st-ink)]'
                   }`}
                 >
                   {v.name}
@@ -272,7 +272,7 @@ export default function CustomizerStudio({
             <SpecRow k="Output" v="300 DPI PNG" />
             <SpecRow k="Sides" v={twoSided ? 'Front & back' : 'Front only'} />
           </dl>
-          <p className="mt-3 font-body text-[10px] leading-relaxed text-paper/30">
+          <p className="mt-3 font-body text-[11px] leading-relaxed text-[var(--st-ink-3)]">
             Anything past the dashed edge is trimmed off the print.
           </p>
         </section>
@@ -285,23 +285,23 @@ export default function CustomizerStudio({
     // the page itself must never scroll — every panel manages its own overflow
     // so the garment can't be scrolled out from under the tools. 100dvh (not
     // vh) so mobile browser chrome collapsing doesn't leave the tab bar cut off.
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#0B0F0C]">
+    <div className="studio flex h-[100dvh] flex-col overflow-hidden bg-[var(--st-well)] text-[var(--st-ink)]">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       {/* This is the one screen in the app that could be mistaken for a
           bolted-on third-party widget — full-bleed dark chrome, no nav, no
           footer. The mark anchors it as ours, the same way a browser tab
           favicon does; without it there's nothing on screen saying DEWDROPZ
           made this tool. */}
-      <header className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-3 border-b border-paper/10 bg-[#0B0F0C]/95 px-4 py-3 backdrop-blur-sm sm:px-6">
+      <header className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-3 border-b border-[var(--st-rule)] bg-[var(--st-panel)] px-4 py-3 sm:px-6">
         <div className="flex min-w-0 flex-shrink-0 items-center gap-3 sm:gap-4">
           <Logo
             markHeight={20}
-            wordmarkClassName="hidden sm:inline-block font-display text-xs tracking-[0.28em] text-paper"
+            wordmarkClassName="hidden sm:inline-block font-display text-xs tracking-[0.28em] text-[var(--st-ink)]"
           />
-          <span className="hidden h-5 w-px bg-paper/15 sm:block" aria-hidden />
+          <span className="hidden h-5 w-px bg-[var(--st-rule)] sm:block" aria-hidden />
           <Link
             href={`/products/${product.slug}`}
-            className="flex flex-shrink-0 items-center gap-1.5 font-body text-xs text-paper/50 transition-colors hover:text-paper"
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-sm px-2 py-1.5 font-body text-xs text-[var(--st-ink-2)] transition-colors hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Back</span>
@@ -309,17 +309,17 @@ export default function CustomizerStudio({
         </div>
 
         <div className="min-w-0 text-center">
-          <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-sage">The Studio</div>
-          <h1 className="truncate font-display text-sm leading-tight text-paper sm:text-base">{product.name}</h1>
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--st-accent)]">The Studio</div>
+          <h1 className="truncate font-display text-sm leading-tight text-[var(--st-ink)] sm:text-base">{product.name}</h1>
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-3">
-          <span className="hidden font-body text-sm text-paper/70 tabular-nums sm:block">{formatPrice(price)}</span>
+          <span className="hidden font-mono text-sm text-[var(--st-ink-2)] tabular-nums sm:block">{formatPrice(price)}</span>
           <button
             type="button"
             onClick={handleContinue}
             disabled={saving}
-            className="flex items-center gap-1.5 rounded-sm bg-sage px-4 py-2.5 font-body text-[10px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-paper disabled:opacity-60 sm:px-5"
+            className="flex items-center gap-2 rounded-sm bg-[var(--st-ink)] px-4 py-2.5 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-[#0A0D0B] transition-all duration-300 hover:bg-white disabled:opacity-50 sm:px-5"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             {saving ? 'Saving…' : 'Add to bag'}
@@ -332,14 +332,14 @@ export default function CustomizerStudio({
           garment overflow the viewport instead of scaling down. */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* ── Setup rail — desktop only ────────────────────────────────── */}
-        <aside className="hidden flex-shrink-0 overflow-y-auto border-paper/10 lg:block lg:w-60 lg:border-r lg:px-5 lg:py-6">
+        <aside className="hidden flex-shrink-0 overflow-y-auto bg-[var(--st-panel)] lg:block lg:w-[248px] lg:border-r lg:border-[var(--st-rule)] lg:px-5 lg:py-6">
           {setupContent}
         </aside>
 
         {/* ── Stage ────────────────────────────────────────────────────── */}
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {twoSided && (
-            <div className="flex flex-shrink-0 justify-center gap-1 border-b border-paper/10 px-4 py-2">
+            <div className="flex flex-shrink-0 justify-center gap-1 border-b border-[var(--st-rule)] bg-[var(--st-panel)] px-4 py-2">
               {sides.map((s) => {
                 const filled = (s === 'front' ? frontCanvas : backCanvas)?.getObjects().length ?? 0
                 return (
@@ -349,7 +349,9 @@ export default function CustomizerStudio({
                     onClick={() => setActiveSide(s)}
                     aria-pressed={effectiveSide === s}
                     className={`flex items-center gap-2 rounded-sm px-5 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] transition-colors duration-300 ${
-                      effectiveSide === s ? 'bg-sage text-ink' : 'text-paper/50 hover:text-paper'
+                      effectiveSide === s
+                        ? 'bg-[var(--st-raise)] text-[var(--st-ink)] shadow-[inset_0_0_0_1px_var(--st-line)]'
+                        : 'text-[var(--st-ink-3)] hover:bg-[var(--st-raise)] hover:text-[var(--st-ink-2)]'
                     }`}
                   >
                     {s}
@@ -357,7 +359,7 @@ export default function CustomizerStudio({
                         that there's work over there — without it, a design on
                         the back is invisible from the front. */}
                     {filled > 0 && (
-                      <span className={`h-1.5 w-1.5 rounded-full ${effectiveSide === s ? 'bg-ink/40' : 'bg-sage'}`} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--st-accent)]" />
                     )}
                   </button>
                 )
@@ -368,7 +370,7 @@ export default function CustomizerStudio({
           {/* The stage is just a box; CanvasStage fits the garment into
               whatever it measures here. Open a tool panel and this box gets
               shorter, so the garment scales down and stays wholly visible. */}
-          <div className="min-h-0 flex-1 overflow-hidden p-3 sm:p-5 lg:p-6">
+          <div className="studio-stage min-h-0 flex-1 overflow-hidden p-3 sm:p-5 lg:p-8">
             {color?.front && (
               <CanvasStage
                 zone={color.front}
@@ -407,11 +409,13 @@ export default function CustomizerStudio({
 
 function RailLabel({ n, label, value }: { n: string; label: string; value?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 border-b border-paper/10 pb-1.5">
-      <span className="font-body text-[10px] uppercase tracking-[0.18em] text-paper/40">
-        <span className="text-sage">{n}</span> {label}
+    <div className="flex items-baseline justify-between gap-2 border-b border-[var(--st-edge)] pb-2">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--st-ink-3)]">
+        <span className="text-[var(--st-accent)]">{n}</span> {label}
       </span>
-      {value && <span className="truncate font-body text-[11px] text-paper/70">{value}</span>}
+      {value && (
+        <span className="truncate font-body text-[12px] text-[var(--st-ink)]">{value}</span>
+      )}
     </div>
   )
 }
@@ -419,8 +423,8 @@ function RailLabel({ n, label, value }: { n: string; label: string; value?: stri
 function SpecRow({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="font-body text-[11px] text-paper/35">{k}</dt>
-      <dd className="font-mono text-[10px] text-paper/60">{v}</dd>
+      <dt className="font-body text-[12px] text-[var(--st-ink-3)]">{k}</dt>
+      <dd className="font-mono text-[11px] text-[var(--st-ink-2)] tabular-nums">{v}</dd>
     </div>
   )
 }

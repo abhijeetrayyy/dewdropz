@@ -251,7 +251,7 @@ export default function Toolbar({
         <button
           type="button"
           onClick={onCopyToOtherSide}
-          className="ml-auto flex items-center gap-1.5 rounded-sm border border-paper/15 px-2.5 py-1.5 font-body text-[10px] text-paper/50 transition-colors hover:border-paper/40 hover:text-paper"
+          className="ml-auto flex items-center gap-1.5 rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-3 py-2 font-body text-[11px] text-[var(--st-ink-2)] transition-colors hover:border-[var(--st-line)] hover:text-[var(--st-ink)]"
         >
           <FlipHorizontal2 className="h-3 w-3" />
           Copy to {activeSide === 'front' ? 'back' : 'front'}
@@ -269,25 +269,25 @@ export default function Toolbar({
           <select
             value={textbox.fontFamily ?? 'Inter'}
             onChange={(e) => updateText({ fontFamily: e.target.value })}
-            className="w-full rounded-sm border border-paper/15 bg-[#0B0F0C] p-2 font-body text-xs text-paper outline-none transition-colors focus:border-sage"
+            className="w-full rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2 font-body text-[12px] text-[var(--st-ink)] outline-none transition-colors focus:border-[var(--st-accent)]"
           >
             {FONTS.map((f) => (
-              <option key={f} value={f} className="bg-[#0B0F0C]">
+              <option key={f} value={f} className="bg-[#171E19]">
                 {f}
               </option>
             ))}
           </select>
 
           <div className="flex items-center gap-2">
-            <label className="flex flex-1 items-center gap-2 rounded-sm border border-paper/15 px-2 py-1.5">
-              <span className="font-mono text-[9px] uppercase tracking-wider text-paper/35">Size</span>
+            <label className="flex flex-1 items-center gap-2 rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--st-ink-3)]">Size</span>
               <input
                 type="number"
                 min={8}
                 max={200}
                 value={Math.round(textbox.fontSize ?? 24)}
                 onChange={(e) => updateText({ fontSize: Number(e.target.value) })}
-                className="w-full bg-transparent font-body text-xs text-paper outline-none tabular-nums"
+                className="w-full bg-transparent font-mono text-[12px] text-[var(--st-ink)] outline-none tabular-nums"
               />
             </label>
             <IconButton
@@ -307,7 +307,7 @@ export default function Toolbar({
           </div>
 
           <div>
-            <div className="mb-1.5 font-mono text-[9px] uppercase tracking-wider text-paper/35">Ink</div>
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-[var(--st-ink-3)]">Ink</div>
             <div className="flex flex-wrap items-center gap-1.5">
               {SWATCHES.map((hex) => (
                 <button
@@ -315,7 +315,7 @@ export default function Toolbar({
                   type="button"
                   onClick={() => updateText({ fill: hex })}
                   aria-label={`Ink ${hex}`}
-                  className={`h-5 w-5 rounded-full border transition-all ${
+                  className={`h-6 w-6 rounded-full border transition-all ${
                     (textbox.fill as string)?.toUpperCase() === hex
                       ? 'border-sage ring-1 ring-sage ring-offset-1 ring-offset-[#131A15]'
                       : 'border-paper/20 hover:border-paper/50'
@@ -323,7 +323,7 @@ export default function Toolbar({
                   style={{ backgroundColor: hex }}
                 />
               ))}
-              <label className="relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-paper/20 hover:border-paper/50">
+              <label className="relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-[var(--st-line)] hover:border-[var(--st-ink-2)]">
                 <span
                   aria-hidden
                   className="absolute inset-0"
@@ -363,7 +363,7 @@ export default function Toolbar({
     <div>
       <SectionLabel>Layers</SectionLabel>
       {layers.length === 0 ? (
-        <p className="mt-2 font-body text-[11px] leading-relaxed text-paper/35">
+        <p className="mt-2 font-body text-[12px] leading-relaxed text-[var(--st-ink-3)]">
           Nothing here yet — add some text or an image and it&apos;ll stack up here.
         </p>
       ) : (
@@ -373,7 +373,7 @@ export default function Toolbar({
               <button
                 type="button"
                 onClick={() => selectLayer(obj)}
-                className={`flex w-full items-center gap-2 truncate rounded-sm px-2 py-1.5 text-left font-body text-[11px] transition-colors ${
+                className={`flex w-full items-center gap-2 truncate rounded-sm px-2.5 py-2 text-left font-body text-[12px] transition-colors ${
                   selected === obj ? 'bg-sage/15 text-paper' : 'text-paper/50 hover:bg-paper/5 hover:text-paper/80'
                 }`}
               >
@@ -400,11 +400,11 @@ export default function Toolbar({
       />
 
       {/* ── Desktop rail ───────────────────────────────────────────────── */}
-      <aside className="hidden w-72 flex-shrink-0 space-y-5 overflow-y-auto border-l border-paper/10 p-5 lg:block">
+      <aside className="hidden w-[300px] flex-shrink-0 space-y-5 overflow-y-auto border-l border-[var(--st-rule)] bg-[var(--st-panel)] p-5 lg:block">
         {addActions}
         {historyActions}
-        {inspector && <div className="border-t border-paper/10 pt-5">{inspector}</div>}
-        <div className="border-t border-paper/10 pt-5">{layerList}</div>
+        {inspector && <div className="border-t border-[var(--st-edge)] pt-5">{inspector}</div>}
+        <div className="border-t border-[var(--st-edge)] pt-5">{layerList}</div>
       </aside>
 
       {/* ── Mobile: one tool at a time ──────────────────────────────────────
@@ -420,9 +420,9 @@ export default function Toolbar({
           one SHRINKS the garment to fit the space that's left instead of
           covering it. Tapping the open tab again returns the stage to full
           height. Nothing the studio can do ever hides the artwork. ────────── */}
-      <div className="flex-shrink-0 border-t border-paper/10 bg-[#131A15] lg:hidden">
+      <div className="flex-shrink-0 border-t border-[var(--st-rule)] bg-[var(--st-panel)] lg:hidden">
         {mobileTab !== 'none' && (
-          <div className="max-h-[38vh] overflow-y-auto border-b border-paper/10 p-4">
+          <div className="max-h-[38vh] overflow-y-auto border-b border-[var(--st-edge)] p-4">
             {mobileTab === 'add' && (
               <div className="space-y-3">
                 <SectionLabel>Add to your design</SectionLabel>
@@ -431,7 +431,7 @@ export default function Toolbar({
                   <button
                     type="button"
                     onClick={onCopyToOtherSide}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-sm border border-paper/15 px-3 py-2 font-body text-[11px] text-paper/60 transition-colors hover:border-paper/40 hover:text-paper"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-3 py-2.5 font-body text-[12px] text-[var(--st-ink-2)] transition-colors hover:border-[var(--st-line)] hover:text-[var(--st-ink)]"
                   >
                     <FlipHorizontal2 className="h-3.5 w-3.5" />
                     Copy this side to the {activeSide === 'front' ? 'back' : 'front'}
@@ -441,7 +441,7 @@ export default function Toolbar({
             )}
             {mobileTab === 'edit' &&
               (inspector ?? (
-                <p className="font-body text-[11px] leading-relaxed text-paper/35">
+                <p className="font-body text-[12px] leading-relaxed text-[var(--st-ink-3)]">
                   Tap something on the garment to edit it.
                 </p>
               ))}
@@ -484,7 +484,7 @@ export default function Toolbar({
           {/* Undo/redo stay out of the panels on purpose — they're the one pair
               you reach for mid-gesture, and burying them behind a tab would
               mean opening a panel (and shrinking the garment) just to undo. */}
-          <div className="ml-1 flex items-center gap-1 border-l border-paper/10 pl-2">
+          <div className="ml-1 flex items-center gap-1 border-l border-[var(--st-edge)] pl-2">
             <IconButton onClick={undo} disabled={!canUndo} label="Undo">
               <Undo2 className="h-4 w-4" />
             </IconButton>
@@ -520,14 +520,14 @@ function MobileTabButton({
       aria-pressed={active}
       className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-sm transition-colors duration-200 ${
         active
-          ? 'bg-sage/15 text-sage'
+          ? 'bg-[var(--st-raise)] text-[var(--st-accent)] shadow-[inset_0_0_0_1px_var(--st-edge)]'
           : dimmed
-          ? 'text-paper/25 hover:text-paper/50'
-          : 'text-paper/55 hover:bg-paper/5 hover:text-paper'
+          ? 'text-[var(--st-ink-3)]/60'
+          : 'text-[var(--st-ink-2)] hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]'
       }`}
     >
       {icon}
-      <span className="flex items-center gap-0.5 truncate font-body text-[9px] uppercase tracking-[0.1em]">
+      <span className="flex items-center gap-0.5 truncate font-body text-[10px] uppercase tracking-[0.1em]">
         {label}
         <ChevronDown className={`h-2.5 w-2.5 transition-transform ${active ? '' : 'rotate-180'}`} />
       </span>
@@ -536,7 +536,11 @@ function MobileTabButton({
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-sage">{children}</div>
+  return (
+    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--st-ink-3)]">
+      {children}
+    </div>
+  )
 }
 
 function ToolButton({
@@ -549,10 +553,12 @@ function ToolButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 rounded-sm border px-3 py-2 font-body text-[11px] transition-colors duration-200 disabled:opacity-40 ${
+      // A control you can see: a real surface and a real edge, not a hairline
+      // at 15% over the same black the panel is painted in.
+      className={`flex items-center justify-center gap-2 rounded-sm border px-3 py-2.5 font-body text-[12px] transition-colors duration-200 disabled:opacity-35 ${
         danger
-          ? 'border-paper/15 text-[#D98A8A] hover:border-[#D98A8A]/50 hover:bg-[#D98A8A]/10'
-          : 'border-paper/15 text-paper/70 hover:border-paper/40 hover:bg-paper/5 hover:text-paper'
+          ? 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[#E09A9A] hover:border-[#E09A9A]/60 hover:bg-[#E09A9A]/12'
+          : 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-line)] hover:bg-[var(--st-hover)] hover:text-[var(--st-ink)]'
       } ${className}`}
     >
       {children}
@@ -572,10 +578,10 @@ function IconButton({
       disabled={disabled}
       aria-label={label}
       aria-pressed={active}
-      className={`flex h-8 w-8 items-center justify-center rounded-sm border transition-colors duration-200 disabled:opacity-30 ${
+      className={`flex h-9 w-9 items-center justify-center rounded-sm border transition-colors duration-200 disabled:opacity-30 ${
         active
-          ? 'border-sage bg-sage/15 text-paper'
-          : 'border-paper/15 text-paper/60 hover:border-paper/40 hover:text-paper'
+          ? 'border-[var(--st-accent)] bg-[var(--st-accent)]/18 text-[var(--st-ink)]'
+          : 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-line)] hover:bg-[var(--st-hover)] hover:text-[var(--st-ink)]'
       }`}
     >
       {children}

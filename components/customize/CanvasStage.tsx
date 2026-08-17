@@ -131,11 +131,15 @@ export default function CanvasStage({
       onPointerDownCapture={onFocus}
       className={`h-full w-full items-center justify-center ${isActive ? 'flex' : 'hidden'}`}
     >
+      {/* The garment is placed ON the stage, not floating in it. A drop
+          shadow and a real edge are what make a bright mockup photo read as an
+          object on a surface rather than as a rectangle pasted over a hole —
+          which is what a 10%-opacity ring on a flat black ground gave. */}
       <div
-        className="relative overflow-hidden rounded-md ring-1 ring-paper/10"
+        className="relative overflow-hidden rounded-lg shadow-[0_24px_70px_-24px_rgba(0,0,0,0.9)] ring-1 ring-[rgba(237,239,232,0.14)]"
         style={{ width: scale > 0 ? CANONICAL_WIDTH * scale : '100%' }}
       >
-        <div className="absolute left-3 top-3 z-10 rounded-sm bg-ink/70 px-2.5 py-1 font-body text-[9px] uppercase tracking-[0.18em] text-paper backdrop-blur-sm">
+        <div className="absolute left-3 top-3 z-10 rounded-sm bg-[rgba(8,11,9,0.82)] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[#EDEFE8] backdrop-blur-sm">
           {side === 'front' ? 'Front' : 'Back'}
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -151,7 +155,7 @@ export default function CanvasStage({
             is clipped in the preview and in the print file, so it needs to
             read clearly against a mid-grey garment shot. */}
         <div
-          className="absolute border border-dashed border-sage/70"
+          className="absolute border border-dashed border-[#8FB87F] shadow-[0_0_0_1px_rgba(8,11,9,0.35)]"
           style={{
             left: zone.x * scale,
             top: zone.y * scale,

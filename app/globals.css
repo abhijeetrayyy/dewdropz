@@ -211,6 +211,47 @@
     }
   }
 
+  /* ── The studio ──────────────────────────────────────────────────────────
+     The print customiser used one flat near-black for the stage, the rails,
+     the header and the inputs, with borders at 10% and labels at 35%. Nothing
+     had an edge and nothing had depth, so it read as murky rather than as a
+     tool — the thing a serious editor gets right is not "dark", it is the
+     LADDER: the artboard sits below everything, panels sit on it, controls sit
+     on the panels, and the one you are touching lifts again.
+
+     Held as variables so the whole studio moves together, and so there is a
+     single place to answer "which grey is that". */
+  .studio {
+    --st-well:   #080B09;  /* the stage the garment sits in — the floor      */
+    --st-panel:  #101512;  /* rails and header                                */
+    --st-raise:  #171E19;  /* buttons, inputs, swatch wells                   */
+    --st-hover:  #212A25;  /* the one under the pointer                       */
+    --st-edge:   rgba(237, 239, 232, 0.09);  /* hairline between things       */
+    --st-rule:   rgba(237, 239, 232, 0.16);  /* a real divider                */
+    --st-line:   rgba(237, 239, 232, 0.30);  /* an input you can find         */
+    --st-ink:    #EDEFE8;  /* primary type                                    */
+    --st-ink-2:  rgba(237, 239, 232, 0.68);  /* secondary                     */
+    /* 0.44 measured 3.94:1 on the panel — under AA, and these are the 10px
+       and 11px labels, the ones that most need to be readable. 0.60 puts them
+       at about 6:1. */
+    --st-ink-3:  rgba(237, 239, 232, 0.60);  /* labels, and nothing smaller   */
+    --st-accent: #8FB87F;  /* selection only — lifted off sage so it holds
+                              its own against the near-black ground          */
+    --st-warn:   #C89272;
+  }
+
+  /* The artboard. A faint grid and a vignette, so the stage reads as a
+     surface the garment is placed ON rather than as a hole it floats in —
+     which is the whole reason a bright mockup photo looked pasted on. */
+  .studio-stage {
+    background-color: var(--st-well);
+    background-image:
+      radial-gradient(ellipse 70% 60% at 50% 45%, rgba(143, 184, 127, 0.05), transparent 70%),
+      linear-gradient(rgba(237, 239, 232, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237, 239, 232, 0.028) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+  }
+
   /* ── The weather tiles ───────────────────────────────────────────────────
      Four little windows on the hero, one per condition, each showing the
      weather it switches the range to. Only the live one moves at rest; the
