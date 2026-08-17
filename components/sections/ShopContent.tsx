@@ -68,6 +68,36 @@ export default function ShopContent({
     () => categories.filter((c) => products.some((p) => p.categories?.some((pc) => pc.category_id === c.id))),
     [categories, products]
   )
+
+  // Grouped under their department, because that is how the range is organised
+  // now: Apparel and Drinkware, each holding its garments. A flat row of chips
+  // reads as a pile of unrelated tags once there is more than a handful, and
+  // the brief asks for the two departments explicitly.
+  //
+  // Parents are found by id from the full list, not from `stockedCategories` —
+  // a department has no products of its own, so it never survives the stocked
+  // filter and would otherwise lose its label. Sorted by the sort_order the
+  // migration set, so the row reads T-Shirts, Hoodies, Sweatshirts rather than
+  // alphabetically.
+  const categoryGroups = useMemo(() => {
+    const byParent = new Map<string, { heading: string; order: number; items: Category[] }>()
+    const ungrouped: Category[] = []
+
+    for (const c of stockedCategories) {
+      const parent = c.parent_id ? categories.find((p) => p.id === c.parent_id) : null
+      if (!parent) { ungrouped.push(c); continue }
+      const g = byParent.get(parent.id) ?? { heading: parent.name, order: parent.sort_order ?? 0, items: [] }
+      g.items.push(c)
+      byParent.set(parent.id, g)
+    }
+
+    const groups = [...byParent.values()].sort((a, b) => a.order - b.order)
+    for (const g of groups) g.items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    // Anything with no department still gets shown, under no heading, so a
+    // category added in admin without a parent cannot silently disappear.
+    if (ungrouped.length) groups.push({ heading: '', order: 99, items: ungrouped })
+    return groups
+  }, [stockedCategories, categories])
   const stockedCollections = useMemo(
     () => collections.filter((c) => products.some((p) => p.collection?.slug === c.slug)),
     [collections, products]
@@ -139,7 +169,12 @@ export default function ShopContent({
           <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-forest">
             Made to order · Printed in Dehradun
           </p>
-          <h1 className="mt-4 font-display text-[clamp(38px,5.5vw,68px)] leading-[0.92] text-text">The shop.</h1>
+          <h1 className="mt-4 font-display text-[clamp(38px,5.5vw,68px)] leading-[0.92] text-text">
+            The DEWDROPZ Collection.
+          </h1>
+          <p className="mt-4 max-w-lg font-body text-sm leading-relaxed text-mid md:text-base">
+            Apparel and everyday essentials inspired by mountains, trails and slow travel.
+          </p>
           {products.length > 0 && (
             <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-mono text-[10px] uppercase tracking-[0.18em] text-mid">
               <span>
@@ -149,7 +184,7 @@ export default function ShopContent({
                 ₹{Math.round(Math.min(...products.map((p) => p.price)) / 100).toLocaleString('en-IN')} — ₹
                 {Math.round(Math.max(...products.map((p) => p.price)) / 100).toLocaleString('en-IN')}
               </span>
-              <span>Ships from Dehradun in 2 days</span>
+              <span>Fast dispatch across India</span>
             </div>
           )}
         </div>
@@ -220,20 +255,32 @@ export default function ShopContent({
             {stockedCategories.length > 0 && (
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setCategory('all')} className={chip(category === 'all')}>
-                  All
+                  All Products
                 </button>
-                {stockedCategories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCategory(category === c.slug ? 'all' : c.slug)}
-                    className={chip(category === c.slug)}
+                {categoryGroups.map((group, gi) => (
+                  <div
+                    key={group.heading || `ungrouped-${gi}`}
+                    className="flex items-center gap-2 border-l border-rule pl-4"
                   >
-                    {c.name}
-                    <span className="ml-2 opacity-50">
-                      {countFor((p) => !!p.categories?.some((pc) => pc.category_id === c.id))}
-                    </span>
-                  </button>
+                    {group.heading && (
+                      <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.18em] text-mid/70">
+                        {group.heading}
+                      </span>
+                    )}
+                    {group.items.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setCategory(category === c.slug ? 'all' : c.slug)}
+                        className={chip(category === c.slug)}
+                      >
+                        {c.name}
+                        <span className="ml-2 opacity-50">
+                          {countFor((p) => !!p.categories?.some((pc) => pc.category_id === c.id))}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </div>
             )}

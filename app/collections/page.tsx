@@ -24,18 +24,16 @@ export default async function CollectionsPage() {
       <main>
         <PageHeader
           eyebrow="Shop"
-          title="Three collections. One philosophy."
-          subtitle="Every DEWDROPZ collection is built around a specific kind of trail — the fog, the altitude, the long haul. Find the one that matches yours."
+          title="Three Collections. One Spirit of Exploration."
+          subtitle="Each DEWDROPZ collection tells a different story — from quiet mountain mornings to mist-covered trails and moments of stillness along the way. Discover the one that speaks to you."
         />
 
+        {/* "How to Choose" removed at the client's request. It framed the range
+            as technical kit selected against trekking conditions — the outdoor
+            outfitter positioning the brief is explicitly moving away from. The
+            collections are stories now, not condition-matched kits. */}
         <section className="bg-paper px-6 md:px-10 pb-16">
           <div className="max-w-5xl mx-auto">
-            <div className="font-body text-xs tracking-[0.18em] text-forest uppercase text-center mb-2">
-              How to Choose
-            </div>
-            <p className="font-body text-sm text-mid text-center max-w-lg mx-auto mb-10">
-              Match the collection to the conditions you actually trek in — not the other way around.
-            </p>
             <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-rule border-t border-b border-rule">
               {COLLECTIONS.map((c) => (
                 <div key={c.id} className="py-6 md:px-8 first:md:pl-0 last:md:pr-0">

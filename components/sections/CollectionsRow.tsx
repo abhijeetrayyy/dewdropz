@@ -38,7 +38,7 @@ export default function CollectionsRow({
           <div>
             <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">11:00 · The Ridge</div>
             <h2 className="font-display text-[clamp(30px,4.4vw,46px)] text-text mt-2">
-              Three conditions. Three kits.
+              Three collections. One philosophy.
             </h2>
           </div>
           <Link

@@ -169,11 +169,23 @@ export const TIMELINE = [
   { year: '2026', label: 'Testing gear above 5,200m and building the next decade of DEWDROPZ from the same ridge we started on.' },
 ]
 
+// PLACEHOLDERS, all of them, and they are live on the site right now.
+//
+// `instagram` points at instagram.com's front page, not an account. `phone` and
+// `whatsapp` are 98765 43210 — the number Indian form examples use, which is
+// not a real line. A customer who taps any of these gets nowhere, and the
+// footer presents them as the way to reach the shop.
+//
+// `address` is marketing copy for the site footer. It is NOT the registered
+// place of business, and the GST invoice deliberately reads its address from
+// store_settings instead (see migration 048) — do not point anything legal here.
 export const SITE = {
   email: 'hello@dewdropz.shop',
   phone: '+91 98765 43210',
   address: 'Rajpur Road, Dehradun, Uttarakhand 248009, India',
   instagram: 'https://instagram.com',
+  facebook: 'https://facebook.com',
+  linkedin: 'https://linkedin.com',
   whatsapp: 'https://wa.me/919876543210',
 }
 

@@ -599,14 +599,56 @@ export default function SummitHero({
               Printed in Dehradun · 30.3165° N
             </p>
 
+            {/* The weather, as a control rather than a setting.
+                HeroWeather has always known how to render all four — real
+                particle profiles for rain and snow, a haze pass for fog — but
+                the only way to reach any of them was to type ?season=snow into
+                the address bar, so in practice every visitor saw `clear` and
+                the whole layer was invisible work. This is the picker the
+                client's reference screenshot shows.
+
+                Hidden when the scene is not running: on a touch device the
+                weather layer is deliberately off (it is the one effect a
+                mid-range phone feels), so offering four buttons that change
+                nothing would be worse than offering none. */}
+            {weather && (
+              <div
+                data-summit-reveal
+                className="invisible mt-5 flex flex-wrap items-center gap-1.5"
+                role="group"
+                aria-label="Weather on the range"
+              >
+                {(['clear', 'fog', 'rain', 'snow'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSeason(s)}
+                    aria-pressed={season === s}
+                    className={`rounded-full border px-3 py-1 font-mono text-[9px] uppercase tracking-[0.18em] transition-colors duration-300 ${
+                      season === s
+                        ? 'border-sage bg-sage/15 text-sage'
+                        : 'border-paper/20 text-paper/50 hover:border-paper/45 hover:text-paper/80'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <h1 className="mt-5 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper">
               <span data-summit-reveal className="invisible block">Go where</span>
               <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
             </h1>
 
+            {/* Repositioned per the client brief: the shop is not an expedition
+                outfitter. The line that stood here talked about heavyweight
+                blanks and printing, which reads as a supplier describing its
+                process; the brief asks for apparel and everyday essentials that
+                happen to be mountain-inspired. */}
             <p data-summit-reveal className="invisible mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
-              Heavyweight blanks, printed one at a time — with your design on them.
-              Nothing is made until you have seen exactly how it will look.
+              Inspired by mountains. Made for everyday journeys.
+              Apparel and drinkware, printed one at a time with your design on it.
             </p>
 
             <div data-summit-reveal className="invisible mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
@@ -620,7 +662,7 @@ export default function SummitHero({
                 href="/shop"
                 className="border-b border-paper/25 pb-1 font-body text-[11px] uppercase tracking-[0.14em] text-paper/65 transition-colors duration-300 hover:text-paper"
               >
-                {fromPrice ? `See the blanks — from ${fromPrice}` : 'See the blanks'}
+                {fromPrice ? `Shop the drop — from ${fromPrice}` : 'Shop the drop'}
               </Link>
             </div>
           </div>
@@ -631,7 +673,7 @@ export default function SummitHero({
             <div data-summit-reveal className="invisible">
               <div className="mb-3 flex items-baseline justify-between border-b border-paper/15 pb-2">
                 <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/40">
-                  The blanks
+                  The drop
                 </span>
                 <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper/30">
                   Made to order

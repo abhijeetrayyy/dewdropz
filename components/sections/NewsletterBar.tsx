@@ -10,16 +10,16 @@ import { subscribeToNewsletter } from '@/actions/reviews'
 // in days, so hearing about drops first is worth an email address.
 const DISPATCH_PROMISES = [
   {
-    title: 'First call on small-batch drops',
-    detail: 'Runs of 200–500 pieces that sell out in days — subscribers hear first.',
+    title: 'First access to new drops',
+    detail: 'Be the first to know when new collections and limited releases go live.',
   },
   {
-    title: 'One trail guide a month',
-    detail: 'A mapped route, its season window, and the exact packing list we carry.',
+    title: 'Stories from the mountains',
+    detail: 'Slow travel, hidden places, trail notes and moments worth remembering.',
   },
   {
-    title: 'Field notes from the guides',
-    detail: 'What broke, what held, and what we changed because of it.',
+    title: 'Behind the collections',
+    detail: 'The inspiration, sketches and stories behind every DEWDROPZ release.',
   },
 ]
 
@@ -62,7 +62,7 @@ export default function NewsletterBar() {
           <h2 className="mt-4 font-display font-light text-[clamp(30px,4.4vw,48px)] text-paper leading-[1.1]">
             One email a month.
             <br />
-            <span className="italic text-sage">Worth opening.</span>
+            <span className="italic text-sage">Actually worth opening.</span>
           </h2>
 
           <ul className="mt-8 space-y-5">
@@ -99,7 +99,7 @@ export default function NewsletterBar() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="trail@example.com"
+                      placeholder="you@example.com"
                       className="flex-1 bg-transparent border-b border-paper/25 pb-3 font-body text-base text-paper placeholder:text-paper/30 focus:outline-none focus:border-sage transition-colors"
                     />
                     <button

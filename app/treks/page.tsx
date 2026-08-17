@@ -21,9 +21,9 @@ export default function TreksPage() {
       <NavBar />
       <main>
         <PageHeader
-          eyebrow="Trail Guide"
-          title="The trails this gear was built on."
-          subtitle="Where they are, how high they go, when they're worth walking, and what you pass on the way. No departures to book — just what we'd tell a friend before their first one."
+          eyebrow="The Trail Guide"
+          title="Knowledge for the road ahead."
+          subtitle="A growing library of routes, stories and field notes for those who carry the mountains with them."
           variant="altitude"
         />
         <TrailGuide />

@@ -12,7 +12,13 @@ export default async function ShopPage() {
   const [products, collections, categories] = await Promise.all([
     getProducts(),
     getCollections(),
-    getCategories({ parentId: null }),
+    // Every category, not just the top level. The filter rail needs the
+    // children — T-Shirts, Hoodies, Sweatshirts — because those are what a
+    // product is actually tagged with; the departments above them (Apparel,
+    // Drinkware) hold no products of their own and only supply the headings.
+    // Asking for `parentId: null` returned exactly the two departments, so the
+    // rail found nothing stocked and rendered no filters at all.
+    getCategories(),
   ])
 
   return (

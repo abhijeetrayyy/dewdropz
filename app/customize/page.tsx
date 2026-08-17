@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const STEPS = [
   ['01', 'Pick your blank', 'Tee, sweatshirt or hoodie. All oversized unisex fits, sizes S to XL.'],
   ['02', 'Make the design', 'Upload an image or set type. Position it on the front, the back, or both.'],
-  ['03', 'It goes to print', 'Your preview goes into the cart exactly as it’ll be printed. COD across India.'],
+  ['03', 'It goes to print', 'Your preview goes into the cart exactly as it’ll be printed.'],
 ] as const
 
 // Landing page for the customization studio: the destination for the
@@ -39,14 +39,13 @@ export default async function CustomizeIndexPage() {
 
           <div className="relative mx-auto max-w-7xl">
             <div className="max-w-2xl">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">The Workbench</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">Custom Studio</div>
               <h1 className="mt-3 font-display text-[clamp(36px,5.5vw,58px)] leading-[1.03] text-text">
-                Design your own.
+                Go on — make it yours
               </h1>
               <p className="mt-5 max-w-xl font-body text-sm leading-relaxed text-mid md:text-base">
-                Pick a blank, choose a colour and size, then throw your artwork on it in the studio. You get a live
-                preview on the garment — front and back —{' '}
-                <span className="text-text">before anything goes to print.</span>
+                Start with a blank canvas. Upload your artwork, choose your colour and size, and{' '}
+                <span className="text-text">preview it before it goes to print.</span>
               </p>
             </div>
           </div>

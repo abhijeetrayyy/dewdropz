@@ -16,13 +16,62 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const NAV_LINKS = [
-  { label: 'Shop', href: '/shop' },
-  { label: 'Collections', href: '/collections' },
+// The launch navigation, per the client brief:
+//   SHOP | COLLECTIONS | CUSTOMIZE | TREK BUDDY | TRAILS | ABOUT | CONTACT
+//
+// Journal leaves the bar — "we will not keep this for now". The route and its
+// posts are untouched, and the footer still links to it, so nothing is deleted
+// on the strength of a nav decision.
+//
+// Two of these carry a menu, and they are two different ways in: SHOP is
+// product-first (what garment do you want), COLLECTIONS is story-first (which
+// world do you like). The brief draws that distinction explicitly, so the menus
+// are not the same list twice.
+type NavLink = {
+  label: string
+  href: string
+  menu?: { heading?: string; items: { label: string; href: string }[] }[]
+}
+
+const NAV_LINKS: NavLink[] = [
+  {
+    label: 'Shop',
+    href: '/shop',
+    menu: [
+      {
+        heading: 'Apparel',
+        items: [
+          { label: 'T-Shirts', href: '/shop?category=t-shirts' },
+          { label: 'Hoodies', href: '/shop?category=hoodies' },
+          { label: 'Sweatshirts', href: '/shop?category=sweatshirts' },
+        ],
+      },
+      {
+        heading: 'Drinkware',
+        items: [
+          { label: 'Mugs', href: '/shop?category=mugs' },
+          { label: 'Tumblers & Bottles', href: '/shop?category=tumblers' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Collections',
+    href: '/collections',
+    menu: [
+      {
+        items: [
+          { label: 'O Collection', href: '/collections/o-collection' },
+          { label: 'Mist & Morning', href: '/collections/mist-and-morning' },
+          { label: 'Silent Altitude', href: '/collections/silent-altitude' },
+        ],
+      },
+    ],
+  },
   { label: 'Customize', href: '/customize' },
+  { label: 'Trek Buddy', href: '/trek-buddy' },
   { label: 'Trails', href: '/treks' },
   { label: 'About', href: '/about' },
-  { label: 'Journal', href: '/journal' },
   { label: 'Contact', href: '/contact' },
 ]
 
@@ -95,9 +144,8 @@ export default function NavBar() {
           // <body> at the act boundaries and the arbitrary variant below reads
           // it, so the cue costs no state, no context and no re-render up here.
           const isStudioDoor = link.href === '/customize'
-          return (
+          const trigger = (
             <Link
-              key={link.label}
               href={link.href}
               className={`group relative font-body text-xs tracking-[0.12em] uppercase text-paper/80 hover:text-paper transition-colors duration-300 ${
                 isStudioDoor ? '[body[data-hero-act=studio]_&]:text-paper' : ''
@@ -112,6 +160,43 @@ export default function NavBar() {
                 />
               )}
             </Link>
+          )
+
+          if (!link.menu) return <div key={link.label}>{trigger}</div>
+
+          // Opens on hover for a mouse and on focus for a keyboard, and the
+          // label itself stays a real link — so Shop and Collections are still
+          // reachable in one click without going through the menu, which is how
+          // people actually use a top-level category.
+          return (
+            <div key={link.label} className="group/menu relative">
+              {trigger}
+              <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-4 opacity-0 transition-[opacity,visibility] duration-200 group-hover/menu:visible group-hover/menu:opacity-100 group-focus-within/menu:visible group-focus-within/menu:opacity-100">
+                <div className="min-w-[190px] rounded-sm border border-white/10 bg-ink/95 p-4 shadow-lg backdrop-blur-sm">
+                  {link.menu.map((group, gi) => (
+                    <div key={group.heading ?? gi} className={gi > 0 ? 'mt-4 border-t border-white/10 pt-4' : ''}>
+                      {group.heading && (
+                        <div className="mb-2 font-body text-[9px] uppercase tracking-[0.2em] text-sage">
+                          {group.heading}
+                        </div>
+                      )}
+                      <ul className="flex flex-col gap-1.5">
+                        {group.items.map((item) => (
+                          <li key={item.href}>
+                            <Link
+                              href={item.href}
+                              className="block whitespace-nowrap font-body text-xs text-paper/70 transition-colors duration-200 hover:text-paper"
+                            >
+                              {item.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )
         })}
       </nav>
@@ -224,6 +309,23 @@ export default function NavBar() {
                 >
                   {link.label}
                 </Link>
+                {/* No hover on a phone, so the menus flatten into a quiet row
+                    under their parent rather than hiding behind a tap-to-expand
+                    the customer has to discover. */}
+                {link.menu && (
+                  <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+                    {link.menu.flatMap((g) => g.items).map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        className="font-body text-xs uppercase tracking-[0.1em] text-paper/50 transition-colors hover:text-paper"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             ))}
           </motion.div>

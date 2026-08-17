@@ -14,10 +14,15 @@ export default async function FooterSection() {
   const footerColumns = [
     {
       heading: 'Shop',
+      // Named products, not gear shelves. The old column listed "All Gear" and
+      // whatever categories the database happened to hold, which was the
+      // outfitter taxonomy the brand is moving away from.
       links: [
-        { label: 'All Gear', href: '/shop' },
-        { label: 'Design Your Own', href: '/customize' },
-        ...categories.map((t) => ({ label: t.name, href: `/shop?category=${t.slug}` })),
+        { label: 'All Products', href: '/shop' },
+        { label: 'T-Shirts', href: '/shop?category=t-shirts' },
+        { label: 'Hoodies', href: '/shop?category=hoodies' },
+        { label: 'Sweatshirts', href: '/shop?category=sweatshirts' },
+        { label: 'Drinkware', href: '/shop?category=drinkware' },
       ],
     },
     {
@@ -30,10 +35,9 @@ export default async function FooterSection() {
     {
       heading: 'Explore',
       links: [
-        { label: 'Trail Guide', href: '/treks' },
         { label: 'Journal', href: '/journal' },
-        { label: 'About', href: '/about' },
-        { label: 'Sustainability', href: '/sustainability' },
+        { label: 'About DEWDROPZ', href: '/about' },
+        { label: 'Our Philosophy', href: '/sustainability' },
       ],
     },
     {
@@ -60,8 +64,8 @@ export default async function FooterSection() {
             taglineClassName="font-display italic text-sage text-sm"
           />
           <p className="mt-5 font-body text-sm text-white/40 leading-relaxed max-w-[260px]">
-            Trekking gear built by guides in Dehradun, tested above 5,200 metres on the
-            trails we still walk every season.
+            Designed for everyday journeys. Inspired by mountains, mist and the
+            spirit of exploration.
           </p>
 
           <div className="mt-6 space-y-1.5 font-body text-sm">
@@ -78,9 +82,14 @@ export default async function FooterSection() {
                 <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
               </svg>
             </SocialLink>
-            <SocialLink href={SITE.whatsapp} label="WhatsApp">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M20 12a8 8 0 1 1-3.6-6.7L20 4l-1.2 3.6A8 8 0 0 1 20 12z" />
+            <SocialLink href={SITE.facebook} label="Facebook">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M14 8.5V7a1 1 0 0 1 1-1h1.5V3.5H14A3.5 3.5 0 0 0 10.5 7v1.5H8.5V11h2v9.5H14V11h2.2l.3-2.5H14z" />
+              </svg>
+            </SocialLink>
+            <SocialLink href={SITE.linkedin} label="LinkedIn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M6.5 8.5H4v11h2.5v-11zM5.25 3.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM20 13.6c0-3-1.6-4.4-3.8-4.4a3.3 3.3 0 0 0-3 1.6V8.5H10.8v11h2.5v-5.8c0-1.5.3-3 2.2-3s1.9 1.7 1.9 3.1v5.7H20v-5.9z" />
               </svg>
             </SocialLink>
           </div>
@@ -107,7 +116,7 @@ export default async function FooterSection() {
         <span>COD · UPI · Cards</span>
         <span>Free shipping over ₹2,000</span>
         <span>7-day returns</span>
-        <span>Ships from Dehradun in 2 days</span>
+        <span>Fast dispatch across India</span>
       </div>
 
       {/* The sign-off — oversized wordmark, like a summit marker */}
@@ -122,7 +131,7 @@ export default async function FooterSection() {
 
       {/* Legal row */}
       <div className="max-w-7xl mx-auto border-t border-white/10 mt-4 py-6 flex flex-wrap items-center justify-between gap-3">
-        <span className="font-body text-xs text-white/30">© 2026 DEWDROPZ · Est. 2019, Dehradun</span>
+        <span className="font-body text-xs text-white/30">© 2026 DEWDROPZ</span>
         <span className="font-mono text-[10px] tracking-[0.1em] text-white/25">30.3165° N, 78.0322° E</span>
         <span className="font-body text-xs text-white/30">Made by DoonDzn</span>
       </div>
