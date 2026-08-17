@@ -78,8 +78,11 @@ export const ACTIVITY_BY_KEY = Object.fromEntries(
   ACTIVITIES.map((a) => [a.key, a])
 ) as Record<TrekActivity, ActivitySpec>
 
-export const EFFORT_LABEL: Record<string, string> = {
-  easy: 'Easy', moderate: 'Moderate', hard: 'Hard',
+// The Indian trekking market's vocabulary, and the proposal's: easy, moderate,
+// difficult. `effort` (easy/moderate/hard) is the older column and is kept only
+// so existing rows still read.
+export const DIFFICULTY_LABEL: Record<string, string> = {
+  easy: 'Easy', moderate: 'Moderate', difficult: 'Difficult',
 }
 
 /** How the whole party gets described in one word on a card. */

@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { ACTIVITY_BY_KEY, EFFORT_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
+import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
 
-const hhmm = (t: string) => t.slice(0, 5)
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '—')
 
 function istLong(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', {
@@ -22,15 +22,24 @@ function istLong(iso: string) {
 // back, how many are going, how hard. Everything else on the page is detail
 // underneath that.
 export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
-  const light = lightForTime(plan.start_time)
+  const light = lightForTime(plan.start_time ?? '06:00')
   const spec = ACTIVITY_BY_KEY[plan.activity as TrekActivity]
   const overnight = plan.ends_on !== plan.starts_on
 
+  const nights = Math.round(
+    (new Date(plan.ends_on).getTime() - new Date(plan.starts_on).getTime()) / 86400000
+  )
+
+  // On a multi-day trek the span is the headline number, not a departure time.
   const facts: [string, string][] = [
-    ['Leaves', hhmm(plan.start_time)],
-    ['Back', `${hhmm(plan.back_by)}${overnight ? ' +1' : ''}`],
+    nights > 0
+      ? ['Days', String(nights + 1)]
+      : ['Leaves', plan.start_time ? hhmm(plan.start_time) : '—'],
+    nights > 0
+      ? ['Ends', new Date(plan.ends_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' })]
+      : ['Back', plan.back_by ? `${hhmm(plan.back_by)}${overnight ? ' +1' : ''}` : '—'],
     ['Going', `${plan.going_count}/${plan.capacity}`],
-    ['Effort', EFFORT_LABEL[plan.effort]],
+    ['Difficulty', DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty],
   ]
 
   return (
@@ -51,7 +60,7 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
         </Link>
 
         <p className="mt-7 font-mono text-[10px] uppercase tracking-[0.22em] text-paper/70">
-          {spec?.label ?? plan.activity} · {light.label} · {istLong(plan.starts_at)}
+          {spec?.label ?? plan.activity} · {plan.start_time ? light.label : `${nights + 1} days out`} · {istLong(plan.starts_at)}
         </p>
 
         <h1 className="mt-3 font-display text-[clamp(34px,6vw,60px)] font-light leading-[0.95] text-paper">

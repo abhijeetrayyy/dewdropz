@@ -50,7 +50,7 @@ export default async function NewTrekPlanPage({
             </p>
           </div>
           <div className="mt-8">
-            <NewPlanForm initialActivity={initial} />
+            <NewPlanForm initialActivity={initial} trekGender={membership.trekGender} />
           </div>
         </section>
       </main>

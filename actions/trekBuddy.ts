@@ -46,6 +46,12 @@ export type TrekPlanRow = {
   going_count: number
   spots_left: number
   effort: TrekEffort
+  difficulty: 'easy' | 'moderate' | 'difficult'
+  women_only: boolean
+  senior_friendly: boolean
+  languages: string[]
+  cover_urls: string[]
+  is_live: boolean
   note: string | null
   status: 'open' | 'cancelled'
   cancelled_at: string | null
@@ -60,7 +66,7 @@ export async function getTrekMembership() {
 
   const { data } = await createAdminSupabaseClient()
     .from('profiles')
-    .select('trek_display_name, trek_dob, trek_terms_at, trek_can_host')
+    .select('trek_display_name, trek_dob, trek_terms_at, trek_can_host, trek_gender')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -71,6 +77,9 @@ export async function getTrekMembership() {
     onboarded,
     displayName: (data?.trek_display_name as string) ?? null,
     canHost: Boolean(data?.trek_can_host),
+    // Needed by the composer so it can say why the women-only control is off,
+    // rather than offering it and letting the database refuse the post.
+    trekGender: (data?.trek_gender as string | null) ?? null,
   }
 }
 
@@ -126,7 +135,11 @@ export async function saveTrekProfile(input: {
 export async function getTrekBoard(filters?: {
   activity?: string
   when?: 'all' | 'week' | 'weekend'
-  effort?: string
+  difficulty?: string
+  language?: string
+  womenOnly?: boolean
+  seniorFriendly?: boolean
+  hasSpots?: boolean
   q?: string
   mine?: boolean
 }) {
@@ -143,7 +156,11 @@ export async function getTrekBoard(filters?: {
     .limit(60)
 
   if (filters?.activity && filters.activity !== 'all') query = query.eq('activity', filters.activity)
-  if (filters?.effort && filters.effort !== 'all') query = query.eq('effort', filters.effort)
+  if (filters?.difficulty && filters.difficulty !== 'all') query = query.eq('difficulty', filters.difficulty)
+  if (filters?.womenOnly) query = query.eq('women_only', true)
+  if (filters?.seniorFriendly) query = query.eq('senior_friendly', true)
+  // Postgres array containment — a trip matches if it lists the language.
+  if (filters?.language && filters.language !== 'all') query = query.contains('languages', [filters.language])
 
   // Search covers the place and the rendezvous town — the two things somebody
   // actually types. Not the note, which is where hosts put chatter.
@@ -170,6 +187,7 @@ export async function getTrekBoard(filters?: {
     })
   }
 
+  if (filters?.hasSpots) rows = rows.filter((r) => r.spots_left > 0)
   if (filters?.mine) rows = rows.filter((r) => r.host_id === user.id)
   return rows
 }
@@ -310,15 +328,19 @@ export async function createTrekPlan(input: {
   place: string
   meetArea: string
   startsOn: string
-  startTime: string
-  backBy: string
+  endsOn?: string
+  startTime?: string
+  backBy?: string
   capacity: number
   meetingPoint: string
-  effort: TrekEffort
+  difficulty?: 'easy' | 'moderate' | 'difficult'
   note?: string
   logistics?: string
-  endsOn?: string
   nightNote?: string
+  womenOnly?: boolean
+  seniorFriendly?: boolean
+  languages?: string[]
+  coverUrls?: string[]
 }) {
   const user = await requireAuth()
   const result = await callTrek('trek_create_plan', {
@@ -326,16 +348,22 @@ export async function createTrekPlan(input: {
     p_place: input.place,
     p_meet_area: input.meetArea,
     p_starts_on: input.startsOn,
-    p_start_time: input.startTime,
-    p_back_by: input.backBy,
+    p_ends_on: input.endsOn || input.startsOn,
     p_capacity: input.capacity,
     p_meeting_point: input.meetingPoint,
-    p_effort: input.effort,
+    p_difficulty: input.difficulty ?? 'moderate',
+    // Optional now: on a six-day trek nobody should invent a return time for
+    // day six, and the database fills the ordering instants itself.
+    p_start_time: input.startTime || null,
+    p_back_by: input.backBy || null,
     p_note: input.note || null,
     p_logistics: input.logistics || null,
-    p_actor: user.id,
-    p_ends_on: input.endsOn || input.startsOn,
     p_night_note: input.nightNote || null,
+    p_women_only: input.womenOnly ?? false,
+    p_senior_friendly: input.seniorFriendly ?? false,
+    p_languages: input.languages ?? [],
+    p_cover_urls: input.coverUrls ?? [],
+    p_actor: user.id,
   }, ['/trek-buddy'])
 
   if ('success' in result) {
@@ -549,4 +577,40 @@ export async function vouchFor(planId: string, forUserId: string) {
   return callTrek('trek_vouch', {
     p_plan_id: planId, p_for: forUserId, p_actor: user.id,
   }, ['/trek-buddy/profile', `/trek-buddy/people/${forUserId}`])
+}
+
+
+/** Report a trek or a person. Lands in trek_reports for a human to read. */
+export async function reportTrek(input: {
+  reason: 'unsafe' | 'harassment' | 'spam' | 'impersonation' | 'not_real' | 'other'
+  detail?: string
+  planId?: string
+  subjectId?: string
+}) {
+  const user = await requireAuth()
+  const result = await callTrek('trek_report', {
+    p_reason: input.reason,
+    p_detail: input.detail || null,
+    p_plan_id: input.planId || null,
+    p_subject_id: input.subjectId || null,
+    p_actor: user.id,
+  }, ['/trek-buddy'])
+
+  if ('success' in result) {
+    // Until somebody is named to own the queue, Slack IS the queue.
+    await sendSlackAlert(
+      `:rotating_light: Trek Buddy report — ${input.reason}` +
+      (input.planId ? ` on plan ${input.planId}` : '') +
+      (input.subjectId ? ` about member ${input.subjectId}` : '') +
+      (input.detail ? `\n${input.detail}` : '')
+    ).catch(() => {})
+  }
+  return result
+}
+
+/** Block somebody. Applies in both directions on any join. */
+export async function blockMember(userId: string) {
+  const user = await requireAuth()
+  return callTrek('trek_block', { p_blocked: userId, p_actor: user.id },
+    ['/trek-buddy', `/trek-buddy/people/${userId}`])
 }

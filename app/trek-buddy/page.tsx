@@ -29,7 +29,11 @@ export const metadata: Metadata = {
 export default async function TrekBuddyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ activity?: string; when?: string; q?: string }>
+  searchParams: Promise<{
+    activity?: string; when?: string; q?: string
+    difficulty?: string; language?: string
+    womenOnly?: string; senior?: string; spots?: string
+  }>
 }) {
   const sp = await searchParams
   const membership = await getTrekMembership()
@@ -110,7 +114,16 @@ export default async function TrekBuddyPage({
   // carry honest counts — a filter that says "Camping 0" is more useful than a
   // filter that has quietly disappeared.
   const [plans, all, mine] = await Promise.all([
-    getTrekBoard({ activity: sp.activity, when: sp.when as 'all' | 'week' | 'weekend', q: sp.q }),
+    getTrekBoard({
+      activity: sp.activity,
+      when: sp.when as 'all' | 'week' | 'weekend',
+      q: sp.q,
+      difficulty: sp.difficulty,
+      language: sp.language,
+      womenOnly: sp.womenOnly === '1',
+      seniorFriendly: sp.senior === '1',
+      hasSpots: sp.spots === '1',
+    }),
     getTrekBoard(),
     getMyTreks(),
   ])
@@ -118,7 +131,10 @@ export default async function TrekBuddyPage({
   const counts: Record<string, number> = { all: all.length }
   for (const a of ACTIVITIES) counts[a.key] = all.filter((p) => p.activity === a.key).length
 
-  const filtering = Boolean(sp.activity || sp.q || (sp.when && sp.when !== 'all'))
+  const filtering = Boolean(
+    sp.activity || sp.q || (sp.when && sp.when !== 'all') ||
+    sp.difficulty || sp.language || sp.womenOnly || sp.senior || sp.spots
+  )
   const involved = mine.hosting.length + mine.going.length
 
   return (

@@ -5,6 +5,7 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekGate from '@/components/trek/TrekGate'
 import Evidence from '@/components/trek/Evidence'
+import SafetyActions from '@/components/trek/SafetyActions'
 import { getPerson, getTrekMembership } from '@/actions/trekBuddy'
 import { ACTIVITY_BY_KEY, type TrekActivity } from '@/lib/trek'
 import { DAY_ARC } from '@/lib/constants'
@@ -92,12 +93,14 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               <Evidence person={person} />
             </div>
 
-            <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
-              There is no way to message someone here, and that is deliberate — walks are arranged
-              on the walk&apos;s own page, where the host decides who comes. If this profile worries
-              you,{' '}
-              <Link href="/contact" className="text-forest underline underline-offset-4">tell us</Link>.
-            </p>
+            <div className="space-y-4 border-t border-rule pt-6">
+              <p className="font-body text-xs leading-relaxed text-mid">
+                There is no way to message someone here, and that is deliberate — walks are
+                arranged on the walk&apos;s own page, where the host decides who comes.
+              </p>
+              {/* Nobody needs to report or block themselves. */}
+              {!isMe && <SafetyActions subjectId={person.userId} subjectName={person.displayName} />}
+            </div>
           </div>
         </section>
       </main>

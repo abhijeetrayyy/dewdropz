@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createTrekPlan, type TrekEffort } from '@/actions/trekBuddy'
+import { createTrekPlan } from '@/actions/trekBuddy'
 import { ACTIVITIES, ACTIVITY_BY_KEY, lightForTime, type TrekActivity } from '@/lib/trek'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 
@@ -25,11 +26,24 @@ function tomorrowIst() {
   return ymd(now)
 }
 
-function nextDay(d: string) {
+function addDays(d: string, n: number) {
   const t = new Date(d + 'T00:00:00')
-  t.setDate(t.getDate() + 1)
+  t.setDate(t.getDate() + n)
   return ymd(t)
 }
+const nextDay = (d: string) => addDays(d, 1)
+
+/** Whole days between two yyyy-mm-dd, inclusive of both ends. */
+function daysBetween(a: string, b: string) {
+  return Math.round(
+    (new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000
+  ) + 1
+}
+
+const shortDay = (d: string) =>
+  new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+
+const LANGUAGES = ['Hindi', 'English', 'Garhwali', 'Punjabi', 'Bengali']
 
 const label = 'font-mono text-[10px] uppercase tracking-[0.2em] text-mid'
 const field =
@@ -37,7 +51,7 @@ const field =
 const hint = 'mt-1.5 block font-body text-xs leading-relaxed text-mid'
 
 /** The four steps, named. Posting a walk is a sequence, so it is numbered. */
-const STEPS = ['What', 'Where', 'When', 'The details'] as const
+const STEPS = ['What', 'Where', 'How long', 'The details'] as const
 
 // Posting a walk, as a composer rather than a form.
 //
@@ -50,7 +64,13 @@ const STEPS = ['What', 'Where', 'When', 'The details'] as const
 // what, where, when, and the rest — and shows the card they are building, live,
 // beside it. The preview is the point: you are not filling in a form, you are
 // writing the thing other people will read, and you can see it the whole time.
-export default function NewPlanForm({ initialActivity }: { initialActivity?: TrekActivity }) {
+export default function NewPlanForm({
+  initialActivity,
+  trekGender,
+}: {
+  initialActivity?: TrekActivity
+  trekGender: string | null
+}) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState('')
@@ -63,10 +83,18 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
     place: '',
     meetArea: '',
     startsOn: tomorrowIst(),
+    endsOn: initial.endsNextDay ? nextDay(tomorrowIst()) : tomorrowIst(),
+    // Multi-day trips carry no hour by default. On a six-day walk "leaves at
+    // 06:00" is a detail of day one, and asking a host to invent a return time
+    // for day six is asking for a fiction.
+    timed: true,
     startTime: initial.defaultStart,
     backBy: initial.defaultBackBy,
+    womenOnly: false,
+    seniorFriendly: false,
+    languages: [] as string[],
     capacity: Math.max(4, initial.minParty),
-    effort: 'moderate' as TrekEffort,
+    difficulty: 'moderate' as 'easy' | 'moderate' | 'difficult',
     meetingPoint: '',
     note: '',
     logistics: '',
@@ -75,14 +103,51 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
   // Functional, so two changes in one tick cannot clobber each other.
   const set = (p: Partial<typeof f>) => setF((prev) => ({ ...prev, ...p }))
   const spec = ACTIVITY_BY_KEY[f.activity]
-  const light = useMemo(() => lightForTime(f.startTime), [f.startTime])
+  const light = useMemo(() => lightForTime(f.timed ? f.startTime : '06:00'), [f.timed, f.startTime])
+  const days = daysBetween(f.startsOn, f.endsOn)
+  const canBeWomenOnly = trekGender === 'woman'
+  // For anything that runs into the dark the departure hour is the whole point,
+  // so it stays required however many days the trip lasts.
+  const hoursMatter = spec.needsNightNote || spec.dayPart !== 'day'
+
+  /** Set the length in days, keeping the start where it is. */
+  const setDays = (n: number) =>
+    setF((prev) => ({
+      ...prev,
+      endsOn: addDays(prev.startsOn, Math.max(0, Math.min(31, n - 1))),
+      // Past a single day the hour stops being the defining fact, so the form
+      // stops insisting on one. The host can still add it back.
+      timed: hoursMatter || n <= 1,
+    }))
+
+  /** Moving the start date drags the end with it, so a trip keeps its length. */
+  const setStart = (d: string) =>
+    setF((prev) => ({ ...prev, startsOn: d, endsOn: addDays(d, daysBetween(prev.startsOn, prev.endsOn) - 1) }))
+
+  const toggleLanguage = (l: string) =>
+    setF((prev) => ({
+      ...prev,
+      languages: prev.languages.includes(l)
+        ? prev.languages.filter((x) => x !== l)
+        : [...prev.languages, l],
+    }))
 
   // Changing the kind of outing re-seeds its hours. Somebody switching from
   // trekking to camping should not have to work out that 07:00 is no longer a
   // legal start — the database would refuse it and they would have to guess why.
   function pickActivity(key: TrekActivity) {
     const a = ACTIVITY_BY_KEY[key]
-    setF((prev) => ({ ...prev, activity: key, startTime: a.defaultStart, backBy: a.defaultBackBy, capacity: Math.max(prev.capacity, a.minParty) }))
+    setF((prev) => ({
+      ...prev,
+      activity: key,
+      startTime: a.defaultStart,
+      backBy: a.defaultBackBy,
+      capacity: Math.max(prev.capacity, a.minParty),
+      endsOn: a.endsNextDay ? nextDay(prev.startsOn) : prev.startsOn,
+      // Camping is an overnight by definition and still wants its hours; a
+      // multi-day trek does not.
+      timed: true,
+    }))
     setStep(1)
   }
 
@@ -97,7 +162,10 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
     start(async () => {
       const r = await createTrekPlan({
         ...f,
-        endsOn: spec.endsNextDay ? nextDay(f.startsOn) : f.startsOn,
+        endsOn: spec.endsNextDay && f.endsOn === f.startsOn ? nextDay(f.startsOn) : f.endsOn,
+        startTime: f.timed ? f.startTime : undefined,
+        backBy: f.timed ? f.backBy : undefined,
+        languages: f.languages.length ? f.languages : undefined,
         nightNote: spec.needsNightNote ? f.nightNote : undefined,
       })
       if ('error' in r) { setError(r.error); return }
@@ -173,13 +241,44 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
           )}
 
           {step === 2 && (
-            <div className="space-y-6">
-              <h2 className="font-display text-2xl text-text">When?</h2>
+            <div className="space-y-7">
+              <h2 className="font-display text-2xl text-text">How long are you out?</h2>
+
+              {/* Length first, because it is the fact that decides whether the
+                  hours even matter. A day walk is an hour; a six-day trek is a
+                  span, and the form should not pretend they are the same shape. */}
+              <div>
+                <span className={label}>Days out</span>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {[1, 2, 3, 5, 7].map((n) => (
+                    <button key={n} type="button" onClick={() => setDays(n)}
+                      aria-pressed={days === n}
+                      className={`rounded-full border px-4 py-1.5 font-mono text-xs tabular-nums transition-colors ${
+                        days === n ? 'border-forest bg-forest text-paper' : 'border-rule text-mid hover:border-text'
+                      }`}>
+                      {n === 1 ? 'One day' : `${n} days`}
+                    </button>
+                  ))}
+                  <span className="flex items-center gap-1.5 rounded-full border border-rule px-2 py-1">
+                    <button type="button" onClick={() => setDays(Math.max(1, days - 1))}
+                      aria-label="One day fewer"
+                      className="h-6 w-6 rounded-full font-mono text-sm text-mid transition-colors hover:bg-paper-warm hover:text-text">−</button>
+                    <span className="min-w-[2ch] text-center font-mono text-xs text-text tabular-nums">{days}</span>
+                    <button type="button" onClick={() => setDays(Math.min(32, days + 1))}
+                      aria-label="One day more"
+                      className="h-6 w-6 rounded-full font-mono text-sm text-mid transition-colors hover:bg-paper-warm hover:text-text">+</button>
+                  </span>
+                </div>
+              </div>
+
               <div className="grid gap-6 sm:grid-cols-2">
                 <label className="block">
-                  <span className={label}>Date</span>
+                  <span className={label}>Setting off</span>
                   <input type="date" value={f.startsOn} min={tomorrowIst()}
-                    onChange={(e) => set({ startsOn: e.target.value })} required className={field} />
+                    onChange={(e) => setStart(e.target.value)} required className={field} />
+                  <span className={hint}>
+                    {days > 1 ? `Back on ${shortDay(f.endsOn)}.` : 'Back the same day.'}
+                  </span>
                 </label>
                 <label className="block">
                   <span className={label}>How many people</span>
@@ -187,32 +286,61 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
                     onChange={(e) => set({ capacity: Number(e.target.value) })} required className={field} />
                   <span className={hint}>Including you. Between {spec.minParty} and 8.</span>
                 </label>
-                <label className="block">
-                  <span className={label}>Leaving at</span>
-                  <input type="time" value={f.startTime} min={spec.startMin} max={spec.startMax}
-                    onChange={(e) => set({ startTime: e.target.value })} required className={field} />
-                  <span className={hint}>Between {spec.startMin} and {spec.startMax} for {spec.label.toLowerCase()}.</span>
-                </label>
-                <label className="block">
-                  <span className={label}>Back by</span>
-                  <input type="time" value={f.backBy}
-                    onChange={(e) => set({ backBy: e.target.value })} required className={field} />
-                  <span className={hint}>{spec.endsNextDay ? 'The next morning.' : '19:00 at the latest.'}</span>
-                </label>
               </div>
+
+              {/* Hours. Required for a day out and for anything after dark;
+                  optional the moment a trip runs over several days. */}
+              {f.timed ? (
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <label className="block">
+                    <span className={label}>Leaving at</span>
+                    <input type="time" value={f.startTime} min={spec.startMin} max={spec.startMax}
+                      onChange={(e) => set({ startTime: e.target.value })} required className={field} />
+                    <span className={hint}>Between {spec.startMin} and {spec.startMax} for {spec.label.toLowerCase()}.</span>
+                  </label>
+                  <label className="block">
+                    <span className={label}>{days > 1 ? 'Back on the last day by' : 'Back by'}</span>
+                    <input type="time" value={f.backBy}
+                      onChange={(e) => set({ backBy: e.target.value })} required className={field} />
+                    <span className={hint}>{spec.endsNextDay ? 'The next morning.' : '19:00 at the latest.'}</span>
+                  </label>
+                  {days > 1 && !hoursMatter && (
+                    <button type="button" onClick={() => set({ timed: false })}
+                      className="justify-self-start border-b border-rule pb-1 font-body text-xs text-mid transition-colors hover:text-text">
+                      Drop the hours — this one is measured in days
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-sm border border-dashed border-rule px-4 py-4">
+                  <p className="font-body text-sm text-text">
+                    {days} days on the hill — no hours stated.
+                  </p>
+                  <p className={hint}>
+                    Right for a long trek: the day-one departure is something you settle with
+                    the people coming, not a headline on the board.
+                  </p>
+                  <button type="button" onClick={() => set({ timed: true })}
+                    className="mt-2 border-b border-rule pb-1 font-body text-xs text-mid transition-colors hover:text-text">
+                    Add a departure time anyway
+                  </button>
+                </div>
+              )}
+
               <div>
                 <span className={label}>How hard</span>
                 <div className="mt-2 flex gap-2">
-                  {(['easy', 'moderate', 'hard'] as const).map((k) => (
-                    <button key={k} type="button" onClick={() => set({ effort: k })}
-                      aria-pressed={f.effort === k}
+                  {(['easy', 'moderate', 'difficult'] as const).map((k) => (
+                    <button key={k} type="button" onClick={() => set({ difficulty: k })}
+                      aria-pressed={f.difficulty === k}
                       className={`rounded-full border px-4 py-1.5 font-body text-xs capitalize transition-colors ${
-                        f.effort === k ? 'border-forest bg-forest text-paper' : 'border-rule text-mid hover:border-text'
+                        f.difficulty === k ? 'border-forest bg-forest text-paper' : 'border-rule text-mid hover:border-text'
                       }`}>{k}</button>
                   ))}
                 </div>
                 <span className={hint}>Be honest — somebody will plan their day around this.</span>
               </div>
+
               <button type="button" onClick={() => setStep(3)}
                 className="rounded-sm bg-forest px-5 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper">
                 Next — the details
@@ -256,6 +384,62 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
                 </label>
               )}
 
+              {/* Who it is for. These are the filters people actually search the
+                  board with, so they belong on the post rather than buried in
+                  the note where nothing can read them. */}
+              <div className="space-y-5 border-t border-rule pt-6">
+                <div>
+                  <span className={label}>Speaks</span>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {LANGUAGES.map((l) => (
+                      <button key={l} type="button" onClick={() => toggleLanguage(l)}
+                        aria-pressed={f.languages.includes(l)}
+                        className={`rounded-full border px-3.5 py-1.5 font-body text-xs transition-colors ${
+                          f.languages.includes(l)
+                            ? 'border-forest bg-forest text-paper'
+                            : 'border-rule text-mid hover:border-text hover:text-text'
+                        }`}>{l}</button>
+                    ))}
+                  </div>
+                  <span className={hint}>What the group will be speaking on the walk.</span>
+                </div>
+
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input type="checkbox" checked={f.seniorFriendly}
+                    onChange={(e) => set({ seniorFriendly: e.target.checked })}
+                    className="mt-1 h-4 w-4 accent-forest" />
+                  <span>
+                    <span className="block font-body text-sm text-text">Senior friendly</span>
+                    <span className="block font-body text-xs text-mid">
+                      Unhurried, with rests, and nothing that needs scrambling.
+                    </span>
+                  </span>
+                </label>
+
+                {canBeWomenOnly ? (
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input type="checkbox" checked={f.womenOnly}
+                      onChange={(e) => set({ womenOnly: e.target.checked })}
+                      className="mt-1 h-4 w-4 accent-clay" />
+                    <span>
+                      <span className="block font-body text-sm text-text">Women only</span>
+                      <span className="block font-body text-xs text-mid">
+                        Only members whose profile says women can ask to come. The board enforces
+                        this, not the note.
+                      </span>
+                    </span>
+                  </label>
+                ) : (
+                  <p className="font-body text-xs leading-relaxed text-mid">
+                    Women-only walks can be posted by members whose profile says women.{' '}
+                    <Link href="/trek-buddy/profile" className="text-forest underline underline-offset-4">
+                      Set that on your profile
+                    </Link>{' '}
+                    if it applies to you.
+                  </p>
+                )}
+              </div>
+
               <label className="block">
                 <span className={label}>Anything else</span>
                 <textarea value={f.note} onChange={(e) => set({ note: e.target.value })}
@@ -292,19 +476,37 @@ export default function NewPlanForm({ initialActivity }: { initialActivity?: Tre
           <span aria-hidden="true" style={{ background: light.bar }} className="w-1 shrink-0" />
           <div className="min-w-0 flex-1 p-4">
             <div className="flex items-baseline gap-2">
-              <span style={{ color: light.ink }} className="font-mono text-sm tabular-nums">{f.startTime}</span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">{light.label}</span>
+              <span style={{ color: light.ink }} className="font-mono text-sm tabular-nums">
+                {f.timed ? f.startTime : `${days} days`}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
+                {f.timed ? light.label : 'On the hill'}
+              </span>
             </div>
             <h3 className="mt-1 font-display text-xl leading-tight text-text">
               {f.place || <span className="text-mid/50">Where are you going?</span>}
             </h3>
             <p className="mt-1 font-body text-xs text-mid">
-              {spec.label} · from {f.meetArea || '…'} · back {f.backBy}
-              {spec.endsNextDay ? ' next day' : ''}
+              {spec.label} · from {f.meetArea || '…'}
+              {days > 1 ? ` · ${days} days` : f.timed ? ` · back ${f.backBy}` : ''}
             </p>
             <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-mid tabular-nums">
-              {dayLabel} · 1/{f.capacity} · {f.effort}
+              {dayLabel} · 1/{f.capacity} · {f.difficulty}
             </p>
+            {(f.womenOnly || f.seniorFriendly) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {f.womenOnly && (
+                  <span className="rounded-full border border-clay/50 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-clay">
+                    Women only
+                  </span>
+                )}
+                {f.seniorFriendly && (
+                  <span className="rounded-full border border-forest/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-forest">
+                    Senior friendly
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <p className="mt-3 font-body text-xs leading-relaxed text-mid">

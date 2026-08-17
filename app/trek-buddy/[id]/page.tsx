@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
@@ -7,6 +6,7 @@ import { getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
 import PlanActions from './PlanActions'
 import PlanMasthead from '@/components/trek/PlanMasthead'
 import SafetyNotes from '@/components/trek/SafetyNotes'
+import SafetyActions from '@/components/trek/SafetyActions'
 import { ACTIVITY_BY_KEY, DAY_PART_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ function istDay(iso: string) {
     timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 }
-const hhmm = (t: string) => t.slice(0, 5)
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '—')
 
 /** A section on this page. Ruled and labelled, so the page scans. */
 function Block({ label, children }: { label: string; children: React.ReactNode }) {
@@ -47,7 +47,8 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   const full = plan.spots_left <= 0
   const cancelled = plan.status === 'cancelled'
   const confirmed = myStatus === 'confirmed'
-  const light = lightForTime(plan.start_time)
+  const light = lightForTime(plan.start_time ?? '06:00')
+  const multiDay = plan.ends_on !== plan.starts_on
 
   return (
     <>
@@ -131,11 +132,19 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                 <p className="font-body text-sm text-mid">
                   Copy this to a friend or someone at home before you set off.
                 </p>
+                {/* Written out rather than templated with dashes: a trek with
+                    no stated hour must not produce "at —, back by —" in the one
+                    message somebody sends home before walking into the hills. */}
                 <p className="mt-3 rounded-sm bg-paper-warm px-4 py-3 font-body text-sm leading-relaxed text-text">
                   I&apos;m going {activityLabel(plan.activity).toLowerCase()} at {plan.place} on{' '}
-                  {istDay(plan.starts_at)}. Meeting around {plan.meet_area} at{' '}
-                  {hhmm(plan.start_time)}, back by {hhmm(plan.back_by)}
-                  {plan.ends_on !== plan.starts_on ? ' the next day' : ''}. Organised through
+                  {istDay(plan.starts_at)}
+                  {multiDay
+                    ? `, back on ${istDay(plan.ends_at)}`
+                    : plan.back_by
+                      ? `, back by ${hhmm(plan.back_by)}`
+                      : ''}
+                  . Meeting around {plan.meet_area}
+                  {plan.start_time ? ` at ${hhmm(plan.start_time)}` : ''}. Organised through
                   DEWDROPZ Trek Buddy by {plan.host_name}.
                 </p>
               </Block>
@@ -143,12 +152,16 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
 
             <SafetyNotes variant="compact" />
 
-            <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
-              DEWDROPZ does not organise, lead, vet or supervise this walk and has not checked who
-              anyone on it is. Go at your own risk and turn back if conditions change. Emergency:{' '}
-              <span className="text-text">112</span>. Something wrong with this walk?{' '}
-              <Link href="/contact" className="text-forest underline underline-offset-4">Tell us</Link>.
-            </p>
+            <div className="space-y-4 border-t border-rule pt-6">
+              <p className="font-body text-xs leading-relaxed text-mid">
+                DEWDROPZ does not organise, lead, vet or supervise this walk and has not checked
+                who anyone on it is. Go at your own risk and turn back if conditions change.
+                Emergency: <span className="text-text">112</span>.
+              </p>
+              {/* A host cannot report their own walk — there is a Cancel button
+                  for that, and a self-report is only ever a mistake. */}
+              {!isHost && <SafetyActions planId={plan.id} />}
+            </div>
           </div>
         </div>
       </main>

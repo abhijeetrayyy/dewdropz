@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { ACTIVITY_BY_KEY, EFFORT_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
+import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
 
 /** IST, because the walk happens in India and the server does not. */
 function istParts(iso: string) {
@@ -10,7 +10,8 @@ function istParts(iso: string) {
   return { day: f({ day: '2-digit' }), month: f({ month: 'short' }), weekday: f({ weekday: 'short' }) }
 }
 
-const hhmm = (t: string) => t.slice(0, 5)
+/** start_time and back_by are nullable now — a six-day trek need not name an hour. */
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null)
 
 /** Initials for the people going. A face is a person; a number is a row. */
 function Party({ count, capacity }: { count: number; capacity: number }) {
@@ -52,10 +53,15 @@ function Party({ count, capacity }: { count: number; capacity: number }) {
 // the date are instrument readings off a logbook; the place is a name on a map.
 // Keeping those two registers apart is what stops the card reading as a form.
 export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
-  const light = lightForTime(plan.start_time)
+  // A trek with no stated hour still needs a rail colour; 06:00 reads as a
+  // morning departure, which is what a multi-day trek almost always is.
+  const light = lightForTime(plan.start_time ?? '06:00')
   const spec = ACTIVITY_BY_KEY[plan.activity as TrekActivity]
   const { day, month, weekday } = istParts(plan.starts_at)
   const full = plan.spots_left <= 0
+  const nights = Math.round(
+    (new Date(plan.ends_on).getTime() - new Date(plan.starts_on).getTime()) / 86400000
+  )
 
   return (
     <Link
@@ -85,26 +91,36 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
               style={{ color: light.ink }}
               className="font-mono text-sm tabular-nums"
             >
-              {hhmm(plan.start_time)}
+              {hhmm(plan.start_time) ?? `${nights + 1} days`}
             </span>
             <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
-              {light.label}
+              {plan.start_time ? light.label : 'On the hill'}
             </span>
           </div>
 
           <h3 className="mt-1 font-display text-xl leading-tight text-text">{plan.place}</h3>
 
+          {/* Days, not hours, once a trek runs over more than one. */}
           <p className="mt-1 font-body text-xs text-mid">
-            {spec?.label ?? plan.activity} · from {plan.meet_area} · back{' '}
-            <span className="tabular-nums">{hhmm(plan.back_by)}</span>
-            {plan.ends_on !== plan.starts_on ? ' next day' : ''}
+            {spec?.label ?? plan.activity} · from {plan.meet_area}
+            {nights > 0 ? ` · ${nights + 1} days` : plan.back_by ? ` · back ${hhmm(plan.back_by)}` : ''}
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
             <Party count={plan.going_count} capacity={plan.capacity} />
             <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
-              {EFFORT_LABEL[plan.effort]}
+              {DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty}
             </span>
+            {plan.women_only && (
+              <span className="rounded-full border border-clay/50 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-clay">
+                Women only
+              </span>
+            )}
+            {plan.senior_friendly && (
+              <span className="rounded-full border border-forest/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-forest">
+                Senior friendly
+              </span>
+            )}
             {plan.day_part !== 'day' && (
               <span
                 style={{ color: light.ink, borderColor: light.bar }}
