@@ -2,6 +2,8 @@
 
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { getUser } from './auth'
+import { customDesignSchema } from '@/lib/validations'
+import { rateLimit } from '@/lib/rateLimit'
 import type { CustomDesign, Json } from '@/types/database'
 
 export type UserDesign = CustomDesign & {
@@ -13,6 +15,14 @@ export type UserDesign = CustomDesign & {
 // the customizer studio inserts a fresh row rather than updating an
 // existing one, so a design already sitting in a placed order can never be
 // retroactively changed by a later edit to the same product.
+/** Validated, rate-limited, and its URLs pinned to our own storage.
+ *
+ *  This was the only write in the customize flow with no checks at all: no
+ *  schema, no rate limit, and it stored client-supplied URLs that the server
+ *  later fetches (renderDesign) and an admin later downloads (the print-file
+ *  route). Its mobile twin validated every field. Guests can still design
+ *  without an account — that is the point of the studio — so the control here
+ *  is rate and shape, not authorization. */
 export async function saveCustomDesign(input: {
   product_id: string
   variant_id?: string | null
@@ -29,6 +39,27 @@ export async function saveCustomDesign(input: {
   color_name?: string | null
   color_hex?: string | null
 }) {
+  const parsed = customDesignSchema.safeParse(input)
+  if (!parsed.success) return { error: 'That design could not be saved — some of its details are invalid.' }
+
+  // Unauthenticated, writes a row and references uploaded files. Generous
+  // enough that a real person iterating on a design never sees it.
+  const limited = await rateLimit('design.save', { limit: 20, windowSeconds: 600 })
+  if (!limited.ok) return { error: limited.error }
+
+  // Every URL must be ours. These are handed to a server-side fetch and to an
+  // admin's browser later; accepting an arbitrary origin here is what made
+  // those two places exploitable.
+  const storageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const ours = (u?: string | null) => {
+    if (!u) return true
+    try { return new URL(u).origin === new URL(storageOrigin!).origin } catch { return false }
+  }
+  const urls = [input.front_preview_url, input.back_preview_url, input.front_print_url, input.back_print_url]
+  if (!storageOrigin || !urls.every(ours)) {
+    return { error: 'Design images must be uploaded through the studio.' }
+  }
+
   const supabase = await createServerSupabaseClient()
   const user = await getUser()
 

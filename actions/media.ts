@@ -2,6 +2,7 @@
 
 import { requireAdmin } from './auth'
 import { uploadFileAdmin, deleteFile, STORAGE_BUCKETS } from '@/lib/supabase/storage'
+import { rateLimit } from '@/lib/rateLimit'
 
 export type MediaBucket = keyof typeof STORAGE_BUCKETS
 
@@ -33,6 +34,14 @@ const CUSTOMER_UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 // images only (no SVG — avoids embedded-script/parsing risk), a real size
 // cap, and a random filename (never the client-supplied name).
 export async function uploadCustomerImage(file: File) {
+  // Unauthenticated by design — you can put a photo on a shirt before making an
+  // account — and it writes a permanent public object with no cleanup. That
+  // combination is worth a rate limit: 30 images per 10 minutes is far more
+  // than a person iterating on one design, and stops the endpoint being free
+  // permanent storage. Fails open, like every other rateLimit caller.
+  const limited = await rateLimit('upload.customer-image', { limit: 30, windowSeconds: 600 })
+  if (!limited.ok) throw new Error(limited.error)
+
   if (!CUSTOMER_UPLOAD_MIME_TYPES.includes(file.type)) {
     throw new Error('Please upload a JPEG, PNG, or WebP image.')
   }

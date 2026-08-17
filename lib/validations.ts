@@ -198,3 +198,22 @@ export type MobileUploadInput = z.infer<typeof mobileUploadSchema>
 export type ReviewInput = z.infer<typeof reviewSchema>
 export type NewsletterInput = z.infer<typeof newsletterSchema>
 export type ProductInput = z.infer<typeof productSchema>
+
+/** The studio's save. Its mobile counterpart (mobileDesignSchema) has validated
+ *  every field since it was written; the web action validated nothing at all —
+ *  no schema, no auth, no rate limit — while writing client-supplied URLs that
+ *  the server later fetches and an admin later downloads. */
+export const customDesignSchema = z.object({
+  product_id: z.string().uuid(),
+  variant_id: z.string().uuid().nullish(),
+  front_design: z.unknown().nullish(),
+  back_design: z.unknown().nullish(),
+  front_preview_url: z.string().url().nullish(),
+  back_preview_url: z.string().url().nullish(),
+  front_print_url: z.string().url().nullish(),
+  back_print_url: z.string().url().nullish(),
+  front_print_dpi: z.number().int().positive().max(2400).nullish(),
+  back_print_dpi: z.number().int().positive().max(2400).nullish(),
+  color_name: z.string().max(60).nullish(),
+  color_hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a #rrggbb colour').nullish(),
+})

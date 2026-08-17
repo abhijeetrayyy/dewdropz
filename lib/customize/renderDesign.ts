@@ -80,14 +80,46 @@ export type RenderLayer =
       rotation: number
     }
 
+/** 25MB. Generous for a print-resolution photo, and a hard stop on a URL that
+ *  streams forever. */
+const MAX_LAYER_BYTES = 25 * 1024 * 1024
+const FETCH_TIMEOUT_MS = 15_000
+
 async function fetchImage(uri: string) {
-  // Only http(s) is accepted: layer image URIs come from our own storage after
-  // upload, and following file:// or data: here would let a client push the
-  // server at its own filesystem.
-  if (!/^https?:\/\//i.test(uri)) throw new Error('Unsupported image source')
-  const res = await fetch(uri)
+  // http(s) only was already enforced, which stopped file:// and data:. It did
+  // not stop the more useful attack: this route is deliberately unauthenticated
+  // and accepts up to 40 layer URIs per side, so ANY host was reachable from
+  // our server. The error message returns the upstream status, which makes it a
+  // working reachability probe for internal addresses — and any image that DID
+  // load was composited into a PNG and uploaded to a public bucket, which turns
+  // it from inference into exfiltration.
+  //
+  // Layer images are always files we uploaded to our own Supabase storage.
+  // Nothing legitimate points anywhere else, so the allowlist is exact.
+  const storageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!storageOrigin) throw new Error('Storage origin is not configured')
+
+  let url: URL
+  try {
+    url = new URL(uri)
+  } catch {
+    throw new Error('Unsupported image source')
+  }
+  if (url.origin !== new URL(storageOrigin).origin) {
+    // Deliberately does not echo the host back — the message is the oracle.
+    throw new Error('Layer images must come from this store\'s own storage')
+  }
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`Could not fetch layer image (${res.status})`)
-  return loadImage(Buffer.from(await res.arrayBuffer()))
+
+  const declared = Number(res.headers.get('content-length') ?? 0)
+  if (declared > MAX_LAYER_BYTES) throw new Error('Layer image is too large')
+
+  const buf = Buffer.from(await res.arrayBuffer())
+  // Checked again after reading: content-length is a claim, not a guarantee.
+  if (buf.byteLength > MAX_LAYER_BYTES) throw new Error('Layer image is too large')
+  return loadImage(buf)
 }
 
 // Draws one layer with its own transform. Rotation is applied about the

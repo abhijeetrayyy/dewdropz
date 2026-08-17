@@ -44,7 +44,17 @@ export async function GET(
     return NextResponse.json({ error: 'No print file for that side' }, { status: 404 })
   }
 
-  const upstream = await fetch(url)
+  // The URL is read from a row a customer's design write put there, so it is
+  // client-influenced data being fetched by the server and streamed to an
+  // admin's browser. Pinned to our own storage: without this, a crafted design
+  // row could make this privileged route fetch an arbitrary host and hand the
+  // response to whoever opened it.
+  const storageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!storageOrigin || new URL(url).origin !== new URL(storageOrigin).origin) {
+    return NextResponse.json({ error: 'Print file is not in this store\'s storage' }, { status: 400 })
+  }
+
+  const upstream = await fetch(url, { signal: AbortSignal.timeout(30_000) })
   if (!upstream.ok || !upstream.body) {
     return NextResponse.json({ error: 'Print file could not be read from storage' }, { status: 502 })
   }
