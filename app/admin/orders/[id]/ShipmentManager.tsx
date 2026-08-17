@@ -231,6 +231,15 @@ export default function ShipmentManager({
                 <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-700">
                   {LABEL[s.status] ?? s.status}
                 </span>
+                {/* Opens in a new tab and prints itself — the packer's hands are
+                    on a box, not on a mouse. */}
+                <a
+                  href={`/api/admin/packing-slip/${s.id}`} target="_blank" rel="noopener"
+                  title="Printable slip for this parcel"
+                  className="rounded border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600 hover:border-neutral-900 hover:text-neutral-900"
+                >
+                  Packing slip
+                </a>
                 <button
                   type="button" onClick={() => beginEdit(s)} disabled={pending}
                   title="Correct courier or AWB"

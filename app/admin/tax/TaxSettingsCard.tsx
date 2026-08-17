@@ -30,7 +30,14 @@ export default function TaxSettingsCard() {
         enable_tax: settings.enable_tax,
         gst_percentage: settings.gst_percentage,
         origin_state: settings.origin_state,
-        gstin: settings.gstin,
+        gstin: settings.gstin?.trim().toUpperCase() || null,
+        seller_legal_name: settings.seller_legal_name?.trim() || null,
+        seller_address_line1: settings.seller_address_line1?.trim() || null,
+        seller_address_line2: settings.seller_address_line2?.trim() || null,
+        seller_city: settings.seller_city?.trim() || null,
+        seller_postal_code: settings.seller_postal_code?.trim() || null,
+        seller_state_code: settings.seller_state_code?.trim() || null,
+        invoice_signatory_name: settings.invoice_signatory_name?.trim() || null,
       })
       toast.success('Tax settings saved')
     } catch {
@@ -47,6 +54,23 @@ export default function TaxSettingsCard() {
       </CardContent></Card>
     )
   }
+
+  // Mirrors exactly what issue_invoice checks, so the screen tells the truth
+  // about whether dispatching will actually produce a document.
+  const invoiceReady = Boolean(
+    settings.gstin?.trim() &&
+      settings.seller_legal_name?.trim() &&
+      settings.seller_address_line1?.trim() &&
+      settings.seller_city?.trim() &&
+      settings.seller_postal_code?.trim() &&
+      settings.seller_state_code?.trim() &&
+      settings.invoice_signatory_name?.trim()
+  )
+  const stateCodeMismatch = Boolean(
+    settings.gstin?.trim() &&
+      settings.seller_state_code?.trim() &&
+      settings.gstin.trim().slice(0, 2) !== settings.seller_state_code.trim()
+  )
 
   return (
     <Card>
@@ -109,6 +133,101 @@ export default function TaxSettingsCard() {
               placeholder="05ABCDE1234F1Z5"
             />
             <p className="text-xs text-gray-400 mt-1">Printed on invoices.</p>
+          </div>
+        </div>
+
+        {/* Invoice identity.
+            Split out because it is not "settings" in the tweak-a-number sense —
+            these are copied from the GST registration certificate, and until
+            every one of them is filled in, no invoice can be issued at all: the
+            database refuses rather than printing a document that claims to be a
+            tax invoice without a registration behind it. */}
+        <div className="mt-6 border-t border-gray-100 pt-5">
+          <h4 className="text-sm font-medium text-gray-900">Invoice identity</h4>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Copy these from the GST registration certificate, not from the website — Rule 46
+            asks for the registered name and address of the supplier.
+          </p>
+
+          {!invoiceReady && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Invoices are <span className="font-medium">not being issued</span>. Dispatching a
+              parcel will not produce a tax invoice until the GSTIN, the fields below and the
+              signatory are all filled in.
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-4">
+            <div className="sm:col-span-2">
+              <Label htmlFor="seller_legal_name">Registered legal name</Label>
+              <Input
+                id="seller_legal_name"
+                value={settings.seller_legal_name ?? ''}
+                onChange={(e) => setSettings({ ...settings, seller_legal_name: e.target.value })}
+                placeholder="Dewdropz Apparel Pvt Ltd"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="invoice_signatory_name">Authorised signatory</Label>
+              <Input
+                id="invoice_signatory_name"
+                value={settings.invoice_signatory_name ?? ''}
+                onChange={(e) => setSettings({ ...settings, invoice_signatory_name: e.target.value })}
+                placeholder="Name of whoever signs invoices"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="seller_address_line1">Address line 1</Label>
+              <Input
+                id="seller_address_line1"
+                value={settings.seller_address_line1 ?? ''}
+                onChange={(e) => setSettings({ ...settings, seller_address_line1: e.target.value })}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="seller_address_line2">Address line 2</Label>
+              <Input
+                id="seller_address_line2"
+                value={settings.seller_address_line2 ?? ''}
+                onChange={(e) => setSettings({ ...settings, seller_address_line2: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="seller_city">City</Label>
+              <Input
+                id="seller_city"
+                value={settings.seller_city ?? ''}
+                onChange={(e) => setSettings({ ...settings, seller_city: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="seller_postal_code">PIN code</Label>
+              <Input
+                id="seller_postal_code"
+                value={settings.seller_postal_code ?? ''}
+                onChange={(e) => setSettings({ ...settings, seller_postal_code: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="seller_state_code">State code</Label>
+              <Input
+                id="seller_state_code"
+                value={settings.seller_state_code ?? ''}
+                onChange={(e) => setSettings({ ...settings, seller_state_code: e.target.value })}
+                placeholder="05"
+                maxLength={2}
+              />
+              {/* Caught here rather than at issue time: the first two digits of
+                  a GSTIN ARE the state code, so a disagreement means one of the
+                  two is mistyped and both get printed. */}
+              {stateCodeMismatch ? (
+                <p className="mt-1 text-xs text-red-600">
+                  Does not match the GSTIN, which starts {settings.gstin?.slice(0, 2)}.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-gray-400">Uttarakhand is 05.</p>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

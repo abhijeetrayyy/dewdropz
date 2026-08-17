@@ -317,4 +317,24 @@ async function syncOrderFromShipments(orderId: string) {
       ...(next === 'delivered' && { delivered_at: stamp }),
     })
     .eq('id', orderId)
+
+  // Dispatch is when the tax invoice is issued. s.31(1)(a) wants it before or at
+  // the removal of the goods, and it is the only trigger that also works for
+  // COD — that money arrives days later, and nothing here ever marks a COD order
+  // paid, so waiting for payment would mean never invoicing half the shop.
+  //
+  // Also covers the order that goes straight to 'delivered' without passing
+  // through 'shipped' (a single parcel marked delivered in one click), which is
+  // why this is not inside the `next === 'shipped'` branch.
+  //
+  // Never throws and never blocks the status change: the shop has no GSTIN yet,
+  // so today every one of these refuses, and a parcel must still be able to
+  // leave. Repeat calls return the existing invoice rather than a second number,
+  // which matters because this runs on every parcel update. Anything that slips
+  // through shows up in the `uninvoiced_supplies` view.
+  const { issueInvoiceForOrder } = await import('@/lib/invoicing')
+  const result = await issueInvoiceForOrder(orderId, { supplyAt: stamp })
+  if ('refused' in result) {
+    console.warn(`[invoice] not issued for order ${orderId}: ${result.refused}`)
+  }
 }

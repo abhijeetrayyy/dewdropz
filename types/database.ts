@@ -705,6 +705,174 @@ export interface StoreSettings {
   timezone: string
   home_config: HomeConfig
   updated_at: string
+
+  // Rule 46(a) needs the supplier's registered name and ADDRESS on the face of
+  // every invoice. These are nullable because the shop has not supplied them
+  // yet, and `issue_invoice` refuses rather than printing a document without
+  // them. Take them from the GST certificate — NOT from lib/constants.ts, whose
+  // address is marketing copy.
+  seller_legal_name: string | null
+  seller_address_line1: string | null
+  seller_address_line2: string | null
+  seller_city: string | null
+  seller_postal_code: string | null
+  seller_country: string
+  /** Numeric GST state code. Must match the first two digits of the GSTIN. */
+  seller_state_code: string | null
+  /** Rule 46(q): who the invoice is signed by. */
+  invoice_signatory_name: string | null
+  einvoice_declaration_required: boolean
+  /**
+   * Whether freight forms part of the taxable value (s.15(2)(c)). Currently
+   * false, matching what checkout actually computes. Turning it on without
+   * teaching lib/tax.ts to charge tax on shipping makes `issue_invoice` refuse,
+   * so the two halves cannot silently disagree.
+   */
+  shipping_is_taxable: boolean
+}
+
+/** One entry of an invoice's rate-wise tax summary, the shape GST returns take. */
+export interface InvoiceTaxSummaryRow {
+  rate: number
+  taxable: number
+  cgst: number
+  sgst: number
+  igst: number
+  cess: number
+}
+
+/**
+ * An issued tax invoice.
+ *
+ * Every party detail is COPIED here at issue rather than joined, so the
+ * document keeps saying what it said even after the store is renamed, a product
+ * is retitled, an address is edited or a tax rate changes. The row is immutable
+ * once written — the only permitted change is recording a cancellation.
+ */
+export interface Invoice {
+  id: string
+  order_id: string
+  document_type: 'tax_invoice' | 'bill_of_supply'
+  /** Financial-year label, e.g. '2627' for 2026-27. */
+  fy: string
+  seq: number
+  /** What is printed: DDZ/2627/000001. At most 16 characters, per Rule 46(b). */
+  serial: string
+  issued_at: string
+
+  seller_legal_name: string
+  seller_trade_name: string | null
+  seller_address: Record<string, string | null>
+  seller_gstin: string | null
+  seller_state: string
+  seller_state_code: string
+  signatory_name: string
+  einvoice_declaration: boolean
+
+  buyer_name: string
+  buyer_legal_name: string | null
+  buyer_email: string | null
+  buyer_phone: string | null
+  buyer_gstin: string | null
+  supply_type: 'B2B' | 'B2C'
+
+  billing_address: Record<string, unknown>
+  shipping_address: Record<string, unknown>
+  delivery_address_differs: boolean
+
+  place_of_supply_state: string
+  place_of_supply_code: string
+  is_igst: boolean
+  reverse_charge: boolean
+
+  gross_value: number
+  discount_total: number
+  taxable_total: number
+  shipping_charge: number
+  shipping_taxable_value: number
+  shipping_tax_rate: number
+  shipping_tax_amount: number
+  cgst_total: number
+  sgst_total: number
+  igst_total: number
+  cess_total: number
+  grand_total: number
+  currency: string
+  tax_summary: InvoiceTaxSummaryRow[]
+
+  order_number: string
+  order_placed_at: string
+  payment_method: string | null
+  payment_status_at_issue: string | null
+
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  created_at: string
+}
+
+export interface InvoiceLine {
+  id: string
+  invoice_id: string
+  order_item_id: string | null
+  line_no: number
+  description: string
+  hsn_code: string
+  quantity: number
+  /** Unit Quantity Code — 'PCS' for garments. */
+  uqc: string
+  unit_price: number
+  gross_value: number
+  discount: number
+  taxable_value: number
+  tax_rate: number
+  /**
+   * The price band that produced the rate, snapshotted. Without it an auditor
+   * reading two garments at different rates cannot see why.
+   */
+  rate_band_min: number | null
+  rate_band_max: number | null
+  cgst_amount: number
+  sgst_amount: number
+  igst_amount: number
+  cess_amount: number
+  line_total: number
+}
+
+export interface InvoiceWithLines extends Invoice {
+  lines: InvoiceLine[]
+}
+
+/** Section 34 credit note — the document that reverses tax on a refund. */
+export interface CreditNote {
+  id: string
+  invoice_id: string
+  refund_id: string | null
+  fy: string
+  seq: number
+  serial: string
+  issued_at: string
+  reason: string
+  original_invoice_number: string
+  original_invoice_date: string
+  seller_legal_name: string
+  seller_address: Record<string, string | null>
+  seller_gstin: string
+  buyer_name: string
+  buyer_gstin: string | null
+  buyer_address: Record<string, unknown>
+  place_of_supply_state: string
+  place_of_supply_code: string
+  signatory_name: string
+  is_igst: boolean
+  taxable_value_reduced: number
+  shipping_reduced: number
+  cgst_reduced: number
+  sgst_reduced: number
+  igst_reduced: number
+  cess_reduced: number
+  total_reduced: number
+  tax_summary: InvoiceTaxSummaryRow[]
+  created_at: string
 }
 
 export interface ShippingZone {

@@ -6,6 +6,7 @@ import PrintedToggle from '@/components/admin/PrintedToggle'
 import { getOrderPromotions } from '@/actions/promotions'
 import { splitTax } from '@/lib/tax'
 import { getShipmentsForOrderAdmin, getFulfillmentForOrder } from '@/actions/shipments'
+import { getInvoiceForOrder } from '@/lib/invoicing'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { formatPrice } from '@/lib/utils'
 import ShipmentManager from './ShipmentManager'
@@ -26,11 +27,12 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   // the same work in parallel. On a page whose whole job is to answer a
   // customer's question while they are on the phone, that is the difference
   // people feel.
-  const [order, shipments, fulfillment, promotions] = await Promise.all([
+  const [order, shipments, fulfillment, promotions, invoice] = await Promise.all([
     getOrderForAdmin(id),
     getShipmentsForOrderAdmin(id),
     getFulfillmentForOrder(id),
     getOrderPromotions(id),
+    getInvoiceForOrder(id),
   ])
   if (!order) notFound()
 
@@ -177,6 +179,44 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         </div>
 
         <div className="space-y-6">
+          {/* The tax invoice. Present only once the order has dispatched, since
+              that is when the serial is allocated — and shown as an explicit
+              absence rather than hidden, so "where is the invoice?" has an
+              answer on the page instead of in someone's head. */}
+          <section className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="text-sm font-semibold text-neutral-900">Tax invoice</h2>
+            {invoice ? (
+              <>
+                <p className="mt-2 font-mono text-sm text-neutral-900">{invoice.serial}</p>
+                <p className="text-xs text-neutral-500">
+                  Issued {new Date(invoice.issued_at).toLocaleDateString('en-IN', {
+                    timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+                  })}
+                  {invoice.cancelled_at && ' · cancelled'}
+                </p>
+                {/* Rule 48(1) wants three marked copies for a supply of goods. */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(['original', 'duplicate', 'triplicate'] as const).map((copy) => (
+                    <a
+                      key={copy}
+                      href={`/api/admin/invoice/${invoice.id}?copy=${copy}`}
+                      target="_blank" rel="noopener"
+                      className="rounded border border-neutral-300 px-2 py-1 text-xs capitalize text-neutral-700 hover:border-neutral-900 hover:text-neutral-900"
+                    >
+                      {copy}
+                    </a>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-neutral-500">
+                Not issued. The invoice is raised automatically when the first parcel is
+                dispatched, and needs the shop&apos;s GSTIN and registered address filled in
+                under Tax settings.
+              </p>
+            )}
+          </section>
+
           <section className="rounded-lg border border-neutral-200 bg-white p-5">
             <h2 className="text-sm font-semibold text-neutral-900">Ship to</h2>
             {addr ? (

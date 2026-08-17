@@ -7,6 +7,7 @@ import { getShipmentsForOrder } from '@/actions/shipments'
 import { getOrderPromotions } from '@/actions/promotions'
 import { splitTax } from '@/lib/tax'
 import { getReturnEligibility, getReturnsForOrder } from '@/actions/returns'
+import { getInvoiceForOrder } from '@/lib/invoicing'
 import ReturnRequest from './ReturnRequest'
 import { formatPrice } from '@/lib/utils'
 import CancelOrderButton from './CancelOrderButton'
@@ -46,6 +47,11 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
   // Both read through RLS, scoped to the caller's own orders.
   const eligibility = await getReturnEligibility(id)
   const returns = await getReturnsForOrder(id)
+
+  // Ownership is already established: getOrder() above returned null for anyone
+  // else's order and we called notFound(). The route that actually serves the
+  // document re-checks it independently.
+  const invoice = await getInvoiceForOrder(id)
 
   // RLS restricts this to the caller's own orders, so no extra ownership check.
   const shipments = (await getShipmentsForOrder(id)) as {
@@ -119,6 +125,35 @@ export default async function OrderDetailsPage({ params }: { params: Promise<{ i
             )}
           </div>
         </div>
+
+        {/* The tax invoice, when one exists.
+            Gated on the invoice ROW, deliberately — not on the order's status.
+            Every order dispatched before invoicing existed is 'shipped' with no
+            invoice behind it, and a link that 404s on a tax document is worse
+            than no link at all. */}
+        {invoice && (
+          <div className="mt-10">
+            <div className="mb-4 font-body text-xs uppercase tracking-[0.1em] text-mid">
+              Tax invoice
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-rule p-4">
+              <div>
+                <div className="font-mono text-sm text-text">{invoice.serial}</div>
+                <div className="font-body text-xs text-mid">
+                  Issued {new Date(invoice.issued_at).toLocaleDateString('en-IN', {
+                    timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric',
+                  })}
+                </div>
+              </div>
+              <a
+                href={`/api/invoice/${invoice.id}`} target="_blank" rel="noopener"
+                className="rounded-sm border border-text px-4 py-2 font-body text-xs uppercase tracking-[0.1em] text-text transition hover:bg-text hover:text-white"
+              >
+                View / download
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Parcels. An order can ship in more than one box — each carries its
             own courier, AWB and scan history, which is the whole reason a single

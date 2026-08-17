@@ -696,11 +696,31 @@ export async function refundOrder(orderId: string, options?: { amount?: number; 
     return { error: gatewayResult.error }
   }
 
-  await recordRefund({
+  const refundId = await recordRefund({
     orderId, gateway: order.payment_method ?? 'manual', amount: refundAmount,
     status: 'succeeded', gatewayRefundId: gatewayResult.gatewayRefundId,
     reason: options?.reason, actorEmail: actor.email,
   })
+
+  // Section 34: reducing the value of a supply after its invoice was issued
+  // needs a credit note, and without one the GST charged on the refunded part
+  // is never reversed — the shop keeps owing the government tax on money it
+  // gave back. Only applies to an order that was actually invoiced; a refund
+  // before dispatch has no invoice to credit and is skipped silently.
+  //
+  // Deliberately after the money moved and after the refund is recorded: a
+  // document problem must never roll back a refund the gateway has completed.
+  if (refundId) {
+    const { issueCreditNoteForRefund } = await import('@/lib/invoicing')
+    const note = await issueCreditNoteForRefund(
+      refundId,
+      options?.reason ?? 'Refund',
+      { actorId: actor.id }
+    )
+    if ('refused' in note) {
+      console.warn(`[credit-note] not issued for refund ${refundId}: ${note.refused}`)
+    }
+  }
 
   const newRefundedAmount = alreadyRefunded + refundAmount
   const isFullyRefunded = newRefundedAmount >= order.total_amount

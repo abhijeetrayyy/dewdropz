@@ -255,7 +255,11 @@ export async function issueGatewayRefund(
 
 /** Record what the gateway did — including, especially, when it refused.
  *  Never throws: a failed bookkeeping write must not undo a refund that
- *  actually went through, same rule as auditLog. */
+ *  actually went through, same rule as auditLog.
+ *
+ *  Returns the refund's id so the caller can hang a GST credit note off it, and
+ *  null when the write was swallowed — a caller must therefore treat "no id" as
+ *  "no credit note", not as an error. */
 export async function recordRefund(input: {
   orderId: string
   gateway: 'stripe' | 'razorpay' | 'cod' | 'manual'
@@ -267,7 +271,7 @@ export async function recordRefund(input: {
   actorEmail?: string | null
 }) {
   try {
-    await createAdminSupabaseClient().from('refunds').insert({
+    const { data } = await createAdminSupabaseClient().from('refunds').insert({
       order_id: input.orderId,
       gateway: input.gateway,
       amount: input.amount,
@@ -276,9 +280,11 @@ export async function recordRefund(input: {
       reason: input.reason ?? null,
       error: input.error ?? null,
       actor_email: input.actorEmail ?? null,
-    })
+    }).select('id').single()
+    return (data?.id as string) ?? null
   } catch {
     // Swallowed deliberately — see above.
+    return null
   }
 }
 
