@@ -31,8 +31,7 @@ import {
   Settings,
   ExternalLink,
   ChevronDown,
-  Undo2,
-} from 'lucide-react'
+  Undo2, Mountain,} from 'lucide-react'
 
 const navGroups = [
   {
@@ -75,6 +74,7 @@ const navGroups = [
       { href: '/admin/reviews', label: 'Reviews', icon: Star },
       { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
       { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
+      { href: '/admin/trek-buddy', label: 'Trek Buddy', icon: Mountain },
     ],
   },
 ]
