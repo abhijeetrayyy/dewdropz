@@ -80,11 +80,19 @@ const ACT2_OUT = [0.67, 0.77] as const
 // Act 3's footage decodes only while it is on screen.
 const VIDEO_LIVE = 0.66
 const ACT3_IN = [0.73, 0.83] as const
-// Then the day-arc literally passes: a marker sweeps the sky bar and each
-// activity lights as its hour goes by. Positions are the hours' places on the
-// gradient (dawn 12%, morning 30%, dusk 68%, night 90%).
-const DAY_SWEEP = [0.8, 0.97] as const
-const DAY_HOURS = [0.12, 0.3, 0.68, 0.9] as const
+// ACT 3 is the loop, run once, scrubbed — the same trick act 2 plays with the
+// editor. Describing Trek Buddy in four columns of text was the weak beat of
+// this hero: act 2 shows the tool being USED, and act 3 was a list. So the
+// walk gets posted, people ask, the host decides, and the meeting point
+// unlocks, in that order, as you scroll.
+//
+// Each beat is where it is because the one before it has to land first — the
+// card cannot fill before it exists, and the point cannot unlock before the
+// party is there.
+const PLAN_IN    = [0.83, 0.865] as const  // the walk appears on the board
+const ASKS_IN    = [0.875, 0.915] as const // people ask to come
+const CONFIRM_IN = [0.915, 0.945] as const // the host says yes, the party fills
+const POINT_IN   = [0.95, 0.975] as const  // the exact spot is released
 const CHAPTER_1TO2 = 0.25
 const CHAPTER_2TO3 = 0.75
 // The range does not leave between acts. It dims to a held level and stays
@@ -96,22 +104,6 @@ const RANGE_DIM = [0.12, 0.32] as const
 const RANGE_HELD = 0.26
 const RANGE_OUT = [0.62, 0.74] as const
 const RANGE_DARK = 0.76
-
-// Four things people go up there to do, which are really four times of day.
-// Real ground near Dehradun, and the hours are the ones the board actually
-// enforces for each kind.
-//
-// These used to carry participant counts — "3 going, 2 spots" — invented for
-// the frame while Trek Buddy was unbuilt. It is built now, and a homepage
-// showing fabricated activity on a board that has a real one is a different
-// thing entirely from a placeholder. So the numbers are gone and what is left
-// is true: these are the kinds of outing you can post, at the hours they run.
-const DAY = [
-  { time: '05:20', activity: 'Bird watching', place: 'Benog Sanctuary', alt: '2,100 m', note: 'Before the birds move' },
-  { time: '09:00', activity: 'Trekking', place: 'Nag Tibba', alt: '3,022 m', note: 'Out and back in a day' },
-  { time: '17:30', activity: 'Camping', place: 'Har Ki Dun', alt: '3,566 m', note: 'One night, back next morning' },
-  { time: '21:40', activity: 'Stargazing', place: 'George Everest', alt: '2,024 m', note: 'Down again the same night' },
-] as const
 
 // "Mobile" here means how the page is *consumed*, not just how wide it is: on a
 // coarse-pointer device the scroll-scrubbed descent becomes flick-labour — three
@@ -662,28 +654,63 @@ export default function SummitHero({
         { opacity: 1, scale: 1, duration: ACT3_IN[1] - ACT3_IN[0], ease: 'power2.out' },
         ACT3_IN[0]
       )
-      const rows = boardRef.current?.querySelectorAll('[data-board-row]')
-      if (rows?.length) {
-        tl.fromTo(rows, { opacity: 0 }, { opacity: 0.3, duration: 0.05, ease: 'none' }, ACT3_IN[0] + 0.04)
-        // …then the day passes: the marker sweeps the sky bar, and each plan
-        // lights as its hour goes by. The frame does what the product does —
-        // a day fills up with company.
-        const sweepLen = DAY_SWEEP[1] - DAY_SWEEP[0]
-        rows.forEach((row, i) => {
-          if (DAY_HOURS[i] === undefined) return
-          tl.to(row, { opacity: 1, duration: 0.025 }, DAY_SWEEP[0] + DAY_HOURS[i] * sweepLen)
+      // ── The loop ──────────────────────────────────────────────────────
+      // Four beats, each one a thing the product actually does. Written
+      // against refs found once, because a scrub that queries the DOM per
+      // frame is a scrub that drops frames.
+      const planCard = q<HTMLElement>('[data-plan-card]')
+      if (planCard) {
+        tl.fromTo(planCard, { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: PLAN_IN[1] - PLAN_IN[0], ease: 'power2.out' }, PLAN_IN[0])
+      }
+
+      // The people asking, one after another rather than as a block — the
+      // point of the beat is that they arrive separately.
+      const asks = qa('[data-ask-row]')
+      if (asks.length) {
+        const per = (ASKS_IN[1] - ASKS_IN[0]) / asks.length
+        asks.forEach((row, i) => {
+          tl.fromTo(row, { opacity: 0, x: -10 },
+            { opacity: 1, x: 0, duration: per * 0.8, ease: 'power2.out' }, ASKS_IN[0] + i * per)
         })
-        const markerEl = q<HTMLElement>('[data-day-marker]')
-        const barEl = q<HTMLElement>('[data-day-bar]')
-        if (markerEl && barEl) {
-          tl.fromTo(markerEl, { opacity: 0 }, { opacity: 1, duration: 0.02 }, DAY_SWEEP[0])
-            .fromTo(
-              markerEl,
-              { x: 0 },
-              { x: () => (barEl.clientWidth ?? 0) - 2, duration: sweepLen, ease: 'none' },
-              DAY_SWEEP[0]
-            )
-        }
+      }
+
+      // The host deciding. The asks resolve into a confirmed party, so the
+      // dots fill and the roster line changes state.
+      const partyDots = qa('[data-party-dot]')
+      if (partyDots.length) {
+        const per = (CONFIRM_IN[1] - CONFIRM_IN[0]) / partyDots.length
+        partyDots.forEach((dot, i) => {
+          tl.to(dot, { backgroundColor: '#7BA46F', borderColor: '#7BA46F', duration: per * 0.6 },
+            CONFIRM_IN[0] + i * per)
+        })
+      }
+      const decided = q<HTMLElement>('[data-decided]')
+      if (decided) {
+        tl.fromTo(decided, { opacity: 0 }, { opacity: 1, duration: 0.02 }, CONFIRM_IN[1] - 0.01)
+      }
+
+      // The meeting point. The one moment the product is built around, so it
+      // gets the only reveal in the act: the redaction bar slides off it.
+      const pointRow = q<HTMLElement>('[data-point-row]')
+      const pointMask = q<HTMLElement>('[data-point-mask]')
+      if (pointRow) {
+        tl.fromTo(pointRow, { opacity: 0.35 }, { opacity: 1, duration: 0.02 }, POINT_IN[0])
+      }
+      if (pointMask) {
+        tl.to(pointMask, { scaleX: 0, transformOrigin: '100% 50%',
+          duration: POINT_IN[1] - POINT_IN[0], ease: 'power2.inOut' }, POINT_IN[0])
+      }
+
+      // The step caption, which names what you are watching. Without it the
+      // sequence is pretty and unreadable.
+      const steps = qa('[data-step]')
+      if (steps.length === 4) {
+        const marks = [PLAN_IN[0], ASKS_IN[0], CONFIRM_IN[0], POINT_IN[0]]
+        steps.forEach((el, i) => {
+          tl.to(el, { opacity: 1, duration: 0.012 }, marks[i])
+          if (i < 3) tl.to(el, { opacity: 0, duration: 0.012 }, marks[i + 1])
+        })
       }
 
       // The chapter rail — the quiet cue that this hero is chaptered.
@@ -1146,50 +1173,109 @@ export default function SummitHero({
               </div>
             </div>
 
-            {/* The day. */}
-            <div ref={boardRef} className="mt-14">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-6">
-                {DAY.map((d) => (
-                  <div key={d.activity} data-board-row className="flex flex-col">
-                    <span className="font-mono text-[10px] tracking-[0.16em] text-paper/45 tabular-nums">
-                      {d.time}
-                    </span>
-                    <span className="mt-2.5 font-display text-[17px] leading-tight text-paper lg:text-[19px]">
-                      {d.activity}
-                    </span>
-                    <span className="mt-1.5 font-body text-[12px] leading-snug text-paper/50">
-                      {d.place}
-                    </span>
-                    <span className="mt-0.5 font-mono text-[9px] tracking-[0.1em] text-paper/30 tabular-nums">
-                      {d.alt}
-                    </span>
+            {/* ── The loop, run once ────────────────────────────────────
+                What Trek Buddy actually does, shown rather than listed. A
+                walk is posted, people ask, the host decides, and only then
+                does the exact meeting point appear — which is the single rule
+                the whole product is built around, so it gets the only reveal
+                in the act.
 
-                    <span className="mt-4 font-body text-[11px] leading-snug text-paper/45">
-                      {d.note}
-                    </span>
-
-                    {/* The tick down to the hour this happens in. */}
-                    <span className="mt-6 h-7 w-px bg-gradient-to-b from-transparent to-paper/35" />
+                This is a demonstration, the same way act 2 types "FEEL ALIVE"
+                onto a garment nobody ordered. It is not a live listing, and
+                the caption says which step you are watching so it cannot be
+                mistaken for one. */}
+            <div ref={boardRef} className="mt-10 grid gap-8 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-end">
+              {/* The step you are on. One line, replaced rather than stacked. */}
+              <div className="relative h-16 lg:h-20">
+                {[
+                  ['01', 'Somebody posts a walk', 'The place, the hour, and how many can come.'],
+                  ['02', 'People ask to come', 'Not a join button. A request, with a message.'],
+                  ['03', 'The host decides', 'They pick the group they are spending the day with.'],
+                  ['04', 'The meeting point unlocks', 'Only for the confirmed party, and only once it is big enough.'],
+                ].map(([n, title, body]) => (
+                  <div key={n} data-step className="absolute inset-x-0 top-0 opacity-0">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-sage">
+                      {n} — {title}
+                    </p>
+                    <p className="mt-2 max-w-sm font-body text-[13px] leading-relaxed text-paper/65">
+                      {body}
+                    </p>
                   </div>
                 ))}
               </div>
 
-              {/* The sky, from first light to full dark. */}
+              {/* The card. Same construction as a real one on the board — the
+                  hour rail down the left, the party as dots, the withheld
+                  line at the bottom. */}
               <div
-                data-day-bar
-                className="relative h-[3px] w-full rounded-full"
-                style={{
-                  background:
-                    'linear-gradient(90deg, #22314C 0%, #C98A4B 15%, #E4EBDD 40%, #C98A4B 68%, #22314C 96%)',
-                }}
+                data-plan-card
+                className="flex overflow-hidden rounded-sm border border-paper/20 bg-ink/70 opacity-0 backdrop-blur-md"
               >
-                {/* The hour hand. It sweeps as act 3 scrubs, and the plans above
-                    light as it passes their hour — the day literally fills up. */}
-                <span data-day-marker className="absolute -top-[4px] left-0 h-[11px] w-[2px] rounded-full bg-paper opacity-0" />
-              </div>
-              <div className="mt-3 flex justify-between font-mono text-[9px] uppercase tracking-[0.22em] text-paper/25">
-                <span>First light</span>
-                <span>Dark</span>
+                <span aria-hidden="true" className="w-1 shrink-0 bg-[#7FA471]" />
+                <div className="min-w-0 flex-1 p-5">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-sm text-[#9BC08C] tabular-nums">07:00</span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/50">
+                      First light
+                    </span>
+                  </div>
+                  <h3 className="mt-1 font-display text-xl leading-tight text-paper">Nag Tibba</h3>
+                  <p className="mt-1 font-body text-xs text-paper/55">
+                    Trekking · from Dehradun ISBT · back 16:00
+                  </p>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="flex">
+                      {[0, 1, 2, 3].map((i) => (
+                        <span
+                          key={i}
+                          data-party-dot
+                          style={{ marginLeft: i === 0 ? 0 : -6 }}
+                          className="h-5 w-5 rounded-full border border-dashed border-paper/35 bg-transparent"
+                        />
+                      ))}
+                    </div>
+                    <span data-decided className="ml-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#9BC08C] opacity-0">
+                      4 going
+                    </span>
+                  </div>
+
+                  <ul className="mt-4 space-y-1.5 border-t border-paper/12 pt-3.5">
+                    {['Priya', 'Rahul', 'Sara'].map((who) => (
+                      <li
+                        key={who}
+                        data-ask-row
+                        className="flex items-center gap-2 font-body text-[12px] text-paper/65 opacity-0"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-paper/12 font-mono text-[9px] text-paper/80"
+                        >
+                          {who[0]}
+                        </span>
+                        {who} asked to come
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* The withheld line. Redacted until the party is there,
+                      which is the rule stated as a picture. */}
+                  <div data-point-row className="mt-4 border-t border-paper/12 pt-3.5 opacity-35">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-paper/45">
+                      Exact meeting point
+                    </p>
+                    <div className="relative mt-1.5">
+                      <p className="font-body text-[13px] text-paper">
+                        Pantwari trailhead, by the forest gate
+                      </p>
+                      <span
+                        data-point-mask
+                        aria-hidden="true"
+                        className="absolute inset-0 origin-right bg-paper/25"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
