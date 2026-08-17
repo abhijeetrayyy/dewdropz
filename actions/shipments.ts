@@ -235,20 +235,27 @@ export async function updateShipmentStatus(
   // inline: the parcel is already dispatched and an email provider having a bad
   // minute must not fail the status update that records it.
   if (DISPATCHED.includes(status)) {
+    // The columns are `courier_name` and `awb`. This asked for `carrier` and
+    // `tracking_number`, which do not exist on this table — PostgREST answers a
+    // bad column with an error and no rows, so `full` was always null, the
+    // guard below was always false, and the "your parcel is on its way" email
+    // could never fire. It failed silently because the whole block is
+    // best-effort by design. Verified against the live database: selecting
+    // `carrier` returns 'column "carrier" does not exist'.
     const { data: full } = await supabase
       .from('shipments')
-      .select('carrier, tracking_number, tracking_url, notified_at, order:orders(email, order_number)')
+      .select('courier_name, awb, tracking_url, notified_at, order:orders(email, order_number)')
       .eq('id', shipmentId)
       .single()
     const order = full?.order as unknown as { email: string; order_number: string } | null
     // Only once per parcel: statuses can be stepped forward more than once and
     // DISPATCHED covers several of them.
-    if (order?.email && full?.tracking_number && !full.notified_at) {
+    if (order?.email && full?.awb && !full.notified_at) {
       await enqueue('order.shipped', {
         email: order.email,
         orderNumber: order.order_number,
-        carrier: full.carrier ?? 'Courier',
-        trackingNumber: full.tracking_number,
+        carrier: full.courier_name ?? 'Courier',
+        trackingNumber: full.awb,
         trackingUrl: full.tracking_url ?? undefined,
       })
       await supabase.from('shipments').update({ notified_at: now }).eq('id', shipmentId)

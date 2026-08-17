@@ -1,0 +1,62 @@
+name: Drain job queue
+
+# Every transactional email this shop sends goes onto the `jobs` queue and waits
+# for something to drain it. Nothing did. `/api/cron/run-jobs` has existed since
+# migration 038 with a Bearer gate and a working handler, and there was no
+# scheduler anywhere in the repo pointing at it — no vercel.json crons, no
+# workflow — so order confirmations, shipped notices and refund emails have been
+# accumulating unsent since the day the queue was built. RESEND_API_KEY being
+# unset hid it: the obvious explanation for "no email arrived" was the missing
+# key, and it was never the only reason.
+#
+# Same shape and same reasoning as release-stale-orders.yml next door: a Vercel
+# Hobby account caps crons at once per day and rejects a more frequent
+# expression at deploy time, which is no use for mail a customer is waiting on.
+#
+# Every minute is deliberate and safe. runDueJobs claims rows with
+# FOR UPDATE SKIP LOCKED, so an overlapping run picks up different jobs rather
+# than sending anything twice, and handlers are documented as safe to run twice
+# in any case (lib/jobs.ts).
+#
+# Requires the same CRON_SECRET repository secret as the sweep, matching the
+# value in the Vercel project's environment variables.
+
+on:
+  schedule:
+    - cron: "* * * * *"
+  # Lets you flush the queue by hand from the Actions tab.
+  workflow_dispatch:
+
+# A slow drain should delay the next run, not race it.
+concurrency:
+  group: run-jobs
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run due jobs
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://dewdropz.vercel.app' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET repository secret is not set." >&2
+            exit 1
+          fi
+
+          status=$(curl -sS --fail-with-body \
+            -o response.json -w '%{http_code}' \
+            --retry 3 --retry-delay 5 --retry-connrefused --max-time 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/cron/run-jobs") || {
+              echo "::error::Request failed (HTTP ${status:-000})." >&2
+              cat response.json >&2 || true
+              exit 1
+            }
+
+          echo "HTTP ${status}"
+          cat response.json

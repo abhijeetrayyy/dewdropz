@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '@/providers/CartProvider'
 import { syncLocalCartToDbCart } from '@/actions/checkout'
 import { createAddress } from '@/actions/addresses'
-import { createOrder } from '@/actions/orders'
+import { createOrder, getCheckoutQuote } from '@/actions/orders'
 import { createRazorpayOrder } from '@/actions/payments'
 import { previewCheckoutTotals } from '@/actions/promotions'
 import { formatPrice } from '@/lib/utils'
@@ -40,7 +40,7 @@ export default function CheckoutClient({
   initialAddresses: Address[]
 }) {
   const router = useRouter()
-  const { items, subtotal, clear } = useCart()
+  const { items, subtotal } = useCart()
 
   const [addresses, setAddresses] = useState(initialAddresses)
   const [selectedAddressId, setSelectedAddressId] = useState(
@@ -66,11 +66,40 @@ export default function CheckoutClient({
     totalDiscount: number
   }>({ subtotal: 0, promotions: [], promoDiscount: 0, freeShipping: false, couponDiscount: 0, totalDiscount: 0 })
 
+  // The full, final price — shipping and GST included — for the address that is
+  // actually selected.
+  //
+  // Separate from `quote` above on purpose. Promotions and coupons can be
+  // resolved from the cart alone, but delivery cost and the GST split both
+  // depend on WHERE it is going, so before an address is chosen there is
+  // genuinely no total to show and the summary says so instead of inventing
+  // one. Once there is an address, this is the number the customer approves —
+  // and it comes from the same priceCheckout() that createOrder bills from, so
+  // it cannot differ from what they are charged.
+  // Stored WITH the address it was priced for. Deriving from that rather than
+  // clearing the state when the address changes means a stale quote can never
+  // be shown next to a new address for the render between the two — which is
+  // exactly the kind of gap that puts a wrong total in front of someone.
+  const [fullQuote, setFullQuote] = useState<
+    { addressId: string; result: Awaited<ReturnType<typeof getCheckoutQuote>> } | null
+  >(null)
+  const [quotingFor, setQuotingFor] = useState<string | null>(null)
+
   // The code that has actually been applied, separate from what is being typed —
   // otherwise every keystroke would re-price the cart.
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState('')
   const [couponBusy, setCouponBusy] = useState(false)
+
+  // A quote counts only if it is for the address currently selected AND it
+  // succeeded. An error result (a coupon that stopped qualifying, a cart that
+  // emptied) falls back to the "no total yet" state rather than being read as
+  // a price.
+  const priced =
+    fullQuote && fullQuote.addressId === selectedAddressId && !('error' in fullQuote.result)
+      ? fullQuote.result
+      : null
+  const quoting = quotingFor !== null && quotingFor === selectedAddressId && !priced
 
   const cartKey = items.map((i) => `${i.slug}:${i.size}:${i.quantity}`).join('|')
   useEffect(() => {
@@ -96,6 +125,40 @@ export default function CheckoutClient({
     // re-query and a quantity change does.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartKey, appliedCoupon, userId])
+
+  // Re-price whenever the destination, the cart or the coupon changes. The
+  // server cart is the source of truth for this, so the local cart is synced
+  // first — otherwise the very first quote prices an empty cart.
+  useEffect(() => {
+    const addressId = selectedAddressId
+    if (!addressId || items.length === 0) return
+    let cancelled = false
+    const run = async () => {
+      setQuotingFor(addressId)
+      try {
+        await syncLocalCartToDbCart(
+          items.map((i) => ({
+            slug: i.slug, size: i.size, quantity: i.quantity,
+            productId: i.productId, variantId: i.variantId, customDesignId: i.customDesignId,
+          })),
+          userId
+        )
+        const result = await getCheckoutQuote({
+          userId,
+          shipping_address_id: addressId,
+          coupon_code: appliedCoupon || undefined,
+        })
+        if (!cancelled) setFullQuote({ addressId, result })
+      } catch {
+        if (!cancelled) setFullQuote(null)
+      } finally {
+        if (!cancelled) setQuotingFor(null)
+      }
+    }
+    void run()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddressId, cartKey, appliedCoupon, userId])
 
   async function applyCoupon() {
     const code = couponInput.trim().toUpperCase()
@@ -173,8 +236,14 @@ export default function CheckoutClient({
           return
         }
         idempotencyKey.current = null
-        clear()
-        router.push(`/account/orders/${result.orderId}?success=true`)
+        // NOT clear() here. Emptying the cart re-renders this component into
+        // its own "your cart is empty" early return, which is what the customer
+        // used to be shown at the exact moment their order succeeded. The
+        // confirmation page clears it once it has actually rendered.
+        //
+        // `replace`, not `push`: the back button from a confirmation should not
+        // return to a checkout that would place the order again.
+        router.replace(`/checkout/success/${result.orderId}`)
         return
       }
 
@@ -228,8 +297,7 @@ export default function CheckoutClient({
           }
           // The attempt is finished; a later checkout must mint a fresh key.
           idempotencyKey.current = null
-          clear()
-          router.push(`/account/orders/${rpResult.orderId}?success=true`)
+          router.replace(`/checkout/success/${rpResult.orderId}`)
         },
         modal: {
           ondismiss: () => setPlacing(false),
@@ -391,24 +459,87 @@ export default function CheckoutClient({
                 </div>
               )}
 
-              <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-t border-rule">
-                <span>Shipping &amp; tax</span>
-                <span className="text-mid">{quote.freeShipping ? 'Shipping free · tax at checkout' : 'Calculated after address'}</span>
-              </div>
-              <div className="flex items-center justify-between font-body text-base font-medium py-4">
-                <span className="text-text">Subtotal</span>
-                <span className="text-forest tabular-nums">{formatPrice(Math.max(0, subtotal - quote.totalDiscount))}</span>
-              </div>
+              {/* The actual breakdown. Every line the customer is charged, named,
+                  before they commit — including the GST that is added on top of
+                  the shelf price, which the shop had never disclosed anywhere. */}
+              {priced ? (
+                <div className="border-t border-rule pt-3 mt-1 space-y-1.5">
+                  <div className="flex items-center justify-between font-body text-sm text-mid">
+                    <span>Delivery</span>
+                    <span className="tabular-nums">
+                      {priced.freeShipping && priced.shippingCost > 0 ? (
+                        <>
+                          <span className="line-through opacity-50 mr-1.5">{formatPrice(priced.shippingCost)}</span>
+                          <span className="text-forest">Free</span>
+                        </>
+                      ) : priced.effectiveShipping === 0
+                        ? <span className="text-forest">Free</span>
+                        : formatPrice(priced.effectiveShipping)}
+                    </span>
+                  </div>
+                  {/* An unexplained ₹0 on a price line reads as a bug even when
+                      it is the threshold doing its job. */}
+                  {priced.effectiveShipping === 0 && !priced.freeShipping && priced.freeShippingThreshold > 0 && (
+                    <p className="font-body text-[11px] text-mid -mt-0.5">
+                      Free delivery on orders over {formatPrice(priced.freeShippingThreshold)}
+                    </p>
+                  )}
 
-              {error && <p className="text-clay text-xs font-body mb-3">{error}</p>}
+                  {priced.taxEnabled && priced.taxBreakdown.map((b) => (
+                    <div key={b.rate} className="flex items-center justify-between font-body text-sm text-mid">
+                      {/* Named the way it is actually levied, because that is what
+                          the tax invoice will say: within the state it is CGST and
+                          SGST at half each, outside it is one IGST line. */}
+                      <span>
+                        {priced.taxIsIgst ? `IGST ${b.rate}%` : `CGST + SGST ${b.rate}%`}
+                      </span>
+                      <span className="tabular-nums">{formatPrice(b.tax)}</span>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between font-body text-base font-medium pt-3 mt-1 border-t border-rule">
+                    <span className="text-text">Total</span>
+                    <span className="text-forest tabular-nums text-lg">{formatPrice(priced.totalAmount)}</span>
+                  </div>
+                  <p className="font-body text-[11px] text-mid leading-snug pt-1">
+                    Inclusive of all taxes. {paymentMethod === 'cod'
+                      ? `Pay ${formatPrice(priced.totalAmount)} in cash when it arrives.`
+                      : 'Nothing further to pay on delivery.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="border-t border-rule pt-3 mt-1 space-y-1.5">
+                  <div className="flex items-center justify-between font-body text-sm">
+                    <span className="text-mid">Subtotal</span>
+                    <span className="text-text tabular-nums">{formatPrice(Math.max(0, subtotal - quote.totalDiscount))}</span>
+                  </div>
+                  {/* Honest rather than reassuring: delivery and GST both depend on
+                      the destination, so until there is one there is no total to
+                      show, and inventing a placeholder is how the old page ended up
+                      billing people a number they had never seen. */}
+                  <p className="font-body text-xs text-mid pt-1">
+                    {quoting
+                      ? 'Working out delivery and GST…'
+                      : 'Pick a delivery address to see delivery and GST.'}
+                  </p>
+                </div>
+              )}
+
+              {error && <p className="text-clay text-xs font-body mt-3 mb-1">{error}</p>}
 
               <button
                 type="button"
                 onClick={placeOrder}
-                disabled={placing}
-                className="w-full bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={placing || quoting || !priced}
+                className="mt-3 w-full bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {placing ? 'Placing Order...' : 'Place Order'}
+                {placing
+                  ? 'Placing Order…'
+                  : priced
+                    ? (paymentMethod === 'cod'
+                        ? `Place Order · ${formatPrice(priced.totalAmount)} on delivery`
+                        : `Pay ${formatPrice(priced.totalAmount)}`)
+                    : 'Place Order'}
               </button>
             </div>
           </div>

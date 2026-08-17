@@ -219,18 +219,20 @@ export default function CartView({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between font-body text-sm text-mid py-2">
-                <span>Subtotal</span>
-                <span className="text-text tabular-nums">{formatPrice(subtotal)}</span>
-              </div>
-              <div className="flex items-center justify-between font-body text-sm text-mid py-2 border-b border-rule">
-                <span>Shipping &amp; tax</span>
-                <span className="text-mid">Calculated at checkout</span>
-              </div>
-              <div className="flex items-center justify-between font-body text-base font-medium py-4">
-                <span className="text-text">Total</span>
+              {/* There used to be a bold green "Total" here showing the subtotal.
+                  It was not the total — GST and delivery are added at checkout —
+                  so a ₹1,800 cart said ₹1,800 and the customer was charged around
+                  ₹2,224. A confident wrong number is worse than an honest absent
+                  one: the customer anchors on it and meets the real figure at the
+                  bank screen. The total appears at checkout, where the delivery
+                  address makes it knowable. */}
+              <div className="flex items-center justify-between font-body text-base font-medium py-4 border-b border-rule">
+                <span className="text-text">Subtotal</span>
                 <span className="text-forest tabular-nums">{formatPrice(subtotal)}</span>
               </div>
+              <p className="font-body text-xs text-mid pt-3 pb-1 leading-relaxed">
+                GST and delivery are added at checkout, once you pick where it is going.
+              </p>
 
               <motion.a
                 ref={checkoutBtnRef as React.RefObject<HTMLAnchorElement>}

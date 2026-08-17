@@ -2,17 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { auditLog } from '@/lib/audit'
-import { resolvePromotions } from '@/lib/promotions'
-import { calculateTax, isInterState } from '@/lib/tax'
-import { getTaxRates } from '@/lib/tax.server'
-import { cartLinesForPromotions, getLivePromotions } from '@/lib/promotions.server'
+import { priceCheckout } from '@/lib/checkoutPricing'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import { checkoutSchema } from '@/lib/validations'
-import { ASSUMED_PRODUCT_WEIGHT_GRAMS } from '@/lib/constants'
-import { getCart, validateCoupon } from './cart'
+import { getCart } from './cart'
 import { getStoreSettings } from './settings'
-import { calculateShippingCost } from './shipping'
 import { sendOrderCancellationEmail, sendRefundEmail } from '@/lib/email'
 import { sendSlackAlert } from '@/lib/slack'
 import { setPaymentStatusInternal, restoreOrderStock, cancelOrderInternal, issueGatewayRefund, releaseCouponUsage, recordRefund } from '@/lib/orders-internal'
@@ -128,79 +123,24 @@ export async function createOrder(input: {
     .from('addresses').select('*').eq('id', parsed.data.shipping_address_id).single()
   if (!shippingAddress) return { error: 'Shipping address not found' }
 
-  const subtotal = cart.items.reduce((sum, item) => {
-    const price = item.product.price + (item.variant?.price_adjustment ?? 0)
-    return sum + price * item.quantity
-  }, 0)
-  const weightGrams = cart.items.reduce(
-    (sum, item) => sum + (item.product.weight ?? ASSUMED_PRODUCT_WEIGHT_GRAMS) * item.quantity,
-    0,
-  )
-
-  const settings = await getStoreSettings()
-  const shipping_cost = await calculateShippingCost({
-    state: shippingAddress.state,
-    country: shippingAddress.country,
-    subtotal,
-    weightGrams,
+  // Priced by the same function the checkout screen quotes from, so the number
+  // the customer approved and the number they are billed cannot drift apart.
+  // See lib/checkoutPricing.ts for why that is one function and not two.
+  const priced = await priceCheckout({
+    items: cart.items,
+    destination: { state: shippingAddress.state, country: shippingAddress.country },
+    couponCode: parsed.data.coupon_code,
+    userId: input.userId ?? undefined,
+    client: input.client,
   })
-  let discount_amount = 0
+  if ('error' in priced) return { error: priced.error }
 
-  // Automatic promotions, resolved from the same server-priced cart lines the
-  // subtotal came from — never from anything the browser sent. Coupons are a
-  // separate mechanism and still apply on top; a shop that runs a sale AND
-  // honours a code is normal, and the resolver's own stacking rules already
-  // stop promotions from compounding with each other.
-  const livePromotions = await getLivePromotions()
-  const promoResult = livePromotions.length
-    ? resolvePromotions(livePromotions, await cartLinesForPromotions(cart.items))
-    : { applied: [], discount: 0, freeShipping: false }
-  discount_amount += promoResult.discount
-
-  if (parsed.data.coupon_code) {
-    // The coupon sees the post-promotion subtotal, so a percentage code cannot
-    // be taken off money already discounted away.
-    const couponResult = await validateCoupon(parsed.data.coupon_code, subtotal - promoResult.discount, input.userId ?? undefined, input.client)
-    if ('error' in couponResult) return { error: couponResult.error }
-    discount_amount += couponResult.discount
-  }
-
-  // Free shipping is a shipping change, not a discount — folding it into
-  // discount_amount would double-count it against a total that still charged
-  // for delivery.
-  const effective_shipping = promoResult.freeShipping ? 0 : shipping_cost
-
-  // A cart cannot cost less than nothing, however many offers stack.
-  discount_amount = Math.min(discount_amount, subtotal)
-
-  // GST, per line.
-  //
-  // Charged on what the customer actually pays for the goods, not the list
-  // price: under s.15(3)(a) CGST a discount given at the time of supply and
-  // shown on the invoice is excluded from the taxable value, so the order's
-  // discount is apportioned across the lines before the rate is applied.
-  //
-  // Per line rather than per order because rates differ by product, and for
-  // apparel by the price of the piece — a single store-wide percentage cannot
-  // express either. Unmapped products fall back to gst_percentage so nothing
-  // becomes untaxed by accident.
-  const interState = isInterState(settings.origin_state ?? 'Uttarakhand', shippingAddress.state)
-  const taxResult = calculateTax({
-    lines: cart.items.map((item) => ({
-      key: item.id,
-      hsnCode: item.product.hsn_code ?? null,
-      unitPrice: item.product.price + (item.variant?.price_adjustment ?? 0),
-      quantity: item.quantity,
-    })),
-    rates: await getTaxRates(),
-    fallbackRate: Number(settings.gst_percentage),
-    discount: discount_amount,
-    enabled: settings.enable_tax,
-  })
-  const tax_amount = taxResult.totalTax
-  const taxByLine = new Map(taxResult.lines.map((l) => [l.key, l]))
-
-  const total_amount = subtotal + effective_shipping + tax_amount - discount_amount
+  const {
+    subtotal, effectiveShipping: effective_shipping, discountAmount: discount_amount,
+    taxAmount: tax_amount, totalAmount: total_amount, taxByLine,
+  } = priced
+  const taxResult = { breakdown: priced.taxBreakdown }
+  const interState = priced.taxIsIgst
 
   let billingAddress = shippingAddress
   if (parsed.data.billing_address_id) {
@@ -252,9 +192,9 @@ export async function createOrder(input: {
   }))
 
   // What each campaign actually cost, per order.
-  if (promoResult.applied.length) {
+  if (priced.promotions.length) {
     await admin.from('order_promotions').insert(
-      promoResult.applied.map((a) => ({
+      priced.promotions.map((a) => ({
         order_id: order.id, promotion_id: a.promotionId, label: a.label, amount: a.amount,
       }))
     )
@@ -764,4 +704,69 @@ export async function refundOrder(orderId: string, options?: { amount?: number; 
   revalidatePath(`/admin/orders`)
   revalidatePath(`/orders/${orderId}`)
   return { success: true }
+}
+
+/**
+ * What this cart will actually cost, delivered to this address.
+ *
+ * Exists because the checkout screen used to show a subtotal and the words
+ * "Shipping & tax: calculated after address" — on a page where the address is
+ * already chosen — and then a Place Order button. The customer agreed to a
+ * number nobody had shown them, and for cash on delivery a courier turned up
+ * asking for it.
+ *
+ * Deliberately calls the SAME priceCheckout() that createOrder bills from, so
+ * the quote and the charge cannot drift. If this returns 27943 paise, that is
+ * what the order will be.
+ *
+ * Coupon errors come back as a normal result rather than a throw: a code that
+ * stopped qualifying because the cart changed is an ordinary thing to tell
+ * someone about, not an exception.
+ */
+export async function getCheckoutQuote(input: {
+  userId?: string | null
+  shipping_address_id: string
+  coupon_code?: string
+}) {
+  const supabase = await createServerSupabaseClient()
+
+  const cart = await getCart(input.userId, null, supabase)
+  if (!cart?.items?.length) return { error: 'Cart is empty' as const }
+
+  // RLS scopes addresses to their owner, so this cannot price against someone
+  // else's address by id.
+  const { data: address } = await supabase
+    .from('addresses').select('*').eq('id', input.shipping_address_id).single()
+  if (!address) return { error: 'Shipping address not found' as const }
+
+  const priced = await priceCheckout({
+    items: cart.items,
+    destination: { state: address.state, country: address.country },
+    couponCode: input.coupon_code,
+    userId: input.userId ?? undefined,
+    client: supabase,
+  })
+  if ('error' in priced) return { error: priced.error }
+
+  // taxByLine is a Map and is only needed at insert time; it does not survive
+  // the server-action boundary and has no business on the client anyway.
+  return {
+    subtotal: priced.subtotal,
+    promotions: priced.promotions,
+    couponDiscount: priced.couponDiscount,
+    discountAmount: priced.discountAmount,
+    shippingCost: priced.shippingCost,
+    effectiveShipping: priced.effectiveShipping,
+    freeShipping: priced.freeShipping,
+    taxAmount: priced.taxAmount,
+    taxBreakdown: priced.taxBreakdown,
+    taxIsIgst: priced.taxIsIgst,
+    taxEnabled: priced.taxEnabled,
+    totalAmount: priced.totalAmount,
+    destinationState: address.state as string | null,
+    // So the summary can say WHY delivery is free rather than just showing a
+    // zero. The owner read a bare "0" as a bug — it was the threshold working,
+    // but an unexplained zero on a price line reads as broken either way.
+    freeShippingThreshold: (await getStoreSettings()).free_shipping_threshold,
+  }
 }
