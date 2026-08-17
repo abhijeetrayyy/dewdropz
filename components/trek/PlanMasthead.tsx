@@ -59,7 +59,13 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
         </h1>
 
         <p className="mt-3 font-body text-sm text-paper/70">
-          Meeting around {plan.meet_area} · hosted by {plan.host_name}
+          Meeting around {plan.meet_area} · hosted by{' '}
+          <Link
+            href={`/trek-buddy/people/${plan.host_id}`}
+            className="text-paper underline decoration-paper/40 underline-offset-4 transition-colors hover:decoration-paper"
+          >
+            {plan.host_name}
+          </Link>
         </p>
 
         <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 border-t border-paper/20 pt-5">

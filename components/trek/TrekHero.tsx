@@ -25,10 +25,11 @@ export default function TrekHero({
   openCount: number
   canHost: boolean
   /** Which of the three Trek Buddy pages you are on. */
-  active: 'board' | 'yours' | 'new'
+  active: 'board' | 'people' | 'yours' | 'new'
 }) {
   const tabs = [
     { key: 'board', label: 'The board', href: '/trek-buddy' },
+    { key: 'people', label: 'Who is out there', href: '/trek-buddy/people' },
     { key: 'yours', label: 'Yours', href: '/trek-buddy/yours' },
     ...(canHost ? [{ key: 'new', label: 'Post a walk', href: '/trek-buddy/new' }] : []),
   ]

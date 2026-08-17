@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { requestToJoin, withdrawRequest, decideRequest, cancelPlan } from '@/actions/trekBuddy'
 
@@ -53,7 +54,10 @@ export default function PlanActions({
               {waiting.map((r) => (
                 <li key={r.user_id} className="flex flex-wrap items-center gap-3 py-3">
                   <div className="min-w-0 flex-1">
-                    <span className="font-body text-sm text-text">{r.display_name}</span>
+                    <Link href={`/trek-buddy/people/${r.user_id}`}
+                      className="font-body text-sm text-text underline decoration-rule underline-offset-4 hover:decoration-forest">
+                      {r.display_name}
+                    </Link>
                     {r.message && (
                       <p className="mt-0.5 font-body text-xs text-mid">{r.message}</p>
                     )}
@@ -89,8 +93,13 @@ export default function PlanActions({
             <p className="font-body text-xs uppercase tracking-[0.1em] text-mid">
               Coming with you ({going.length})
             </p>
-            <p className="mt-1 font-body text-sm text-text">
-              {going.map((r) => r.display_name).join(', ')}
+            <p className="mt-1 flex flex-wrap gap-x-3 font-body text-sm text-text">
+              {going.map((r) => (
+                <Link key={r.user_id} href={`/trek-buddy/people/${r.user_id}`}
+                  className="underline decoration-rule underline-offset-4 hover:decoration-forest">
+                  {r.display_name}
+                </Link>
+              ))}
             </p>
           </div>
         )}

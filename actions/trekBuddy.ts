@@ -384,3 +384,169 @@ export async function cancelPlan(planId: string, reason?: string) {
   }
   return result
 }
+
+// ── People ───────────────────────────────────────────────────────────────────
+
+export type PersonCard = {
+  userId: string
+  displayName: string
+  homeBase: string | null
+  intro: string | null
+  pace: string | null
+  activities: string[]
+  languages: string[]
+  memberSince: string | null
+  canHost: boolean
+  /** The four facts. Each says exactly what it proves — see migration 054. */
+  emailOk: boolean
+  isCustomer: boolean
+  walksHosted: number
+  walksJoined: number
+  vouches: number
+}
+
+/** One person, as everybody else sees them. */
+export async function getPerson(userId: string): Promise<PersonCard | null> {
+  const viewer = await getUser()
+  if (!viewer) return null
+
+  const { data } = await createAdminSupabaseClient().rpc('trek_person_card', { p_user: userId })
+  const r = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined
+  if (!r?.display_name) return null
+
+  return {
+    userId,
+    displayName: r.display_name as string,
+    homeBase: (r.home_base as string) ?? null,
+    intro: (r.intro as string) ?? null,
+    pace: (r.pace as string) ?? null,
+    activities: (r.activities as string[]) ?? [],
+    languages: (r.languages as string[]) ?? [],
+    memberSince: (r.member_since as string) ?? null,
+    canHost: Boolean(r.can_host),
+    emailOk: Boolean(r.email_ok),
+    isCustomer: Boolean(r.is_customer),
+    walksHosted: Number(r.walks_hosted ?? 0),
+    walksJoined: Number(r.walks_joined ?? 0),
+    vouches: Number(r.vouches ?? 0),
+  }
+}
+
+/** Everyone who has actually hosted or been on something. Not a user directory. */
+export async function getPeople(limit = 40) {
+  const viewer = await getUser()
+  if (!viewer) return []
+  const { data } = await createAdminSupabaseClient().rpc('trek_people', { p_limit: limit })
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    userId: r.user_id as string,
+    displayName: r.display_name as string,
+    homeBase: (r.home_base as string) ?? null,
+    activities: (r.activities as string[]) ?? [],
+    walks: Number(r.walks ?? 0),
+  }))
+}
+
+/**
+ * Update how you appear to other people.
+ *
+ * The intro is checked by a CHECK constraint that refuses phone numbers, emails
+ * and handles — the safety model depends on contact details not travelling
+ * through this product, and an intro box is exactly where somebody will paste
+ * one. The database's message is passed through so the person is told what is
+ * actually wrong rather than "invalid".
+ */
+export async function saveTrekPerson(input: {
+  displayName: string
+  homeBase?: string
+  intro?: string
+  pace?: string
+  activities: string[]
+  languages: string[]
+}) {
+  const user = await requireAuth()
+
+  const name = input.displayName.trim()
+  if (name.length < 2 || name.length > 40) {
+    return { error: 'Your name needs to be between 2 and 40 characters.' }
+  }
+
+  const { error } = await createAdminSupabaseClient()
+    .from('profiles')
+    .update({
+      trek_display_name: name,
+      trek_home_base: input.homeBase?.trim() || null,
+      trek_intro: input.intro?.trim() || null,
+      trek_pace: input.pace || null,
+      trek_activities: input.activities,
+      trek_languages: input.languages,
+    })
+    .eq('id', user.id)
+
+  if (error) {
+    if (error.message.includes('no_contact')) {
+      return {
+        error:
+          'Take the phone number, email or handle out of your intro. Trek Buddy does not pass contact details between people — that is the point of it.',
+      }
+    }
+    if (error.message.includes('intro_len')) {
+      return { error: 'Your intro needs to be between 10 and 280 characters.' }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath('/trek-buddy/profile')
+  revalidatePath(`/trek-buddy/people/${user.id}`)
+  return { success: true as const }
+}
+
+/** People you were on a past walk with, and whether you have vouched yet. */
+export async function getVouchable() {
+  const user = await getUser()
+  if (!user) return []
+  const admin = createAdminSupabaseClient()
+
+  const { data: past } = await admin
+    .from('trek_plans')
+    .select('id, place, starts_at, host_id, host_name')
+    .lt('starts_at', new Date().toISOString())
+    .neq('status', 'cancelled')
+    .order('starts_at', { ascending: false })
+    .limit(20)
+
+  if (!past?.length) return []
+  const ids = past.map((p) => p.id)
+
+  const [{ data: rosters }, { data: mine }] = await Promise.all([
+    admin.from('trek_plan_requests').select('plan_id, user_id, display_name')
+      .in('plan_id', ids).eq('status', 'confirmed'),
+    admin.from('trek_vouches').select('vouchee_id').eq('voucher_id', user.id),
+  ])
+
+  const vouched = new Set((mine ?? []).map((v) => v.vouchee_id as string))
+
+  return past.flatMap((plan) => {
+    const party = (rosters ?? []).filter((r) => r.plan_id === plan.id)
+    const iWasThere = plan.host_id === user.id || party.some((r) => r.user_id === user.id)
+    if (!iWasThere) return []
+
+    const others = [
+      ...(plan.host_id !== user.id ? [{ user_id: plan.host_id as string, display_name: plan.host_name as string }] : []),
+      ...party.filter((r) => r.user_id !== user.id).map((r) => ({ user_id: r.user_id as string, display_name: r.display_name as string })),
+    ]
+    if (!others.length) return []
+    return [{
+      planId: plan.id as string,
+      place: plan.place as string,
+      when: plan.starts_at as string,
+      people: others.map((o) => ({ ...o, vouched: vouched.has(o.user_id) })),
+    }]
+  })
+}
+
+export async function vouchFor(planId: string, forUserId: string) {
+  const user = await requireAuth()
+  return callTrek('trek_vouch', {
+    p_plan_id: planId, p_for: forUserId, p_actor: user.id,
+  }, ['/trek-buddy/profile', `/trek-buddy/people/${forUserId}`])
+}
