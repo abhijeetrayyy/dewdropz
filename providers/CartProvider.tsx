@@ -10,9 +10,11 @@ export interface CartLine {
   image: string
   size: string
   quantity: number
-  // Only set for a customized item — real product/variant identity (no
-  // fuzzy matching needed at checkout) and the design it's carrying. Every
-  // customized line is distinct, even if it shares a slug+size with another.
+  // Real identity, carried rather than re-derived. `variantId` is set on EVERY
+  // line now, not just customized ones: checkout used to resolve a size back to
+  // a variant by name, which silently picked the first size for everything.
+  // `productId` and `customDesignId` remain customize-only — a customized line
+  // is distinct even when it shares a slug and size with another.
   productId?: string
   variantId?: string | null
   customDesignId?: string

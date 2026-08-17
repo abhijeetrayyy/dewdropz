@@ -38,7 +38,7 @@ export default function SeasonKit({
 
   function addKit() {
     for (const p of products) {
-      addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '' })
+      addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '', variantId: p.variants?.[0]?.id ?? null })
     }
     setAdded(true)
     setTimeout(() => setAdded(false), 2200)

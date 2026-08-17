@@ -126,7 +126,9 @@ export default function ProductDetail({
   const handleAddToCart = () => {
     trackEvent('add_to_cart', { currency: 'INR', value: price, items: [{ item_id: product.slug, item_name: product.name }] })
     addItem(
-      { slug: product.slug, name: product.name, price, image: images[0] ?? '', size: variant?.name ?? '' },
+      // variantId carried, not re-derived. Resolving a size back to a variant
+      // by name is what shipped the wrong garment; the picker already knows.
+      { slug: product.slug, name: product.name, price, image: images[0] ?? '', size: variant?.name ?? '', variantId: variant?.id ?? null },
       quantity
     )
     setAdded(true)

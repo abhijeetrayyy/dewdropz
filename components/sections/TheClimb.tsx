@@ -19,7 +19,7 @@ function StationRow({ station, index }: { station: Station; index: number }) {
   const p = station.product
 
   function handleAdd() {
-    addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '' })
+    addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '', variantId: p.variants?.[0]?.id ?? null })
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }

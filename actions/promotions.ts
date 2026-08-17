@@ -10,6 +10,21 @@ import { getCart, validateCoupon } from './cart'
 import { getProductsBySlugs } from './products'
 import { matchVariantForSize } from '@/lib/variantMatch'
 
+/** A cart line as the browser holds it. `variantId` is what makes the preview
+ *  price the same variant createOrder charges for — without it the preview
+ *  resolved by size, which picked the first variant for every line. */
+type PreviewLine = { slug: string; size: string; quantity: number; variantId?: string | null }
+
+/** One resolution rule for both preview functions, so they cannot drift from
+ *  each other or from the checkout sync. */
+function resolveLineVariant<T extends { id: string; name: string }>(
+  variants: T[] | null | undefined,
+  line: PreviewLine,
+): T | null {
+  if (line.variantId) return variants?.find((v) => v.id === line.variantId) ?? null
+  return matchVariantForSize(variants, line.size)
+}
+
 export type PromotionRow = Promotion & {
   name: string
   starts_at: string | null
@@ -145,7 +160,7 @@ export async function previewCartPromotions(userId?: string | null, sessionId?: 
  * and lines resolve through the same variant rule the checkout sync uses, so
  * the preview matches what createOrder goes on to charge.
  */
-export async function previewPromotionsForLines(lines: { slug: string; size: string; quantity: number }[]) {
+export async function previewPromotionsForLines(lines: PreviewLine[]) {
   const empty = { applied: [] as { label: string; amount: number; freeShipping: boolean }[], discount: 0, freeShipping: false }
   if (!lines.length) return empty
   const live = await getLivePromotions()
@@ -157,7 +172,7 @@ export async function previewPromotionsForLines(lines: { slug: string; size: str
   const cartLines = lines.flatMap((line) => {
     const product = bySlug.get(line.slug)
     if (!product) return []
-    const variant = matchVariantForSize(product.variants, line.size)
+    const variant = resolveLineVariant(product.variants, line)
     return [{
       productSlug: product.slug,
       collectionSlug: product.collection?.slug ?? null,
@@ -181,7 +196,7 @@ export async function previewPromotionsForLines(lines: { slug: string; size: str
  * Prices come from the product rows, never the browser.
  */
 export async function previewCheckoutTotals(
-  lines: { slug: string; size: string; quantity: number }[],
+  lines: PreviewLine[],
   couponCode?: string,
   userId?: string | null
 ) {
@@ -192,7 +207,7 @@ export async function previewCheckoutTotals(
   const subtotal = lines.reduce((sum, line) => {
     const product = bySlug.get(line.slug)
     if (!product) return sum
-    const variant = matchVariantForSize(product.variants, line.size)
+    const variant = resolveLineVariant(product.variants, line)
     return sum + (product.price + (variant?.price_adjustment ?? 0)) * line.quantity
   }, 0)
 

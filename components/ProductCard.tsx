@@ -46,12 +46,16 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
 
   const handleAddToCart = () => {
     if (soldOut) return
+    // A card adds the first variant — carry its id rather than making checkout
+    // guess it back from the name.
+    const first = product.variants?.[0]
     addItem({
       slug: product.slug,
       name: product.name,
       price: product.price,
       image: product.images?.[0] ?? '',
-      size: product.variants?.[0]?.name ?? '',
+      size: first?.name ?? '',
+      variantId: first?.id ?? null,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)

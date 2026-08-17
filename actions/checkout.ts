@@ -45,7 +45,10 @@ export async function syncLocalCartToDbCart(
     const product = await getProductBySlug(line.slug)
     if (!product) { skipped.push(line.slug); continue }
 
-    const variantId = matchVariantForSize(product.variants, line.size)?.id ?? null
+    // The line carries its variant id now. Falling back to resolving it from
+    // the size is only for lines saved in a browser before that shipped —
+    // and it can legitimately return null rather than silently picking one.
+    const variantId = line.variantId ?? matchVariantForSize(product.variants, line.size)?.id ?? null
 
     const result = await addToCart({ product_id: product.id, variant_id: variantId, quantity: line.quantity, userId, client })
     if (result && 'error' in result) skipped.push(line.slug)

@@ -76,7 +76,7 @@ export default function CheckoutClient({
   useEffect(() => {
     let cancelled = false
     previewCheckoutTotals(
-      items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity })),
+      items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity, variantId: i.variantId ?? null })),
       appliedCoupon || undefined,
       userId
     )
@@ -104,7 +104,7 @@ export default function CheckoutClient({
     setError('')
     try {
       const r = await previewCheckoutTotals(
-        items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity })),
+        items.map((i) => ({ slug: i.slug, size: i.size, quantity: i.quantity, variantId: i.variantId ?? null })),
         code,
         userId
       )
