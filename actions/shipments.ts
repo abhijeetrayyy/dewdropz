@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/actions/auth'
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase'
+import { enqueue } from '@/lib/jobs'
 
 // Manual shipping.
 //
@@ -226,6 +227,33 @@ export async function updateShipmentStatus(
     location: note?.location ?? null,
     occurred_at: note?.occurredAt ?? now,
   })
+
+  // Tell the customer their parcel is moving. sendShipmentNotificationEmail has
+  // existed in lib/email.ts since shipping was built and had ZERO callers — so
+  // a made-to-order garment could be printed, packed, handed to a courier and
+  // delivered without the buyer ever being told it had left. Queued, not sent
+  // inline: the parcel is already dispatched and an email provider having a bad
+  // minute must not fail the status update that records it.
+  if (DISPATCHED.includes(status)) {
+    const { data: full } = await supabase
+      .from('shipments')
+      .select('carrier, tracking_number, tracking_url, notified_at, order:orders(email, order_number)')
+      .eq('id', shipmentId)
+      .single()
+    const order = full?.order as unknown as { email: string; order_number: string } | null
+    // Only once per parcel: statuses can be stepped forward more than once and
+    // DISPATCHED covers several of them.
+    if (order?.email && full?.tracking_number && !full.notified_at) {
+      await enqueue('order.shipped', {
+        email: order.email,
+        orderNumber: order.order_number,
+        carrier: full.carrier ?? 'Courier',
+        trackingNumber: full.tracking_number,
+        trackingUrl: full.tracking_url ?? undefined,
+      })
+      await supabase.from('shipments').update({ notified_at: now }).eq('id', shipmentId)
+    }
+  }
 
   await syncOrderFromShipments(shipment.order_id)
   revalidatePath(`/admin/orders/${shipment.order_id}`)

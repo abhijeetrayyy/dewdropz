@@ -1,6 +1,6 @@
 import 'server-only'
 import { createAdminSupabaseClient } from '@/lib/supabase'
-import { sendOrderCancellationEmail, sendRefundEmail, sendPaymentFailedEmail } from '@/lib/email'
+import { sendShipmentNotificationEmail, sendOrderCancellationEmail, sendRefundEmail, sendPaymentFailedEmail } from '@/lib/email'
 import { sendSlackAlert } from '@/lib/slack'
 
 // The job runner.
@@ -18,6 +18,7 @@ export type JobType =
   | 'order.confirmation'
   | 'order.cancellation'
   | 'order.refund'
+  | 'order.shipped'
   | 'payment.failed'
   | 'slack.alert'
 
@@ -76,6 +77,15 @@ const HANDLERS: Record<JobType, Handler> = {
       orderNumber: String(p.orderNumber),
       amount: Number(p.amount),
       partial: Boolean(p.partial),
+    })
+  },
+  'order.shipped': async (p) => {
+    await sendShipmentNotificationEmail({
+      email: String(p.email),
+      orderNumber: String(p.orderNumber),
+      carrier: String(p.carrier),
+      trackingNumber: String(p.trackingNumber),
+      trackingUrl: p.trackingUrl ? String(p.trackingUrl) : undefined,
     })
   },
   'payment.failed': async (p) => {

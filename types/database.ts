@@ -365,7 +365,12 @@ export interface Order {
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
   payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded'
   payment_method: 'stripe' | 'razorpay' | 'cod' | null
+  /** The gateway's ORDER/SESSION handle — Razorpay `order_…`, Stripe `cs_…`. */
   payment_intent_id: string | null
+  /** The CAPTURED payment — Razorpay `pay_…`, Stripe `pi_…`. What a refund is
+   *  issued against. Split out in migration 043: both used to share the column
+   *  above, and whichever wrote last won, which silently broke every refund. */
+  gateway_payment_id: string | null
   subtotal: number
   shipping_cost: number
   tax_amount: number

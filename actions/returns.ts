@@ -6,6 +6,7 @@ import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/sup
 import { auditLog } from '@/lib/audit'
 import { refundOrder } from '@/actions/orders'
 import { RETURN_WINDOW_DAYS } from '@/lib/constants'
+import { sendSlackAlert } from '@/lib/slack'
 
 // Returns / RMA.
 //
@@ -221,13 +222,20 @@ export async function receiveReturn(input: {
     if (!line.restock) continue
     const item = line.item as unknown as { product_id: string; variant_id: string | null } | null
     if (!item?.product_id) continue
-    await admin.rpc('adjust_stock_atomic', {
+    // Checked, because "received and restocked" is recorded on the return
+    // whether or not the stock actually moved.
+    const { error: stockError } = await admin.rpc('adjust_stock_atomic', {
       p_product_id: item.product_id,
       p_variant_id: item.variant_id ?? null,
       p_quantity_change: line.quantity,
       p_reason: 'restock',
       p_notes: `Return ${ret.rma_number}`,
     })
+    if (stockError) {
+      await sendSlackAlert(
+        `:warning: Restock FAILED for return ${ret.rma_number} (product ${item.product_id}): ${stockError.message}`
+      )
+    }
   }
 
   const now = new Date().toISOString()

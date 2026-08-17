@@ -131,7 +131,7 @@ export async function createRazorpayOrder(input: {
 
   if (razorpayOrder.error) return { error: razorpayOrder.error.description }
 
-  await setPaymentStatusInternal(orderResult.orderId, 'pending', razorpayOrder.id)
+  await setPaymentStatusInternal(orderResult.orderId, 'pending', { gatewayOrderId: razorpayOrder.id })
 
   return {
     success: true,
@@ -184,7 +184,7 @@ export async function verifyStripeWebhook(payload: string, signature: string) {
         if (orderId) {
           const { data: existing } = await supabase.from('orders').select('payment_status').eq('id', orderId).single()
           const alreadyPaid = existing?.payment_status === 'paid'
-          await setPaymentStatusInternal(orderId, 'paid', session.id)
+          await setPaymentStatusInternal(orderId, 'paid', { gatewayOrderId: session.id })
           await supabase
             .from('orders')
             .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
@@ -360,7 +360,7 @@ export async function verifyRazorpayPayment(input: {
   }
 
   const alreadyPaid = order.payment_status === 'paid'
-  await setPaymentStatusInternal(order.id, 'paid', input.razorpayPaymentId)
+  await setPaymentStatusInternal(order.id, 'paid', { gatewayPaymentId: input.razorpayPaymentId })
   await supabase
     .from('orders')
     .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })

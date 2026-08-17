@@ -176,13 +176,16 @@ export async function adjustStock(input: {
     note: input.notes,
   })
 
-  await supabase.rpc('adjust_stock_atomic', {
+  // Surfaced to the caller. The audit row above is written first, so swallowing
+  // this left an audit trail asserting a stock change that never happened.
+  const { error: stockError } = await supabase.rpc('adjust_stock_atomic', {
     p_product_id: input.product_id,
     p_variant_id: input.variant_id ?? null,
     p_quantity_change: input.quantity_change,
     p_reason: input.reason,
     p_notes: input.notes ?? null,
   })
+  if (stockError) throw new Error(`Stock adjustment failed: ${stockError.message}`)
 
   revalidatePath('/admin/products')
 }

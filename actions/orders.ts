@@ -15,8 +15,9 @@ import { getStoreSettings } from './settings'
 import { calculateShippingCost } from './shipping'
 import { sendOrderCancellationEmail, sendRefundEmail } from '@/lib/email'
 import { sendSlackAlert } from '@/lib/slack'
-import { setPaymentStatusInternal, restoreOrderStock, cancelOrderInternal, issueGatewayRefund, releaseCouponUsage } from '@/lib/orders-internal'
+import { setPaymentStatusInternal, restoreOrderStock, cancelOrderInternal, issueGatewayRefund, releaseCouponUsage, recordRefund } from '@/lib/orders-internal'
 import { notifyUser } from '@/lib/notifications'
+import { enqueue } from '@/lib/jobs'
 import type { OrderWithItems, Order, OrderItem } from '@/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -294,6 +295,19 @@ export async function createOrder(input: {
       .eq('id', cart.id)
   }
 
+  // COD is confirmed the moment it is placed — there is no gateway callback
+  // coming to do it later. The three existing `order.confirmation` enqueues all
+  // live in gateway success handlers, so a COD customer placed an order and
+  // heard nothing at all: no confirmation, no order number, no record they
+  // could point at. On the payment method this shop advertises most.
+  if (parsed.data.payment_method === 'cod') {
+    await admin
+      .from('orders')
+      .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
+      .eq('id', order.id)
+    await enqueue('order.confirmation', { orderId: order.id })
+  }
+
   revalidatePath('/orders')
   return { success: true, orderId: order.id }
 }
@@ -481,7 +495,7 @@ export async function cancelOrderAsAdmin(orderId: string, reason?: string) {
 // throw and silently leave every order stuck 'pending' forever.
 export async function updatePaymentStatus(orderId: string, paymentStatus: Order['payment_status'], paymentIntentId?: string) {
   await requireAdmin()
-  await setPaymentStatusInternal(orderId, paymentStatus, paymentIntentId)
+  await setPaymentStatusInternal(orderId, paymentStatus, { gatewayOrderId: paymentIntentId })
 }
 
 // The queues an ops team actually works from, rather than raw status values.
@@ -645,7 +659,32 @@ export async function refundOrder(orderId: string, options?: { amount?: number; 
   if (refundAmount <= 0 || refundAmount > remaining) return { error: 'Invalid refund amount' }
 
   const gatewayResult = await issueGatewayRefund(order, refundAmount)
-  if ('error' in gatewayResult) return { error: gatewayResult.error }
+  if ('error' in gatewayResult) {
+    // The attempt is recorded even though it failed — a refunds table holding
+    // only successes cannot answer "what did we try and fail to return?", which
+    // is the question someone asks after a customer chases them. The order is
+    // flagged so it surfaces in the admin's needs-attention view rather than
+    // looking settled.
+    await recordRefund({
+      orderId, gateway: order.payment_method ?? 'manual', amount: refundAmount,
+      status: 'failed', reason: options?.reason, error: gatewayResult.error,
+      actorEmail: actor.email,
+    })
+    await admin.from('orders').update({
+      refund_needs_attention: true,
+      admin_notes: [order.admin_notes, `REFUND FAILED — ₹${(refundAmount / 100).toLocaleString('en-IN')} not returned: ${gatewayResult.error}`].filter(Boolean).join('\n'),
+    }).eq('id', orderId)
+    await sendSlackAlert(
+      `:rotating_light: Refund FAILED for order ${order.order_number} (₹${(refundAmount / 100).toLocaleString('en-IN')}): ${gatewayResult.error}`
+    )
+    return { error: gatewayResult.error }
+  }
+
+  await recordRefund({
+    orderId, gateway: order.payment_method ?? 'manual', amount: refundAmount,
+    status: 'succeeded', gatewayRefundId: gatewayResult.gatewayRefundId,
+    reason: options?.reason, actorEmail: actor.email,
+  })
 
   const newRefundedAmount = alreadyRefunded + refundAmount
   const isFullyRefunded = newRefundedAmount >= order.total_amount
