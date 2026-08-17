@@ -118,6 +118,56 @@ function clampRange(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
+const SEASONS = ['clear', 'fog', 'rain', 'snow'] as const
+
+// The weather, as an instrument on the left edge rather than four pills stacked
+// on the headline.
+//
+// HeroWeather has always known how to render all four — real particle profiles
+// for rain and snow, a haze pass for fog — but the only way to reach any of them
+// was to type ?season=snow into the address bar. Centred above the h1 the picker
+// worked, but it sat in the headline's light and pushed the whole frame down.
+//
+// Off to the left it becomes what it actually is: a reading of conditions on the
+// range, in the same register as the coordinate above the headline and the
+// altitudes in act 3. A hairline rule with ticks growing off it — the longest
+// one is the live condition. Same device as the hour rail on Trek Buddy, which
+// is this brand's one established signature, so it lands as part of a system
+// rather than as another control.
+function WeatherRail({ season, onPick }: { season: Season; onPick: (s: Season) => void }) {
+  return (
+    <div data-summit-reveal className="invisible" role="group" aria-label="Weather on the range">
+      <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/35">Conditions</p>
+      <div className="mt-3 flex flex-col items-stretch border-l border-paper/15">
+        {SEASONS.map((s) => {
+          const on = season === s
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onPick(s)}
+              aria-pressed={on}
+              className={`group flex items-center gap-2.5 py-[7px] text-left font-mono text-[10px] uppercase tracking-[0.18em] transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage ${
+                on ? 'text-sage' : 'text-paper/45 hover:text-paper/85'
+              }`}
+            >
+              {/* The tick is the state. Length reads before colour does, which
+                  matters on a frame where the ground behind it is moving. */}
+              <span
+                aria-hidden="true"
+                className={`h-px shrink-0 transition-all duration-500 ${
+                  on ? 'w-5 bg-sage' : 'w-2 bg-paper/25 group-hover:w-3.5 group-hover:bg-paper/45'
+                }`}
+              />
+              {s}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function SummitHero({
   products = [],
 }: {
@@ -314,7 +364,14 @@ export default function SummitHero({
           end: '+=440%',
           pin: true,
           scrub: true,
-          anticipatePin: 1,
+          // No anticipatePin. It guards against a flicker when a fast native
+          // wheel throws you into a pin before ScrollTrigger can react — but
+          // Lenis already smooths wheel input (lerp 0.3) so that throw never
+          // arrives, and the guard works by engaging the pin EARLY off scroll
+          // velocity. Reverse direction near the start boundary and the early
+          // pin toggles on and off across it, re-parenting the section between
+          // the pin-spacer and normal flow: the jump you feel arriving back at
+          // scroll zero.
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             progressRef.current = self.progress
@@ -599,80 +656,90 @@ export default function SummitHero({
             mountain. The client's reference is the original centred frame, and
             it is the better call: the products get their own act moments later,
             and a hero that already sells is a hero nobody reads. */}
-        <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-          <div className="flex flex-col items-center">
-            <p data-summit-reveal className="invisible font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
-              Printed in Dehradun · 30.3165° N
-            </p>
+        {/* Three columns so the headline stays optically centred while the rail
+            sits hard against the frame's left edge. Equal-width side columns are
+            what guarantee that — a rail absolutely positioned over a centred
+            column collides with it the moment the window narrows. */}
+        <div className="flex w-full items-center">
+          <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+            <div className="flex flex-col items-center">
+              <p data-summit-reveal className="invisible font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
+                Printed in Dehradun · 30.3165° N
+              </p>
 
-            {/* The weather, as a control rather than a setting.
-                HeroWeather has always known how to render all four — real
-                particle profiles for rain and snow, a haze pass for fog — but
-                the only way to reach any of them was to type ?season=snow into
-                the address bar, so in practice every visitor saw `clear` and
-                the whole layer was invisible work. This is the picker the
-                client's reference screenshot shows.
+              <h1 className="mt-5 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper">
+                <span data-summit-reveal className="invisible block">Go where</span>
+                <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
+              </h1>
 
-                Hidden when the scene is not running: on a touch device the
-                weather layer is deliberately off (it is the one effect a
-                mid-range phone feels), so offering four buttons that change
-                nothing would be worse than offering none. */}
-            {weather && (
-              <div
-                data-summit-reveal
-                className="invisible mt-5 flex flex-wrap items-center gap-1.5"
-                role="group"
-                aria-label="Weather on the range"
-              >
-                {(['clear', 'fog', 'rain', 'snow'] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setSeason(s)}
-                    aria-pressed={season === s}
-                    className={`rounded-full border px-3 py-1 font-mono text-[9px] uppercase tracking-[0.18em] transition-colors duration-300 ${
-                      season === s
-                        ? 'border-sage bg-sage/15 text-sage'
-                        : 'border-paper/20 text-paper/50 hover:border-paper/45 hover:text-paper/80'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+              {/* Repositioned per the client brief: the shop is not an expedition
+                  outfitter. The line that stood here talked about heavyweight
+                  blanks and printing, which reads as a supplier describing its
+                  process; the brief asks for apparel and everyday essentials that
+                  happen to be mountain-inspired. */}
+              <p data-summit-reveal className="invisible mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
+                Inspired by mountains. Made for everyday journeys.
+                Apparel and drinkware, printed one at a time with your design on it.
+              </p>
+
+              <div data-summit-reveal className="invisible mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+                <Link
+                  href="/customize"
+                  className="inline-flex items-center gap-2 rounded-full bg-paper px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
+                >
+                  Design yours <span aria-hidden="true">↗</span>
+                </Link>
+                <Link
+                  href="/shop"
+                  className="border-b border-paper/25 pb-1 font-body text-[11px] uppercase tracking-[0.14em] text-paper/65 transition-colors duration-300 hover:text-paper"
+                >
+                  {fromPrice ? `Shop the drop — from ${fromPrice}` : 'Shop the drop'}
+                </Link>
               </div>
-            )}
 
-            <h1 className="mt-5 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper">
-              <span data-summit-reveal className="invisible block">Go where</span>
-              <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
-            </h1>
-
-            {/* Repositioned per the client brief: the shop is not an expedition
-                outfitter. The line that stood here talked about heavyweight
-                blanks and printing, which reads as a supplier describing its
-                process; the brief asks for apparel and everyday essentials that
-                happen to be mountain-inspired. */}
-            <p data-summit-reveal className="invisible mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
-              Inspired by mountains. Made for everyday journeys.
-              Apparel and drinkware, printed one at a time with your design on it.
-            </p>
-
-            <div data-summit-reveal className="invisible mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-              <Link
-                href="/customize"
-                className="inline-flex items-center gap-2 rounded-full bg-paper px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
-              >
-                Design yours <span aria-hidden="true">↗</span>
-              </Link>
-              <Link
-                href="/shop"
-                className="border-b border-paper/25 pb-1 font-body text-[11px] uppercase tracking-[0.14em] text-paper/65 transition-colors duration-300 hover:text-paper"
-              >
-                {fromPrice ? `Shop the drop — from ${fromPrice}` : 'Shop the drop'}
-              </Link>
+              {/* Between 768px and the rail's breakpoint the frame is too narrow
+                  for a side column, so the picker folds back into the stack —
+                  below the call to action, where it cannot push the headline
+                  down. Same ticks, laid on their side. */}
+              {weather && (
+                <div
+                  data-summit-reveal
+                  className="invisible mt-10 flex items-center gap-4 lg:hidden"
+                  role="group"
+                  aria-label="Weather on the range"
+                >
+                  <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/30">
+                    Conditions
+                  </span>
+                  {SEASONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSeason(s)}
+                      aria-pressed={season === s}
+                      className={`font-mono text-[10px] uppercase tracking-[0.18em] transition-colors duration-300 ${
+                        season === s
+                          ? 'border-b border-sage pb-0.5 text-sage'
+                          : 'border-b border-transparent pb-0.5 text-paper/45 hover:text-paper/85'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Balances the rail so the column above stays centred in the frame. */}
+          <div aria-hidden="true" className="hidden w-[136px] shrink-0 lg:block" />
+
+          {/* Last in the DOM, first in the layout. The intro staggers on document
+              order, so putting the rail here lets the headline lead and the
+              control arrive after it — while `order-first` keeps it on the left. */}
+          <div className="order-first hidden w-[136px] shrink-0 lg:block">
+            {weather && <WeatherRail season={season} onPick={setSeason} />}
+          </div>
         </div>
 
       </div>

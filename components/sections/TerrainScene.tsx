@@ -643,12 +643,50 @@ const START_LOOK = new THREE.Vector3(0, 2, -10)
 const END_LOOK = new THREE.Vector3(0, 0.8, -20)
 const HERO_PHASE = 0.3
 
-function pathLerp(out: THREE.Vector3, hero: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3, p: number) {
+// The seam between the two segments used to be a hitch you could feel.
+//
+// Segment one smoothstepped HERO→START, and smoothstep's derivative at t=1 is
+// zero — the camera eased to a dead stop at p=0.3. Segment two is a straight
+// lerp START→END, so its velocity is constant and non-zero from its first
+// frame: (END-START)/0.7, about 35 world-units per unit of progress. The camera
+// therefore halted and then lurched, instantaneously, at exactly the frame
+// where act 1 hands over to act 2 — felt in both directions, and worst coming
+// back up because you meet the kick while already decelerating.
+//
+// Fixed by giving segment one a cubic Hermite instead of an eased lerp: it
+// still leaves the summit from rest (the push-off the hold is built on), but it
+// ARRIVES at START already travelling at exactly the speed segment two departs
+// at. Velocity is now continuous across the seam, so there is nothing to feel.
+// The tangent has to be a vector, not an eased scalar — segment two leaves
+// along END-START, which is not the direction segment one was travelling.
+const POS_TANGENT = new THREE.Vector3()
+  .subVectors(END_POS, START_POS)
+  .multiplyScalar(HERO_PHASE / (1 - HERO_PHASE))
+const LOOK_TANGENT = new THREE.Vector3()
+  .subVectors(END_LOOK, START_LOOK)
+  .multiplyScalar(HERO_PHASE / (1 - HERO_PHASE))
+
+function pathLerp(
+  out: THREE.Vector3,
+  hero: THREE.Vector3,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  p: number,
+  tangent: THREE.Vector3
+) {
   if (p < HERO_PHASE) {
-    // Smoothstep the summit-to-entry blend so leaving the hold feels like a
-    // push-off rather than a linear slide.
+    // Cubic Hermite with a zero tangent at the summit and `tangent` on arrival.
+    // h10 is dropped because its coefficient (the departure tangent) is zero.
     const t = p / HERO_PHASE
-    out.lerpVectors(hero, start, t * t * (3 - 2 * t))
+    const t2 = t * t
+    const t3 = t2 * t
+    const h00 = 2 * t3 - 3 * t2 + 1
+    const h01 = -2 * t3 + 3 * t2
+    const h11 = t3 - t2
+    out.set(0, 0, 0)
+      .addScaledVector(hero, h00)
+      .addScaledVector(start, h01)
+      .addScaledVector(tangent, h11)
   } else {
     out.lerpVectors(start, end, (p - HERO_PHASE) / (1 - HERO_PHASE))
   }
@@ -701,12 +739,12 @@ function CameraRig({
     const aspect = size.width / size.height
     const portrait = Math.max(0, 0.85 - aspect)
 
-    pathLerp(pos.current, HERO_POS, START_POS, END_POS, p)
+    pathLerp(pos.current, HERO_POS, START_POS, END_POS, p, POS_TANGENT)
     pos.current.x += smoothed.current.x * 1.1
     pos.current.y += smoothed.current.y * 0.45 - portrait * 9
     camera.position.copy(pos.current)
 
-    pathLerp(look.current, HERO_LOOK, START_LOOK, END_LOOK, p)
+    pathLerp(look.current, HERO_LOOK, START_LOOK, END_LOOK, p, LOOK_TANGENT)
     look.current.y -= portrait * 6
     camera.lookAt(look.current)
 
