@@ -593,8 +593,14 @@ export default function SummitHero({
             blanks sit in a column of their own so the price list reads as a
             price list — scannable down the right edge — instead of as captions
             strung under a row. */}
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.82fr)] lg:gap-16">
-          <div>
+        {/* Act 1 is one thing: the range, and a reason to be here.
+            It used to be a two-column split with the three garments listed down
+            the right — the catalogue arriving before anyone had looked at the
+            mountain. The client's reference is the original centred frame, and
+            it is the better call: the products get their own act moments later,
+            and a hero that already sells is a hero nobody reads. */}
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+          <div className="flex flex-col items-center">
             <p data-summit-reveal className="invisible font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
               Printed in Dehradun · 30.3165° N
             </p>
@@ -667,49 +673,6 @@ export default function SummitHero({
             </div>
           </div>
 
-          {/* The evidence. A ruled list, not a carousel: three rows, each its own
-              door, with the prices aligned so the range is legible at a glance. */}
-          {garments.length > 0 && (
-            <div data-summit-reveal className="invisible">
-              <div className="mb-3 flex items-baseline justify-between border-b border-paper/15 pb-2">
-                <span className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/40">
-                  The drop
-                </span>
-                <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper/30">
-                  Made to order
-                </span>
-              </div>
-              {garments.map((g) => (
-                <Link
-                  key={g.slug}
-                  href={`/products/${g.slug}`}
-                  className="group flex items-center gap-4 border-b border-paper/[0.08] py-3 transition-colors duration-300 hover:border-paper/25"
-                >
-                  <div className="relative h-16 w-[52px] shrink-0 overflow-hidden rounded-sm bg-paper/5">
-                    <Image
-                      src={g.image}
-                      alt={g.name}
-                      fill
-                      sizes="52px"
-                      preload
-                      placeholder="blur"
-                      blurDataURL={BLUR_DATA_URL}
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-body text-[13px] text-paper">{g.name}</div>
-                    {g.blurb && (
-                      <div className="mt-0.5 truncate font-body text-[11px] text-paper/45">{g.blurb}</div>
-                    )}
-                  </div>
-                  <div className="shrink-0 font-mono text-[12px] text-paper/75 tabular-nums">
-                    {formatPrice(g.price)}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
         </div>
 
       </div>
