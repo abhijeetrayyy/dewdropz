@@ -263,46 +263,6 @@
     background-size: 100% 100%, 32px 32px, 32px 32px;
   }
 
-  /* ── The weather tiles ───────────────────────────────────────────────────
-     Four little windows on the hero, one per condition, each showing the
-     weather it switches the range to. Only the live one moves at rest; the
-     others wake on hover, which is what makes the row worth touching rather
-     than merely readable.
-
-     Everything here animates transform and opacity only, so four tiles cost
-     the compositor and not the main thread — the hero already has a WebGL
-     loop and a scroll scrub competing for it. */
-  @keyframes wx-sun {
-    0%, 100% { transform: translateY(0) scale(1); opacity: 0.9; }
-    50%      { transform: translateY(-1px) scale(1.06); opacity: 1; }
-  }
-  @keyframes wx-drift {
-    from { transform: translateX(-40%); }
-    to   { transform: translateX(40%); }
-  }
-  @keyframes wx-fall {
-    from { transform: translateY(-120%); opacity: 0; }
-    12%  { opacity: 1; }
-    88%  { opacity: 1; }
-    to   { transform: translateY(320%); opacity: 0; }
-  }
-  @keyframes wx-flake {
-    from { transform: translate(0, -120%); opacity: 0; }
-    15%  { opacity: 1; }
-    85%  { opacity: 1; }
-    to   { transform: translate(3px, 320%); opacity: 0; }
-  }
-
-  /* Paused by default. The tile turns them on when it is live or hovered, so
-     an idle hero is not running sixteen animations nobody is looking at. */
-  .wx-anim { animation-play-state: paused; }
-  .wx-on .wx-anim,
-  .wx-tile:hover .wx-anim,
-  .wx-tile:focus-visible .wx-anim { animation-play-state: running; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .wx-anim { animation: none !important; opacity: 0.85; }
-  }
 }
 
 

@@ -133,135 +133,19 @@ const SEASON_NOTE: Record<(typeof SEASONS)[number], string> = {
   snow:  'Quiet, and the light goes flat.',
 }
 
-/**
- * One tile: a small window showing the weather it switches to.
- *
- * The point of drawing the weather rather than labelling it is that a person
- * scanning a hero does not read a four-item list, but they do notice something
- * moving in the corner — and once they have noticed, a tile that visibly
- * *contains* rain is an obvious thing to press. The inactive ones are still
- * until hovered, so the row rewards a cursor going near it and costs nothing
- * while nobody is.
- */
-function WeatherTile({ season, live }: { season: (typeof SEASONS)[number]; live: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`relative block h-[42px] w-[58px] shrink-0 overflow-hidden rounded-[3px] border transition-all duration-500 ${
-        live
-          ? 'border-sage/70 shadow-[0_0_0_1px_rgba(123,164,111,0.25),0_6px_18px_-10px_rgba(123,164,111,0.5)]'
-          : 'border-paper/15 group-hover:border-paper/40'
-      }`}
-      style={{
-        // A sliver of the same sky the scene uses, so the tile reads as a
-        // window onto the range and not as an icon sitting on top of it.
-        background:
-          season === 'clear'
-            ? 'linear-gradient(180deg, #22314C 0%, #6E5A52 62%, #101E17 100%)'
-            : season === 'snow'
-              ? 'linear-gradient(180deg, #2A3344 0%, #4A5361 70%, #141C18 100%)'
-              : 'linear-gradient(180deg, #1B2430 0%, #2B3436 65%, #0D1512 100%)',
-      }}
-    >
-      {season === 'clear' && (
-        <>
-          <span
-            className="wx-anim absolute left-1/2 top-[28%] h-3.5 w-3.5 -translate-x-1/2 rounded-full"
-            style={{
-              background: 'radial-gradient(circle, #F3D9A8 0%, rgba(243,217,168,0.35) 60%, transparent 72%)',
-              animationName: 'wx-sun',
-              animationDuration: '3.2s',
-              animationTimingFunction: 'ease-in-out',
-              animationIterationCount: 'infinite',
-            }}
-          />
-          {/* The ridge, so "clear" is clear *of* something. */}
-          <span
-            className="absolute inset-x-0 bottom-0 h-3.5"
-            style={{ background: '#0C130F', clipPath: 'polygon(0 100%,0 55%,22% 18%,42% 62%,62% 26%,84% 70%,100% 42%,100% 100%)' }}
-          />
-        </>
-      )}
-
-      {season === 'fog' && (
-        <>
-          <span
-            className="absolute inset-x-0 bottom-0 h-3.5"
-            style={{ background: '#0C130F', clipPath: 'polygon(0 100%,0 55%,22% 18%,42% 62%,62% 26%,84% 70%,100% 42%,100% 100%)' }}
-          />
-          {[
-            { top: '34%', dur: '7s', o: 0.5 },
-            { top: '52%', dur: '5s', o: 0.38 },
-            { top: '68%', dur: '9s', o: 0.28 },
-          ].map((b, i) => (
-            <span
-              key={i}
-              className="wx-anim absolute h-[4px] w-[160%]"
-              style={{
-                top: b.top,
-                left: '-30%',
-                opacity: b.o,
-                background: 'linear-gradient(90deg, transparent, #D8DDD4 35%, #D8DDD4 65%, transparent)',
-                filter: 'blur(1.5px)',
-                animationName: 'wx-drift',
-                animationDuration: b.dur,
-                animationTimingFunction: 'ease-in-out',
-                animationIterationCount: 'infinite',
-                animationDirection: 'alternate',
-              }}
-            />
-          ))}
-        </>
-      )}
-
-      {season === 'rain' &&
-        [8, 20, 30, 40, 15, 35].map((x, i) => (
-          <span
-            key={i}
-            className="wx-anim absolute top-0 h-2.5 w-px"
-            style={{
-              left: `${x}%`,
-              background: 'linear-gradient(180deg, transparent, #BCD2E8)',
-              animationName: 'wx-fall',
-              animationDuration: `${0.62 + (i % 3) * 0.12}s`,
-              animationTimingFunction: 'linear',
-              animationIterationCount: 'infinite',
-              animationDelay: `${i * 0.11}s`,
-            }}
-          />
-        ))}
-
-      {season === 'snow' &&
-        [10, 22, 34, 44, 16, 38].map((x, i) => (
-          <span
-            key={i}
-            className="wx-anim absolute top-0 h-[3px] w-[3px] rounded-full bg-[#EEF2EA]"
-            style={{
-              left: `${x}%`,
-              animationName: 'wx-flake',
-              animationDuration: `${2.1 + (i % 3) * 0.5}s`,
-              animationTimingFunction: 'linear',
-              animationIterationCount: 'infinite',
-              animationDelay: `${i * 0.35}s`,
-            }}
-          />
-        ))}
-    </span>
-  )
-}
-
-// The weather, as four windows on the left of the frame.
+// The weather, as a control the scene itself previews.
 //
-// HeroWeather has always known how to render all four — real particle profiles
-// for rain and snow, a haze pass for fog — but the only way to reach any of
-// them was to type ?season=snow into the address bar, so in practice every
-// visitor saw `clear` and the whole layer was invisible work.
+// The last pass drew four little windows, one per condition, each with its own
+// rain or drifting fog inside. They were unreadable: at 58x42 on a dark ground
+// they are four murky rectangles, and the thing they were previewing is
+// already on screen at full size and in three dimensions. A thumbnail of the
+// hero, next to the hero, is a worse copy of something you are already
+// looking at.
 //
-// Four ticks in a rail fixed the reaching; it did not fix the noticing. A row
-// of small live windows does, because the eye goes to the one thing moving in
-// an otherwise still corner, and a tile with rain falling in it explains what
-// pressing it will do without a word of instruction. It sits high and left,
-// clear of the headline, where the scrim already buys it a legible ground.
+// So the previews are gone and the type does the work instead. Bigger, plainly
+// set, with the live condition marked and named — and the line underneath says
+// what the range looks like in it, which is the only thing a thumbnail was
+// ever going to tell you.
 function WeatherRail({
   season,
   onPick,
@@ -271,14 +155,11 @@ function WeatherRail({
 }) {
   return (
     <div data-summit-reveal className="invisible" role="group" aria-label="Weather on the range">
-      {/* Named for what it does, not for what it is. "Conditions" is a
-          heading; "Change the weather" is an offer, and this control's whole
-          problem was that nobody knew it was one. */}
       <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/50">
         Change the weather
       </p>
 
-      <div className="mt-3.5 flex flex-col gap-2">
+      <div className="mt-3 flex flex-col border-t border-paper/20">
         {SEASONS.map((s) => {
           const live = season === s
           return (
@@ -287,14 +168,19 @@ function WeatherRail({
               type="button"
               onClick={() => onPick(s)}
               aria-pressed={live}
-              className={`wx-tile group flex items-center gap-2.5 rounded-sm py-0.5 pr-2 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage ${
-                live ? 'wx-on' : ''
-              }`}
+              className="group flex items-center gap-2.5 border-b border-paper/12 py-2.5 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage"
             >
-              <WeatherTile season={s} live={live} />
+              {/* The marker keeps its space whether or not it is drawn, so the
+                  names never shift as you move between them. */}
               <span
-                className={`font-mono text-[11px] uppercase tracking-[0.16em] transition-colors duration-300 ${
-                  live ? 'text-sage' : 'text-paper/50 group-hover:text-paper/90'
+                aria-hidden="true"
+                className={`h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-300 ${
+                  live ? 'bg-sage' : 'bg-paper/0 group-hover:bg-paper/40'
+                }`}
+              />
+              <span
+                className={`font-body text-[15px] capitalize leading-none transition-colors duration-300 ${
+                  live ? 'text-paper' : 'text-paper/50 group-hover:text-paper/85'
                 }`}
               >
                 {s}
@@ -304,9 +190,7 @@ function WeatherRail({
         })}
       </div>
 
-      {/* The reward for pressing one. Changes with the choice, so the row
-          answers back instead of just looking different. */}
-      <p className="mt-4 max-w-[10.5rem] font-body text-[11px] leading-relaxed text-paper/50">
+      <p className="mt-3.5 max-w-[11rem] font-body text-[12px] leading-relaxed text-paper/55">
         {SEASON_NOTE[season as (typeof SEASONS)[number]] ?? ''}
       </p>
     </div>
@@ -1135,29 +1019,51 @@ export default function SummitHero({
             }}
           />
 
-          <div className="relative mx-auto w-full max-w-5xl px-8 lg:px-12">
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-sage" />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
-                    Trek Buddy
-                  </span>
-                </div>
-                <h2 className="mt-5 font-display text-[clamp(28px,3.2vw,46px)] font-light leading-[1.04] text-paper">
-                  Never go <span className="italic text-sage">alone.</span>
-                </h2>
-                <p className="mt-4 max-w-sm font-body text-sm leading-relaxed text-paper/70">
-                  Post the hour you are leaving. Whoever else is going that day finds you, and
-                  you decide who comes.
-                </p>
+          {/* ONE composed frame, not four corners.
+              The first pass put the headline top-left, the buttons floating
+              mid-right, the step caption bottom-left and the card bottom-right
+              — four things in four corners with a dead middle, and the caption
+              four hundred pixels from the card it was narrating. Two columns
+              on one vertical centre fixes all of it: the argument reads down
+              the left, the product sits on the right, and the caption is
+              attached to the thing it describes. */}
+          <div className="relative mx-auto grid w-full max-w-5xl grid-cols-1 items-center gap-10 px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)] lg:gap-16 lg:px-12">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-sage" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
+                  Trek Buddy
+                </span>
               </div>
 
-              {/* It said "Coming soon" and pointed at the customiser. Trek
-                  Buddy is live, so this is a real door now — and the third act
-                  of the hero is the only place on the homepage that was
-                  carrying it at all. */}
-              <div className="pointer-events-auto flex flex-wrap items-center gap-x-5 gap-y-3 pb-1">
+              <h2 className="mt-5 font-display text-[clamp(30px,3.6vw,50px)] font-light leading-[1.02] text-paper">
+                Never go <span className="italic text-sage">alone.</span>
+              </h2>
+
+              <p className="mt-4 max-w-sm font-body text-[15px] leading-relaxed text-paper/75">
+                Post the hour you are leaving. Whoever else is going that day finds you, and you
+                decide who comes.
+              </p>
+
+              {/* The caption for the beat you are watching, on a rail so it
+                  reads as narration of the card rather than as more copy. */}
+              <div className="relative mt-9 h-[92px] max-w-sm border-l border-paper/25 pl-5">
+                {[
+                  ['01', 'Somebody posts a walk', 'The place, the hour, and how many can come.'],
+                  ['02', 'People ask to come', 'Not a join button — a request, with a message.'],
+                  ['03', 'The host decides', 'They pick the group they are spending the day with.'],
+                  ['04', 'The meeting point unlocks', 'Only for the confirmed party, and only once it is big enough.'],
+                ].map(([n, title, body]) => (
+                  <div key={n} data-step className="absolute inset-x-0 top-0 pl-5 opacity-0" style={{ left: 0 }}>
+                    <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-paper">
+                      <span className="text-sage">{n}</span> · {title}
+                    </p>
+                    <p className="mt-2 font-body text-[13px] leading-relaxed text-paper/60">{body}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pointer-events-auto mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <Link
                   href="/trek-buddy"
                   className="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 font-body text-[10px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
@@ -1166,90 +1072,70 @@ export default function SummitHero({
                 </Link>
                 <Link
                   href="/trek-buddy/people"
-                  className="border-b border-paper/25 pb-0.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/60 transition-colors duration-300 hover:text-paper"
+                  className="border-b border-paper/25 pb-0.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/65 transition-colors duration-300 hover:text-paper"
                 >
                   Who is out there
                 </Link>
               </div>
             </div>
 
-            {/* ── The loop, run once ────────────────────────────────────
-                What Trek Buddy actually does, shown rather than listed. A
-                walk is posted, people ask, the host decides, and only then
-                does the exact meeting point appear — which is the single rule
-                the whole product is built around, so it gets the only reveal
-                in the act.
-
-                This is a demonstration, the same way act 2 types "FEEL ALIVE"
-                onto a garment nobody ordered. It is not a live listing, and
-                the caption says which step you are watching so it cannot be
-                mistaken for one. */}
-            <div ref={boardRef} className="mt-10 grid gap-8 lg:mt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-end">
-              {/* The step you are on. One line, replaced rather than stacked. */}
-              <div className="relative h-16 lg:h-20">
-                {[
-                  ['01', 'Somebody posts a walk', 'The place, the hour, and how many can come.'],
-                  ['02', 'People ask to come', 'Not a join button. A request, with a message.'],
-                  ['03', 'The host decides', 'They pick the group they are spending the day with.'],
-                  ['04', 'The meeting point unlocks', 'Only for the confirmed party, and only once it is big enough.'],
-                ].map(([n, title, body]) => (
-                  <div key={n} data-step className="absolute inset-x-0 top-0 opacity-0">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-sage">
-                      {n} — {title}
-                    </p>
-                    <p className="mt-2 max-w-sm font-body text-[13px] leading-relaxed text-paper/65">
-                      {body}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* The card. Same construction as a real one on the board — the
-                  hour rail down the left, the party as dots, the withheld
-                  line at the bottom. */}
+            {/* The card, and it is the point of the act, so it gets the size
+                and the ground to hold its own against a bright photograph. */}
+            <div ref={boardRef} className="min-w-0">
               <div
                 data-plan-card
-                className="flex overflow-hidden rounded-sm border border-paper/20 bg-ink/70 opacity-0 backdrop-blur-md"
+                className="flex overflow-hidden rounded-sm border border-paper/25 bg-ink/80 opacity-0 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl"
               >
-                <span aria-hidden="true" className="w-1 shrink-0 bg-[#7FA471]" />
-                <div className="min-w-0 flex-1 p-5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-sm text-[#9BC08C] tabular-nums">07:00</span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/50">
+                <span aria-hidden="true" className="w-1.5 shrink-0 bg-[#7FA471]" />
+                <div className="min-w-0 flex-1 p-6">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="font-mono text-[15px] text-[#9BC08C] tabular-nums">07:00</span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/55">
                       First light
                     </span>
                   </div>
-                  <h3 className="mt-1 font-display text-xl leading-tight text-paper">Nag Tibba</h3>
-                  <p className="mt-1 font-body text-xs text-paper/55">
+                  <h3 className="mt-1.5 font-display text-[26px] leading-tight text-paper">
+                    Nag Tibba
+                  </h3>
+                  <p className="mt-1.5 font-body text-[13px] text-paper/60">
                     Trekking · from Dehradun ISBT · back 16:00
                   </p>
 
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-5 flex items-center gap-2.5">
                     <div className="flex">
                       {[0, 1, 2, 3].map((i) => (
                         <span
                           key={i}
                           data-party-dot
-                          style={{ marginLeft: i === 0 ? 0 : -6 }}
-                          className="h-5 w-5 rounded-full border border-dashed border-paper/35 bg-transparent"
+                          // A ring in the card's own ground, so four filled
+                          // circles overlapping still read as four people
+                          // rather than as one green smear.
+                          style={{
+                            marginLeft: i === 0 ? 0 : -7,
+                            boxShadow: '0 0 0 2px rgba(10,14,11,0.92)',
+                          }}
+                          className="h-6 w-6 rounded-full border border-dashed border-paper/40 bg-transparent"
                         />
                       ))}
                     </div>
-                    <span data-decided className="ml-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#9BC08C] opacity-0">
+                    <span
+                      data-decided
+                      className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#9BC08C] opacity-0"
+                    >
                       4 going
                     </span>
                   </div>
 
-                  <ul className="mt-4 space-y-1.5 border-t border-paper/12 pt-3.5">
+                  <ul className="mt-5 space-y-2 border-t border-paper/15 pt-4">
                     {['Priya', 'Rahul', 'Sara'].map((who) => (
                       <li
                         key={who}
                         data-ask-row
-                        className="flex items-center gap-2 font-body text-[12px] text-paper/65 opacity-0"
+                        className="flex items-center gap-2.5 font-body text-[13px] text-paper/70 opacity-0"
                       >
                         <span
                           aria-hidden="true"
-                          className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-paper/12 font-mono text-[9px] text-paper/80"
+                          className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-paper/15 font-mono text-[10px] text-paper"
                         >
                           {who[0]}
                         </span>
@@ -1258,20 +1144,20 @@ export default function SummitHero({
                     ))}
                   </ul>
 
-                  {/* The withheld line. Redacted until the party is there,
-                      which is the rule stated as a picture. */}
-                  <div data-point-row className="mt-4 border-t border-paper/12 pt-3.5 opacity-35">
-                    <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-paper/45">
+                  {/* The withheld line — the rule the product is built on,
+                      stated as a picture rather than a sentence. */}
+                  <div data-point-row className="mt-5 border-t border-paper/15 pt-4 opacity-40">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-paper/50">
                       Exact meeting point
                     </p>
-                    <div className="relative mt-1.5">
-                      <p className="font-body text-[13px] text-paper">
+                    <div className="relative mt-2 inline-block">
+                      <p className="font-body text-[14px] text-paper">
                         Pantwari trailhead, by the forest gate
                       </p>
                       <span
                         data-point-mask
                         aria-hidden="true"
-                        className="absolute inset-0 origin-right bg-paper/25"
+                        className="absolute -inset-x-1 inset-y-0 origin-right bg-paper/30"
                       />
                     </div>
                   </div>
