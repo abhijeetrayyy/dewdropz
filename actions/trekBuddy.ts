@@ -347,6 +347,13 @@ export async function getTrekPlan(planId: string) {
     plan: labelled as TrekPlanRow,
     isHost,
     myStatus: (mine?.status as string) ?? null,
+    // Only computed when it means something. A position for somebody who is
+    // confirmed, declined or not involved is a number with no referent.
+    waitlistPosition:
+      mine?.status === 'waitlisted'
+        ? ((await admin.rpc('trek_waitlist_position', { p_plan: planId, p_user: user.id }))
+            .data as number | null)
+        : null,
     meetingPoint: (details?.meeting_point as string) ?? null,
     logistics: (details?.logistics as string) ?? null,
     roster: roster ?? [],

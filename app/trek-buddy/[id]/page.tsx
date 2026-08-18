@@ -41,7 +41,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   const data = await getTrekPlan(id)
   if (!data) notFound()
 
-  const { plan, isHost, myStatus, meetingPoint, logistics, roster } = data
+  const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition } = data
   const full = plan.spots_left <= 0
   const cancelled = plan.status === 'cancelled'
   const confirmed = myStatus === 'confirmed'
@@ -86,6 +86,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
               full={full}
               cancelled={cancelled}
               roster={roster as { user_id: string; display_name: string; status: string; message: string | null }[]}
+              waitlistPosition={waitlistPosition}
             />
 
             {/* The exact spot. Not conditional rendering hiding a value the page
