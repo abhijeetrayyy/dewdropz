@@ -34,9 +34,12 @@ const chip = (on: boolean, dark: boolean) =>
 export default function BoardFilters({
   counts,
   tone = 'light',
+  withSearch = true,
 }: {
   counts: Record<string, number>
   tone?: 'light' | 'dark'
+  /** Discover renders its own, larger, above the chips — see that page. */
+  withSearch?: boolean
 }) {
   const dark = tone === 'dark'
   const router = useRouter()
@@ -78,6 +81,7 @@ export default function BoardFilters({
 
   return (
     <div className="space-y-3">
+      {withSearch && (
       <label className="block">
         <span className="sr-only">Search walks by place</span>
         <input
@@ -95,6 +99,7 @@ export default function BoardFilters({
           }
         />
       </label>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button type="button" onClick={() => set('activity', 'all')} className={chip(activity === 'all', dark)}>

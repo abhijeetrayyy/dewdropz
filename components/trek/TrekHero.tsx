@@ -30,7 +30,7 @@ export default function TrekHero({
   openCount: number
   canHost: boolean
   /** Which Trek Buddy page you are on. */
-  active: 'board' | 'people' | 'basecamp' | 'messages' | 'yours' | 'new' | 'profile'
+  active: 'board' | 'discover' | 'people' | 'basecamp' | 'messages' | 'yours' | 'new' | 'profile'
   /** The viewer, when they have finished joining. Drives the presence card. */
   me?: MyTrekCard | null
   /** Unread notifications, shown on the Yours tab. */
@@ -41,6 +41,10 @@ export default function TrekHero({
 }) {
   const tabs = [
     { key: 'board', label: 'The board', href: '/trek-buddy' },
+    // Discover is the same walks arranged for looking rather than for
+    // scanning: search and filters first, one walk given the width, then the
+    // buckets. The board stays for people who know what they are after.
+    { key: 'discover', label: 'Discover', href: '/trek-buddy/discover' },
     { key: 'people', label: 'Who is out there', href: '/trek-buddy/people' },
     // Next to the directory rather than beside "Yours": it answers a question
     // about other people, not about your own walks.
