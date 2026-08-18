@@ -128,6 +128,69 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
               </Block>
             )}
 
+            {/* The day, hour by hour. Optional, and the thing that most changes
+                whether a stranger feels able to say yes: "moderate, 21 km" is a
+                statistic, and "05:10 meet, 09:30 summit, back at the cars by 2"
+                is a day somebody can picture themselves inside.
+
+                The hour rail runs down it, the same colour language the board
+                and the masthead already use. */}
+            {plan.itinerary.length > 0 && (
+              <Block label="The day, hour by hour">
+                <ol className="space-y-0">
+                  {plan.itinerary.map((m, i) => (
+                    <li key={`${m.at}-${i}`} className="flex gap-4 pb-4 last:pb-0">
+                      <div className="flex flex-col items-center">
+                        <span
+                          aria-hidden="true"
+                          style={{ background: light.bar }}
+                          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                        />
+                        {i < plan.itinerary.length - 1 && (
+                          <span aria-hidden="true" className="mt-1 w-px flex-1 bg-rule" />
+                        )}
+                      </div>
+                      <div className="min-w-0 pb-1">
+                        <span
+                          style={{ color: light.ink }}
+                          className="font-mono text-xs tabular-nums"
+                        >
+                          {m.at}
+                        </span>
+                        <p className="font-body text-sm leading-snug text-text">{m.label}</p>
+                        {m.detail && (
+                          <p className="mt-0.5 font-body text-xs leading-relaxed text-mid">
+                            {m.detail}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-1 font-body text-xs leading-relaxed text-mid">
+                  The host&apos;s plan for the day, not a timetable. Hills and weather do what
+                  they like.
+                </p>
+              </Block>
+            )}
+
+            {/* Set as a list of things, not a paragraph about things, because
+                this is read standing over a rucksack the night before. */}
+            {plan.bring.length > 0 && (
+              <Block label="Bring">
+                <ul className="flex flex-wrap gap-2">
+                  {plan.bring.map((b) => (
+                    <li
+                      key={b}
+                      className="rounded-full border border-rule px-3 py-1 font-body text-xs text-text"
+                    >
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </Block>
+            )}
+
             {plan.night_note && (
               <Block label={`${DAY_PART_LABEL[plan.day_part]} · getting back`}>
                 <p className="font-body text-sm leading-relaxed text-text">{plan.night_note}</p>

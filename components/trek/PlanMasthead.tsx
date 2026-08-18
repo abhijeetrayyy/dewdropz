@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
 import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
+import { formatPrice } from '@/lib/utils'
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '—')
 
@@ -40,6 +41,17 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
     ['Going', `${plan.going_count}/${plan.capacity}`],
     ['Difficulty', DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty],
   ]
+
+  // Optional, and only shown when the host actually knows. A blank is more use
+  // than a number somebody invented, because a stranger will plan their day
+  // around whatever this says.
+  if (plan.distance_km != null) facts.push(['Distance', `${plan.distance_km} km`])
+  if (plan.gain_m != null) facts.push(['Climb', `${plan.gain_m.toLocaleString('en-IN')} m`])
+  // "Shared", not "price". The board never takes money and this is a split of
+  // fuel and permits — calling it a cost would make it a ticket.
+  if (plan.cost_paise != null) {
+    facts.push(['Cost share', plan.cost_paise === 0 ? 'Nothing' : `${formatPrice(plan.cost_paise)} each`])
+  }
 
   return (
     <header

@@ -3,10 +3,12 @@
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import type { TrekMoment } from '@/actions/trekBuddy'
 import { createTrekPlan, type TrekKind } from '@/actions/trekBuddy'
 import { lightForTime } from '@/lib/trek'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import CoverPicker from '@/components/trek/CoverPicker'
+import DepthFields from '@/components/trek/DepthFields'
 
 /**
  * yyyy-mm-dd from a Date's LOCAL parts.
@@ -103,6 +105,11 @@ export default function NewPlanForm({
     seniorFriendly: false,
     minTrust: 0 as 0 | 1 | 2,
     coverUrl: null as string | null,
+    distanceKm: '',
+    gainM: '',
+    costRupees: '',
+    bring: [] as string[],
+    itinerary: [] as TrekMoment[],
     languages: [] as string[],
     capacity: Math.max(4, initial.minParty),
     difficulty: 'moderate' as 'easy' | 'moderate' | 'difficult',
@@ -183,6 +190,15 @@ export default function NewPlanForm({
         activityOther: spec.isOpenEnded ? f.activityOther.trim() : undefined,
         nightNote: spec.needsNightNote ? f.nightNote : undefined,
         coverUrls: f.coverUrl ? [f.coverUrl] : undefined,
+        // '' means "not stated", which is a different thing from zero and has
+        // to stay different all the way to the column.
+        distanceKm: f.distanceKm.trim() === '' ? null : Number(f.distanceKm),
+        gainM: f.gainM.trim() === '' ? null : Number(f.gainM),
+        costPaise: f.costRupees.trim() === '' ? null : Math.round(Number(f.costRupees) * 100),
+        bring: f.bring.map((b) => b.trim()).filter(Boolean),
+        itinerary: f.itinerary
+          .map((m) => ({ ...m, label: m.label.trim(), detail: m.detail?.trim() || undefined }))
+          .filter((m) => m.label !== ''),
       })
       if ('error' in r) { setError(r.error); return }
       router.push('/trek-buddy')
@@ -507,6 +523,17 @@ export default function NewPlanForm({
                   </p>
                 )}
               </div>
+
+              <DepthFields
+                distanceKm={f.distanceKm}
+                gainM={f.gainM}
+                costRupees={f.costRupees}
+                bring={f.bring}
+                itinerary={f.itinerary}
+                set={set}
+                label={label}
+                field={field}
+              />
 
               <div>
                 <span className={label}>The photograph</span>

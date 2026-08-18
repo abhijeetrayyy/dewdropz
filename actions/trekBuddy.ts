@@ -26,6 +26,9 @@ import type { TrekActivity } from '@/lib/trek'
 
 export type TrekEffort = 'easy' | 'moderate' | 'hard'
 
+/** One line of a walk's itinerary. `at` is HH:MM, validated in the database. */
+export type TrekMoment = { at: string; label: string; detail?: string }
+
 export type TrekPlanRow = {
   id: string
   host_id: string
@@ -54,6 +57,11 @@ export type TrekPlanRow = {
   senior_friendly: boolean
   languages: string[]
   cover_urls: string[]
+  distance_km: number | null
+  gain_m: number | null
+  cost_paise: number | null
+  bring: string[]
+  itinerary: TrekMoment[]
   is_live: boolean
   note: string | null
   status: 'open' | 'cancelled'
@@ -459,6 +467,11 @@ export async function createTrekPlan(input: {
   nightNote?: string
   womenOnly?: boolean
   minTrust?: 0 | 1 | 2
+  distanceKm?: number | null
+  gainM?: number | null
+  costPaise?: number | null
+  bring?: string[]
+  itinerary?: TrekMoment[]
   seniorFriendly?: boolean
   languages?: string[]
   coverUrls?: string[]
@@ -488,6 +501,11 @@ export async function createTrekPlan(input: {
     p_cover_urls: input.coverUrls ?? [],
     p_activity_other: input.activityOther?.trim() || null,
     p_min_trust: input.minTrust ?? 0,
+    p_distance_km: input.distanceKm ?? null,
+    p_gain_m: input.gainM ?? null,
+    p_cost_paise: input.costPaise ?? null,
+    p_bring: input.bring ?? [],
+    p_itinerary: input.itinerary ?? [],
     p_actor: user.id,
   }, ['/trek-buddy'])
 
