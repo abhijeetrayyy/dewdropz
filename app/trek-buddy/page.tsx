@@ -278,7 +278,11 @@ export default async function TrekBuddyPage({
                           {bucket.plans.length}
                         </span>
                       </div>
-                      <ul className="grid gap-3">
+                      {/* A grid now the cards are photographs. One column on a
+                          phone so the picture keeps its size — a photo-led card
+                          shrunk into a two-up on a 375px screen is a thumbnail,
+                          and a thumbnail of a hillside tells you nothing. */}
+                      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {bucket.plans.map((p) => (
                           <li key={p.id}>
                             <TrekPlanCard plan={p} />

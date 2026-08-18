@@ -6,6 +6,7 @@ const STORAGE_BUCKETS = {
   AVATARS: 'avatars',
   COLLECTIONS: 'collections',
   DESIGNS: 'design-uploads',
+  TREK_COVERS: 'trek-covers',
 } as const
 
 // Per-bucket overrides for ensureBucketsExist — everything defaults to the

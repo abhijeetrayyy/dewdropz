@@ -207,16 +207,27 @@ export type HourLight = {
   bar: string
   /** Type colour that survives on the card's own ground. */
   ink: string
+  /**
+   * The same hour, legible on ink.
+   *
+   * Needed the moment cards became photographs: the card's foot is an 0.86
+   * scrim of ink, and `bar` is chosen to read against paper. Measured against
+   * #0C100D, predawn came out at 1.69:1 and midday at 1.86:1 — not "a bit
+   * low", but invisible. Every value here clears 4.5:1.
+   */
+  onDark: string
   /** A wash behind the card for the two ends of the day. */
   wash: string
 }
 
 const LIGHTS: Record<HourLight['key'], HourLight> = {
-  predawn: { key: 'predawn', label: 'Before light', bar: '#2E3A56', ink: '#2E3A56', wash: 'rgba(46,58,86,0.05)' },
-  morning: { key: 'morning', label: 'First light',  bar: '#7FA471', ink: '#3C6A33', wash: 'transparent' },
-  midday:  { key: 'midday',  label: 'Full day',     bar: '#27481F', ink: '#27481F', wash: 'transparent' },
-  dusk:    { key: 'dusk',    label: 'Last light',   bar: '#B8826B', ink: '#8A5A44', wash: 'rgba(184,130,107,0.06)' },
-  night:   { key: 'night',   label: 'After dark',   bar: '#0C100D', ink: '#0C100D', wash: 'rgba(12,16,13,0.05)' },
+  // onDark values and their measured contrast against #0C100D:
+  //   predawn 7.86:1   morning 6.80:1   midday 10.33:1   dusk 5.88:1   night 13.34:1
+  predawn: { key: 'predawn', label: 'Before light', bar: '#2E3A56', ink: '#2E3A56', onDark: '#8FA6D8', wash: 'rgba(46,58,86,0.05)' },
+  morning: { key: 'morning', label: 'First light',  bar: '#7FA471', ink: '#3C6A33', onDark: '#7FA471', wash: 'transparent' },
+  midday:  { key: 'midday',  label: 'Full day',     bar: '#27481F', ink: '#27481F', onDark: '#A8C79C', wash: 'transparent' },
+  dusk:    { key: 'dusk',    label: 'Last light',   bar: '#B8826B', ink: '#8A5A44', onDark: '#B8826B', wash: 'rgba(184,130,107,0.06)' },
+  night:   { key: 'night',   label: 'After dark',   bar: '#0C100D', ink: '#0C100D', onDark: '#DDD7C6', wash: 'rgba(12,16,13,0.05)' },
 }
 
 /** Which light a departure falls in. Takes 'HH:MM' or 'HH:MM:SS'. */

@@ -49,7 +49,7 @@ export default async function NewTrekPlanPage({
             </p>
           </div>
           <div className="mt-8">
-            <NewPlanForm kinds={kinds} initialActivity={initial} trekGender={membership.trekGender} />
+            <NewPlanForm kinds={kinds} initialActivity={initial} trekGender={membership.trekGender} userId={membership.userId!} />
           </div>
         </section>
       </main>

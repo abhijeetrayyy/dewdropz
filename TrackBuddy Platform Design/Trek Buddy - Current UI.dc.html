@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Archivo:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#F8F5ED; color:#15150F; }
+  body { font-family: Archivo, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color:#27481F; }
+  a:hover { color:#3C6A33; }
+  ::selection { background:#27481F; color:#F8F5ED; }
+  input:focus, textarea:focus { border-color:#27481F !important; outline:none; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; flex-direction:column; background:#F8F5ED">
+
+<!-- ══ NavBar (solid state — every Trek Buddy page) ══ -->
+<header style="position:fixed; top:0; left:0; right:0; z-index:50; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:0 40px; height:56px; background:rgba(12,16,13,0.95); backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,0.06); box-shadow:0 2px 24px rgba(0,0,0,0.2)">
+  <a onClick="{{ goBoard }}" style="justify-self:start; display:inline-flex; align-items:center; gap:10px; cursor:pointer; text-decoration:none">
+    <img src="assets/mountain-mark.png" alt="" style="height:26px; width:45px; object-fit:contain">
+    <span style="font-family:Fraunces,Georgia,serif; font-size:16px; letter-spacing:0.1em; color:#F8F5ED">DEWDROPZ</span>
+  </a>
+  <nav style="display:flex; align-items:center; gap:36px; justify-self:center">
+    <sc-for list="{{ navLinks }}" as="n" hint-placeholder-count="5">
+      <span style="position:relative; display:block; padding:8px 0; font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:{{ n.color }}; cursor:pointer; transition:color .3s">
+        {{ n.label }}
+        <span style="position:absolute; bottom:2px; left:0; height:1px; width:100%; background:{{ n.under }}"></span>
+      </span>
+    </sc-for>
+  </nav>
+  <div style="display:flex; align-items:center; gap:20px; justify-self:end; color:rgba(248,245,237,0.8)">
+    <span style="display:flex; align-items:center; gap:8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      <span style="font-size:12px">2</span>
+    </span>
+    <span style="display:flex; align-items:center; gap:8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20L9 6h6l5 14H4z" stroke-linejoin="round"></path><path d="M9 6a3 3 0 0 1 6 0" stroke-linecap="round"></path></svg>
+      <span style="font-size:12px">0</span>
+    </span>
+    <span style="position:relative; display:flex">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c0-4.14 3.36-7 7.5-7s7.5 2.86 7.5 7" stroke-linecap="round"></path></svg>
+      <span style="position:absolute; top:-2px; right:-2px; height:7px; width:7px; border-radius:999px; background:#7BA46F; box-shadow:0 0 0 2px #0C100D"></span>
+    </span>
+  </div>
+</header>
+
+<!-- ══ GATE (signed out) ══ -->
+<sc-if value="{{ isGate }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Signed-out gate" style="flex:1">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D">
+    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.8">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.8), rgba(12,16,13,0.3), rgba(12,16,13,0.9))"></div>
+    <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(12,16,13,0.7), rgba(12,16,13,0.25), transparent)"></div>
+    <div style="position:relative; max-width:768px; margin:0 auto; padding:144px 40px 48px">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.26em; color:#7BA46F">Trek Buddy · Dehradun and around</p>
+      <h1 style="margin:16px 0 0; max-width:576px; font-family:Fraunces,Georgia,serif; font-size:50px; font-weight:300; line-height:0.98; color:#F8F5ED">Never go <em style="color:#7BA46F">alone.</em></h1>
+      <p style="margin:16px 0 0; max-width:448px; font-size:14px; line-height:1.625; color:rgba(248,245,237,0.7)">Members post the hour they are going, and other members ask to come. Not a booking platform, and nobody pays for a place.</p>
+    </div>
+  </header>
+  <section style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:672px; margin:0 auto">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#27481F">8 walks on the board</p>
+      <h2 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:32px; font-weight:400; line-height:1.25; color:#15150F">You need an account to see who is going where.</h2>
+      <p style="margin:12px 0 0; max-width:448px; font-size:14px; line-height:1.625; color:#52504A">Walks are visible to signed-in members only, and the exact meeting point is shown to nobody but the people the host has confirmed. That is deliberate, and it is the reason this page is not a list.</p>
+      <ol style="margin:32px 0 0; padding:24px 0 0; border-top:1px solid #DDD7C6; list-style:none; display:flex; flex-direction:column; gap:16px">
+        <sc-for list="{{ gateSteps }}" as="g" hint-placeholder-count="3">
+          <li style="display:flex; gap:16px">
+            <span style="margin-top:2px; font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">{{ g.n }}</span>
+            <span>
+              <span style="display:block; font-size:14px; color:#15150F">{{ g.t }}</span>
+              <span style="display:block; font-size:12px; color:#52504A">{{ g.d }}</span>
+            </span>
+          </li>
+        </sc-for>
+      </ol>
+      <div style="margin-top:32px; display:flex; flex-wrap:wrap; gap:16px">
+        <button onClick="{{ goBoard }}" style="border-radius:4px; background:#27481F; padding:12px 24px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer" style-hover="background:#3C6A33">Sign in</button>
+        <span style="align-self:center; border-bottom:1px solid #DDD7C6; padding-bottom:4px; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A; cursor:pointer" style-hover="color:#15150F">Read the trail guide instead</span>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══ SETUP ══ -->
+<sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Setup (onboarding)" style="flex:1">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D">
+    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.8">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.8), rgba(12,16,13,0.3), rgba(12,16,13,0.9))"></div>
+    <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(12,16,13,0.7), rgba(12,16,13,0.25), transparent)"></div>
+    <div style="position:relative; max-width:768px; margin:0 auto; padding:144px 40px 48px">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.26em; color:#7BA46F">Trek Buddy · Setting up</p>
+      <h1 style="margin:16px 0 0; max-width:576px; font-family:Fraunces,Georgia,serif; font-size:50px; font-weight:300; line-height:0.98; color:#F8F5ED">Before you go <em style="color:#7BA46F">anywhere.</em></h1>
+      <p style="margin:16px 0 0; max-width:448px; font-size:14px; line-height:1.625; color:rgba(248,245,237,0.7)">A name for the board, your age, and what you are agreeing to. It takes a minute and you only do it once.</p>
+    </div>
+  </header>
+  <section style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:448px; margin:0 auto">
+      <label style="display:block">
+        <span style="font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">Name other walkers see</span>
+        <input value="Aarav" onChange="{{ noop }}" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 12px; font-family:Archivo,sans-serif; font-size:14px; color:#15150F; box-sizing:border-box">
+        <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Not your delivery name. A first name is plenty.</span>
+      </label>
+      <label style="display:block; margin-top:24px">
+        <span style="font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">Date of birth</span>
+        <input type="date" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 12px; font-family:Archivo,sans-serif; font-size:14px; color:#15150F; box-sizing:border-box">
+        <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Trek Buddy is for adults. We do not show this to anyone.</span>
+      </label>
+      <div style="margin-top:32px; border-radius:4px; border:1px solid #DDD7C6; background:rgba(241,233,215,0.5); padding:16px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#27481F">Before you go</h2>
+        <ul style="margin:8px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px">
+          <sc-for list="{{ safetyCompact }}" as="s" hint-placeholder-count="6">
+            <li style="font-size:12px; color:#52504A"><span style="color:#15150F">{{ s.t }}.</span> {{ s.d }}</li>
+          </sc-for>
+        </ul>
+      </div>
+      <label style="margin-top:24px; display:flex; cursor:pointer; align-items:flex-start; gap:12px; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:16px">
+        <input type="checkbox" style="margin-top:4px; height:16px; width:16px; flex-shrink:0; accent-color:#27481F">
+        <span style="font-size:12px; line-height:1.625; color:#52504A">I understand DEWDROPZ does not organise, lead, vet or supervise these walks and does not check who anyone is. I am meeting strangers outdoors at my own risk, I will tell someone not on the walk where I am going, and I will not post anything I would not want a stranger to know.</span>
+      </label>
+      <button onClick="{{ goBoard }}" style="margin-top:32px; width:100%; border-radius:4px; background:#27481F; padding:12px 24px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer" style-hover="background:#3C6A33">Join the board</button>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══ TABBED PAGES (board / people / yours / new / profile) ══ -->
+<sc-if value="{{ isTabbed }}" hint-placeholder-val="{{ true }}">
+<main style="flex:1">
+  <!-- TrekHero -->
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D">
+    <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; opacity:0.8">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.72) 0%, rgba(12,16,13,0.20) 28%, rgba(12,16,13,0.42) 58%, rgba(12,16,13,0.70) 80%, rgba(12,16,13,0.80) 100%)"></div>
+    <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(12,16,13,0.55) 0%, rgba(12,16,13,0.18) 45%, rgba(12,16,13,0.02) 78%, rgba(12,16,13,0) 100%)"></div>
+    <div style="position:relative; max-width:1024px; margin:0 auto; padding:144px 40px 32px">
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:32px">
+        <div style="min-width:0; flex:1">
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#7BA46F">Trek Buddy · Dehradun and around</p>
+          <h1 style="margin:16px 0 0; max-width:576px; font-family:Fraunces,Georgia,serif; font-size:54px; font-weight:300; line-height:0.98; color:#F8F5ED">Never go <em style="color:#7BA46F">alone.</em></h1>
+          <p style="margin:16px 0 0; max-width:448px; font-size:14px; line-height:1.625; color:rgba(248,245,237,0.7)">{{ heroLede }}</p>
+        </div>
+        <!-- YouCard -->
+        <div onClick="{{ goProfile }}" style="width:290px; flex-shrink:0; border-radius:4px; border:1px solid rgba(248,245,237,0.15); background:rgba(12,16,13,0.45); padding:20px; backdrop-filter:blur(12px); cursor:pointer; transition:border-color .3s" style-hover="border-color:rgba(123,164,111,0.5)">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+            <p style="margin:0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.24em; color:rgba(248,245,237,0.4)">You</p>
+            <span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.14em; color:rgba(248,245,237,0.4)">Edit →</span>
+          </div>
+          <div style="margin-top:16px; display:flex; align-items:center; gap:14px">
+            <span style="display:grid; height:48px; width:48px; flex-shrink:0; place-items:center; border-radius:999px; background:rgba(123,164,111,0.2); color:#7BA46F; font-family:Fraunces,Georgia,serif; font-size:16px">AM</span>
+            <div style="min-width:0">
+              <p style="margin:0; font-family:Fraunces,Georgia,serif; font-size:20px; line-height:1.25; color:#F8F5ED; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">Aarav Mehta</p>
+              <p style="margin:2px 0 0; font-size:11px; color:rgba(248,245,237,0.5)">Dehradun · Seasoned · 6y</p>
+            </div>
+          </div>
+          <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; border-top:1px solid rgba(248,245,237,0.12); padding-top:14px">
+            <sc-for list="{{ youStats }}" as="s" hint-placeholder-count="3">
+              <div>
+                <p style="margin:0; font-family:'Space Mono',monospace; font-size:18px; line-height:1; font-variant-numeric:tabular-nums; color:#F8F5ED">{{ s.n }}</p>
+                <p style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:rgba(248,245,237,0.4)">{{ s.label }}</p>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:16px; border-top:1px solid rgba(248,245,237,0.12); padding-top:14px">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+              <p style="margin:0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(248,245,237,0.4)">Your profile</p>
+              <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; font-variant-numeric:tabular-nums; color:rgba(248,245,237,0.55)">7/7</p>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:4px">
+              <sc-for list="{{ meterSegs }}" as="m" hint-placeholder-count="7">
+                <span style="height:3px; flex:1; border-radius:999px; background:#7BA46F"></span>
+              </sc-for>
+            </div>
+            <p style="margin:10px 0 0; font-size:11px; line-height:1.4; color:rgba(248,245,237,0.55)">Nothing missing. This is what a stranger sees before asking to walk with you.</p>
+          </div>
+        </div>
+      </div>
+      <!-- Tabs -->
+      <nav style="margin-top:32px; display:flex; flex-wrap:wrap; column-gap:24px; row-gap:8px; border-bottom:1px solid rgba(248,245,237,0.25); padding-bottom:12px">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+          <span onClick="{{ goTab }}" data-key="{{ t.key }}" style="position:relative; padding-bottom:8px; font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:{{ t.color }}; cursor:pointer; transition:color .3s">
+            {{ t.label }}<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="margin-left:6px; display:inline-flex; min-width:15px; align-items:center; justify-content:center; border-radius:999px; background:#7BA46F; padding:1px 4px; font-family:'Space Mono',monospace; font-size:9px; line-height:1; color:#0C100D; font-variant-numeric:tabular-nums">3</span></sc-if>
+            <span style="position:absolute; bottom:-13px; left:0; height:1px; width:100%; background:{{ t.under }}"></span>
+          </span>
+        </sc-for>
+      </nav>
+      <!-- BoardFilters (board only) -->
+      <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:24px; display:flex; flex-direction:column; gap:12px">
+          <input placeholder="Search a place — Nag Tibba, Mussoorie, Benog…" style="width:100%; border-radius:4px; border:1px solid rgba(248,245,237,0.3); background:rgba(12,16,13,0.7); padding:12px 14px; font-family:Archivo,sans-serif; font-size:14px; color:#F8F5ED; box-shadow:0 2px 20px -8px rgba(0,0,0,0.6); backdrop-filter:blur(12px); box-sizing:border-box">
+          <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px">
+            <sc-for list="{{ activityChips }}" as="c" hint-placeholder-count="7">
+              <button onClick="{{ setActivity }}" data-key="{{ c.key }}" style="white-space:nowrap; border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 12px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; backdrop-filter:blur(4px); transition:all .2s">{{ c.label }}<span style="margin-left:6px; opacity:0.6">{{ c.count }}</span></button>
+            </sc-for>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px">
+            <sc-for list="{{ whenChips }}" as="c" hint-placeholder-count="3">
+              <button onClick="{{ setWhen }}" data-key="{{ c.key }}" style="white-space:nowrap; border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 12px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; backdrop-filter:blur(4px); transition:all .2s">{{ c.label }}</button>
+            </sc-for>
+            <span style="margin-left:auto; flex-shrink:0; white-space:nowrap; border-bottom:1px solid rgba(248,245,237,0.4); padding-bottom:2px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:rgba(248,245,237,0.85); cursor:pointer" style-hover="color:#F8F5ED">More filters +</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </header>
+
+  <!-- BOARD content -->
+  <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ true }}">
+  <section data-screen-label="The board" style="background:#F8F5ED; padding:40px 40px 96px">
+    <div style="max-width:1024px; margin:0 auto; display:flex; flex-direction:column; gap:40px">
+      <div onClick="{{ goYours }}" style="display:flex; align-items:center; justify-content:space-between; gap:16px; border-radius:4px; border:1px solid rgba(39,72,31,0.25); background:rgba(39,72,31,0.04); padding:12px 16px; cursor:pointer; transition:border-color .2s" style-hover="border-color:rgba(39,72,31,0.5)">
+        <span style="font-size:14px; color:#15150F">You are on 3 walks <span style="color:#52504A">· hosting 1</span></span>
+        <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#27481F">See yours →</span>
+      </div>
+      <div>
+        <div style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:16px">
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">{{ boardCountLabel }}</h2>
+          <sc-if value="{{ filtering }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ clearFilters }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#27481F; text-decoration:underline; text-underline-offset:4px; cursor:pointer">Clear filters</span>
+          </sc-if>
+        </div>
+        <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="border-radius:4px; border:1px dashed #DDD7C6; padding:64px 24px; text-align:center">
+            <h3 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:28px; font-weight:400; color:#15150F">Nothing matches that yet.</h3>
+            <p style="margin:12px auto 0; max-width:384px; font-size:14px; line-height:1.625; color:#52504A">Try a wider date range, or clear the filters to see everything.</p>
+          </div>
+        </sc-if>
+        <div style="display:flex; flex-direction:column; gap:32px">
+          <sc-for list="{{ buckets }}" as="b" hint-placeholder-count="3">
+            <div>
+              <div style="display:flex; align-items:baseline; gap:12px; padding-bottom:12px">
+                <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#15150F">{{ b.label }}</h3>
+                <span style="height:1px; flex:1; background:#DDD7C6"></span>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">{{ b.count }}</span>
+              </div>
+              <ul style="margin:0; padding:0; list-style:none; display:grid; gap:12px">
+                <sc-for list="{{ b.plans }}" as="p" hint-placeholder-count="2">
+                  <li>
+                    <div onClick="{{ openPlan }}" data-id="{{ p.id }}" style="position:relative; display:flex; overflow:hidden; border-radius:4px; border:1px solid #DDD7C6; background:{{ p.wash }}; cursor:pointer; transition:all .3s" style-hover="transform:translateY(-2px); border-color:rgba(39,72,31,0.5); box-shadow:0 10px 30px -18px rgba(12,16,13,0.45)">
+                      <span style="width:4px; flex-shrink:0; background:{{ p.bar }}"></span>
+                      <div style="display:flex; min-width:0; flex:1; gap:16px; padding:20px; align-items:flex-start">
+                        <div style="display:flex; width:56px; flex-shrink:0; flex-direction:column">
+                          <span style="font-family:Fraunces,Georgia,serif; font-size:30px; line-height:1; color:#15150F; font-variant-numeric:tabular-nums">{{ p.day }}</span>
+                          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#52504A">{{ p.md }}</span>
+                        </div>
+                        <div style="min-width:0; flex:1">
+                          <div style="display:flex; align-items:baseline; gap:8px">
+                            <span style="font-family:'Space Mono',monospace; font-size:14px; font-variant-numeric:tabular-nums; color:{{ p.ink }}">{{ p.timeText }}</span>
+                            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A">{{ p.lightLabel }}</span>
+                          </div>
+                          <h3 style="margin:4px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.25; color:#15150F">{{ p.place }}</h3>
+                          <p style="margin:6px 0 0; display:flex; align-items:center; gap:6px; font-size:12px; color:#52504A">
+                            <span style="display:grid; height:16px; width:16px; place-items:center; border-radius:999px; background:rgba(39,72,31,0.12); font-family:'Space Mono',monospace; font-size:8px; color:#27481F">{{ p.hostInitial }}</span>
+                            {{ p.host }}
+                          </p>
+                          <p style="margin:4px 0 0; font-size:12px; color:#52504A">{{ p.meta }}</p>
+                          <div style="margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; column-gap:12px; row-gap:8px">
+                            <div style="display:flex; align-items:center; gap:6px">
+                              <div style="display:flex">
+                                <sc-for list="{{ p.dots }}" as="d" hint-placeholder-count="4">
+                                  <span style="height:20px; width:20px; border-radius:999px; margin-left:{{ d.ml }}px; border:{{ d.bd }}; background:{{ d.bg }}; box-sizing:border-box"></span>
+                                </sc-for>
+                              </div>
+                              <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A; font-variant-numeric:tabular-nums">{{ p.countText }}</span>
+                            </div>
+                            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">{{ p.diff }}</span>
+                            <sc-if value="{{ p.womenOnly }}" hint-placeholder-val="{{ false }}"><span style="border-radius:999px; border:1px solid rgba(184,130,107,0.5); padding:2px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#B8826B">Women only</span></sc-if>
+                            <sc-if value="{{ p.senior }}" hint-placeholder-val="{{ false }}"><span style="border-radius:999px; border:1px solid rgba(39,72,31,0.4); padding:2px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#27481F">Senior friendly</span></sc-if>
+                            <sc-if value="{{ p.needsChip }}" hint-placeholder-val="{{ false }}"><span style="border-radius:999px; border:1px solid {{ p.bar }}; padding:2px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:{{ p.ink }}">needs {{ p.minParty }}</span></sc-if>
+                          </div>
+                        </div>
+                        <div style="flex-shrink:0; align-self:center">
+                          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ p.spacesColor }}">{{ p.spacesText }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </sc-for>
+              </ul>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- QuickStart -->
+      <div style="border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:20px">
+        <div style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px">
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#27481F">Going somewhere? Start here</h2>
+          <span onClick="{{ goNew }}" style="font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A; text-decoration:underline; text-underline-offset:4px; cursor:pointer" style-hover="color:#15150F">Start from blank</span>
+        </div>
+        <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
+          <sc-for list="{{ quickStarts }}" as="a" hint-placeholder-count="6">
+            <div onClick="{{ goNew }}" style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; border-radius:4px; border:1px solid #DDD7C6; padding:12px 14px; cursor:pointer; transition:border-color .2s" style-hover="border-color:#27481F">
+              <span style="min-width:0">
+                <span style="display:block; font-size:14px; color:#15150F">{{ a.label }}</span>
+                <span style="display:block; font-size:11px; color:#52504A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ a.blurb }}</span>
+              </span>
+              <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">{{ a.start }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- WhatTheBoardDoes -->
+      <section style="border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:24px; margin-bottom:24px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#27481F">What the board does</h2>
+        <p style="margin:8px 0 0; max-width:576px; font-size:14px; line-height:1.625; color:#52504A">Six rules, each one enforced by the database rather than asked for politely. They are listed by what they stop, so you can tell what relying on them is worth.</p>
+        <dl style="margin:20px 0 0; display:grid; grid-template-columns:1fr 1fr; column-gap:32px; row-gap:20px">
+          <sc-for list="{{ boardChecks }}" as="c" hint-placeholder-count="6">
+            <div>
+              <dt style="font-size:14px; color:#15150F">{{ c.t }}</dt>
+              <dd style="margin:4px 0 0; font-size:12px; line-height:1.625; color:#52504A">{{ c.d }}</dd>
+            </div>
+          </sc-for>
+        </dl>
+        <h3 style="margin:32px 0 0; border-top:1px solid #DDD7C6; padding-top:24px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#B8826B">And where it stops</h3>
+        <p style="margin:8px 0 0; max-width:576px; font-size:14px; line-height:1.625; color:#52504A">Not small print. Every line here is something a reasonable person would otherwise assume the board had covered.</p>
+        <dl style="margin:20px 0 0; display:grid; grid-template-columns:1fr 1fr; column-gap:32px; row-gap:20px">
+          <sc-for list="{{ boardLimits }}" as="c" hint-placeholder-count="4">
+            <div>
+              <dt style="font-size:14px; color:#15150F">{{ c.t }}</dt>
+              <dd style="margin:4px 0 0; font-size:12px; line-height:1.625; color:#52504A">{{ c.d }}</dd>
+            </div>
+          </sc-for>
+        </dl>
+      </section>
+      <!-- SafetyNotes full -->
+      <section style="border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:24px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#27481F">Take care of yourself out there</h2>
+        <p style="margin:8px 0 0; max-width:576px; font-size:14px; line-height:1.625; color:#52504A">This board introduces people who have not met. The rules above are the board's; these are yours — and out in the hills, yours are the ones doing the work.</p>
+        <dl style="margin:20px 0 0; display:grid; grid-template-columns:1fr 1fr; column-gap:32px; row-gap:20px">
+          <sc-for list="{{ safetyNotes }}" as="n" hint-placeholder-count="6">
+            <div>
+              <dt style="font-size:14px; color:#15150F">{{ n.t }}</dt>
+              <dd style="margin:4px 0 0; font-size:12px; line-height:1.625; color:#52504A">{{ n.d }}</dd>
+            </div>
+          </sc-for>
+        </dl>
+      </section>
+      <p style="margin:0; border-top:1px solid #DDD7C6; padding-top:24px; font-size:12px; line-height:1.625; color:#52504A">DEWDROPZ does not organise, lead, vet or supervise these walks, and does not check who anyone is. You are meeting strangers in the hills at your own risk. In an emergency call <span style="color:#15150F">112</span>.</p>
+    </div>
+  </section>
+  </sc-if>
+
+  <!-- PEOPLE content -->
+  <sc-if value="{{ isPeople }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Who is out there" style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:1024px; margin:0 auto; display:flex; flex-direction:column; gap:40px">
+      <div style="display:flex; flex-direction:column; gap:12px">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px">
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Sets off from</span>
+          <sc-for list="{{ townChips }}" as="c" hint-placeholder-count="7">
+            <span style="white-space:nowrap; border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-size:12px; cursor:pointer; transition:all .2s">{{ c.label }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px">
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Goes out for</span>
+          <sc-for list="{{ kindChips }}" as="c" hint-placeholder-count="7">
+            <span style="white-space:nowrap; border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-size:12px; cursor:pointer; transition:all .2s">{{ c.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#B8826B">People who have done a lot of this</h2>
+        <p style="margin:8px 0 0; max-width:512px; font-size:14px; line-height:1.625; color:#52504A">Appointed by DEWDROPZ, not self-claimed. They know these hills and are happy to be asked — start here if you are working out where to begin.</p>
+        <ul style="margin:20px 0 0; padding:0; list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <sc-for list="{{ mentors }}" as="p" hint-placeholder-count="2">
+            <li>
+              <div onClick="{{ openPerson }}" data-id="{{ p.id }}" style="display:flex; height:100%; flex-direction:column; gap:12px; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:20px; cursor:pointer; transition:all .3s; box-sizing:border-box" style-hover="transform:translateY(-2px); border-color:rgba(39,72,31,0.5); box-shadow:0 10px 30px -18px rgba(12,16,13,0.4)">
+                <div style="display:flex; align-items:flex-start; gap:14px">
+                  <span style="display:grid; height:48px; width:48px; flex-shrink:0; place-items:center; border-radius:999px; background:#27481F; color:#F8F5ED; font-family:Fraunces,Georgia,serif; font-size:16px; box-shadow:0 0 0 2px #fff, 0 0 0 4px #B8826B">{{ p.initials }}</span>
+                  <div style="min-width:0; flex:1">
+                    <div style="display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px">
+                      <h3 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:18px; font-weight:400; line-height:1.25; color:#15150F">{{ p.name }}</h3>
+                      <span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.14em; color:#B8826B">Mentor</span>
+                    </div>
+                    <p style="margin:2px 0 0; font-size:12px; color:#52504A">{{ p.sub }}</p>
+                  </div>
+                </div>
+                <p style="margin:0; font-size:14px; line-height:1.625; color:#52504A; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden">{{ p.intro }}</p>
+                <ul style="margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px">
+                  <sc-for list="{{ p.acts }}" as="a" hint-placeholder-count="3">
+                    <li style="border-radius:999px; border:1px solid #DDD7C6; padding:2px 10px; font-size:11px; text-transform:capitalize; color:#52504A">{{ a }}</li>
+                  </sc-for>
+                </ul>
+                <div style="margin-top:auto; display:flex; flex-wrap:wrap; align-items:center; column-gap:16px; row-gap:4px; border-top:1px solid #DDD7C6; padding-top:12px">
+                  <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.walks }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">walks</span></span>
+                  <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.hosted }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">hosted</span></span>
+                  <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.vouches }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">vouched</span></span>
+                  <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">{{ p.pace }}</span>
+                </div>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+      <div>
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">6 others on the board</h2>
+        <ul style="margin:20px 0 0; padding:0; list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <sc-for list="{{ others }}" as="p" hint-placeholder-count="6">
+            <li>
+              <div onClick="{{ openPerson }}" data-id="{{ p.id }}" style="display:flex; height:100%; flex-direction:column; gap:12px; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:20px; cursor:pointer; transition:all .3s; box-sizing:border-box" style-hover="transform:translateY(-2px); border-color:rgba(39,72,31,0.5); box-shadow:0 10px 30px -18px rgba(12,16,13,0.4)">
+                <div style="display:flex; align-items:flex-start; gap:14px">
+                  <span style="display:grid; height:48px; width:48px; flex-shrink:0; place-items:center; border-radius:999px; background:rgba(39,72,31,0.1); color:#27481F; font-family:Fraunces,Georgia,serif; font-size:16px">{{ p.initials }}</span>
+                  <div style="min-width:0; flex:1">
+                    <h3 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:18px; font-weight:400; line-height:1.25; color:#15150F">{{ p.name }}</h3>
+                    <p style="margin:2px 0 0; font-size:12px; color:#52504A">{{ p.sub }}</p>
+                  </div>
+                </div>
+                <p style="margin:0; font-size:14px; line-height:1.625; color:#52504A; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden">{{ p.intro }}</p>
+                <ul style="margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px">
+                  <sc-for list="{{ p.acts }}" as="a" hint-placeholder-count="2">
+                    <li style="border-radius:999px; border:1px solid #DDD7C6; padding:2px 10px; font-size:11px; text-transform:capitalize; color:#52504A">{{ a }}</li>
+                  </sc-for>
+                </ul>
+                <div style="margin-top:auto; display:flex; flex-wrap:wrap; align-items:center; column-gap:16px; row-gap:4px; border-top:1px solid #DDD7C6; padding-top:12px">
+                  <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.walks }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">walks</span></span>
+                  <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.hosted }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">hosted</span></span>
+                  <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.vouches }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">vouched</span></span>
+                  <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">{{ p.pace }}</span>
+                </div>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <!-- YOURS content -->
+  <sc-if value="{{ isYours }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Yours (inbox + walks)" style="background:#F8F5ED; padding:40px 40px 96px">
+    <div style="max-width:1024px; margin:0 auto; display:flex; flex-direction:column; gap:48px">
+      <div>
+        <div style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:12px">
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">What has happened <span style="margin-left:8px; border-radius:999px; background:#27481F; padding:2px 8px; font-size:9px; color:#F8F5ED; font-variant-numeric:tabular-nums; letter-spacing:0">3 new</span></h2>
+          <span style="border-bottom:1px solid #DDD7C6; padding-bottom:2px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A; cursor:pointer" style-hover="color:#15150F">Mark all read</span>
+        </div>
+        <ul style="margin:0; padding:0; list-style:none; border-top:1px solid #DDD7C6">
+          <sc-for list="{{ inbox }}" as="n" hint-placeholder-count="5">
+            <li onClick="{{ openPlan }}" data-id="{{ n.planId }}" style="display:flex; gap:14px; padding:14px 0; border-bottom:1px solid #DDD7C6; cursor:pointer; transition:background .2s" style-hover="background:rgba(241,233,215,0.4)">
+              <span style="margin-top:6px; height:6px; width:6px; flex-shrink:0; border-radius:999px; background:{{ n.dotBg }}; border:{{ n.dotBd }}; box-sizing:border-box"></span>
+              <div style="min-width:0; flex:1">
+                <div style="display:flex; flex-wrap:wrap; align-items:baseline; column-gap:10px">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ n.toneColor }}">{{ n.label }}</span>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; color:rgba(82,80,74,0.7)">{{ n.when }}</span>
+                </div>
+                <p style="margin:4px 0 0; font-size:14px; line-height:1.375; color:{{ n.bodyColor }}">{{ n.body }}</p>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+      <div>
+        <div style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:16px">
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">You are hosting 1</h2>
+          <span onClick="{{ goNew }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#27481F; text-decoration:underline; text-underline-offset:4px; cursor:pointer">Post another</span>
+        </div>
+        <ul style="margin:0; padding:0; list-style:none; display:grid; gap:12px">
+          <sc-for list="{{ hostingCards }}" as="p" hint-placeholder-count="1">
+            <li>
+              <div onClick="{{ openPlan }}" data-id="{{ p.id }}" style="position:relative; display:flex; overflow:hidden; border-radius:4px; border:1px solid #DDD7C6; background:{{ p.wash }}; cursor:pointer; transition:all .3s" style-hover="transform:translateY(-2px); border-color:rgba(39,72,31,0.5); box-shadow:0 10px 30px -18px rgba(12,16,13,0.45)">
+                <span style="width:4px; flex-shrink:0; background:{{ p.bar }}"></span>
+                <div style="display:flex; min-width:0; flex:1; gap:16px; padding:20px; align-items:flex-start">
+                  <div style="display:flex; width:56px; flex-shrink:0; flex-direction:column">
+                    <span style="font-family:Fraunces,Georgia,serif; font-size:30px; line-height:1; color:#15150F; font-variant-numeric:tabular-nums">{{ p.day }}</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#52504A">{{ p.md }}</span>
+                  </div>
+                  <div style="min-width:0; flex:1">
+                    <div style="display:flex; align-items:baseline; gap:8px">
+                      <span style="font-family:'Space Mono',monospace; font-size:14px; font-variant-numeric:tabular-nums; color:{{ p.ink }}">{{ p.timeText }}</span>
+                      <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A">{{ p.lightLabel }}</span>
+                    </div>
+                    <h3 style="margin:4px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.25; color:#15150F">{{ p.place }}</h3>
+                    <p style="margin:4px 0 0; font-size:12px; color:#52504A">{{ p.meta }}</p>
+                  </div>
+                  <div style="flex-shrink:0; align-self:center"><span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ p.spacesColor }}">{{ p.spacesText }}</span></div>
+                </div>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+      <div>
+        <h2 style="margin:0 0 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">You are going on 2</h2>
+        <ul style="margin:0; padding:0; list-style:none; display:grid; gap:12px">
+          <sc-for list="{{ goingCards }}" as="p" hint-placeholder-count="2">
+            <li>
+              <div onClick="{{ openPlan }}" data-id="{{ p.id }}" style="position:relative; display:flex; overflow:hidden; border-radius:4px; border:1px solid #DDD7C6; background:{{ p.wash }}; cursor:pointer; transition:all .3s" style-hover="transform:translateY(-2px); border-color:rgba(39,72,31,0.5); box-shadow:0 10px 30px -18px rgba(12,16,13,0.45)">
+                <span style="width:4px; flex-shrink:0; background:{{ p.bar }}"></span>
+                <div style="display:flex; min-width:0; flex:1; gap:16px; padding:20px; align-items:flex-start">
+                  <div style="display:flex; width:56px; flex-shrink:0; flex-direction:column">
+                    <span style="font-family:Fraunces,Georgia,serif; font-size:30px; line-height:1; color:#15150F; font-variant-numeric:tabular-nums">{{ p.day }}</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#52504A">{{ p.md }}</span>
+                  </div>
+                  <div style="min-width:0; flex:1">
+                    <div style="display:flex; align-items:baseline; gap:8px">
+                      <span style="font-family:'Space Mono',monospace; font-size:14px; font-variant-numeric:tabular-nums; color:{{ p.ink }}">{{ p.timeText }}</span>
+                      <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A">{{ p.lightLabel }}</span>
+                    </div>
+                    <h3 style="margin:4px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.25; color:#15150F">{{ p.place }}</h3>
+                    <p style="margin:4px 0 0; font-size:12px; color:#52504A">{{ p.meta }}</p>
+                  </div>
+                  <div style="flex-shrink:0; align-self:center"><span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ p.spacesColor }}">{{ p.spacesText }}</span></div>
+                </div>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+      </div>
+      <div>
+        <h2 style="margin:0 0 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Waiting on a host — 1</h2>
+        <ul style="margin:0; padding:0; list-style:none; display:grid; gap:12px">
+          <sc-for list="{{ waitingCards }}" as="p" hint-placeholder-count="1">
+            <li>
+              <div onClick="{{ openPlan }}" data-id="{{ p.id }}" style="position:relative; display:flex; overflow:hidden; border-radius:4px; border:1px solid #DDD7C6; background:{{ p.wash }}; cursor:pointer; transition:all .3s" style-hover="transform:translateY(-2px); border-color:rgba(39,72,31,0.5); box-shadow:0 10px 30px -18px rgba(12,16,13,0.45)">
+                <span style="width:4px; flex-shrink:0; background:{{ p.bar }}"></span>
+                <div style="display:flex; min-width:0; flex:1; gap:16px; padding:20px; align-items:flex-start">
+                  <div style="display:flex; width:56px; flex-shrink:0; flex-direction:column">
+                    <span style="font-family:Fraunces,Georgia,serif; font-size:30px; line-height:1; color:#15150F; font-variant-numeric:tabular-nums">{{ p.day }}</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#52504A">{{ p.md }}</span>
+                  </div>
+                  <div style="min-width:0; flex:1">
+                    <div style="display:flex; align-items:baseline; gap:8px">
+                      <span style="font-family:'Space Mono',monospace; font-size:14px; font-variant-numeric:tabular-nums; color:{{ p.ink }}">{{ p.timeText }}</span>
+                      <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A">{{ p.lightLabel }}</span>
+                    </div>
+                    <h3 style="margin:4px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.25; color:#15150F">{{ p.place }}</h3>
+                    <p style="margin:4px 0 0; font-size:12px; color:#52504A">{{ p.meta }}</p>
+                  </div>
+                  <div style="flex-shrink:0; align-self:center"><span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ p.spacesColor }}">{{ p.spacesText }}</span></div>
+                </div>
+              </div>
+            </li>
+          </sc-for>
+        </ul>
+        <p style="margin:12px 0 0; font-size:12px; color:#52504A">Hosts are people, not a system. If nobody has answered by the day before, assume it is not happening and make another plan.</p>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <!-- NEW (composer) content -->
+  <sc-if value="{{ isNew }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Post a walk (composer)" style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:1024px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:40px">
+      <div>
+        <ol style="margin:0; padding:0 0 16px; border-bottom:1px solid #DDD7C6; list-style:none; display:flex; flex-wrap:wrap; column-gap:24px; row-gap:8px">
+          <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+            <li><span onClick="{{ setStep }}" data-step="{{ s.i }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ s.color }}; cursor:pointer; transition:color .2s"><span style="font-variant-numeric:tabular-nums">{{ s.n }}</span> {{ s.label }}</span></li>
+          </sc-for>
+        </ol>
+        <div style="margin-top:32px">
+          <!-- Step 0: What -->
+          <sc-if value="{{ step0 }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">What are you doing?</h2>
+              <p style="margin:6px 0 0; font-size:14px; color:#52504A">Pick the closest thing. The hours and the group size fill themselves in from it, and the board refuses anything that disagrees.</p>
+              <sc-for list="{{ activityGroups }}" as="g" hint-placeholder-count="3">
+                <div style="margin-top:24px">
+                  <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">{{ g.label }}</p>
+                  <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                    <sc-for list="{{ g.items }}" as="a" hint-placeholder-count="2">
+                      <button onClick="{{ pickActivity }}" data-key="{{ a.key }}" style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; border-radius:4px; border:1px solid #DDD7C6; background:transparent; padding:14px 16px; text-align:left; cursor:pointer; font-family:Archivo,sans-serif; transition:border-color .2s" style-hover="border-color:#27481F">
+                        <span>
+                          <span style="display:block; font-size:14px; color:#15150F">{{ a.label }}</span>
+                          <span style="display:block; font-size:12px; color:#52504A">{{ a.blurb }}</span>
+                        </span>
+                        <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">{{ a.start }}</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <button onClick="{{ pickOther }}" style="margin-top:24px; display:flex; width:100%; align-items:baseline; justify-content:space-between; gap:12px; border-radius:4px; border:1px dashed #DDD7C6; background:transparent; padding:14px 16px; text-align:left; cursor:pointer; font-family:Archivo,sans-serif; transition:border-color .2s; box-sizing:border-box" style-hover="border-color:#27481F">
+                <span>
+                  <span style="display:block; font-size:14px; color:#15150F">Something else</span>
+                  <span style="display:block; font-size:12px; color:#52504A">None of those fit? Name it yourself.</span>
+                </span>
+                <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; color:#52504A">+</span>
+              </button>
+            </div>
+          </sc-if>
+          <!-- Step 1: Where -->
+          <sc-if value="{{ step1 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:24px">
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">Where?</h2>
+              <label style="display:block">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">The place</span>
+                <input value="{{ fPlace }}" onChange="{{ onField }}" data-field="place" placeholder="Nag Tibba" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                <span style="margin-top:6px; display:block; font-size:12px; line-height:1.625; color:#52504A">Where you are actually going. Everyone sees this.</span>
+              </label>
+              <label style="display:block">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Meet around</span>
+                <input value="{{ fMeetArea }}" onChange="{{ onField }}" data-field="meetArea" placeholder="Dehradun ISBT" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                <span style="margin-top:6px; display:block; font-size:12px; line-height:1.625; color:#52504A">A town or landmark. Somewhere public with people around — a bus stand, a car park, a chai stall. The exact spot comes later and goes to fewer people.</span>
+              </label>
+              <button onClick="{{ setStep }}" data-step="2" style="align-self:flex-start; border-radius:4px; background:#27481F; padding:10px 20px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer" style-hover="background:#3C6A33">Next — when</button>
+            </div>
+          </sc-if>
+          <!-- Step 2: How long -->
+          <sc-if value="{{ step2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:28px">
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">How long are you out?</h2>
+              <div>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Days out</span>
+                <div style="margin-top:8px; display:flex; flex-wrap:wrap; align-items:center; gap:8px">
+                  <sc-for list="{{ dayChips }}" as="c" hint-placeholder-count="5">
+                    <button onClick="{{ setDays }}" data-days="{{ c.n }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 16px; font-family:'Space Mono',monospace; font-size:12px; font-variant-numeric:tabular-nums; cursor:pointer; transition:all .2s">{{ c.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px">
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Setting off</span>
+                  <input type="date" value="{{ fStartsOn }}" onChange="{{ onField }}" data-field="startsOn" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                  <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">{{ backOnLabel }}</span>
+                </label>
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">How many people</span>
+                  <input type="number" value="{{ fCapacity }}" onChange="{{ onField }}" data-field="capacity" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                  <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Including you. Between {{ minParty }} and 8.</span>
+                </label>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px">
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Leaving at</span>
+                  <input type="time" value="{{ fStartTime }}" onChange="{{ onField }}" data-field="startTime" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                  <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Between {{ startMin }} and {{ startMax }} for {{ actLower }}.</span>
+                </label>
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Back by</span>
+                  <input type="time" value="{{ fBackBy }}" onChange="{{ onField }}" data-field="backBy" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                  <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">{{ backByHint }}</span>
+                </label>
+              </div>
+              <div>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">How hard</span>
+                <div style="margin-top:8px; display:flex; gap:8px">
+                  <sc-for list="{{ diffChips }}" as="c" hint-placeholder-count="3">
+                    <button onClick="{{ setDiff }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 16px; font-family:Archivo,sans-serif; font-size:12px; text-transform:capitalize; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+                  </sc-for>
+                </div>
+                <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Be honest — somebody will plan their day around this.</span>
+              </div>
+              <button onClick="{{ setStep }}" data-step="3" style="align-self:flex-start; border-radius:4px; background:#27481F; padding:10px 20px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer" style-hover="background:#3C6A33">Next — the details</button>
+            </div>
+          </sc-if>
+          <!-- Step 3: Details -->
+          <sc-if value="{{ step3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:24px">
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">The details</h2>
+              <div style="border-radius:4px; border:1px solid rgba(39,72,31,0.3); background:rgba(39,72,31,0.04); padding:20px">
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Exact meeting point</span>
+                  <input value="{{ fMeetingPoint }}" onChange="{{ onField }}" data-field="meetingPoint" placeholder="Gate 2, behind the tea stall" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                  <span style="margin-top:6px; display:block; font-size:12px; line-height:1.625; color:#52504A">Held back until {{ minParty }} people are going, and shown only to the ones you confirm. Do not put anything here you would not want a stranger to have.</span>
+                </label>
+                <label style="margin-top:20px; display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Getting there</span>
+                  <input value="{{ fLogistics }}" onChange="{{ onField }}" data-field="logistics" placeholder="Shared cab from ISBT, roughly ₹300 each" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+                </label>
+              </div>
+              <sc-if value="{{ needsNightNote }}" hint-placeholder-val="{{ false }}">
+                <label style="display:block; border-radius:4px; border:1px solid rgba(184,130,107,0.4); background:rgba(184,130,107,0.04); padding:20px">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">How does everyone get back in the dark?</span>
+                  <textarea rows="2" onChange="{{ onField }}" data-field="nightNote" placeholder="Two cars, headlamps required, we drive back together at 00:30." style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box; resize:vertical">{{ fNightNote }}</textarea>
+                  <span style="margin-top:6px; display:block; font-size:12px; line-height:1.625; color:#52504A">Required for anything after dark, and not a checkbox on purpose — writing the sentence is what makes you check the descent actually works.</span>
+                </label>
+              </sc-if>
+              <div style="display:flex; flex-direction:column; gap:20px; border-top:1px solid #DDD7C6; padding-top:24px">
+                <div>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Speaks</span>
+                  <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px">
+                    <sc-for list="{{ langChips }}" as="c" hint-placeholder-count="5">
+                      <button onClick="{{ toggleLang }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+                    </sc-for>
+                  </div>
+                  <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">What the group will be speaking on the walk.</span>
+                </div>
+                <label style="display:flex; cursor:pointer; align-items:flex-start; gap:12px">
+                  <input type="checkbox" onChange="{{ toggleSenior }}" style="margin-top:4px; height:16px; width:16px; accent-color:#27481F">
+                  <span>
+                    <span style="display:block; font-size:14px; color:#15150F">Senior friendly</span>
+                    <span style="display:block; font-size:12px; color:#52504A">Unhurried, with rests, and nothing that needs scrambling.</span>
+                  </span>
+                </label>
+                <p style="margin:0; font-size:12px; line-height:1.625; color:#52504A">Women-only walks can be posted by members whose profile says women. <span style="color:#27481F; text-decoration:underline; text-underline-offset:4px; cursor:pointer">Set that on your profile</span> if it applies to you.</p>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Who can ask to come</span>
+                <sc-for list="{{ trustOptions }}" as="o" hint-placeholder-count="3">
+                  <label style="display:flex; cursor:pointer; align-items:flex-start; gap:12px">
+                    <input type="radio" name="minTrust" checked="{{ o.on }}" onChange="{{ setTrust }}" data-value="{{ o.v }}" style="margin-top:4px; height:16px; width:16px; accent-color:#B8826B">
+                    <span>
+                      <span style="display:block; font-size:14px; color:#15150F">{{ o.name }}</span>
+                      <span style="display:block; font-size:12px; color:#52504A">{{ o.why }}</span>
+                    </span>
+                  </label>
+                </sc-for>
+              </div>
+              <label style="display:block">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Anything else</span>
+                <textarea rows="3" onChange="{{ onField }}" data-field="note" placeholder="Bring 2L water and something warm. We'll stop for chai on the way back." style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box; resize:vertical">{{ fNote }}</textarea>
+              </label>
+              <button onClick="{{ goBoard }}" style="width:100%; border-radius:4px; background:#27481F; padding:14px 24px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer; opacity:{{ postOpacity }}" style-hover="background:#3C6A33">Post this walk</button>
+              <sc-if value="{{ cantPost }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:0; text-align:center; font-size:12px; color:#52504A">Still needs a place, a meeting area and the exact spot{{ nightNoteSuffix }}.</p>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <!-- Live preview aside -->
+      <aside style="position:sticky; top:96px; align-self:start">
+        <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">How it will look</p>
+        <div style="margin-top:12px; display:flex; overflow:hidden; border-radius:4px; border:1px solid #DDD7C6; background:{{ pvWash }}">
+          <span style="width:4px; flex-shrink:0; background:{{ pvBar }}"></span>
+          <div style="min-width:0; flex:1; padding:16px">
+            <div style="display:flex; align-items:baseline; gap:8px">
+              <span style="font-family:'Space Mono',monospace; font-size:14px; font-variant-numeric:tabular-nums; color:{{ pvInk }}">{{ pvTime }}</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A">{{ pvLightLabel }}</span>
+            </div>
+            <h3 style="margin:4px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.25; color:{{ pvPlaceColor }}">{{ pvPlace }}</h3>
+            <p style="margin:4px 0 0; font-size:12px; color:#52504A">{{ pvMeta }}</p>
+            <p style="margin:8px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A; font-variant-numeric:tabular-nums">{{ pvBottom }}</p>
+            <sc-if value="{{ fSenior }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
+                <span style="border-radius:999px; border:1px solid rgba(39,72,31,0.4); padding:2px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#27481F">Senior friendly</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <p style="margin:12px 0 0; font-size:12px; line-height:1.625; color:#52504A">The exact meeting point is never on this card. It reaches people only once {{ minParty }} are going and you have confirmed them.</p>
+      </aside>
+    </div>
+  </section>
+  </sc-if>
+
+  <!-- PROFILE content -->
+  <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Your profile" style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:1024px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:40px">
+      <div style="display:flex; flex-direction:column; gap:28px">
+        <label style="display:block">
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Name other walkers see</span>
+          <input value="{{ prName }}" onChange="{{ onProfileField }}" data-field="name" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box">
+        </label>
+        <div>
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Sets off from</span>
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ prTownChips }}" as="c" hint-placeholder-count="7">
+              <button onClick="{{ setPrTown }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <label style="display:block">
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">A line about you</span>
+          <textarea rows="2" onChange="{{ onProfileField }}" data-field="intro" style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 14px; font-family:Archivo,sans-serif; font-size:16px; color:#15150F; box-sizing:border-box; resize:vertical">{{ prIntro }}</textarea>
+          <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">What a stranger reads before deciding whether to walk with you.</span>
+        </label>
+        <div>
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Goes out for</span>
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ prActChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ togglePrAct }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Pace</span>
+          <div style="margin-top:8px; display:flex; flex-direction:column; gap:10px">
+            <sc-for list="{{ prPaces }}" as="o" hint-placeholder-count="3">
+              <label style="display:flex; cursor:pointer; align-items:flex-start; gap:12px">
+                <input type="radio" name="pace" checked="{{ o.on }}" onChange="{{ setPrPace }}" data-key="{{ o.key }}" style="margin-top:3px; height:16px; width:16px; accent-color:#27481F">
+                <span><span style="font-size:14px; color:#15150F">{{ o.label }}</span> <span style="font-size:12px; color:#52504A">— {{ o.d }}</span></span>
+              </label>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Speaks</span>
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ prLangChips }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ togglePrLang }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Usually carries</span>
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ prCarryChips }}" as="c" hint-placeholder-count="10">
+              <button onClick="{{ togglePrCarry }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:6px 14px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <button onClick="{{ saveProfile }}" style="align-self:flex-start; border-radius:4px; background:#27481F; padding:12px 24px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer" style-hover="background:#3C6A33">{{ saveLabel }}</button>
+      </div>
+      <aside style="position:sticky; top:96px; align-self:start">
+        <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">How a stranger sees you</p>
+        <div style="margin-top:12px; display:flex; flex-direction:column; gap:12px; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:20px">
+          <div style="display:flex; align-items:flex-start; gap:14px">
+            <span style="display:grid; height:48px; width:48px; flex-shrink:0; place-items:center; border-radius:999px; background:rgba(39,72,31,0.1); color:#27481F; font-family:Fraunces,Georgia,serif; font-size:16px">{{ prInitials }}</span>
+            <div style="min-width:0; flex:1">
+              <h3 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:18px; font-weight:400; line-height:1.25; color:#15150F">{{ prName }}</h3>
+              <p style="margin:2px 0 0; font-size:12px; color:#52504A">{{ prSub }}</p>
+            </div>
+          </div>
+          <p style="margin:0; font-size:14px; line-height:1.625; color:#52504A">{{ prIntro }}</p>
+          <div style="display:flex; flex-wrap:wrap; align-items:center; column-gap:16px; border-top:1px solid #DDD7C6; padding-top:12px">
+            <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">14</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">walks</span></span>
+            <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">9</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">hosted</span></span>
+            <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">12</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">vouched</span></span>
+          </div>
+        </div>
+        <p style="margin:12px 0 0; font-size:12px; line-height:1.625; color:#52504A">The counted numbers are derived from what actually happened on the board. You cannot edit them, and neither can anyone else.</p>
+      </aside>
+    </div>
+  </section>
+  </sc-if>
+</main>
+</sc-if>
+
+<!-- ══ PLAN DETAIL ══ -->
+<sc-if value="{{ isPlan }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="A walk (plan detail)" style="flex:1">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:{{ dBar }}">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.45), rgba(12,16,13,0.15), rgba(12,16,13,0.55))"></div>
+    <div style="position:relative; max-width:768px; margin:0 auto; padding:128px 40px 32px">
+      <span onClick="{{ goBoard }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(248,245,237,0.6); cursor:pointer; transition:color .2s" style-hover="color:#F8F5ED">← The board</span>
+      <p style="margin:28px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:rgba(248,245,237,0.7)">{{ dEyebrow }}</p>
+      <h1 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:60px; font-weight:300; line-height:0.95; color:#F8F5ED">{{ dPlace }}</h1>
+      <p style="margin:12px 0 0; font-size:14px; color:rgba(248,245,237,0.7)">Meeting around {{ dMeetArea }} · hosted by <span style="color:#F8F5ED; text-decoration:underline; text-decoration-color:rgba(248,245,237,0.4); text-underline-offset:4px; cursor:pointer">{{ dHost }}</span></p>
+      <dl style="margin:32px 0 0; display:flex; flex-wrap:wrap; column-gap:40px; row-gap:16px; border-top:1px solid rgba(248,245,237,0.2); padding-top:20px">
+        <sc-for list="{{ dFacts }}" as="f" hint-placeholder-count="4">
+          <div>
+            <dt style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(248,245,237,0.5)">{{ f.k }}</dt>
+            <dd style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:20px; color:#F8F5ED; font-variant-numeric:tabular-nums">{{ f.v }}</dd>
+          </div>
+        </sc-for>
+      </dl>
+    </div>
+  </header>
+  <div style="background:#F8F5ED; padding:40px 40px 96px">
+    <div style="max-width:768px; margin:0 auto; display:flex; flex-direction:column; gap:32px">
+      <!-- Host view -->
+      <sc-if value="{{ dIsHost }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#27481F">Your walk</h2>
+          <div style="margin-top:16px">
+            <p style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A">Asked to come (2)</p>
+            <ul style="margin:8px 0 0; padding:0; list-style:none; border-top:1px solid #DDD7C6; border-bottom:1px solid #DDD7C6">
+              <sc-for list="{{ dWaiting }}" as="r" hint-placeholder-count="2">
+                <li style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #DDD7C6">
+                  <div style="min-width:0; flex:1">
+                    <span onClick="{{ openPerson }}" data-id="{{ r.pid }}" style="font-size:14px; color:#15150F; text-decoration:underline; text-decoration-color:#DDD7C6; text-underline-offset:4px; cursor:pointer" style-hover="text-decoration-color:#27481F">{{ r.name }}</span>
+                    <p style="margin:2px 0 0; font-size:12px; color:#52504A">{{ r.msg }}</p>
+                  </div>
+                  <button style="border-radius:4px; background:#27481F; padding:6px 12px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#F8F5ED; border:none; cursor:pointer">Confirm</button>
+                  <button style="border-radius:4px; border:1px solid #DDD7C6; background:transparent; padding:6px 12px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A; cursor:pointer" style-hover="border-color:#15150F; color:#15150F">Decline</button>
+                </li>
+              </sc-for>
+            </ul>
+            <p style="margin:8px 0 0; font-size:12px; color:#52504A">Declining is silent — they are not told why, and you do not owe a reason.</p>
+          </div>
+          <div style="margin-top:24px">
+            <p style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A">Coming with you (4)</p>
+            <p style="margin:4px 0 0; display:flex; flex-wrap:wrap; column-gap:12px; font-size:14px; color:#15150F">
+              <sc-for list="{{ dGoing }}" as="g" hint-placeholder-count="4">
+                <span style="text-decoration:underline; text-decoration-color:#DDD7C6; text-underline-offset:4px; cursor:pointer" style-hover="text-decoration-color:#27481F">{{ g }}</span>
+              </sc-for>
+            </p>
+          </div>
+          <span style="margin-top:32px; display:inline-block; border-bottom:1px solid #DDD7C6; padding-bottom:4px; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#B8826B; cursor:pointer" style-hover="color:#15150F">Call this walk off</span>
+        </div>
+      </sc-if>
+      <!-- Confirmed viewer -->
+      <sc-if value="{{ dIsConfirmed }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <p style="margin:0; font-size:14px; color:#15150F">You're confirmed for this walk.</p>
+          <span style="margin-top:12px; display:inline-block; border-bottom:1px solid #DDD7C6; padding-bottom:4px; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A; cursor:pointer" style-hover="color:#15150F">I can't make it</span>
+        </div>
+      </sc-if>
+      <!-- Requested viewer -->
+      <sc-if value="{{ dIsRequested }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <p style="margin:0; font-size:14px; color:#15150F">You've asked to come. <span style="color:#52504A">The host will confirm or decline.</span></p>
+          <span style="margin-top:12px; display:inline-block; border-bottom:1px solid #DDD7C6; padding-bottom:4px; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A; cursor:pointer" style-hover="color:#15150F">Withdraw</span>
+        </div>
+      </sc-if>
+      <!-- Stranger viewer -->
+      <sc-if value="{{ dIsStranger }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <label style="display:block">
+            <span style="font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">Say hello (optional)</span>
+            <textarea rows="2" placeholder="Anything the host should know — pace, experience, whether you're driving." style="margin-top:8px; width:100%; border-radius:4px; border:1px solid #DDD7C6; background:#fff; padding:10px 12px; font-family:Archivo,sans-serif; font-size:14px; color:#15150F; box-sizing:border-box; resize:vertical"></textarea>
+          </label>
+          <button style="margin-top:12px; border-radius:4px; background:#27481F; padding:12px 24px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#F8F5ED; border:none; cursor:pointer" style-hover="background:#3C6A33">Ask to come</button>
+        </div>
+      </sc-if>
+      <!-- Meeting point -->
+      <section style="border-top:1px solid #DDD7C6; padding-top:24px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Exact meeting point</h2>
+        <div style="margin-top:12px">
+          <sc-if value="{{ dPointReleased }}" hint-placeholder-val="{{ true }}">
+            <div style="border-left:2px solid {{ dBar }}; padding-left:16px">
+              <p style="margin:0; font-size:16px; color:#15150F">{{ dMeetingPoint }}</p>
+              <p style="margin:6px 0 0; font-size:14px; color:#52504A">{{ dLogistics }}</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ dPointLocked }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:4px; border:1px dashed #DDD7C6; padding:20px 16px">
+              <p style="margin:0; font-size:14px; line-height:1.625; color:#52504A">{{ dLockCopy }}</p>
+              <div style="margin-top:12px; display:flex; align-items:center; gap:8px">
+                <sc-for list="{{ dLockSegs }}" as="s" hint-placeholder-count="4">
+                  <span style="height:6px; flex:1; border-radius:999px; border:1px solid #DDD7C6; background:{{ s.bg }}; box-sizing:border-box"></span>
+                </sc-for>
+              </div>
+              <p style="margin:8px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A; font-variant-numeric:tabular-nums">{{ dLockCount }}</p>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+      <section style="border-top:1px solid #DDD7C6; padding-top:24px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">From the host</h2>
+        <p style="margin:12px 0 0; font-size:14px; line-height:1.625; color:#15150F">{{ dNote }}</p>
+      </section>
+      <!-- Guidance -->
+      <section style="border-top:1px solid #DDD7C6; padding-top:24px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">{{ dGuidanceTitle }}</h2>
+        <p style="margin:8px 0 0; font-size:14px; line-height:1.625; color:#52504A">From people who have done this around here. Not rules — the things that are only obvious afterwards.</p>
+        <dl style="margin:12px 0 0">
+          <sc-for list="{{ dGuidance }}" as="n" hint-placeholder-count="3">
+            <div style="display:flex; gap:32px; padding:16px 0; border-bottom:1px solid #DDD7C6">
+              <dt style="width:224px; flex-shrink:0; font-size:14px; color:#15150F">{{ n.t }}</dt>
+              <dd style="margin:0; font-size:14px; line-height:1.625; color:#52504A">{{ n.d }}</dd>
+            </div>
+          </sc-for>
+        </dl>
+      </section>
+      <!-- Safety compact -->
+      <div style="border-radius:4px; border:1px solid #DDD7C6; background:rgba(241,233,215,0.5); padding:16px">
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#27481F">Before you go</h2>
+        <ul style="margin:8px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px">
+          <sc-for list="{{ safetyCompact }}" as="s" hint-placeholder-count="6">
+            <li style="font-size:12px; color:#52504A"><span style="color:#15150F">{{ s.t }}.</span> {{ s.d }}</li>
+          </sc-for>
+        </ul>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px; border-top:1px solid #DDD7C6; padding-top:24px">
+        <p style="margin:0; font-size:12px; line-height:1.625; color:#52504A">DEWDROPZ does not organise, lead, vet or supervise this walk and has not checked who anyone on it is. Go at your own risk and turn back if conditions change. Emergency: <span style="color:#15150F">112</span>.</p>
+      </div>
+    </div>
+  </div>
+</main>
+</sc-if>
+
+<!-- ══ PERSON DETAIL ══ -->
+<sc-if value="{{ isPerson }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="A member (person profile)" style="flex:1">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D">
+    <img src="https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.8">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.8), rgba(12,16,13,0.3), rgba(12,16,13,0.9))"></div>
+    <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(12,16,13,0.7), rgba(12,16,13,0.25), transparent)"></div>
+    <div style="position:relative; max-width:768px; margin:0 auto; padding:144px 40px 48px">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.26em; color:#7BA46F">{{ perEyebrow }}</p>
+      <h1 style="margin:16px 0 0; max-width:576px; font-family:Fraunces,Georgia,serif; font-size:50px; font-weight:300; line-height:0.98; color:#F8F5ED">{{ perName }}</h1>
+      <p style="margin:16px 0 0; max-width:448px; font-size:14px; line-height:1.625; color:rgba(248,245,237,0.7)">{{ perIntro }}</p>
+    </div>
+  </header>
+  <section style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:768px; margin:0 auto; display:flex; flex-direction:column; gap:40px">
+      <sc-if value="{{ perMentor }}" hint-placeholder-val="{{ true }}">
+        <div style="border-left:2px solid #B8826B; background:rgba(184,130,107,0.04); padding:16px 20px">
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#B8826B">Mentor · appointed by DEWDROPZ</p>
+          <p style="margin:8px 0 0; font-size:14px; line-height:1.625; color:#15150F">{{ perMentorBio }}</p>
+          <p style="margin:8px 0 0; font-size:12px; line-height:1.625; color:#52504A">Mentors are named by us, never self-claimed, and it is not a safety guarantee — it means somebody who has done a lot of this is happy to be asked.</p>
+        </div>
+      </sc-if>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px">
+        <div>
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Goes out for</h2>
+          <ul style="margin:12px 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ perActs }}" as="a" hint-placeholder-count="3">
+              <li style="border-radius:999px; border:1px solid #DDD7C6; padding:4px 12px; font-size:12px; color:#15150F">{{ a }}</li>
+            </sc-for>
+          </ul>
+          <h2 style="margin:32px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Pace</h2>
+          <p style="margin:8px 0 0; font-size:14px; color:#15150F">{{ perPace }}</p>
+          <h2 style="margin:32px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Speaks</h2>
+          <p style="margin:8px 0 0; font-size:14px; color:#15150F">{{ perLangs }}</p>
+          <h2 style="margin:32px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">What they say about themselves</h2>
+          <p style="margin:6px 0 0; font-size:12px; color:#52504A">Typed by them. Nobody has checked any of it.</p>
+          <dl style="margin:12px 0 0; display:flex; flex-direction:column; gap:10px">
+            <sc-for list="{{ perFacts }}" as="f" hint-placeholder-count="4">
+              <div style="display:flex; gap:16px">
+                <dt style="width:128px; flex-shrink:0; font-size:14px; color:#52504A">{{ f.k }}</dt>
+                <dd style="margin:0; font-size:14px; color:#15150F">{{ f.v }}</dd>
+              </div>
+            </sc-for>
+          </dl>
+        </div>
+        <div>
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">What is known</h2>
+          <ul style="margin:12px 0 0; padding:0; list-style:none; border-top:1px solid #DDD7C6; border-bottom:1px solid #DDD7C6">
+            <sc-for list="{{ perEvidence }}" as="e" hint-placeholder-count="4">
+              <li style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #DDD7C6">
+                <span style="margin-top:6px; height:6px; width:6px; flex-shrink:0; border-radius:999px; background:{{ e.dot }}"></span>
+                <div style="min-width:0">
+                  <p style="margin:0; font-size:14px; color:{{ e.labelColor }}">{{ e.label }}</p>
+                  <p style="margin:2px 0 0; font-size:12px; line-height:1.625; color:#52504A">{{ e.proves }}</p>
+                </div>
+              </li>
+            </sc-for>
+          </ul>
+          <p style="margin:12px 0 0; font-size:12px; line-height:1.625; color:#52504A">DEWDROPZ has not met this person and has not checked who they are. None of the above is a recommendation — it is the whole of what the board knows.</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px; border-top:1px solid #DDD7C6; padding-top:24px">
+        <p style="margin:0; font-size:12px; line-height:1.625; color:#52504A">There is no way to message someone here, and that is deliberate — walks are arranged on the walk's own page, where the host decides who comes.</p>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══ Footer ══ -->
+<footer style="background:#0C100D; color:rgba(255,255,255,0.6); padding:80px 40px 0; overflow:hidden">
+  <div style="max-width:1280px; margin:0 auto; display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr; column-gap:24px; row-gap:48px">
+    <div>
+      <span style="display:inline-flex; align-items:center; gap:10px">
+        <img src="assets/mountain-mark.png" alt="" style="height:34px; width:59px; object-fit:contain">
+        <span style="display:flex; flex-direction:column; line-height:1">
+          <span style="font-family:Fraunces,Georgia,serif; font-size:20px; letter-spacing:-0.01em; color:#fff">DEWDROPZ</span>
+          <span style="margin-top:4px; font-family:Fraunces,Georgia,serif; font-style:italic; font-size:14px; color:#7BA46F">— Feel Alive</span>
+        </span>
+      </span>
+      <p style="margin:20px 0 0; max-width:260px; font-size:14px; line-height:1.625; color:rgba(255,255,255,0.4)">Designed for everyday journeys. Inspired by mountains, mist and the spirit of exploration.</p>
+      <div style="margin-top:24px; display:flex; flex-direction:column; gap:6px; font-size:14px">
+        <span style="cursor:pointer" style-hover="color:#fff">hello@dewdropz.shop</span>
+        <span style="cursor:pointer" style-hover="color:#fff">+91 98765 43210</span>
+        <span style="padding-top:4px; line-height:1.625; color:rgba(255,255,255,0.35)">Rajpur Road, Dehradun, Uttarakhand 248009, India</span>
+      </div>
+    </div>
+    <sc-for list="{{ footerCols }}" as="col" hint-placeholder-count="4">
+      <nav>
+        <div style="font-size:10px; letter-spacing:0.2em; color:#7BA46F; text-transform:uppercase; margin-bottom:16px">{{ col.heading }}</div>
+        <ul style="margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px">
+          <sc-for list="{{ col.links }}" as="l" hint-placeholder-count="4">
+            <li><span style="font-size:14px; cursor:pointer; transition:color .2s" style-hover="color:#fff">{{ l }}</span></li>
+          </sc-for>
+        </ul>
+      </nav>
+    </sc-for>
+  </div>
+  <div style="max-width:1280px; margin:56px auto 0; border-top:1px solid rgba(255,255,255,0.1); padding-top:24px; display:flex; flex-wrap:wrap; align-items:center; column-gap:32px; row-gap:8px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.35)">
+    <span>COD · UPI · Cards</span>
+    <span>Free shipping over ₹2,000</span>
+    <span>7-day returns</span>
+    <span>Fast dispatch across India</span>
+  </div>
+  <div style="max-width:1280px; margin:48px auto 0; user-select:none">
+    <div style="font-family:Fraunces,Georgia,serif; font-weight:300; text-transform:uppercase; line-height:0.8; letter-spacing:-0.03em; color:transparent; font-size:clamp(64px,12.5vw,190px); white-space:nowrap; -webkit-text-stroke:1px rgba(246,243,230,0.14)">Dewdropz</div>
+  </div>
+  <div style="max-width:1280px; margin:16px auto 0; border-top:1px solid rgba(255,255,255,0.1); padding:24px 0; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px">
+    <span style="font-size:12px; color:rgba(255,255,255,0.3)">© 2026 DEWDROPZ</span>
+    <span style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:rgba(255,255,255,0.25)">30.3165° N, 78.0322° E</span>
+    <span style="font-size:12px; color:rgba(255,255,255,0.3)">Made by DoonDzn</span>
+  </div>
+</footer>
+
+<!-- Dev screen switcher (not part of the recreated UI) -->
+<div style="position:fixed; bottom:16px; right:16px; z-index:60; display:flex; gap:2px; border-radius:999px; background:rgba(12,16,13,0.85); padding:4px; backdrop-filter:blur(8px); box-shadow:0 8px 24px rgba(0,0,0,0.35)">
+  <sc-for list="{{ devTabs }}" as="d" hint-placeholder-count="3">
+    <span onClick="{{ goDev }}" data-key="{{ d.key }}" style="border-radius:999px; padding:5px 10px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.08em; color:{{ d.fg }}; background:{{ d.bg }}; cursor:pointer; white-space:nowrap">{{ d.label }}</span>
+  </sc-for>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;board&quot;, &quot;options&quot;: [&quot;board&quot;, &quot;people&quot;, &quot;yours&quot;, &quot;new&quot;, &quot;profile&quot;, &quot;plan&quot;, &quot;person&quot;, &quot;gate&quot;, &quot;setup&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;State&quot;}, &quot;emptyBoard&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;State&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: this.props.screen ?? 'board',
+    planId: 'p3',
+    personId: 'meera',
+    activity: 'all',
+    when: 'all',
+    step: 0,
+    f: { activity: 'trekking', place: '', meetArea: '', startsOn: '2026-10-17', days: 1, capacity: 4, startTime: '07:00', backBy: '16:00', difficulty: 'moderate', languages: [], senior: false, minTrust: 0, meetingPoint: '', logistics: '', nightNote: '', note: '' },
+    pr: { name: 'Aarav Mehta', town: 'Dehradun', intro: 'Weekend ridge walker, always up before the sun. I keep the pace friendly and the chai stops frequent.', acts: ['trekking', 'stargazing', 'camping'], pace: 'brisk', langs: ['Hindi', 'English'], carries: ['First aid kit', 'Head torch', 'Extra water', 'Offline map'] },
+    saved: false,
+  };
+
+  ACTS = [
+    { key: 'trekking', label: 'Trekking', blurb: 'A day walk, out and back', dayPart: 'day', start: '07:00', back: '16:00', min: '04:30', max: '16:00', minParty: 3, night: false },
+    { key: 'bird_watching', label: 'Bird watching', blurb: 'Early start, slow pace', dayPart: 'day', start: '05:20', back: '09:00', min: '04:30', max: '16:00', minParty: 3, night: false },
+    { key: 'cycling', label: 'Cycling', blurb: 'On wheels, on road or trail', dayPart: 'day', start: '06:30', back: '12:00', min: '04:30', max: '16:00', minParty: 3, night: false },
+    { key: 'running', label: 'Running', blurb: 'Trail running, at a stated pace', dayPart: 'day', start: '06:00', back: '09:00', min: '04:30', max: '16:00', minParty: 3, night: false },
+    { key: 'stargazing', label: 'Stargazing', blurb: 'After dark, back the same night', dayPart: 'evening', start: '21:40', back: '00:30', min: '17:00', max: '22:00', minParty: 4, night: true },
+    { key: 'camping', label: 'Camping', blurb: 'One night out, back next morning', dayPart: 'overnight', start: '17:30', back: '11:00', min: '12:00', max: '19:00', minParty: 4, night: true },
+  ];
+
+  LIGHTS = {
+    predawn: { label: 'Before light', bar: '#2E3A56', ink: '#2E3A56', wash: 'rgba(46,58,86,0.05)' },
+    morning: { label: 'First light', bar: '#7FA471', ink: '#3C6A33', wash: 'transparent' },
+    midday: { label: 'Full day', bar: '#27481F', ink: '#27481F', wash: 'transparent' },
+    dusk: { label: 'Last light', bar: '#B8826B', ink: '#8A5A44', wash: 'rgba(184,130,107,0.06)' },
+    night: { label: 'After dark', bar: '#0C100D', ink: '#0C100D', wash: 'rgba(12,16,13,0.05)' },
+  };
+  lightFor(t) {
+    const h = Number(String(t).slice(0, 2));
+    if (h < 6) return this.LIGHTS.predawn;
+    if (h < 9) return this.LIGHTS.morning;
+    if (h < 16) return this.LIGHTS.midday;
+    if (h < 19) return this.LIGHTS.dusk;
+    return this.LIGHTS.night;
+  }
+
+  PLANS = [
+    { id: 'p1', day: '16', md: 'Oct · Fri', time: '05:20', activity: 'bird_watching', actLabel: 'Bird watching', place: 'Asan Barrage', host: 'Meera Joshi', personId: 'meera', meet: 'Dehradun ISBT', back: '09:00', going: 2, cap: 4, minParty: 3, diff: 'Easy', dayPart: 'day', bucket: 'soon', when: 'week' },
+    { id: 'p2', day: '16', md: 'Oct · Fri', time: '06:30', activity: 'cycling', actLabel: 'Cycling', place: 'Sahastradhara Loop', host: 'Arjun Rawat', personId: 'arjun', meet: 'Rajpur Road', back: '12:00', going: 3, cap: 5, minParty: 3, diff: 'Moderate', dayPart: 'day', bucket: 'soon', when: 'week' },
+    { id: 'p3', day: '17', md: 'Oct · Sat', time: '07:00', activity: 'trekking', actLabel: 'Trekking', place: 'Nag Tibba', host: 'Aarav Mehta', personId: 'me', meet: 'Dehradun ISBT', back: '16:00', going: 5, cap: 6, minParty: 3, diff: 'Moderate', dayPart: 'day', bucket: 'weekend', when: 'weekend' },
+    { id: 'p4', day: '17', md: 'Oct · Sat', time: '21:40', activity: 'stargazing', actLabel: 'Stargazing', place: 'George Everest Peak', host: 'Priya Negi', personId: 'priya', meet: 'Library Chowk, Mussoorie', back: '00:30', going: 3, cap: 6, minParty: 4, diff: 'Easy', dayPart: 'evening', bucket: 'weekend', when: 'weekend' },
+    { id: 'p5', day: '18', md: 'Oct · Sun', time: '06:00', activity: 'running', actLabel: 'Running', place: 'Rajpur Forest Trail', host: 'Ananya Bisht', personId: 'ananya', meet: 'Rajpur Road', back: '09:00', going: 2, cap: 4, minParty: 3, diff: 'Easy', dayPart: 'day', womenOnly: true, bucket: 'weekend', when: 'weekend' },
+    { id: 'p6', day: '20', md: 'Oct · Tue', time: '17:30', activity: 'camping', actLabel: 'Camping', place: 'Kanatal Ridge', host: 'Rohan Thapa', personId: 'rohan', meet: 'Dehradun ISBT', back: '11:00', going: 4, cap: 6, minParty: 4, diff: 'Moderate', dayPart: 'overnight', bucket: 'next', when: 'week' },
+    { id: 'p7', day: '22', md: 'Oct · Thu', time: null, days: 3, activity: 'trekking', actLabel: 'Trekking', place: 'Har Ki Dun Approach', host: 'Meera Joshi', personId: 'meera', meet: 'Dehradun ISBT', going: 2, cap: 5, minParty: 3, diff: 'Difficult', dayPart: 'day', bucket: 'next', when: 'all' },
+    { id: 'p8', day: '01', md: 'Nov · Sun', time: '06:00', activity: 'trekking', actLabel: 'Trekking', place: 'Benog Tibba', host: 'Devendra Rana', personId: 'dev', meet: 'Library Chowk, Mussoorie', back: '14:00', going: 1, cap: 6, minParty: 3, diff: 'Easy', dayPart: 'day', senior: true, bucket: 'later', when: 'all' },
+  ];
+
+  PEOPLE = [
+    { id: 'meera', name: 'Meera Joshi', mentor: true, town: 'Mussoorie', exp: 'Years of it', years: 18, intro: 'I have walked most of the ridgelines between here and Chakrata. Happy to slow down for anyone new — the hills are not a race.', acts: ['trekking', 'bird watching', 'camping'], walks: 56, hosted: 41, vouches: 23, pace: 'Steady', langs: ['Hindi', 'English', 'Garhwali'], highest: 4200, mentorBio: 'Eighteen years of Garhwal ridgelines, most of them before breakfast. Ask her anything about winter routes.' },
+    { id: 'dev', name: 'Devendra Rana', mentor: true, town: 'Chakrata', exp: 'Years of it', years: 12, intro: 'Grew up walking these forests. I host slow, early walks and point out every bird we pass.', acts: ['trekking', 'bird watching'], walks: 38, hosted: 24, vouches: 17, pace: 'Steady', langs: ['Hindi', 'Garhwali'], highest: 3800 },
+    { id: 'arjun', name: 'Arjun Rawat', town: 'Dehradun', exp: 'Seasoned', years: 7, intro: 'Cyclist first, walker second. Sunrise loops on weekdays before work.', acts: ['cycling', 'running'], walks: 21, hosted: 9, vouches: 8, pace: 'Fast', langs: ['Hindi', 'English'], highest: 3100 },
+    { id: 'priya', name: 'Priya Negi', town: 'Mussoorie', exp: 'Seasoned', years: 5, intro: 'Stargazer with a telescope that fits in one rucksack. Clear-sky plans only.', acts: ['stargazing', 'camping'], walks: 17, hosted: 11, vouches: 9, pace: 'Steady', langs: ['Hindi', 'English'], highest: 2900 },
+    { id: 'ananya', name: 'Ananya Bisht', town: 'Dehradun', exp: 'Been out a few times', years: 2, intro: 'Trail runner, early starts. I host women-only runs on the forest loops.', acts: ['running', 'trekking'], walks: 9, hosted: 4, vouches: 5, pace: 'Brisk', langs: ['Hindi', 'English'], highest: 2600 },
+    { id: 'rohan', name: 'Rohan Thapa', town: 'Rishikesh', exp: 'Seasoned', years: 6, intro: 'Overnights and river-side camps. I bring the stove, you bring the stories.', acts: ['camping', 'trekking'], walks: 19, hosted: 8, vouches: 7, pace: 'Steady', langs: ['Hindi', 'English', 'Punjabi'], highest: 3400 },
+    { id: 'kabir', name: 'Kabir Singh', town: 'Haridwar', exp: 'Been out a few times', years: 3, intro: 'Weekend walker working up to the big ones. Steady company, terrible jokes.', acts: ['trekking'], walks: 7, hosted: 2, vouches: 3, pace: 'Steady', langs: ['Hindi', 'Punjabi'], highest: 2400 },
+    { id: 'sana', name: 'Sana Kapoor', town: 'Dehradun', exp: 'Been out a few times', years: 2, intro: 'New-ish to the hills, old hand at early mornings. Bird lists kept diligently.', acts: ['bird watching', 'trekking'], walks: 6, hosted: 0, vouches: 2, pace: 'Steady', langs: ['Hindi', 'English'], highest: 2200 },
+  ];
+
+  SAFETY = [
+    { t: 'Tell someone who is not coming', d: 'Before you set off, send a person at home the place, the start time and when you expect to be back' },
+    { t: 'Nobody here has had their identity checked', d: 'The board does check some things, and is precise about which — none of them is identity, experience or fitness' },
+    { t: 'Meet where there are people', d: 'The rendezvous should be a bus stand, a car park, a chai stall — somewhere public with others around' },
+    { t: 'You can leave at any point', d: 'If the group, the pace or the weather feels wrong, turn back' },
+    { t: 'Carry your own way out', d: 'Water, a layer, a charged phone and a torch, whatever the forecast says' },
+    { t: 'In an emergency, call 112', d: 'That is the national emergency number and it works from any phone' },
+  ];
+  SAFETY_FULL = [
+    { t: 'Tell someone who is not coming', d: 'Before you set off, send a person at home the place, the start time and when you expect to be back. It is the single most useful thing you can do, and it costs one message.' },
+    { t: 'Nobody here has had their identity checked', d: 'The board does check some things, and is precise about which — none of them is identity, experience or fitness. DEWDROPZ does not lead or supervise any of this. Everyone here is still a stranger you met on the internet.' },
+    { t: 'Meet where there are people', d: 'The rendezvous should be a bus stand, a car park, a chai stall — somewhere public with others around. Walk in as a group from there. Never agree to be picked up alone from an isolated spot.' },
+    { t: 'You can leave at any point', d: 'If the group, the pace or the weather feels wrong, turn back. You owe nobody an explanation, and no plan on this board is worth pushing through a bad feeling for.' },
+    { t: 'Carry your own way out', d: 'Water, a layer, a charged phone and a torch, whatever the forecast says. Phone signal in these hills is unreliable, so do not plan around having it.' },
+    { t: 'In an emergency, call 112', d: 'That is the national emergency number and it works from any phone. DEWDROPZ does not receive it and cannot help you on a hillside.' },
+  ];
+  CHECKS = [
+    { t: 'The meeting point is withheld', d: 'The exact spot is never on the public page. It reaches confirmed walkers only once enough people are going, so a walk nobody joins hands its address to nobody.' },
+    { t: 'The host chooses who comes', d: 'You ask; you are not added. Every walk is a person deciding who they will spend the day with, and that decision is the only vetting a board like this can honestly offer.' },
+    { t: 'A host can set a bar to ask', d: 'A walk can be limited to people with a verified phone number, or to people two others have vouched for after actually walking with them. The database refuses the request; it is not a note asking politely.' },
+    { t: 'A vouch has to be earned', d: 'You can only vouch for somebody you were confirmed alongside on a walk that has already happened. Two accounts cannot vouch for each other into credibility.' },
+    { t: 'Women-only walks are enforced', d: 'Only a woman can post one, and only women can ask to join. This is checked when the request is written, not when the page is drawn.' },
+    { t: 'Phone numbers stay off the board', d: 'Numbers, emails and handles are refused in every free-text field, and anything caught goes to a person to look at. Arrangements stay on the walk\u2019s own page, which is what keeps them reviewable.' },
+  ];
+  LIMITS = [
+    { t: 'A verified phone is not a verified person', d: 'It proves somebody holds that SIM. Not their name, not their age, not that they are who the profile says. It makes a throwaway account cost money and effort, and that is the whole of the claim.' },
+    { t: 'Women-only rests on a self-declared field', d: 'The board enforces the rule strictly, but it enforces it against what people said about themselves, because the alternative is collecting identity documents. Choose who you accept accordingly.' },
+    { t: 'No one checks experience or fitness', d: 'Years out, altitude and pace on a profile are typed in by the person whose profile it is. A hard walk with a confident stranger is still a hard walk with a stranger.' },
+    { t: 'DEWDROPZ is not on the walk', d: 'Nobody organises, leads, supervises or follows up on any of this, and no one is watching a screen while you are out. In an emergency, call 112.' },
+  ];
+
+  planCard(p) {
+    const light = this.lightFor(p.time ?? '06:00');
+    const spacesLeft = p.cap - p.going;
+    const dots = [];
+    for (let i = 0; i < Math.min(p.going, 4); i++) dots.push({ ml: i === 0 ? 0 : -6, bd: '1px solid #F8F5ED', bg: 'rgba(39,72,31,0.85)' });
+    const empty = Math.max(0, Math.min(spacesLeft, 4));
+    for (let i = 0; i < empty; i++) dots.push({ ml: p.going === 0 && i === 0 ? 0 : -6, bd: '1px dashed rgba(82,80,74,0.4)', bg: 'transparent' });
+    const nights = p.days ? p.days - 1 : 0;
+    const meta = p.actLabel + ' · from ' + p.meet + (nights > 0 ? ' · ' + p.days + ' days' : p.back ? ' · back ' + p.back : '');
+    return {
+      id: p.id, day: p.day, md: p.md,
+      timeText: p.time ?? p.days + ' days',
+      lightLabel: p.time ? light.label : 'On the hill',
+      bar: light.bar, ink: light.ink, wash: light.wash,
+      place: p.place, host: p.host, hostInitial: p.host.trim().charAt(0).toUpperCase(),
+      meta, countText: p.going + '/' + p.cap, dots, diff: p.diff,
+      womenOnly: !!p.womenOnly, senior: !!p.senior,
+      needsChip: p.dayPart !== 'day', minParty: p.minParty,
+      spacesText: spacesLeft <= 0 ? 'Full' : spacesLeft + ' space' + (spacesLeft === 1 ? '' : 's'),
+      spacesColor: spacesLeft <= 0 ? '#B8826B' : '#27481F',
+    };
+  }
+
+  personCard(p) {
+    return {
+      id: p.id, name: p.name,
+      initials: p.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase(),
+      sub: p.town + ' · ' + p.exp + ' · ' + p.years + 'y out',
+      intro: p.intro, acts: p.acts, walks: p.walks, hosted: p.hosted, vouches: p.vouches, pace: p.pace,
+    };
+  }
+
+  chip(on, dark) {
+    return on
+      ? (dark ? { bd: '#7BA46F', bg: '#7BA46F', fg: '#0C100D' } : { bd: '#27481F', bg: '#27481F', fg: '#F8F5ED' })
+      : (dark ? { bd: 'rgba(248,245,237,0.3)', bg: 'rgba(12,16,13,0.55)', fg: 'rgba(248,245,237,0.8)' } : { bd: '#DDD7C6', bg: 'transparent', fg: '#52504A' });
+  }
+
+  go(screen) { this.setState({ screen }); window.scrollTo(0, 0); }
+
+  renderVals() {
+    const s = this.state;
+    const screen = s.screen;
+    const emptyBoard = this.props.emptyBoard ?? false;
+    const tabbedKeys = ['board', 'people', 'yours', 'new', 'profile'];
+    const isTabbed = tabbedKeys.includes(screen);
+
+    // Filtering
+    let filtered = this.PLANS.filter((p) => (s.activity === 'all' || p.activity === s.activity) && (s.when === 'all' || p.when === s.when || (s.when === 'week' && p.when === 'weekend')));
+    if (emptyBoard) filtered = [];
+    const bucketDefs = [['soon', 'In the next few days'], ['weekend', 'This weekend'], ['next', 'Next week'], ['later', 'Further out']];
+    const buckets = bucketDefs
+      .map(([key, label]) => ({ key, label, plans: filtered.filter((p) => p.bucket === key).map((p) => this.planCard(p)), count: filtered.filter((p) => p.bucket === key).length }))
+      .filter((b) => b.count > 0);
+    const filtering = s.activity !== 'all' || s.when !== 'all';
+
+    const counts = { all: this.PLANS.length };
+    for (const a of this.ACTS) counts[a.key] = this.PLANS.filter((p) => p.activity === a.key).length;
+
+    const activityChips = [{ key: 'all', label: 'All', count: counts.all }].concat(
+      this.ACTS.filter((a) => counts[a.key] > 0).map((a) => ({ key: a.key, label: a.label, count: counts[a.key] }))
+    ).map((c) => ({ ...c, ...this.chip(s.activity === c.key, true), count: c.count || '' }));
+    const whenChips = [['all', 'Any time'], ['week', 'Next 7 days'], ['weekend', 'This weekend']].map(([key, label]) => ({ key, label, ...this.chip(s.when === key, true) }));
+
+    // Detail
+    const plan = this.PLANS.find((p) => p.id === s.planId) ?? this.PLANS[2];
+    const dLight = this.lightFor(plan.time ?? '06:00');
+    const nights = plan.days ? plan.days - 1 : 0;
+    const myStatus = plan.id === 'p3' ? 'host' : plan.id === 'p4' || plan.id === 'p6' ? 'confirmed' : plan.id === 'p7' ? 'requested' : 'none';
+    const released = plan.going >= plan.minParty && (myStatus === 'host' || myStatus === 'confirmed');
+    const dFacts = [
+      nights > 0 ? { k: 'Days', v: String(plan.days) } : { k: 'Leaves', v: plan.time ?? '—' },
+      nights > 0 ? { k: 'Ends', v: '24 Oct' } : { k: 'Back', v: (plan.back ?? '—') + (plan.dayPart !== 'day' && plan.activity !== 'camping' && plan.back && plan.back < '06:00' ? ' +1' : '') },
+      { k: 'Going', v: plan.going + '/' + plan.cap },
+      { k: 'Difficulty', v: plan.diff },
+    ];
+    const lockSegs = [];
+    for (let i = 0; i < plan.minParty; i++) lockSegs.push({ bg: i < plan.going ? dLight.bar : 'transparent' });
+
+    const mentors = this.PEOPLE.filter((p) => p.mentor).map((p) => this.personCard(p));
+    const others = this.PEOPLE.filter((p) => !p.mentor).map((p) => this.personCard(p));
+
+    // Person detail
+    const per = this.PEOPLE.find((p) => p.id === s.personId) ?? this.PEOPLE[0];
+    const perEvidence = [
+      { on: true, label: 'Confirmed email', proves: 'They opened one email. It says nothing about who they are.' },
+      { on: per.walks > 10, label: 'DEWDROPZ customer', off: 'Has never ordered from the shop', proves: 'A delivered order means a real person took a parcel at a real address in India.' },
+      { on: per.walks > 0, label: per.walks + ' walks on this board', proves: per.hosted + ' hosted, ' + (per.walks - per.hosted) + ' joined. Counted, not claimed.' },
+      { on: per.vouches > 0, label: 'Vouched for by ' + per.vouches + ' people', proves: 'Only someone who was on a completed walk with them can say this.' },
+    ].map((e) => ({ label: e.on ? e.label : e.off ?? e.label, proves: e.proves, dot: e.on ? '#27481F' : '#DDD7C6', labelColor: e.on ? '#15150F' : 'rgba(82,80,74,0.6)' }));
+
+    // Composer
+    const spec = this.ACTS.find((a) => a.key === s.f.activity) ?? this.ACTS[0];
+    const f = s.f;
+    const pvLight = this.lightFor(f.startTime || '06:00');
+    const timed = f.days <= 1 || spec.night;
+    const groups = [['day', 'In daylight'], ['evening', 'After dark'], ['overnight', 'Overnight']]
+      .map(([part, label]) => ({ label, items: this.ACTS.filter((a) => a.dayPart === part).map((a) => ({ key: a.key, label: a.label, blurb: a.blurb, start: a.start })) }))
+      .filter((g) => g.items.length);
+    const canPost = f.place.trim() && f.meetArea.trim() && f.meetingPoint.trim() && (!spec.night || f.nightNote.trim().length >= 10);
+    const dayChips = [1, 2, 3, 5, 7].map((n) => ({ n, label: n === 1 ? 'One day' : n + ' days', ...this.chip(f.days === n, false) }));
+    const diffChips = ['easy', 'moderate', 'difficult'].map((key) => ({ key, ...this.chip(f.difficulty === key, false) }));
+    const langChips = ['Hindi', 'English', 'Garhwali', 'Punjabi', 'Bengali'].map((key) => ({ key, ...this.chip(f.languages.includes(key), false) }));
+    const dayName = new Date(f.startsOn + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+
+    // Profile
+    const pr = s.pr;
+    const prTownChips = ['Dehradun', 'Mussoorie', 'Rishikesh', 'Haridwar', 'Sahastradhara', 'Chakrata', 'Elsewhere'].map((key) => ({ key, ...this.chip(pr.town === key, false) }));
+    const prActChips = this.ACTS.map((a) => ({ key: a.key, label: a.label, ...this.chip(pr.acts.includes(a.key), false) }));
+    const prLangChips = ['Hindi', 'English', 'Garhwali', 'Punjabi', 'Bengali'].map((key) => ({ key, ...this.chip(pr.langs.includes(key), false) }));
+    const prCarryChips = ['First aid kit', 'Head torch', 'Extra water', 'Extra layer', 'Power bank', 'Offline map', 'Whistle', 'Rope', 'Stove', 'Tent'].map((key) => ({ key, ...this.chip(pr.carries.includes(key), false) }));
+    const prPaces = [['steady', 'Steady', 'Stops often, no rush'], ['brisk', 'Brisk', 'Keeps moving'], ['fast', 'Fast', 'Expects a pace']].map(([key, label, d]) => ({ key, label, d, on: pr.pace === key }));
+
+    const inbox = [
+      { planId: 'p3', label: 'Someone asked', tone: 'plain', when: '2h ago', body: 'Sana Kapoor asked to come on Nag Tibba — Saturday 07:00.', read: false },
+      { planId: 'p3', label: 'Someone asked', tone: 'plain', when: '5h ago', body: 'Vikram Joshi asked to come on Nag Tibba — Saturday 07:00.', read: false },
+      { planId: 'p6', label: 'Meeting point', tone: 'good', when: 'yesterday', body: 'The meeting point for Kanatal Ridge is out — 4 people are going.', read: false },
+      { planId: 'p4', label: 'You are going', tone: 'good', when: '2d ago', body: 'Priya Negi confirmed you for George Everest Peak — Saturday 21:40.', read: true },
+      { planId: 'p6', label: 'Vouched', tone: 'good', when: '4d ago', body: 'Rohan Thapa vouched for you after Kanatal Ridge in September.', read: true },
+    ].map((n) => ({
+      ...n,
+      dotBg: n.read ? 'transparent' : n.tone === 'bad' ? '#B8826B' : n.tone === 'good' ? '#27481F' : '#52504A',
+      dotBd: n.read ? '1px solid rgba(82,80,74,0.4)' : 'none',
+      toneColor: n.tone === 'bad' ? '#B8826B' : n.tone === 'good' ? '#27481F' : '#52504A',
+      bodyColor: n.read ? '#52504A' : '#15150F',
+    }));
+
+    const tabDefs = [['board', 'The board'], ['people', 'Who is out there'], ['yours', 'Yours'], ['new', 'Post a walk'], ['profile', 'Your profile']];
+    const openCount = this.PLANS.length;
+
+    return {
+      // routing
+      isGate: screen === 'gate', isSetup: screen === 'setup', isTabbed,
+      isBoard: screen === 'board', isPeople: screen === 'people', isYours: screen === 'yours',
+      isNew: screen === 'new', isProfile: screen === 'profile',
+      isPlan: screen === 'plan', isPerson: screen === 'person',
+      goBoard: () => this.go('board'), goYours: () => this.go('yours'), goNew: () => this.go('new'), goProfile: () => this.go('profile'),
+      goTab: (e) => this.go(e.currentTarget.dataset.key),
+      goDev: (e) => this.go(e.currentTarget.dataset.key),
+      openPlan: (e) => { this.setState({ planId: e.currentTarget.dataset.id }); this.go('plan'); },
+      openPerson: (e) => { const id = e.currentTarget.dataset.id; this.setState({ personId: id === 'me' ? 'meera' : id }); this.go('person'); },
+      noop: () => {},
+      devTabs: [['gate', 'Signed out'], ['setup', 'Setup'], ['board', 'Board']].map(([key, label]) => ({ key, label, fg: screen === key ? '#0C100D' : 'rgba(248,245,237,0.7)', bg: screen === key ? '#7BA46F' : 'transparent' })),
+      navLinks: ['Shop', 'Collections', 'Customize', 'Trek Buddy', 'Trails'].map((label) => ({ label, color: label === 'Trek Buddy' ? '#F8F5ED' : 'rgba(248,245,237,0.7)', under: label === 'Trek Buddy' ? '#7BA46F' : 'transparent' })),
+      footerCols: [
+        { heading: 'Shop', links: ['All Products', 'T-Shirts', 'Hoodies', 'Sweatshirts', 'Drinkware'] },
+        { heading: 'Collections', links: ['O Collection', 'Mist & Morning', 'Silent Altitude', 'View All'] },
+        { heading: 'Explore', links: ['Journal', 'About DEWDROPZ', 'Our Philosophy'] },
+        { heading: 'Support', links: ['Contact & FAQs', 'Your Account', 'Wishlist', 'Cart', 'Privacy'] },
+      ],
+      gateSteps: [
+        { n: '01', t: 'Find one', d: 'Browse walks near Dehradun by day, by hour and by activity.' },
+        { n: '02', t: 'Ask to come', d: 'The host confirms or declines. Nobody joins automatically.' },
+        { n: '03', t: 'Meet the group', d: 'The exact spot arrives once enough people are going.' },
+      ],
+      safetyCompact: this.SAFETY, safetyNotes: this.SAFETY_FULL, boardChecks: this.CHECKS, boardLimits: this.LIMITS,
+      // hero
+      heroLede: openCount + ' walks on the board right now. Ask to come, and the host decides.',
+      youStats: [{ n: 14, label: 'walks' }, { n: 9, label: 'hosted' }, { n: 12, label: 'vouched' }],
+      meterSegs: [1, 2, 3, 4, 5, 6, 7],
+      tabs: tabDefs.map(([key, label]) => ({ key, label, badge: key === 'yours', color: screen === key ? '#F8F5ED' : 'rgba(248,245,237,0.7)', under: screen === key ? '#7BA46F' : 'transparent' })),
+      activityChips, whenChips,
+      setActivity: (e) => this.setState({ activity: e.currentTarget.dataset.key }),
+      setWhen: (e) => this.setState({ when: e.currentTarget.dataset.key }),
+      clearFilters: () => this.setState({ activity: 'all', when: 'all' }),
+      filtering,
+      boardEmpty: filtered.length === 0,
+      boardCountLabel: filtered.length === 0 ? (filtering ? 'Nothing matches' : 'Nothing on the board') : filtered.length + ' coming up',
+      buckets,
+      quickStarts: this.ACTS.map((a) => ({ label: a.label, blurb: a.blurb, start: a.start })),
+      // people
+      townChips: ['Anywhere', 'Dehradun', 'Mussoorie', 'Rishikesh', 'Haridwar', 'Sahastradhara', 'Chakrata'].map((label, i) => ({ label, ...this.chip(i === 0, false) })),
+      kindChips: ['Anything', 'Trekking', 'Bird watching', 'Cycling', 'Running', 'Stargazing', 'Camping'].map((label, i) => ({ label, ...this.chip(i === 0, false) })),
+      mentors, others,
+      // yours
+      inbox,
+      hostingCards: [this.planCard(this.PLANS[2])],
+      goingCards: [this.planCard(this.PLANS[3]), this.planCard(this.PLANS[5])],
+      waitingCards: [this.planCard(this.PLANS[6])],
+      // detail
+      dBar: dLight.bar, dPlace: plan.place, dHost: plan.host, dMeetArea: plan.meet,
+      dEyebrow: plan.actLabel + ' · ' + (plan.time ? dLight.label : plan.days + ' days out') + ' · Saturday, 17 October 2026',
+      dFacts,
+      dIsHost: myStatus === 'host', dIsConfirmed: myStatus === 'confirmed', dIsRequested: myStatus === 'requested', dIsStranger: myStatus === 'none',
+      dWaiting: [
+        { pid: 'sana', name: 'Sana Kapoor', msg: 'Steady pace — I\u2019ve done this trail twice. Coming from Rajpur.' },
+        { pid: 'kabir', name: 'Vikram Joshi', msg: 'Coming from Rishikesh, happy to carpool 2 people.' },
+      ],
+      dGoing: ['Priya Negi', 'Rohan Thapa', 'Kabir Singh', 'Ananya Bisht'],
+      dPointReleased: released, dPointLocked: !released,
+      dMeetingPoint: 'Gate 2, Dehradun ISBT — behind the tea stall', dLogistics: 'Shared cab to Pantwari, roughly ₹300 each way.',
+      dLockCopy: myStatus === 'confirmed'
+        ? 'Unlocks when ' + plan.minParty + ' people are going. Right now there are ' + plan.going + '.'
+        : 'Shown to walkers the host has confirmed, once ' + plan.minParty + ' people are going.',
+      dLockSegs: lockSegs, dLockCount: plan.going + ' of ' + plan.minParty,
+      dNote: 'Bring 2L of water and something warm for the top — it is windy past the temple. We will stop for chai at Pantwari on the way back.',
+      dGuidanceTitle: 'Before you go ' + plan.actLabel.toLowerCase(),
+      dGuidance: [
+        { t: 'Start earlier than feels necessary', d: 'Afternoon cloud arrives on schedule here. The view you came for is a morning view, and the descent is safer in full light.' },
+        { t: 'The descent is where knees go', d: 'Poles help more coming down than going up. If you have never done a long descent, say so — the group can pace for it.' },
+        { t: 'Say your pace out loud at the start', d: 'Nobody minds a slow group. Everybody minds finding out halfway that it is one.' },
+      ],
+      // person
+      perName: per.name, perIntro: per.intro,
+      perEyebrow: 'Trek Buddy · ' + per.town,
+      perMentor: !!per.mentor, perMentorBio: per.mentorBio ?? '',
+      perActs: per.acts.map((a) => a.charAt(0).toUpperCase() + a.slice(1)),
+      perPace: per.pace === 'Steady' ? 'Steady — stops often, no rush' : per.pace === 'Brisk' ? 'Brisk — keeps moving' : 'Fast — expects a pace',
+      perLangs: per.langs.join(', '),
+      perFacts: [
+        { k: 'Experience', v: per.exp },
+        { k: 'Going out for', v: per.years + ' years' },
+        { k: 'Highest been', v: per.highest.toLocaleString('en-IN') + ' m' },
+        { k: 'Usually goes', v: 'Weekends' },
+      ],
+      perEvidence,
+      // composer
+      steps: [['What'], ['Where'], ['How long'], ['The details']].map(([label], i) => ({ i, n: String(i + 1).padStart(2, '0'), label, color: i === s.step ? '#27481F' : i < s.step ? '#15150F' : 'rgba(82,80,74,0.5)' })),
+      step0: s.step === 0, step1: s.step === 1, step2: s.step === 2, step3: s.step === 3,
+      setStep: (e) => this.setState({ step: Number(e.currentTarget.dataset.step) }),
+      activityGroups: groups,
+      pickActivity: (e) => {
+        const a = this.ACTS.find((x) => x.key === e.currentTarget.dataset.key);
+        this.setState({ f: { ...f, activity: a.key, startTime: a.start, backBy: a.back, capacity: Math.max(f.capacity, a.minParty) }, step: 1 });
+      },
+      pickOther: () => this.setState({ step: 1 }),
+      onField: (e) => this.setState({ f: { ...this.state.f, [e.currentTarget.dataset.field]: e.currentTarget.value } }),
+      fPlace: f.place, fMeetArea: f.meetArea, fStartsOn: f.startsOn, fCapacity: f.capacity, fStartTime: f.startTime, fBackBy: f.backBy,
+      fMeetingPoint: f.meetingPoint, fLogistics: f.logistics, fNightNote: f.nightNote, fNote: f.note, fSenior: f.senior,
+      dayChips, setDays: (e) => this.setState({ f: { ...f, days: Number(e.currentTarget.dataset.days) } }),
+      diffChips, setDiff: (e) => this.setState({ f: { ...f, difficulty: e.currentTarget.dataset.key } }),
+      langChips, toggleLang: (e) => { const k = e.currentTarget.dataset.key; this.setState({ f: { ...f, languages: f.languages.includes(k) ? f.languages.filter((x) => x !== k) : [...f.languages, k] } }); },
+      toggleSenior: () => this.setState({ f: { ...f, senior: !f.senior } }),
+      setTrust: (e) => this.setState({ f: { ...f, minTrust: Number(e.currentTarget.dataset.value) } }),
+      trustOptions: [
+        [0, 'Anyone on the board', 'Everyone who has joined and filled in a profile.'],
+        [1, 'People with a verified phone', 'A confirmed mobile number. It proves they hold a SIM, not who they are — but it makes a throwaway account cost something.'],
+        [2, 'People who have been vouched for', 'Two people who actually walked with them said so afterwards. The hardest to fake, and the smallest group.'],
+      ].map(([v, name, why]) => ({ v, name, why, on: f.minTrust === v })),
+      minParty: spec.minParty, startMin: spec.min, startMax: spec.max, actLower: spec.label.toLowerCase(),
+      backOnLabel: f.days > 1 ? 'Back ' + (f.days - 1) + ' day' + (f.days > 2 ? 's' : '') + ' later.' : 'Back the same day.',
+      backByHint: spec.key === 'camping' || spec.key === 'stargazing' ? 'The next morning.' : '19:00 at the latest.',
+      needsNightNote: spec.night,
+      postOpacity: canPost ? '1' : '0.4', cantPost: !canPost,
+      nightNoteSuffix: spec.night ? ', plus how everyone gets back' : '',
+      pvBar: timed ? pvLight.bar : this.LIGHTS.morning.bar,
+      pvInk: timed ? pvLight.ink : this.LIGHTS.morning.ink,
+      pvWash: timed ? pvLight.wash : 'transparent',
+      pvTime: timed ? f.startTime : f.days + ' days',
+      pvLightLabel: timed ? pvLight.label : 'On the hill',
+      pvPlace: f.place || 'Where are you going?', pvPlaceColor: f.place ? '#15150F' : 'rgba(82,80,74,0.5)',
+      pvMeta: spec.label + ' · from ' + (f.meetArea || '…') + (f.days > 1 ? ' · ' + f.days + ' days' : ' · back ' + f.backBy),
+      pvBottom: dayName + ' · 1/' + f.capacity + ' · ' + f.difficulty,
+      // profile
+      prName: pr.name, prIntro: pr.intro,
+      prInitials: pr.name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase(),
+      prSub: pr.town + ' · Seasoned · 6y out',
+      prTownChips, prActChips, prLangChips, prCarryChips, prPaces,
+      onProfileField: (e) => this.setState({ pr: { ...pr, [e.currentTarget.dataset.field]: e.currentTarget.value }, saved: false }),
+      setPrTown: (e) => this.setState({ pr: { ...pr, town: e.currentTarget.dataset.key }, saved: false }),
+      setPrPace: (e) => this.setState({ pr: { ...pr, pace: e.currentTarget.dataset.key }, saved: false }),
+      togglePrAct: (e) => { const k = e.currentTarget.dataset.key; this.setState({ pr: { ...pr, acts: pr.acts.includes(k) ? pr.acts.filter((x) => x !== k) : [...pr.acts, k] }, saved: false }); },
+      togglePrLang: (e) => { const k = e.currentTarget.dataset.key; this.setState({ pr: { ...pr, langs: pr.langs.includes(k) ? pr.langs.filter((x) => x !== k) : [...pr.langs, k] }, saved: false }); },
+      togglePrCarry: (e) => { const k = e.currentTarget.dataset.key; this.setState({ pr: { ...pr, carries: pr.carries.includes(k) ? pr.carries.filter((x) => x !== k) : [...pr.carries, k] }, saved: false }); },
+      saveProfile: () => this.setState({ saved: true }),
+      saveLabel: s.saved ? 'Saved ✓' : 'Save profile',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Archivo:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#F8F5ED; color:#15150F; }
+  body { font-family: Archivo, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color:#27481F; } a:hover { color:#C2662A; }
+  ::selection { background:#E39B3F; color:#0C100D; }
+  input:focus, textarea:focus { border-color:#E39B3F !important; outline:none; }
+  @keyframes tb-kenburns { from { transform:scale(1.04) translateY(0); } to { transform:scale(1.12) translateY(-12px); } }
+  @keyframes tb-marquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+  @keyframes tb-pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; flex-direction:column; background:#F8F5ED">
+
+<!-- ══════════ TOP BAR ══════════ -->
+<header style="position:fixed; top:0; left:0; right:0; z-index:50; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; height:64px; padding:0 40px; background:rgba(12,16,13,0.92); backdrop-filter:blur(14px); border-bottom:1px solid rgba(248,245,237,0.08)">
+  <span onClick="{{ goLanding }}" style="justify-self:start; display:inline-flex; align-items:center; gap:12px; cursor:pointer">
+    <span style="position:relative; display:grid; place-items:center; height:30px; width:30px; border-radius:999px; background:radial-gradient(circle at 50% 65%, #F6DCA8 0%, #E39B3F 55%, #C2662A 100%); box-shadow:0 0 18px rgba(227,155,63,0.45)">
+      <span style="position:absolute; bottom:-1px; left:-2px; right:-2px; height:12px; background:#0C100D; border-radius:0 0 999px 999px"></span>
+    </span>
+    <span style="display:flex; flex-direction:column; line-height:1">
+      <span style="font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:500; letter-spacing:0.01em; color:#F8F5ED">TrackBuddy</span>
+      <span style="margin-top:3px; font-family:'Space Mono',monospace; font-size:8px; text-transform:uppercase; letter-spacing:0.3em; color:#7BA46F">by Dewdropz</span>
+    </span>
+  </span>
+  <nav style="display:flex; align-items:center; gap:32px; justify-self:center">
+    <sc-for list="{{ mainNav }}" as="n" hint-placeholder-count="4">
+      <span onClick="{{ goNav }}" data-key="{{ n.key }}" style="position:relative; padding:8px 0; font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:{{ n.color }}; cursor:pointer; transition:color .3s" style-hover="color:#F8F5ED">
+        {{ n.label }}<sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="margin-left:6px; display:inline-flex; min-width:16px; align-items:center; justify-content:center; border-radius:999px; background:#E39B3F; padding:1px 5px; font-family:'Space Mono',monospace; font-size:9px; line-height:1.4; color:#0C100D; font-variant-numeric:tabular-nums">{{ n.badge }}</span></sc-if>
+        <span style="position:absolute; bottom:0; left:0; height:2px; width:100%; border-radius:2px; background:{{ n.under }}"></span>
+      </span>
+    </sc-for>
+  </nav>
+  <div style="display:flex; align-items:center; gap:16px; justify-self:end">
+    <button onClick="{{ goCreate }}" style="border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:10px 20px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; transition:all .25s; box-shadow:0 0 0 0 rgba(227,155,63,0.4)" style-hover="background:#F6DCA8; box-shadow:0 4px 20px -4px rgba(227,155,63,0.6)">Host something</button>
+    <span onClick="{{ goDashboard }}" style="position:relative; display:grid; place-items:center; height:38px; width:38px; border-radius:999px; background:rgba(123,164,111,0.2); color:#7BA46F; font-family:Fraunces,Georgia,serif; font-size:14px; cursor:pointer; box-shadow:0 0 0 2px #E39B3F">AM</span>
+  </div>
+</header>
+
+<!-- ══════════ LANDING ══════════ -->
+<sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+<main data-screen-label="Landing (signed out)" style="flex:1">
+  <!-- Hero -->
+  <section style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D; min-height:92vh; display:flex; flex-direction:column; justify-content:flex-end">
+    <img src="https://images.unsplash.com/photo-1761566333643-bf7d2c94f0ed?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.85; animation:tb-kenburns 24s ease-out both alternate infinite">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.62) 0%, rgba(12,16,13,0.1) 35%, rgba(12,16,13,0.25) 62%, rgba(12,16,13,0.88) 100%)"></div>
+    <div style="position:relative; max-width:1200px; width:100%; margin:0 auto; padding:160px 40px 0; box-sizing:border-box">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.32em; color:#F6DCA8">The hours worth waking for</p>
+      <h1 style="margin:20px 0 0; max-width:900px; font-family:Fraunces,Georgia,serif; font-size:clamp(56px,7.5vw,104px); font-weight:300; line-height:0.94; letter-spacing:-0.01em; color:#F8F5ED">Chase the light.<br><em style="color:#E39B3F">Together.</em></h1>
+      <p style="margin:24px 0 0; max-width:520px; font-size:17px; line-height:1.6; color:rgba(248,245,237,0.78)">Sunrise treks, midnight meteor showers, dawn-chorus walks — posted by real people, joined by real people. Find your crowd, or gather one.</p>
+      <div style="margin-top:36px; display:flex; flex-wrap:wrap; gap:16px">
+        <button onClick="{{ goDiscover }}" style="border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:16px 32px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="background:#F6DCA8; transform:translateY(-2px); box-shadow:0 12px 30px -8px rgba(227,155,63,0.55)">Find something to join</button>
+        <button onClick="{{ goCreate }}" style="border:1px solid rgba(248,245,237,0.35); border-radius:999px; background:rgba(12,16,13,0.35); color:#F8F5ED; padding:16px 32px; font-family:Archivo,sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; backdrop-filter:blur(6px); transition:all .25s" style-hover="border-color:#F8F5ED; transform:translateY(-2px)">Gather your own</button>
+      </div>
+    </div>
+    <!-- Live ticker band -->
+    <div style="position:relative; margin-top:64px; border-top:1px solid rgba(248,245,237,0.15); background:rgba(12,16,13,0.55); backdrop-filter:blur(10px)">
+      <div style="max-width:1200px; margin:0 auto; padding:20px 40px; display:flex; flex-wrap:wrap; align-items:center; gap:48px">
+        <sc-for list="{{ heroStats }}" as="s" hint-placeholder-count="3">
+          <div style="display:flex; align-items:baseline; gap:10px">
+            <span style="font-family:'Space Mono',monospace; font-size:28px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ s.n }}</span>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:rgba(248,245,237,0.6)">{{ s.label }}</span>
+          </div>
+        </sc-for>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px">
+          <span style="height:7px; width:7px; border-radius:999px; background:#E39B3F; animation:tb-pulse 2s ease-in-out infinite"></span>
+          <span style="font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.14em; color:rgba(248,245,237,0.75); font-variant-numeric:tabular-nums">{{ liveClock }} · somewhere, a group is setting off</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marquee -->
+  <div style="overflow:hidden; border-bottom:1px solid #DDD7C6; background:#F8F5ED; padding:18px 0">
+    <div style="display:flex; width:max-content; animation:tb-marquee 40s linear infinite">
+      <sc-for list="{{ marquee }}" as="m" hint-placeholder-count="12">
+        <span style="display:flex; align-items:center; gap:28px; padding-right:28px; font-family:'Space Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.24em; color:#52504A; white-space:nowrap">{{ m }}<span style="color:#E39B3F">✦</span></span>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- A day on TrackBuddy: activity tiles by hour -->
+  <section style="background:#F8F5ED; padding:96px 40px">
+    <div style="max-width:1200px; margin:0 auto">
+      <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#C2662A">04:30 — 23:00</p>
+          <h2 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(36px,4vw,52px); font-weight:300; line-height:1.02; color:#15150F">A whole day of ways<br>to be out there.</h2>
+        </div>
+        <p style="margin:0; max-width:360px; font-size:14px; line-height:1.65; color:#52504A">Every event carries the colour of its departure hour — scan any board here and you are reading a day, from indigo pre-dawn to after-dark ink.</p>
+      </div>
+      <div style="margin-top:48px; display:grid; grid-template-columns:repeat(3, 1fr); gap:16px">
+        <sc-for list="{{ activityTiles }}" as="t" hint-placeholder-count="6">
+          <div onClick="{{ goDiscover }}" style="position:relative; overflow:hidden; border-radius:6px; aspect-ratio:4/3; cursor:pointer; background:#0C100D">
+            <div style="{{ t.bg }}"></div>
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 30%, {{ t.tint }} 100%); transition:opacity .4s"></div>
+            <div style="position:absolute; top:14px; left:14px; display:flex; align-items:center; gap:8px; border-radius:999px; background:rgba(12,16,13,0.55); backdrop-filter:blur(6px); padding:5px 12px">
+              <span style="height:7px; width:7px; border-radius:999px; background:{{ t.dot }}"></span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.14em; color:#F8F5ED; font-variant-numeric:tabular-nums">{{ t.hour }}</span>
+            </div>
+            <div style="position:absolute; left:16px; right:16px; bottom:14px; display:flex; align-items:baseline; justify-content:space-between; gap:8px">
+              <span style="font-family:Fraunces,Georgia,serif; font-size:24px; color:#F8F5ED">{{ t.label }}</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.12em; color:rgba(248,245,237,0.8); font-variant-numeric:tabular-nums">{{ t.count }} live</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section style="background:#F1E9D7; border-top:1px solid #D2C4A4; border-bottom:1px solid #D2C4A4; padding:96px 40px">
+    <div style="max-width:1200px; margin:0 auto">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#C2662A">How it works</p>
+      <h2 style="margin:12px 0 0; max-width:560px; font-family:Fraunces,Georgia,serif; font-size:clamp(32px,3.6vw,46px); font-weight:300; line-height:1.05; color:#15150F">Three moves between you and a sunrise with company.</h2>
+      <div style="margin-top:56px; display:grid; grid-template-columns:repeat(3, 1fr); gap:40px">
+        <sc-for list="{{ howSteps }}" as="h" hint-placeholder-count="3">
+          <div style="border-top:2px solid #E39B3F; padding-top:24px">
+            <span style="font-family:'Space Mono',monospace; font-size:12px; color:#C2662A; font-variant-numeric:tabular-nums">{{ h.n }}</span>
+            <h3 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">{{ h.t }}</h3>
+            <p style="margin:10px 0 0; font-size:14px; line-height:1.65; color:#52504A">{{ h.d }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust: counted, not claimed -->
+  <section style="background:#0C100D; padding:96px 40px">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center">
+      <div>
+        <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#7BA46F">Trust, the honest way</p>
+        <h2 style="margin:14px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(32px,3.6vw,46px); font-weight:300; line-height:1.05; color:#F8F5ED">Counted,<br>never claimed.</h2>
+        <p style="margin:18px 0 0; max-width:420px; font-size:15px; line-height:1.7; color:rgba(248,245,237,0.65)">No stars, no green ticks. Your record here is built from what actually happened — events completed, people vouching after walking beside you, hosts confirming you showed. It cannot be typed in, and that is the point.</p>
+        <div style="margin-top:28px; display:flex; flex-wrap:wrap; gap:10px">
+          <sc-for list="{{ trustChips }}" as="c" hint-placeholder-count="4">
+            <span style="border:1px solid rgba(123,164,111,0.4); border-radius:999px; padding:7px 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#7BA46F">{{ c }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="border:1px solid rgba(248,245,237,0.12); border-radius:8px; background:rgba(248,245,237,0.03); padding:32px">
+        <div style="display:flex; align-items:center; gap:16px">
+          <span style="display:grid; place-items:center; height:56px; width:56px; border-radius:999px; background:rgba(123,164,111,0.2); color:#7BA46F; font-family:Fraunces,Georgia,serif; font-size:18px; box-shadow:0 0 0 2px #B8826B">MJ</span>
+          <div>
+            <p style="margin:0; font-family:Fraunces,Georgia,serif; font-size:22px; color:#F8F5ED">Meera Joshi</p>
+            <p style="margin:3px 0 0; font-size:12px; color:rgba(248,245,237,0.55)">Dehradun, India · hosting since 2024</p>
+          </div>
+          <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:#B8826B">Mentor</span>
+        </div>
+        <div style="margin-top:24px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; border-top:1px solid rgba(248,245,237,0.12); padding-top:20px">
+          <sc-for list="{{ trustProof }}" as="p" hint-placeholder-count="3">
+            <div>
+              <p style="margin:0; font-family:'Space Mono',monospace; font-size:26px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ p.n }}</p>
+              <p style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.14em; color:rgba(248,245,237,0.5)">{{ p.label }}</p>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:20px; border-top:1px solid rgba(248,245,237,0.12); padding-top:16px">
+          <p style="margin:0; font-size:13px; line-height:1.6; color:rgba(248,245,237,0.65)"><span style="color:#7BA46F">Vouched by 23 people</span> she actually walked with — a vouch can only be written after a completed event, by someone who was confirmed on it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Community contact sheet -->
+  <section style="background:#F8F5ED; padding:96px 0 0">
+    <div style="max-width:1200px; margin:0 auto; padding:0 40px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px">
+      <div>
+        <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#C2662A">From last weekend</p>
+        <h2 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(32px,3.6vw,46px); font-weight:300; line-height:1.05; color:#15150F">It happened. Here is the proof.</h2>
+      </div>
+      <span onClick="{{ goRecap }}" style="border-bottom:1px solid #DDD7C6; padding-bottom:4px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#52504A; cursor:pointer; white-space:nowrap" style-hover="color:#15150F">See a recap →</span>
+    </div>
+    <div style="margin-top:48px; overflow:hidden">
+      <div style="display:flex; width:max-content; gap:12px; animation:tb-marquee 60s linear infinite">
+        <sc-for list="{{ contactSheet }}" as="c" hint-placeholder-count="12">
+          <div style="position:relative; height:220px; width:300px; overflow:hidden; border-radius:6px; flex-shrink:0">
+            <div style="{{ c.bg }}"></div>
+            <span style="position:absolute; left:10px; bottom:10px; border-radius:3px; background:rgba(12,16,13,0.6); backdrop-filter:blur(4px); padding:4px 8px; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.1em; color:#F8F5ED">{{ c.tag }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section style="background:#F8F5ED; padding:96px 40px 112px">
+    <div style="max-width:1200px; margin:0 auto; border-radius:10px; background:linear-gradient(135deg, #F6DCA8 0%, #E39B3F 60%, #C2662A 100%); padding:72px 64px; position:relative; overflow:hidden">
+      <div style="position:relative">
+        <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:rgba(12,16,13,0.6)">Sunrise is at 05:52 tomorrow</p>
+        <h2 style="margin:14px 0 0; max-width:640px; font-family:Fraunces,Georgia,serif; font-size:clamp(36px,4.4vw,58px); font-weight:300; line-height:1; color:#0C100D">Someone near you is going. Be the one who came.</h2>
+        <div style="margin-top:32px; display:flex; flex-wrap:wrap; gap:14px">
+          <button onClick="{{ goOnboarding }}" style="border:none; border-radius:999px; background:#0C100D; color:#F6DCA8; padding:16px 32px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="transform:translateY(-2px); box-shadow:0 12px 28px -8px rgba(12,16,13,0.5)">Join TrackBuddy</button>
+          <button onClick="{{ goDiscover }}" style="border:1px solid rgba(12,16,13,0.4); border-radius:999px; background:transparent; color:#0C100D; padding:16px 32px; font-family:Archivo,sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="border-color:#0C100D; transform:translateY(-2px)">Browse first</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══════════ DISCOVER ══════════ -->
+<sc-if value="{{ isDiscover }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Discover board" style="flex:1">
+  <!-- Board header -->
+  <section style="background:#0C100D; padding:104px 40px 0">
+    <div style="max-width:1200px; margin:0 auto">
+      <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:24px">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#F6DCA8">Discover · anywhere the light lands</p>
+          <h1 style="margin:14px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(40px,4.5vw,60px); font-weight:300; line-height:0.98; color:#F8F5ED">What is <em style="color:#E39B3F">on.</em></h1>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:32px; padding-bottom:8px">
+          <sc-for list="{{ boardStats }}" as="s" hint-placeholder-count="3">
+            <div>
+              <p style="margin:0; font-family:'Space Mono',monospace; font-size:22px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ s.n }}</p>
+              <p style="margin:2px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(248,245,237,0.5)">{{ s.label }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="margin-top:28px; display:flex; flex-direction:column; gap:12px; padding-bottom:24px">
+        <input placeholder="Search a place, a peak, a city — Nag Tibba, Dolomites, Kyoto…" style="width:100%; border-radius:6px; border:1px solid rgba(248,245,237,0.25); background:rgba(248,245,237,0.06); padding:14px 16px; font-family:Archivo,sans-serif; font-size:14px; color:#F8F5ED; box-sizing:border-box; backdrop-filter:blur(8px)">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+          <sc-for list="{{ discActChips }}" as="c" hint-placeholder-count="7">
+            <button onClick="{{ setDiscAct }}" data-key="{{ c.key }}" style="white-space:nowrap; border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:7px 14px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; transition:all .2s">{{ c.label }} <span style="opacity:0.6">{{ c.count }}</span></button>
+          </sc-for>
+          <span style="margin-left:auto; display:flex; gap:8px">
+            <sc-for list="{{ discWhenChips }}" as="c" hint-placeholder-count="3">
+              <button onClick="{{ setDiscWhen }}" data-key="{{ c.key }}" style="white-space:nowrap; border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:7px 14px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; transition:all .2s">{{ c.label }}</button>
+            </sc-for>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaving soon rail -->
+  <section style="background:linear-gradient(180deg, #0C100D 0%, #0C100D 55%, #F8F5ED 55%); padding:0 40px 8px">
+    <div style="max-width:1200px; margin:0 auto">
+      <div style="display:flex; align-items:center; gap:12px; padding:20px 0 14px">
+        <span style="height:7px; width:7px; border-radius:999px; background:#E39B3F; animation:tb-pulse 2s ease-in-out infinite"></span>
+        <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#F6DCA8">Leaving within 48 hours</h2>
+      </div>
+      <div style="display:flex; gap:14px; overflow-x:auto; padding-bottom:16px">
+        <sc-for list="{{ soonRail }}" as="e" hint-placeholder-count="4">
+          <div onClick="{{ openEvent }}" data-id="{{ e.id }}" style="position:relative; flex-shrink:0; width:280px; overflow:hidden; border-radius:8px; background:#15150F; cursor:pointer; transition:transform .3s cubic-bezier(0.22,1,0.36,1); box-shadow:0 12px 32px -16px rgba(0,0,0,0.6)" style-hover="transform:translateY(-4px)">
+            <div style="position:relative; height:120px; overflow:hidden">
+              <div style="{{ e.bg }}"></div>
+              <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 20%, {{ e.tint }} 100%)"></div>
+              <span style="position:absolute; top:10px; right:10px; border-radius:999px; background:rgba(12,16,13,0.65); backdrop-filter:blur(6px); padding:4px 10px; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#F6DCA8; font-variant-numeric:tabular-nums">in {{ e.countdown }}</span>
+            </div>
+            <div style="padding:14px 16px 16px">
+              <div style="display:flex; align-items:baseline; gap:8px">
+                <span style="font-family:'Space Mono',monospace; font-size:13px; color:{{ e.hourColor }}; font-variant-numeric:tabular-nums">{{ e.time }}</span>
+                <span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.14em; color:rgba(248,245,237,0.5)">{{ e.lightLabel }}</span>
+              </div>
+              <p style="margin:4px 0 0; font-family:Fraunces,Georgia,serif; font-size:17px; line-height:1.2; color:#F8F5ED; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ e.title }}</p>
+              <p style="margin:4px 0 0; font-size:11px; color:rgba(248,245,237,0.55)">{{ e.loc }} · {{ e.spotsShort }}</p>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured + grid -->
+  <section style="background:#F8F5ED; padding:40px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:48px">
+      <!-- Featured -->
+      <div onClick="{{ openEvent }}" data-id="{{ featured.id }}" style="position:relative; overflow:hidden; border-radius:10px; min-height:380px; display:flex; align-items:flex-end; cursor:pointer; background:#0C100D; box-shadow:0 24px 60px -24px rgba(12,16,13,0.5)">
+        <div style="{{ featuredBg }}"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(12,16,13,0.82) 0%, rgba(12,16,13,0.35) 55%, rgba(12,16,13,0.05) 100%)"></div>
+        <span style="position:absolute; top:20px; left:20px; border-radius:999px; background:#E39B3F; color:#0C100D; padding:6px 14px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em">Featured</span>
+        <div style="position:relative; padding:40px; max-width:560px">
+          <div style="display:flex; align-items:baseline; gap:10px">
+            <span style="font-family:'Space Mono',monospace; font-size:16px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ featured.dateLine }}</span>
+          </div>
+          <h2 style="margin:10px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(32px,3.6vw,46px); font-weight:300; line-height:1.02; color:#F8F5ED">{{ featured.title }}</h2>
+          <p style="margin:12px 0 0; font-size:14px; line-height:1.6; color:rgba(248,245,237,0.75)">{{ featured.blurb }}</p>
+          <div style="margin-top:18px; display:flex; flex-wrap:wrap; align-items:center; gap:16px">
+            <span style="display:flex; align-items:center; gap:8px">
+              <span style="display:grid; place-items:center; height:26px; width:26px; border-radius:999px; background:rgba(123,164,111,0.25); color:#7BA46F; font-family:'Space Mono',monospace; font-size:10px">{{ featured.hostInitials }}</span>
+              <span style="font-size:12px; color:rgba(248,245,237,0.8)">{{ featured.host }}</span>
+            </span>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#7BA46F">{{ featured.spots }}</span>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:rgba(248,245,237,0.6)">{{ featured.cost }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buckets -->
+      <sc-for list="{{ discBuckets }}" as="b" hint-placeholder-count="2">
+        <div>
+          <div style="display:flex; align-items:baseline; gap:14px; padding-bottom:18px">
+            <h3 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:26px; font-weight:400; color:#15150F">{{ b.label }}</h3>
+            <span style="height:1px; flex:1; background:#DDD7C6"></span>
+            <span style="font-family:'Space Mono',monospace; font-size:11px; color:#52504A; font-variant-numeric:tabular-nums">{{ b.count }}</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px">
+            <sc-for list="{{ b.events }}" as="e" hint-placeholder-count="3">
+              <div onClick="{{ openEvent }}" data-id="{{ e.id }}" style="display:flex; flex-direction:column; overflow:hidden; border-radius:8px; background:#fff; border:1px solid #DDD7C6; cursor:pointer; transition:all .35s cubic-bezier(0.22,1,0.36,1)" style-hover="transform:translateY(-4px); box-shadow:0 20px 40px -20px rgba(12,16,13,0.35); border-color:rgba(227,155,63,0.6)">
+                <div style="position:relative; aspect-ratio:16/10; overflow:hidden">
+                  <div style="{{ e.bg }}"></div>
+                  <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, {{ e.tint }} 100%)"></div>
+                  <span style="position:absolute; top:12px; left:12px; display:flex; flex-direction:column; align-items:center; border-radius:6px; background:rgba(248,245,237,0.95); padding:6px 10px; line-height:1">
+                    <span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">{{ e.dow }}</span>
+                    <span style="margin-top:2px; font-family:Fraunces,Georgia,serif; font-size:20px; color:#15150F; font-variant-numeric:tabular-nums">{{ e.day }}</span>
+                  </span>
+                  <span style="position:absolute; top:12px; right:12px; border-radius:999px; background:{{ e.hourBg }}; padding:5px 11px; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:{{ e.hourFg }}; font-variant-numeric:tabular-nums">{{ e.time }}</span>
+                  <sc-if value="{{ e.full }}" hint-placeholder-val="{{ false }}">
+                    <span style="position:absolute; bottom:12px; right:12px; border-radius:999px; background:rgba(12,16,13,0.7); backdrop-filter:blur(4px); padding:4px 10px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#F6DCA8">Waitlist open</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:10px; padding:16px 18px 18px; flex:1">
+                  <div>
+                    <p style="margin:0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:{{ e.inkColor }}">{{ e.actLabel }} · {{ e.lightLabel }}</p>
+                    <h4 style="margin:6px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.2; color:#15150F">{{ e.title }}</h4>
+                    <p style="margin:5px 0 0; font-size:12px; color:#52504A">{{ e.loc }}</p>
+                  </div>
+                  <div style="margin-top:auto; display:flex; align-items:center; gap:8px; border-top:1px solid #EFEADB; padding-top:12px">
+                    <span style="display:grid; place-items:center; height:24px; width:24px; border-radius:999px; background:rgba(39,72,31,0.1); color:#27481F; font-family:'Space Mono',monospace; font-size:9px">{{ e.hostInitials }}</span>
+                    <span style="font-size:12px; color:#52504A">{{ e.host }}</span>
+                    <span style="display:flex; align-items:center; gap:4px; margin-left:2px; font-family:'Space Mono',monospace; font-size:10px; color:#7BA46F; font-variant-numeric:tabular-nums">✓{{ e.vouches }}</span>
+                    <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:{{ e.spotsColor }}; font-variant-numeric:tabular-nums">{{ e.spotsText }}</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px">
+                    <span style="border-radius:4px; background:{{ e.costBg }}; color:{{ e.costFg }}; padding:3px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em">{{ e.cost }}</span>
+                    <span style="border-radius:4px; border:1px solid #DDD7C6; padding:3px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A">{{ e.diff }}</span>
+                    <sc-if value="{{ e.womenOnly }}" hint-placeholder-val="{{ false }}"><span style="border-radius:4px; border:1px solid rgba(184,130,107,0.5); padding:3px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#B8826B">Women only</span></sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══════════ EVENT DETAIL ══════════ -->
+<sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Event detail" style="flex:1">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D; min-height:440px; display:flex; align-items:flex-end">
+    <div style="{{ evBg }}"></div>
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.55) 0%, rgba(12,16,13,0.1) 40%, rgba(12,16,13,0.85) 100%)"></div>
+    <div style="position:relative; width:100%; max-width:1200px; margin:0 auto; padding:120px 40px 32px; box-sizing:border-box">
+      <span onClick="{{ goDiscover }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(248,245,237,0.65); cursor:pointer" style-hover="color:#F8F5ED">← Discover</span>
+      <div style="margin-top:20px; display:flex; align-items:center; gap:12px">
+        <span style="border-radius:999px; background:{{ ev.hourBg }}; padding:6px 14px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.12em; color:{{ ev.hourFg }}; font-variant-numeric:tabular-nums">{{ ev.time }} · {{ ev.lightLabel }}</span>
+        <span style="font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.18em; color:rgba(248,245,237,0.75)">{{ ev.actLabel }} · {{ evDate }}</span>
+      </div>
+      <h1 style="margin:14px 0 0; max-width:820px; font-family:Fraunces,Georgia,serif; font-size:clamp(40px,5vw,64px); font-weight:300; line-height:0.98; color:#F8F5ED">{{ ev.title }}</h1>
+      <p style="margin:14px 0 0; font-size:14px; color:rgba(248,245,237,0.75)">{{ ev.loc }} · hosted by <span onClick="{{ openPerson }}" data-id="{{ evHostId }}" style="color:#F8F5ED; text-decoration:underline; text-decoration-color:rgba(248,245,237,0.4); text-underline-offset:4px; cursor:pointer">{{ ev.host }}</span> <span style="font-family:'Space Mono',monospace; font-size:11px; color:#7BA46F">✓{{ ev.vouches }} vouched</span></p>
+      <dl style="margin:28px 0 0; display:flex; flex-wrap:wrap; column-gap:44px; row-gap:14px; border-top:1px solid rgba(248,245,237,0.2); padding-top:18px">
+        <sc-for list="{{ evFacts }}" as="f" hint-placeholder-count="5">
+          <div>
+            <dt style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(248,245,237,0.5)">{{ f.k }}</dt>
+            <dd style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:19px; color:#F8F5ED; font-variant-numeric:tabular-nums">{{ f.v }}</dd>
+          </div>
+        </sc-for>
+      </dl>
+    </div>
+  </header>
+
+  <div style="background:#F8F5ED; padding:48px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:48px; align-items:start">
+      <div style="display:flex; flex-direction:column; gap:40px">
+        <section>
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#C2662A">The plan</h2>
+          <p style="margin:14px 0 0; max-width:640px; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:350; line-height:1.45; color:#15150F">{{ evStory }}</p>
+        </section>
+        <section>
+          <h2 style="margin:0 0 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#52504A">The day, hour by hour</h2>
+          <div style="display:flex; flex-direction:column">
+            <sc-for list="{{ evItinerary }}" as="i" hint-placeholder-count="4">
+              <div style="display:flex; gap:20px">
+                <div style="display:flex; flex-direction:column; align-items:center">
+                  <span style="height:12px; width:12px; border-radius:999px; background:{{ i.dot }}; box-shadow:0 0 0 3px #F8F5ED, 0 0 0 4px #DDD7C6"></span>
+                  <span style="width:2px; flex:1; background:linear-gradient(180deg, {{ i.dot }}, {{ i.nextDot }}); opacity:{{ i.lineOpacity }}"></span>
+                </div>
+                <div style="padding-bottom:26px; margin-top:-3px">
+                  <div style="display:flex; align-items:baseline; gap:10px">
+                    <span style="font-family:'Space Mono',monospace; font-size:14px; color:{{ i.ink }}; font-variant-numeric:tabular-nums">{{ i.t }}</span>
+                    <span style="font-size:15px; color:#15150F">{{ i.label }}</span>
+                  </div>
+                  <p style="margin:4px 0 0; font-size:13px; line-height:1.6; color:#52504A">{{ i.d }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <section>
+          <h2 style="margin:0 0 14px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#52504A">Bring</h2>
+          <div style="display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ evBring }}" as="b" hint-placeholder-count="6">
+              <span style="border-radius:999px; border:1px solid #DDD7C6; background:#fff; padding:8px 16px; font-size:13px; color:#15150F">{{ b }}</span>
+            </sc-for>
+          </div>
+        </section>
+        <section style="border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:24px">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px">
+            <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#52504A">Going · {{ ev.spotsText }}</h2>
+            <sc-if value="{{ evMine }}" hint-placeholder-val="{{ false }}"><span onClick="{{ goConsole }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#C2662A; cursor:pointer; border-bottom:1px solid #E39B3F; padding-bottom:2px">Manage roster →</span></sc-if>
+          </div>
+          <div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:10px">
+            <sc-for list="{{ evRoster }}" as="r" hint-placeholder-count="6">
+              <span onClick="{{ openPerson }}" data-id="{{ r.id }}" style="display:flex; align-items:center; gap:8px; border-radius:999px; border:1px solid #EFEADB; background:#F8F5ED; padding:5px 14px 5px 5px; cursor:pointer; transition:border-color .2s" style-hover="border-color:#E39B3F">
+                <span style="display:grid; place-items:center; height:26px; width:26px; border-radius:999px; background:{{ r.bg }}; color:{{ r.fg }}; font-family:'Space Mono',monospace; font-size:9px">{{ r.initials }}</span>
+                <span style="font-size:12px; color:#15150F">{{ r.name }}</span>
+                <sc-if value="{{ r.tag }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Space Mono',monospace; font-size:8px; text-transform:uppercase; letter-spacing:0.1em; color:#C2662A">{{ r.tag }}</span></sc-if>
+              </span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ evWaitlistLine }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:14px 0 0; border-top:1px solid #EFEADB; padding-top:12px; font-size:12px; color:#52504A">{{ evWaitlistLine }}</p>
+          </sc-if>
+        </section>
+        <section style="border-radius:8px; border:1px solid #DDD7C6; background:#fff; overflow:hidden">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 24px; border-bottom:1px solid #EFEADB">
+            <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#52504A">Group chat</h2>
+            <span onClick="{{ goMessages }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#27481F; cursor:pointer; border-bottom:1px solid #DDD7C6; padding-bottom:2px" style-hover="color:#C2662A">Open chat →</span>
+          </div>
+          <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px">
+            <sc-for list="{{ evChatPreview }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex; gap:12px">
+                <span style="display:grid; place-items:center; height:30px; width:30px; flex-shrink:0; border-radius:999px; background:rgba(39,72,31,0.1); color:#27481F; font-family:'Space Mono',monospace; font-size:9px">{{ m.initials }}</span>
+                <div>
+                  <p style="margin:0; font-size:11px; color:#52504A"><span style="color:#15150F; font-weight:500">{{ m.name }}</span> · {{ m.when }}</p>
+                  <p style="margin:3px 0 0; font-size:14px; line-height:1.5; color:#15150F">{{ m.text }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <section style="display:flex; gap:20px; border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:24px; align-items:center">
+          <span onClick="{{ openPerson }}" data-id="{{ evHostId }}" style="display:grid; place-items:center; height:64px; width:64px; flex-shrink:0; border-radius:999px; background:rgba(39,72,31,0.1); color:#27481F; font-family:Fraunces,Georgia,serif; font-size:20px; cursor:pointer; box-shadow:0 0 0 2px #fff, 0 0 0 4px #E39B3F">{{ ev.hostInitials }}</span>
+          <div style="min-width:0; flex:1">
+            <p style="margin:0; font-family:Fraunces,Georgia,serif; font-size:20px; color:#15150F">{{ ev.host }}</p>
+            <p style="margin:4px 0 0; font-size:13px; line-height:1.55; color:#52504A">{{ evHostTagline }}</p>
+            <p style="margin:6px 0 0; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#52504A; font-variant-numeric:tabular-nums">{{ evHostStats }}</p>
+          </div>
+          <button onClick="{{ toggleFollowHost }}" style="border-radius:999px; border:1px solid {{ followHostBd }}; background:{{ followHostBg }}; color:{{ followHostFg }}; padding:10px 22px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; transition:all .2s">{{ followHostLabel }}</button>
+        </section>
+        <p style="margin:0; border-top:1px solid #DDD7C6; padding-top:20px; font-size:12px; line-height:1.65; color:#52504A">TrackBuddy does not organise, lead, vet or supervise this event and has not checked who anyone on it is. Meet somewhere public, tell someone who is not coming, and turn back if it feels wrong.</p>
+      </div>
+
+      <!-- Rail -->
+      <aside style="position:sticky; top:88px; display:flex; flex-direction:column; gap:16px">
+        <div style="border-radius:10px; background:#0C100D; padding:26px; box-shadow:0 24px 50px -24px rgba(12,16,13,0.55)">
+          <div style="display:flex; align-items:baseline; justify-content:space-between">
+            <p style="margin:0; font-family:'Space Mono',monospace; font-size:22px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ ev.time }}</p>
+            <p style="margin:0; font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:rgba(248,245,237,0.6)">{{ evDate }}</p>
+          </div>
+          <sc-if value="{{ ev.countdown }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:8px 0 0; display:flex; align-items:center; gap:8px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; color:#E39B3F"><span style="height:6px; width:6px; border-radius:999px; background:#E39B3F; animation:tb-pulse 2s ease-in-out infinite"></span>leaves in {{ ev.countdown }}</p>
+          </sc-if>
+          <div style="margin-top:20px; display:flex; gap:4px">
+            <sc-for list="{{ evMeter }}" as="m" hint-placeholder-count="8">
+              <span style="height:5px; flex:1; border-radius:999px; background:{{ m.bg }}"></span>
+            </sc-for>
+          </div>
+          <p style="margin:8px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:rgba(248,245,237,0.55); font-variant-numeric:tabular-nums">{{ evMeterLabel }}</p>
+          <div style="margin-top:18px; display:flex; align-items:center; justify-content:space-between; border-top:1px solid rgba(248,245,237,0.12); padding-top:16px">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:rgba(248,245,237,0.55)">Cost share</span>
+            <span style="font-family:'Space Mono',monospace; font-size:14px; color:#F8F5ED; font-variant-numeric:tabular-nums">{{ ev.cost }}</span>
+          </div>
+          <sc-if value="{{ evMine }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ goConsole }}" style="margin-top:18px; width:100%; border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:15px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="background:#F6DCA8">Manage this event</button>
+          </sc-if>
+          <sc-if value="{{ evCanJoin }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ askToJoin }}" style="margin-top:18px; width:100%; border:none; border-radius:999px; background:{{ joinBg }}; color:{{ joinFg }}; padding:15px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="filter:brightness(1.1)">{{ joinLabel }}</button>
+            <p style="margin:12px 0 0; font-size:12px; line-height:1.55; color:rgba(248,245,237,0.55); text-align:center">The host decides who comes. The exact meeting point reaches confirmed people only.</p>
+          </sc-if>
+          <sc-if value="{{ evIsFull }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ askToJoin }}" style="margin-top:18px; width:100%; border:1px solid rgba(246,220,168,0.5); border-radius:999px; background:transparent; color:#F6DCA8; padding:15px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="border-color:#F6DCA8">{{ waitlistLabel }}</button>
+            <p style="margin:12px 0 0; font-size:12px; line-height:1.55; color:rgba(248,245,237,0.55); text-align:center">Waitlist moves in order when someone drops. You will be told the moment it is you.</p>
+          </sc-if>
+        </div>
+        <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:20px">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#52504A">Bring a friend</span>
+            <span onClick="{{ goShare }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#C2662A; cursor:pointer; border-bottom:1px solid #E39B3F; padding-bottom:2px">Invite card →</span>
+          </div>
+          <p style="margin:10px 0 0; font-size:13px; line-height:1.55; color:#52504A">Anyone can see the public page — the where stays hidden until the host confirms them.</p>
+        </div>
+        <div style="border-radius:10px; border:1px dashed #D2C4A4; background:rgba(241,233,215,0.5); padding:20px">
+          <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#C2662A">Exact meeting point</span>
+          <p style="margin:8px 0 0; font-size:13px; line-height:1.55; color:#52504A">{{ evPointLine }}</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+</sc-if>
+<!-- ══════════ CREATE ══════════ -->
+<sc-if value="{{ isCreate }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Create event" style="flex:1; background:#F8F5ED">
+  <section style="padding:112px 40px 24px; background:linear-gradient(180deg, #F1E9D7 0%, #F8F5ED 100%); border-bottom:1px solid #DDD7C6">
+    <div style="max-width:1200px; margin:0 auto">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#C2662A">Host something</p>
+      <h1 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(34px,3.8vw,50px); font-weight:300; line-height:1; color:#15150F">You are not filling a form.<br>You are writing an invitation.</h1>
+    </div>
+  </section>
+  <section style="padding:40px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:56px; align-items:start">
+      <div>
+        <ol style="margin:0; padding:0 0 18px; border-bottom:1px solid #DDD7C6; list-style:none; display:flex; flex-wrap:wrap; column-gap:28px; row-gap:8px">
+          <sc-for list="{{ cSteps }}" as="st" hint-placeholder-count="4">
+            <li><span onClick="{{ setCStep }}" data-step="{{ st.i }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ st.color }}; cursor:pointer; white-space:nowrap"><span style="font-variant-numeric:tabular-nums">{{ st.n }}</span> {{ st.label }}</span></li>
+          </sc-for>
+        </ol>
+        <div style="margin-top:32px">
+          <sc-if value="{{ cStep0 }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:28px">
+              <div>
+                <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:26px; font-weight:400; color:#15150F">What are you gathering people for?</h2>
+                <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+                  <sc-for list="{{ cActTiles }}" as="a" hint-placeholder-count="6">
+                    <button onClick="{{ cPickAct }}" data-key="{{ a.key }}" style="display:flex; flex-direction:column; gap:4px; border-radius:8px; border:2px solid {{ a.bd }}; background:{{ a.bg }}; padding:16px; text-align:left; cursor:pointer; font-family:Archivo,sans-serif; transition:all .2s" style-hover="border-color:#E39B3F">
+                      <span style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+                        <span style="font-size:15px; font-weight:500; color:#15150F">{{ a.label }}</span>
+                        <span style="height:8px; width:8px; border-radius:999px; background:{{ a.dot }}"></span>
+                      </span>
+                      <span style="font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">usually {{ a.hour }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <label style="display:block">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Name it like you would say it</span>
+                <input value="{{ cfTitle }}" onChange="{{ cField }}" data-field="title" placeholder="Nag Tibba sunrise push" style="margin-top:8px; width:100%; border-radius:6px; border:1px solid #DDD7C6; background:#fff; padding:14px 16px; font-family:Fraunces,Georgia,serif; font-size:20px; color:#15150F; box-sizing:border-box">
+                <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">This is the headline on the board — a plan, not a listing.</span>
+              </label>
+              <label style="display:block">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">The story</span>
+                <textarea rows="3" onChange="{{ cField }}" data-field="story" placeholder="Out of the treeline by headlamp, summit for first light, maggi at the temple hut on the way down." style="margin-top:8px; width:100%; border-radius:6px; border:1px solid #DDD7C6; background:#fff; padding:12px 16px; font-family:Archivo,sans-serif; font-size:15px; line-height:1.6; color:#15150F; box-sizing:border-box; resize:vertical">{{ cfStory }}</textarea>
+                <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Two honest sentences beat ten bullet points. Say what the day feels like.</span>
+              </label>
+              <button onClick="{{ setCStep }}" data-step="1" style="align-self:flex-start; border:none; border-radius:999px; background:#0C100D; color:#F6DCA8; padding:13px 26px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#27481F">Next — when &amp; where</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cStep1 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:28px">
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:26px; font-weight:400; color:#15150F">When, and where in the world?</h2>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px">
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">The place</span>
+                  <input value="{{ cfPlace }}" onChange="{{ cField }}" data-field="place" placeholder="Nag Tibba" style="margin-top:8px; width:100%; border-radius:6px; border:1px solid #DDD7C6; background:#fff; padding:12px 16px; font-family:Archivo,sans-serif; font-size:15px; color:#15150F; box-sizing:border-box">
+                </label>
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Country / region</span>
+                  <input value="{{ cfCountry }}" onChange="{{ cField }}" data-field="country" style="margin-top:8px; width:100%; border-radius:6px; border:1px solid #DDD7C6; background:#fff; padding:12px 16px; font-family:Archivo,sans-serif; font-size:15px; color:#15150F; box-sizing:border-box">
+                </label>
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Date</span>
+                  <input type="date" value="{{ cfDate }}" onChange="{{ cField }}" data-field="date" style="margin-top:8px; width:100%; border-radius:6px; border:1px solid #DDD7C6; background:#fff; padding:12px 16px; font-family:Archivo,sans-serif; font-size:15px; color:#15150F; box-sizing:border-box">
+                </label>
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Setting off at</span>
+                  <input type="time" value="{{ cfTime }}" onChange="{{ cField }}" data-field="time" style="margin-top:8px; width:100%; border-radius:6px; border:2px solid {{ cHourBd }}; background:#fff; padding:12px 16px; font-family:'Space Mono',monospace; font-size:15px; color:{{ cHourInk }}; box-sizing:border-box; transition:all .3s">
+                  <span style="margin-top:6px; display:flex; align-items:center; gap:8px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:{{ cHourInk }}"><span style="height:8px; width:8px; border-radius:999px; background:{{ cHourDot }}"></span>{{ cHourLabel }} — the card takes this colour</span>
+                </label>
+              </div>
+              <div>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">A photograph that tells the truth</span>
+                <div style="margin-top:10px; display:grid; grid-template-columns:repeat(6, 1fr); gap:8px">
+                  <sc-for list="{{ cImgTiles }}" as="im" hint-placeholder-count="6">
+                    <span onClick="{{ cPickImg }}" data-i="{{ im.i }}" style="position:relative; display:block; aspect-ratio:4/3; overflow:hidden; border-radius:6px; cursor:pointer; box-shadow:{{ im.ring }}; transition:all .2s">
+                      <div style="{{ im.bg }}"></div>
+                    </span>
+                  </sc-for>
+                </div>
+                <span style="margin-top:8px; display:block; font-size:12px; color:#52504A">From your library, or drop one in later. Shots with people in them get joined twice as often.</span>
+              </div>
+              <button onClick="{{ setCStep }}" data-step="2" style="align-self:flex-start; border:none; border-radius:999px; background:#0C100D; color:#F6DCA8; padding:13px 26px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#27481F">Next — the company</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cStep2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:28px">
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:26px; font-weight:400; color:#15150F">Who is coming with you?</h2>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px">
+                <label style="display:block">
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Spots, including you</span>
+                  <input type="number" value="{{ cfSpots }}" onChange="{{ cField }}" data-field="spots" style="margin-top:8px; width:100%; border-radius:6px; border:1px solid #DDD7C6; background:#fff; padding:12px 16px; font-family:Archivo,sans-serif; font-size:15px; color:#15150F; box-sizing:border-box">
+                  <span style="margin-top:6px; display:block; font-size:12px; color:#52504A">Small groups say yes faster. You can open a waitlist once it fills.</span>
+                </label>
+                <div>
+                  <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">How hard, honestly</span>
+                  <div style="margin-top:10px; display:flex; gap:8px">
+                    <sc-for list="{{ cDiffChips }}" as="c" hint-placeholder-count="3">
+                      <button onClick="{{ cSetDiff }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:9px 18px; font-family:Archivo,sans-serif; font-size:12px; text-transform:capitalize; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+                    </sc-for>
+                  </div>
+                  <span style="margin-top:8px; display:block; font-size:12px; color:#52504A">Somebody will plan their whole day around this word.</span>
+                </div>
+              </div>
+              <div style="border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:20px">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px">
+                  <div>
+                    <span style="font-size:15px; color:#15150F">Split the costs</span>
+                    <p style="margin:4px 0 0; font-size:12px; line-height:1.5; color:#52504A">Fuel, permits, a shared cab. Nobody pays for a place — costs are split at face value, shown up front.</p>
+                  </div>
+                  <button onClick="{{ cToggleCost }}" style="flex-shrink:0; position:relative; height:28px; width:52px; border-radius:999px; border:none; background:{{ cCostTrack }}; cursor:pointer; transition:background .25s">
+                    <span style="position:absolute; top:3px; left:{{ cCostKnob }}px; height:22px; width:22px; border-radius:999px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.25); transition:left .25s"></span>
+                  </button>
+                </div>
+                <sc-if value="{{ cfCostOn }}" hint-placeholder-val="{{ false }}">
+                  <label style="margin-top:16px; display:block; border-top:1px solid #EFEADB; padding-top:16px">
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Per person, roughly</span>
+                    <input value="{{ cfCostAmt }}" onChange="{{ cField }}" data-field="costAmt" placeholder="₹350" style="margin-top:8px; width:200px; border-radius:6px; border:1px solid #DDD7C6; background:#F8F5ED; padding:10px 14px; font-family:'Space Mono',monospace; font-size:15px; color:#15150F; box-sizing:border-box">
+                  </label>
+                </sc-if>
+              </div>
+              <div>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Tell people to bring</span>
+                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px">
+                  <sc-for list="{{ cBringChips }}" as="c" hint-placeholder-count="8">
+                    <button onClick="{{ cToggleBring }}" data-key="{{ c.key }}" style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:8px 16px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.key }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <button onClick="{{ setCStep }}" data-step="3" style="align-self:flex-start; border:none; border-radius:999px; background:#0C100D; color:#F6DCA8; padding:13px 26px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#27481F">Next — publish</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cStep3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:24px">
+              <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:26px; font-weight:400; color:#15150F">Last look, then it is live.</h2>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <sc-for list="{{ cChecklist }}" as="c" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:12px; border-radius:8px; border:1px solid {{ c.bd }}; background:#fff; padding:14px 18px">
+                    <span style="display:grid; place-items:center; height:22px; width:22px; border-radius:999px; background:{{ c.dotBg }}; color:{{ c.dotFg }}; font-size:12px">{{ c.mark }}</span>
+                    <span style="font-size:14px; color:#15150F">{{ c.label }}</span>
+                    <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:11px; color:#52504A">{{ c.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border-radius:8px; border:1px dashed #D2C4A4; background:rgba(241,233,215,0.5); padding:18px">
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.16em; color:#C2662A">Held back on purpose</span>
+                <p style="margin:8px 0 0; font-size:13px; line-height:1.6; color:#52504A">The exact meeting point is not on the public page. You will set it in your console, and it reaches only the people you confirm.</p>
+              </div>
+              <button onClick="{{ cPublish }}" style="width:100%; border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:17px 24px; font-family:Archivo,sans-serif; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="background:#F6DCA8; box-shadow:0 12px 28px -8px rgba(227,155,63,0.6)">Put it on the board</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <!-- Live preview -->
+      <aside style="position:sticky; top:88px">
+        <p style="margin:0; display:flex; align-items:center; gap:8px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A"><span style="height:6px; width:6px; border-radius:999px; background:#E39B3F; animation:tb-pulse 2s ease-in-out infinite"></span>Live preview — what the board sees</p>
+        <div style="margin-top:14px; display:flex; flex-direction:column; overflow:hidden; border-radius:8px; background:#fff; border:1px solid #DDD7C6; box-shadow:0 20px 40px -20px rgba(12,16,13,0.3)">
+          <div style="position:relative; aspect-ratio:16/10; overflow:hidden; background:#0C100D">
+            <div style="{{ cPvBg }}"></div>
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, {{ cPvTint }} 100%); transition:background .4s"></div>
+            <span style="position:absolute; top:12px; left:12px; display:flex; flex-direction:column; align-items:center; border-radius:6px; background:rgba(248,245,237,0.95); padding:6px 10px; line-height:1">
+              <span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">{{ cPvDow }}</span>
+              <span style="margin-top:2px; font-family:Fraunces,Georgia,serif; font-size:20px; color:#15150F; font-variant-numeric:tabular-nums">{{ cPvDay }}</span>
+            </span>
+            <span style="position:absolute; top:12px; right:12px; border-radius:999px; background:{{ cPvHourBg }}; padding:5px 11px; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:{{ cPvHourFg }}; font-variant-numeric:tabular-nums; transition:all .4s">{{ cfTime }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; padding:16px 18px 18px">
+            <div>
+              <p style="margin:0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:{{ cHourInk }}">{{ cPvAct }} · {{ cHourLabel }}</p>
+              <h4 style="margin:6px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; line-height:1.2; color:{{ cPvTitleColor }}">{{ cPvTitle }}</h4>
+              <p style="margin:5px 0 0; font-size:12px; color:#52504A">{{ cPvLoc }}</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; border-top:1px solid #EFEADB; padding-top:12px">
+              <span style="display:grid; place-items:center; height:24px; width:24px; border-radius:999px; background:rgba(39,72,31,0.1); color:#27481F; font-family:'Space Mono',monospace; font-size:9px">AM</span>
+              <span style="font-size:12px; color:#52504A">Aarav Mehta</span>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:#7BA46F; font-variant-numeric:tabular-nums">✓31</span>
+              <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#27481F; font-variant-numeric:tabular-nums">{{ cPvSpots }}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <span style="border-radius:4px; background:{{ cPvCostBg }}; color:{{ cPvCostFg }}; padding:3px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em">{{ cPvCost }}</span>
+              <span style="border-radius:4px; border:1px solid #DDD7C6; padding:3px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A">{{ cfDiff }}</span>
+            </div>
+          </div>
+        </div>
+        <p style="margin:14px 0 0; font-size:12px; line-height:1.6; color:#52504A">Change the hour and watch the card change colour — the board sorts a day by its light.</p>
+      </aside>
+    </div>
+  </section>
+</main>
+</sc-if>
+<!-- ══════════ PEOPLE ══════════ -->
+<sc-if value="{{ isPeople }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="People directory" style="flex:1; background:#F8F5ED">
+  <section style="padding:112px 40px 32px; background:#F1E9D7; border-bottom:1px solid #D2C4A4">
+    <div style="max-width:1200px; margin:0 auto">
+      <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#C2662A">People · 27 countries</p>
+      <h1 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(36px,4vw,54px); font-weight:300; line-height:1; color:#15150F">The ones who show up.</h1>
+      <p style="margin:14px 0 0; max-width:520px; font-size:15px; line-height:1.65; color:#52504A">Every number on these cards was counted by the board, not typed by the person. Follow people whose hours match yours — their next plan lands in your basecamp.</p>
+      <div style="margin-top:24px; display:flex; flex-wrap:wrap; gap:8px">
+        <sc-for list="{{ peopleChips }}" as="c" hint-placeholder-count="6">
+          <button style="border-radius:999px; border:1px solid {{ c.bd }}; background:{{ c.bg }}; color:{{ c.fg }}; padding:8px 16px; font-family:Archivo,sans-serif; font-size:12px; cursor:pointer; transition:all .2s">{{ c.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <section style="padding:48px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:40px">
+      <div>
+        <div style="display:flex; align-items:baseline; gap:14px; padding-bottom:18px">
+          <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">Mentors</h2>
+          <span style="font-size:13px; color:#52504A">appointed, never self-claimed — the people to ask when you are starting out</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+          <sc-for list="{{ mentorCards }}" as="p" hint-placeholder-count="2">
+            <div onClick="{{ openPerson }}" data-id="{{ p.id }}" style="position:relative; display:flex; overflow:hidden; border-radius:8px; background:#0C100D; min-height:180px; cursor:pointer; transition:transform .3s cubic-bezier(0.22,1,0.36,1)" style-hover="transform:translateY(-4px)">
+              <div style="{{ p.bg }}"></div>
+              <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(12,16,13,0.9) 20%, rgba(12,16,13,0.4) 100%)"></div>
+              <div style="position:relative; padding:24px; display:flex; flex-direction:column; justify-content:flex-end; gap:8px">
+                <span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.2em; color:#B8826B">Mentor · {{ p.base }}</span>
+                <span style="font-family:Fraunces,Georgia,serif; font-size:26px; color:#F8F5ED">{{ p.name }}</span>
+                <span style="font-size:13px; line-height:1.5; color:rgba(248,245,237,0.7); max-width:380px">{{ p.tagline }}</span>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.12em; color:#7BA46F; font-variant-numeric:tabular-nums">{{ p.statline }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex; align-items:baseline; gap:14px; padding-bottom:18px">
+          <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">Out there every week</h2>
+          <span style="height:1px; flex:1; background:#DDD7C6"></span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px">
+          <sc-for list="{{ personCards }}" as="p" hint-placeholder-count="6">
+            <div style="display:flex; flex-direction:column; gap:12px; border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:22px; transition:all .3s" style-hover="transform:translateY(-3px); box-shadow:0 16px 36px -20px rgba(12,16,13,0.35); border-color:rgba(227,155,63,0.5)">
+              <div style="display:flex; align-items:flex-start; gap:14px">
+                <span onClick="{{ openPerson }}" data-id="{{ p.id }}" style="display:grid; height:52px; width:52px; flex-shrink:0; place-items:center; border-radius:999px; background:{{ p.avBg }}; color:{{ p.avFg }}; font-family:Fraunces,Georgia,serif; font-size:17px; cursor:pointer">{{ p.initials }}</span>
+                <div style="min-width:0; flex:1">
+                  <h3 onClick="{{ openPerson }}" data-id="{{ p.id }}" style="margin:0; font-family:Fraunces,Georgia,serif; font-size:19px; font-weight:400; line-height:1.2; color:#15150F; cursor:pointer">{{ p.name }}</h3>
+                  <p style="margin:3px 0 0; font-size:12px; color:#52504A">{{ p.base }}</p>
+                </div>
+                <button onClick="{{ toggleFollow }}" data-id="{{ p.id }}" style="flex-shrink:0; border-radius:999px; border:1px solid {{ p.fBd }}; background:{{ p.fBg }}; color:{{ p.fFg }}; padding:7px 14px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; transition:all .2s">{{ p.fLabel }}</button>
+              </div>
+              <p style="margin:0; font-size:13px; line-height:1.55; color:#52504A">{{ p.tagline }}</p>
+              <div style="display:flex; flex-wrap:wrap; gap:6px">
+                <sc-for list="{{ p.acts }}" as="a" hint-placeholder-count="2">
+                  <span style="border-radius:999px; border:1px solid #EFEADB; background:#F8F5ED; padding:3px 10px; font-size:11px; color:#52504A">{{ a }}</span>
+                </sc-for>
+              </div>
+              <div style="margin-top:auto; display:flex; align-items:center; column-gap:14px; border-top:1px solid #EFEADB; padding-top:12px">
+                <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.events }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A">events</span></span>
+                <span style="display:flex; align-items:baseline; gap:4px"><span style="font-family:'Space Mono',monospace; font-size:14px; color:#15150F; font-variant-numeric:tabular-nums">{{ p.vouches }}</span><span style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A">vouches</span></span>
+                <span style="margin-left:auto; display:flex; align-items:center; gap:5px; font-family:'Space Mono',monospace; font-size:10px; color:#C2662A; font-variant-numeric:tabular-nums" title="weekend streak">✦ {{ p.streak }}wk</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══════════ PERSON ══════════ -->
+<sc-if value="{{ isPerson }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Person profile" style="flex:1; background:#F8F5ED">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D">
+    <div style="{{ perBg }}"></div>
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.7), rgba(12,16,13,0.5) 50%, rgba(12,16,13,0.92))"></div>
+    <div style="position:relative; max-width:1200px; margin:0 auto; padding:136px 40px 40px">
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:32px; flex-wrap:wrap">
+        <div style="display:flex; align-items:center; gap:24px">
+          <span style="display:grid; place-items:center; height:96px; width:96px; border-radius:999px; background:rgba(123,164,111,0.25); color:#7BA46F; font-family:Fraunces,Georgia,serif; font-size:32px; box-shadow:0 0 0 3px {{ per.ring }}">{{ per.initials }}</span>
+          <div>
+            <sc-if value="{{ per.mentor }}" hint-placeholder-val="{{ true }}"><p style="margin:0 0 8px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.24em; color:#B8826B">Mentor · appointed by Dewdropz</p></sc-if>
+            <h1 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:clamp(36px,4vw,54px); font-weight:300; line-height:1; color:#F8F5ED">{{ per.name }}</h1>
+            <p style="margin:10px 0 0; font-size:14px; color:rgba(248,245,237,0.7)">{{ per.base }} · {{ per.pace }} pace · {{ per.followers }} followers</p>
+          </div>
+        </div>
+        <div style="display:flex; gap:12px">
+          <button onClick="{{ toggleFollowPer }}" style="border-radius:999px; border:none; background:{{ perFollowBg }}; color:{{ perFollowFg }}; padding:13px 26px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="filter:brightness(1.08)">{{ perFollowLabel }}</button>
+          <button style="border-radius:999px; border:1px solid rgba(248,245,237,0.35); background:transparent; color:#F8F5ED; padding:13px 26px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="border-color:#F8F5ED">Invite to an event</button>
+        </div>
+      </div>
+      <div style="margin-top:32px; display:flex; flex-wrap:wrap; column-gap:44px; row-gap:14px; border-top:1px solid rgba(248,245,237,0.18); padding-top:20px">
+        <sc-for list="{{ perStats }}" as="st" hint-placeholder-count="5">
+          <div>
+            <p style="margin:0; font-family:'Space Mono',monospace; font-size:22px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ st.n }}</p>
+            <p style="margin:3px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(248,245,237,0.5)">{{ st.label }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </header>
+  <section style="padding:48px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:48px; align-items:start">
+      <div style="display:flex; flex-direction:column; gap:36px">
+        <section>
+          <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#C2662A">In their words</h2>
+          <p style="margin:12px 0 0; max-width:600px; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:350; line-height:1.45; color:#15150F">“{{ per.tagline }}”</p>
+          <div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:8px">
+            <sc-for list="{{ per.acts }}" as="a" hint-placeholder-count="3">
+              <span style="border-radius:999px; border:1px solid #DDD7C6; background:#fff; padding:6px 14px; font-size:12px; color:#15150F">{{ a }}</span>
+            </sc-for>
+          </div>
+        </section>
+        <section>
+          <h2 style="margin:0 0 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#52504A">Trail log — counted from what happened</h2>
+          <ul style="margin:0; padding:0; list-style:none; border-top:1px solid #DDD7C6">
+            <sc-for list="{{ perLog }}" as="l" hint-placeholder-count="5">
+              <li style="display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid #DDD7C6">
+                <span style="height:10px; width:10px; flex-shrink:0; border-radius:999px; background:{{ l.dot }}"></span>
+                <span style="width:88px; flex-shrink:0; font-family:'Space Mono',monospace; font-size:11px; color:#52504A; font-variant-numeric:tabular-nums">{{ l.date }}</span>
+                <span style="min-width:0; flex:1">
+                  <span style="display:block; font-size:14px; color:#15150F">{{ l.title }}</span>
+                  <span style="display:block; font-size:11px; color:#52504A">{{ l.sub }}</span>
+                </span>
+                <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:{{ l.roleColor }}">{{ l.role }}</span>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+        <section>
+          <h2 style="margin:0 0 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#52504A">What people said after walking with them</h2>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+            <sc-for list="{{ perReviews }}" as="r" hint-placeholder-count="2">
+              <div style="border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:20px">
+                <p style="margin:0; font-size:14px; line-height:1.6; color:#15150F">“{{ r.text }}”</p>
+                <p style="margin:12px 0 0; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#52504A">{{ r.who }} · <span style="color:#7BA46F">after {{ r.after }}</span></p>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:12px 0 0; font-size:12px; color:#52504A">Reviews can only be written by people who were confirmed on a completed event together. There is no other way in.</p>
+        </section>
+      </div>
+      <aside style="display:flex; flex-direction:column; gap:16px; position:sticky; top:88px">
+        <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:24px">
+          <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#52504A">Badges — earned, not bought</h3>
+          <div style="margin-top:16px; display:flex; flex-direction:column; gap:14px">
+            <sc-for list="{{ perBadges }}" as="b" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:14px">
+                <span style="display:grid; place-items:center; height:40px; width:40px; flex-shrink:0; border-radius:999px; background:{{ b.bg }}; font-size:16px">{{ b.icon }}</span>
+                <div>
+                  <p style="margin:0; font-size:14px; color:#15150F">{{ b.t }}</p>
+                  <p style="margin:2px 0 0; font-size:11px; color:#52504A">{{ b.d }}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="border-radius:10px; background:#0C100D; padding:24px">
+          <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#7BA46F">Hosting next</h3>
+          <sc-for list="{{ perNext }}" as="n" hint-placeholder-count="2">
+            <div onClick="{{ openEvent }}" data-id="{{ n.id }}" style="margin-top:14px; display:flex; align-items:center; gap:12px; cursor:pointer; border-radius:6px; padding:8px; margin-left:-8px; margin-right:-8px; transition:background .2s" style-hover="background:rgba(248,245,237,0.06)">
+              <span style="width:4px; height:36px; border-radius:2px; background:{{ n.bar }}"></span>
+              <div style="min-width:0; flex:1">
+                <p style="margin:0; font-size:14px; color:#F8F5ED; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ n.title }}</p>
+                <p style="margin:2px 0 0; font-family:'Space Mono',monospace; font-size:10px; color:rgba(248,245,237,0.5); font-variant-numeric:tabular-nums">{{ n.sub }}</p>
+              </div>
+              <span style="font-family:'Space Mono',monospace; font-size:10px; color:#7BA46F">→</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin:0; font-size:12px; line-height:1.6; color:#52504A">There is no direct messaging outside an event. Plans are made on the event's own page — that is what keeps them reviewable.</p>
+      </aside>
+    </div>
+  </section>
+</main>
+</sc-if>
+<!-- ══════════ BASECAMP (dashboard) ══════════ -->
+<sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Basecamp dashboard" style="flex:1; background:#F8F5ED">
+  <section style="background:#0C100D; padding:112px 40px 36px">
+    <div style="max-width:1200px; margin:0 auto">
+      <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:24px">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#F6DCA8">Basecamp · Thu 20 Aug · {{ liveClock }}</p>
+          <h1 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(34px,3.8vw,50px); font-weight:300; line-height:1; color:#F8F5ED">Morning, Aarav.<br><span style="color:rgba(248,245,237,0.55)">Six people are waiting on you.</span></h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px">
+          <span style="display:flex; align-items:center; gap:8px; border-radius:999px; border:1px solid rgba(227,155,63,0.5); padding:9px 18px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.12em; color:#F6DCA8">✦ 6-weekend streak</span>
+          <button onClick="{{ goCreate }}" style="border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:12px 22px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="background:#F6DCA8">Host another</button>
+        </div>
+      </div>
+      <div style="margin-top:28px; display:grid; grid-template-columns:repeat(4, 1fr); gap:12px">
+        <sc-for list="{{ dashStats }}" as="st" hint-placeholder-count="4">
+          <div onClick="{{ goNav }}" data-key="{{ st.go }}" style="border-radius:8px; border:1px solid rgba(248,245,237,0.12); background:rgba(248,245,237,0.04); padding:18px 20px; cursor:pointer; transition:all .25s" style-hover="border-color:rgba(227,155,63,0.5); background:rgba(227,155,63,0.06)">
+            <p style="margin:0; font-family:'Space Mono',monospace; font-size:26px; color:{{ st.color }}; font-variant-numeric:tabular-nums">{{ st.n }}</p>
+            <p style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.16em; color:rgba(248,245,237,0.55)">{{ st.label }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+  <section style="padding:40px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:40px; align-items:start">
+      <div style="display:flex; flex-direction:column; gap:36px">
+        <!-- Requests queue -->
+        <section>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:14px">
+            <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:400; color:#15150F">Decide who comes <span style="font-family:'Space Mono',monospace; font-size:12px; color:#C2662A; font-variant-numeric:tabular-nums">· {{ dashReqCount }} waiting</span></h2>
+            <span style="font-size:12px; color:#52504A">declining is silent — you owe nobody a reason</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <sc-for list="{{ dashRequests }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:16px; border-radius:8px; border:1px solid {{ r.bd }}; background:#fff; padding:16px 20px; transition:all .3s; opacity:{{ r.opacity }}">
+                <span onClick="{{ openPerson }}" data-id="{{ r.pid }}" style="display:grid; place-items:center; height:44px; width:44px; flex-shrink:0; border-radius:999px; background:{{ r.avBg }}; color:{{ r.avFg }}; font-family:Fraunces,Georgia,serif; font-size:14px; cursor:pointer">{{ r.initials }}</span>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font-size:14px; color:#15150F"><span style="font-weight:600">{{ r.name }}</span> <span style="color:#52504A">asked to join</span> {{ r.event }}</p>
+                  <p style="margin:3px 0 0; font-size:12px; color:#52504A; font-style:italic">“{{ r.msg }}”</p>
+                  <p style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.08em; color:#7BA46F; font-variant-numeric:tabular-nums">{{ r.cred }}</p>
+                </div>
+                <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; gap:8px; flex-shrink:0">
+                    <button onClick="{{ decideReq }}" data-id="{{ r.id }}" data-d="yes" style="border:none; border-radius:999px; background:#27481F; color:#F8F5ED; padding:10px 18px; font-family:Archivo,sans-serif; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="background:#3C6A33">Confirm</button>
+                    <button onClick="{{ decideReq }}" data-id="{{ r.id }}" data-d="no" style="border:1px solid #DDD7C6; border-radius:999px; background:transparent; color:#52504A; padding:10px 18px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="border-color:#15150F; color:#15150F">Decline</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.decided }}" hint-placeholder-val="{{ false }}">
+                  <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:{{ r.decidedColor }}">{{ r.decidedLabel }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <!-- Your events -->
+        <section>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding-bottom:14px">
+            <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:400; color:#15150F">Your events</h2>
+            <span onClick="{{ goDiscover }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#27481F; cursor:pointer; border-bottom:1px solid #DDD7C6; padding-bottom:2px" style-hover="color:#C2662A">On the board →</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <sc-for list="{{ dashEvents }}" as="e" hint-placeholder-count="3">
+              <div onClick="{{ e.onClick }}" style="display:flex; align-items:center; gap:18px; border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:16px 20px; cursor:pointer; transition:all .25s" style-hover="border-color:rgba(227,155,63,0.6); transform:translateX(2px)">
+                <span style="width:4px; height:44px; flex-shrink:0; border-radius:2px; background:{{ e.bar }}"></span>
+                <div style="width:76px; flex-shrink:0">
+                  <p style="margin:0; font-family:'Space Mono',monospace; font-size:13px; color:{{ e.ink }}; font-variant-numeric:tabular-nums">{{ e.time }}</p>
+                  <p style="margin:2px 0 0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; color:#52504A">{{ e.date }}</p>
+                </div>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font-family:Fraunces,Georgia,serif; font-size:17px; color:#15150F">{{ e.title }}</p>
+                  <p style="margin:2px 0 0; font-size:12px; color:#52504A">{{ e.role }}</p>
+                </div>
+                <div style="width:170px; flex-shrink:0">
+                  <div style="display:flex; gap:3px">
+                    <sc-for list="{{ e.meter }}" as="m" hint-placeholder-count="8">
+                      <span style="height:4px; flex:1; border-radius:999px; background:{{ m.bg }}"></span>
+                    </sc-for>
+                  </div>
+                  <p style="margin:5px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#52504A; font-variant-numeric:tabular-nums">{{ e.fill }}</p>
+                </div>
+                <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:{{ e.tagColor }}">{{ e.tag }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <!-- Activity feed -->
+        <section>
+          <h2 style="margin:0 0 14px; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:400; color:#15150F">What has happened</h2>
+          <ul style="margin:0; padding:0; list-style:none; border-top:1px solid #DDD7C6">
+            <sc-for list="{{ dashFeed }}" as="n" hint-placeholder-count="5">
+              <li style="display:flex; gap:14px; padding:14px 0; border-bottom:1px solid #DDD7C6">
+                <span style="margin-top:5px; height:7px; width:7px; flex-shrink:0; border-radius:999px; background:{{ n.dot }}"></span>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font-size:14px; line-height:1.45; color:{{ n.color }}">{{ n.body }}</p>
+                </div>
+                <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:10px; color:rgba(82,80,74,0.7)">{{ n.when }}</span>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+      </div>
+      <!-- Rail -->
+      <aside style="display:flex; flex-direction:column; gap:16px; position:sticky; top:88px">
+        <div style="border-radius:10px; background:#0C100D; padding:24px">
+          <div style="display:flex; align-items:center; gap:14px">
+            <span style="display:grid; place-items:center; height:52px; width:52px; border-radius:999px; background:rgba(123,164,111,0.2); color:#7BA46F; font-family:Fraunces,Georgia,serif; font-size:17px; box-shadow:0 0 0 2px #E39B3F">AM</span>
+            <div>
+              <p style="margin:0; font-family:Fraunces,Georgia,serif; font-size:19px; color:#F8F5ED">Aarav Mehta</p>
+              <p style="margin:2px 0 0; font-size:12px; color:rgba(248,245,237,0.55)">Dehradun · hosting since 2025</p>
+            </div>
+          </div>
+          <div style="margin-top:18px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; border-top:1px solid rgba(248,245,237,0.12); padding-top:16px">
+            <sc-for list="{{ dashYou }}" as="y" hint-placeholder-count="3">
+              <div>
+                <p style="margin:0; font-family:'Space Mono',monospace; font-size:20px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ y.n }}</p>
+                <p style="margin:3px 0 0; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:rgba(248,245,237,0.5)">{{ y.label }}</p>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:16px 0 0; border-top:1px solid rgba(248,245,237,0.12); padding-top:14px; font-size:12px; line-height:1.6; color:rgba(248,245,237,0.6)"><span style="color:#7BA46F">Two vouches to write:</span> you finished Kanatal Ridge with Rohan and Priya. Say so while it is fresh.</p>
+          <button onClick="{{ goRecap }}" style="margin-top:14px; width:100%; border:1px solid rgba(123,164,111,0.4); border-radius:999px; background:transparent; color:#7BA46F; padding:11px 20px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .2s" style-hover="border-color:#7BA46F">Open the recap</button>
+        </div>
+        <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:22px">
+          <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#52504A">From people you follow</h3>
+          <div style="display:flex; flex-direction:column">
+            <sc-for list="{{ dashFollowing }}" as="f" hint-placeholder-count="3">
+              <div onClick="{{ openEvent }}" data-id="{{ f.id }}" style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #EFEADB; cursor:pointer">
+                <span style="width:4px; height:34px; flex-shrink:0; border-radius:2px; background:{{ f.bar }}"></span>
+                <div style="min-width:0; flex:1">
+                  <p style="margin:0; font-size:13px; color:#15150F; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ f.title }}</p>
+                  <p style="margin:2px 0 0; font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">{{ f.sub }}</p>
+                </div>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; color:#C2662A">→</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══════════ MESSAGES ══════════ -->
+<sc-if value="{{ isMessages }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Messages / group chat" style="flex:1; background:#F8F5ED; padding:96px 40px 64px">
+  <div style="max-width:1200px; margin:0 auto">
+    <div style="display:grid; grid-template-columns:340px minmax(0,1fr); border-radius:12px; overflow:hidden; border:1px solid #DDD7C6; background:#fff; min-height:640px; box-shadow:0 24px 60px -32px rgba(12,16,13,0.35)">
+      <!-- Chat list -->
+      <div style="border-right:1px solid #DDD7C6; background:#F8F5ED; display:flex; flex-direction:column">
+        <div style="padding:20px 22px 14px; border-bottom:1px solid #DDD7C6">
+          <h1 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:400; color:#15150F">Messages</h1>
+          <p style="margin:4px 0 0; font-size:12px; color:#52504A">Every chat belongs to an event. No cold DMs — by design.</p>
+        </div>
+        <div style="flex:1; overflow-y:auto">
+          <sc-for list="{{ chatList }}" as="c" hint-placeholder-count="4">
+            <div onClick="{{ pickChat }}" data-id="{{ c.id }}" style="display:flex; gap:12px; padding:16px 22px; border-bottom:1px solid #EFEADB; background:{{ c.bg }}; cursor:pointer; transition:background .2s" style-hover="background:rgba(227,155,63,0.07)">
+              <span style="width:4px; flex-shrink:0; border-radius:2px; background:{{ c.bar }}"></span>
+              <div style="min-width:0; flex:1">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px">
+                  <p style="margin:0; font-size:14px; font-weight:{{ c.weight }}; color:#15150F; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ c.title }}</p>
+                  <span style="flex-shrink:0; font-family:'Space Mono',monospace; font-size:9px; color:#52504A">{{ c.when }}</span>
+                </div>
+                <p style="margin:4px 0 0; font-size:12px; color:#52504A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ c.last }}</p>
+              </div>
+              <sc-if value="{{ c.unread }}" hint-placeholder-val="{{ false }}">
+                <span style="align-self:center; display:grid; place-items:center; min-width:20px; height:20px; border-radius:999px; background:#E39B3F; font-family:'Space Mono',monospace; font-size:10px; color:#0C100D; font-variant-numeric:tabular-nums">{{ c.unread }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- Thread -->
+      <div style="display:flex; flex-direction:column; background:#fff">
+        <div style="display:flex; align-items:center; gap:14px; padding:16px 24px; border-bottom:1px solid #DDD7C6">
+          <span style="width:4px; height:36px; border-radius:2px; background:{{ thread.bar }}"></span>
+          <div style="min-width:0; flex:1">
+            <p onClick="{{ openEvent }}" data-id="{{ thread.eventId }}" style="margin:0; font-family:Fraunces,Georgia,serif; font-size:18px; color:#15150F; cursor:pointer">{{ thread.title }}</p>
+            <p style="margin:2px 0 0; font-family:'Space Mono',monospace; font-size:10px; color:#52504A; font-variant-numeric:tabular-nums">{{ thread.sub }}</p>
+          </div>
+          <div style="display:flex">
+            <sc-for list="{{ thread.faces }}" as="f" hint-placeholder-count="4">
+              <span style="display:grid; place-items:center; height:28px; width:28px; border-radius:999px; background:{{ f.bg }}; color:{{ f.fg }}; font-family:'Space Mono',monospace; font-size:9px; margin-left:-6px; box-shadow:0 0 0 2px #fff">{{ f.i }}</span>
+            </sc-for>
+          </div>
+          <span onClick="{{ goConsole }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#C2662A; cursor:pointer; border-bottom:1px solid #E39B3F; padding-bottom:2px">Console →</span>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:16px; background:linear-gradient(180deg, #FDFBF5 0%, #F8F5ED 100%)">
+          <sc-for list="{{ threadMsgs }}" as="m" hint-placeholder-count="6">
+            <sc-if value="{{ m.system }}" hint-placeholder-val="{{ false }}">
+              <div style="align-self:center; display:flex; align-items:center; gap:10px; border-radius:999px; border:1px dashed #D2C4A4; background:rgba(246,220,168,0.25); padding:8px 18px">
+                <span style="height:6px; width:6px; border-radius:999px; background:#E39B3F"></span>
+                <span style="font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.06em; color:#8A5A44">{{ m.text }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ m.mine }}" hint-placeholder-val="{{ false }}">
+              <div style="align-self:flex-end; max-width:65%">
+                <div style="border-radius:14px 14px 4px 14px; background:#27481F; color:#F8F5ED; padding:12px 16px; font-size:14px; line-height:1.5">{{ m.text }}</div>
+                <p style="margin:4px 2px 0; text-align:right; font-family:'Space Mono',monospace; font-size:9px; color:#52504A">{{ m.when }}</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ m.other }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; gap:10px; max-width:70%">
+                <span style="display:grid; place-items:center; height:30px; width:30px; flex-shrink:0; border-radius:999px; background:{{ m.avBg }}; color:{{ m.avFg }}; font-family:'Space Mono',monospace; font-size:9px; align-self:flex-end">{{ m.initials }}</span>
+                <div>
+                  <p style="margin:0 0 3px 2px; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.06em; color:#52504A">{{ m.name }} · {{ m.when }}</p>
+                  <div style="border-radius:14px 14px 14px 4px; background:#fff; border:1px solid #EFEADB; color:#15150F; padding:12px 16px; font-size:14px; line-height:1.5">{{ m.text }}</div>
+                </div>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+        <div style="display:flex; gap:12px; padding:16px 24px; border-top:1px solid #DDD7C6; background:#fff">
+          <input value="{{ chatDraft }}" onChange="{{ onDraft }}" onKeyDown="{{ draftKey }}" placeholder="Message the group — numbers and emails are filtered out, on purpose" style="flex:1; border-radius:999px; border:1px solid #DDD7C6; background:#F8F5ED; padding:13px 20px; font-family:Archivo,sans-serif; font-size:14px; color:#15150F; box-sizing:border-box">
+          <button onClick="{{ sendMsg }}" style="border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:13px 24px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="background:#F6DCA8">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</sc-if>
+<!-- ══════════ RECAP ══════════ -->
+<sc-if value="{{ isRecap }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Post-event recap" style="flex:1; background:#F8F5ED">
+  <header style="position:relative; isolation:isolate; overflow:hidden; background:#0C100D; min-height:420px; display:flex; align-items:flex-end">
+    <img src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.8">
+    <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.5), rgba(12,16,13,0.15) 45%, rgba(12,16,13,0.9))"></div>
+    <div style="position:relative; width:100%; max-width:1200px; margin:0 auto; padding:120px 40px 36px; box-sizing:border-box">
+      <p style="margin:0; display:inline-flex; align-items:center; gap:10px; border-radius:999px; background:rgba(123,164,111,0.2); border:1px solid rgba(123,164,111,0.4); padding:7px 16px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#7BA46F">✓ Completed · Sat 15 Aug</p>
+      <h1 style="margin:16px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(38px,4.6vw,58px); font-weight:300; line-height:0.98; color:#F8F5ED">Kanatal Ridge, overnight.<br><em style="color:#F6DCA8">It happened.</em></h1>
+      <dl style="margin:26px 0 0; display:flex; flex-wrap:wrap; column-gap:44px; row-gap:14px; border-top:1px solid rgba(248,245,237,0.2); padding-top:18px">
+        <sc-for list="{{ recapStats }}" as="f" hint-placeholder-count="5">
+          <div>
+            <dt style="font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(248,245,237,0.5)">{{ f.k }}</dt>
+            <dd style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:19px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ f.v }}</dd>
+          </div>
+        </sc-for>
+      </dl>
+    </div>
+  </header>
+  <section style="padding:48px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:44px">
+      <!-- Photo wall -->
+      <div>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:16px">
+          <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:24px; font-weight:400; color:#15150F">The wall <span style="font-family:'Space Mono',monospace; font-size:12px; color:#52504A">· 23 photos from 5 people</span></h2>
+          <button style="border:1px solid #DDD7C6; border-radius:999px; background:#fff; color:#15150F; padding:10px 20px; font-family:Archivo,sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="border-color:#E39B3F">Add yours</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:180px; gap:10px">
+          <sc-for list="{{ recapPhotos }}" as="p" hint-placeholder-count="5">
+            <div style="position:relative; overflow:hidden; border-radius:8px; grid-column:span {{ p.span }}; grid-row:span {{ p.rows }}">
+              <div style="{{ p.bg }}"></div>
+              <span style="position:absolute; left:10px; bottom:10px; border-radius:3px; background:rgba(12,16,13,0.6); backdrop-filter:blur(4px); padding:4px 8px; font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.08em; color:#F8F5ED">{{ p.tag }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:44px; align-items:start">
+        <div style="display:flex; flex-direction:column; gap:36px">
+          <!-- Vouch prompts -->
+          <section style="border-radius:10px; background:#0C100D; padding:28px">
+            <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.22em; color:#7BA46F">Close the loop — vouch while it is fresh</h2>
+            <p style="margin:10px 0 0; max-width:520px; font-size:14px; line-height:1.6; color:rgba(248,245,237,0.65)">You spent a night on a ridge with these people. A vouch from you is the strongest thing their profile can carry — and only you can write it.</p>
+            <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px">
+              <sc-for list="{{ recapVouch }}" as="v" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:14px; border-radius:8px; border:1px solid rgba(248,245,237,0.12); padding:14px 18px">
+                  <span style="display:grid; place-items:center; height:38px; width:38px; flex-shrink:0; border-radius:999px; background:{{ v.avBg }}; color:{{ v.avFg }}; font-family:'Space Mono',monospace; font-size:11px">{{ v.initials }}</span>
+                  <div style="min-width:0; flex:1">
+                    <p style="margin:0; font-size:14px; color:#F8F5ED">{{ v.name }}</p>
+                    <p style="margin:2px 0 0; font-size:11px; color:rgba(248,245,237,0.5)">{{ v.sub }}</p>
+                  </div>
+                  <button onClick="{{ doVouch }}" data-id="{{ v.id }}" style="border-radius:999px; border:1px solid {{ v.bd }}; background:{{ v.bg }}; color:{{ v.fg }}; padding:9px 18px; font-family:Archivo,sans-serif; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; transition:all .25s">{{ v.label }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+          <!-- Reviews -->
+          <section>
+            <h2 style="margin:0 0 14px; font-family:Fraunces,Georgia,serif; font-size:22px; font-weight:400; color:#15150F">Said afterwards</h2>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+              <sc-for list="{{ recapReviews }}" as="r" hint-placeholder-count="2">
+                <div style="border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:20px">
+                  <p style="margin:0; font-size:14px; line-height:1.6; color:#15150F">“{{ r.text }}”</p>
+                  <p style="margin:12px 0 0; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:#52504A">{{ r.who }}</p>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+        <aside style="display:flex; flex-direction:column; gap:16px">
+          <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:24px">
+            <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#52504A">Who was there</h3>
+            <div style="margin-top:14px; display:flex; flex-direction:column; gap:12px">
+              <sc-for list="{{ recapWho }}" as="w" hint-placeholder-count="5">
+                <div style="display:flex; align-items:center; gap:12px">
+                  <span style="display:grid; place-items:center; height:32px; width:32px; border-radius:999px; background:{{ w.bg }}; color:{{ w.fg }}; font-family:'Space Mono',monospace; font-size:10px">{{ w.i }}</span>
+                  <span style="font-size:13px; color:#15150F">{{ w.name }}</span>
+                  <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:{{ w.roleColor }}">{{ w.role }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="border-radius:10px; background:linear-gradient(135deg, #F6DCA8, #E39B3F); padding:24px">
+            <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:rgba(12,16,13,0.6)">Do it again</h3>
+            <p style="margin:10px 0 0; font-family:Fraunces,Georgia,serif; font-size:20px; line-height:1.25; color:#0C100D">Same crew, next ridge? Re-host this with one tap — roster invited first.</p>
+            <button onClick="{{ goCreate }}" style="margin-top:16px; width:100%; border:none; border-radius:999px; background:#0C100D; color:#F6DCA8; padding:13px 20px; font-family:Archivo,sans-serif; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#27481F">Re-host this event</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══════════ PUBLIC SHARE PAGE ══════════ -->
+<sc-if value="{{ isShare }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Public shareable event page" style="flex:1; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse 90% 70% at 50% 20%, #F6DCA8 0%, #E7D9BE 45%, #F1E9D7 100%); padding:120px 40px 80px">
+  <div style="width:100%; max-width:920px">
+    <p style="margin:0 0 16px; text-align:center; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.3em; color:#8A5A44">You have been invited</p>
+    <div style="display:grid; grid-template-columns:1.1fr 1fr; overflow:hidden; border-radius:14px; background:#0C100D; box-shadow:0 40px 90px -30px rgba(12,16,13,0.55)">
+      <div style="position:relative; min-height:420px">
+        <div style="{{ shareBg }}"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,13,0.35), transparent 40%, rgba(12,16,13,0.7))"></div>
+        <span style="position:absolute; top:16px; left:16px; border-radius:999px; background:{{ shareEv.hourBg }}; padding:6px 14px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.1em; color:{{ shareEv.hourFg }}; font-variant-numeric:tabular-nums">{{ shareEv.time }} · {{ shareEv.lightLabel }}</span>
+        <div style="position:absolute; left:20px; bottom:18px; display:flex; align-items:center; gap:10px">
+          <span style="display:grid; place-items:center; height:34px; width:34px; border-radius:999px; background:rgba(123,164,111,0.3); color:#7BA46F; font-family:'Space Mono',monospace; font-size:10px; box-shadow:0 0 0 2px rgba(248,245,237,0.4)">{{ shareEv.hostInitials }}</span>
+          <span style="font-size:13px; color:rgba(248,245,237,0.9)">{{ shareEv.host }} is hosting</span>
+        </div>
+      </div>
+      <div style="padding:36px; display:flex; flex-direction:column">
+        <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#7BA46F">{{ shareEv.actLabel }} · {{ shareEv.loc }}</p>
+        <h1 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:34px; font-weight:300; line-height:1.05; color:#F8F5ED">{{ shareEv.title }}</h1>
+        <p style="margin:14px 0 0; font-size:14px; line-height:1.6; color:rgba(248,245,237,0.7)">{{ shareStory }}</p>
+        <dl style="margin:22px 0 0; display:flex; flex-wrap:wrap; column-gap:30px; row-gap:12px; border-top:1px solid rgba(248,245,237,0.15); padding-top:16px">
+          <sc-for list="{{ shareFacts }}" as="f" hint-placeholder-count="3">
+            <div>
+              <dt style="font-family:'Space Mono',monospace; font-size:8px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(248,245,237,0.5)">{{ f.k }}</dt>
+              <dd style="margin:3px 0 0; font-family:'Space Mono',monospace; font-size:16px; color:#F6DCA8; font-variant-numeric:tabular-nums">{{ f.v }}</dd>
+            </div>
+          </sc-for>
+        </dl>
+        <div style="margin-top:auto; padding-top:24px">
+          <button onClick="{{ goOnboarding }}" style="width:100%; border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:15px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="background:#F6DCA8">Ask to join on TrackBuddy</button>
+          <p style="margin:12px 0 0; text-align:center; font-size:11px; line-height:1.5; color:rgba(248,245,237,0.5)">The exact meeting point is not on this page. It reaches you once {{ shareEv.host }} confirms you.</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin:20px auto 0; display:flex; align-items:center; justify-content:center; gap:10px">
+      <span style="display:flex; align-items:center; gap:10px; border-radius:999px; border:1px solid rgba(138,90,68,0.35); background:rgba(248,245,237,0.6); padding:10px 20px; font-family:'Space Mono',monospace; font-size:11px; color:#8A5A44">trackbuddy.app/e/{{ shareSlug }}<span onClick="{{ copyLink }}" style="color:#C2662A; cursor:pointer; border-bottom:1px solid #C2662A">{{ copyLabel }}</span></span>
+      <span onClick="{{ goEventBack }}" style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:#8A5A44; cursor:pointer; border-bottom:1px solid rgba(138,90,68,0.4); padding-bottom:2px">← back to the event</span>
+    </div>
+  </div>
+</main>
+</sc-if>
+<!-- ══════════ ONBOARDING ══════════ -->
+<sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Onboarding" style="flex:1; display:flex; align-items:center; justify-content:center; background:#0C100D; position:relative; overflow:hidden; padding:110px 40px 70px">
+  <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?w=2400&q=80&auto=format&fit=crop" alt="" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.35">
+  <div style="position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 50% 30%, rgba(227,155,63,0.18), transparent 70%), linear-gradient(180deg, rgba(12,16,13,0.75), rgba(12,16,13,0.92))"></div>
+  <div style="position:relative; width:100%; max-width:640px">
+    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:28px">
+      <sc-for list="{{ obDots }}" as="d" hint-placeholder-count="3">
+        <span onClick="{{ setObStep }}" data-step="{{ d.i }}" style="height:6px; width:{{ d.w }}px; border-radius:999px; background:{{ d.bg }}; cursor:pointer; transition:all .3s"></span>
+      </sc-for>
+    </div>
+    <div style="border-radius:16px; border:1px solid rgba(248,245,237,0.12); background:rgba(12,16,13,0.75); backdrop-filter:blur(16px); padding:44px; box-shadow:0 40px 90px -30px rgba(0,0,0,0.6)">
+      <sc-if value="{{ ob0 }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.26em; color:#F6DCA8">01 · Who shows up</p>
+          <h1 style="margin:14px 0 0; font-family:Fraunces,Georgia,serif; font-size:36px; font-weight:300; line-height:1.05; color:#F8F5ED">A name for the trail,<br>and where you start from.</h1>
+          <label style="display:block; margin-top:28px">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(248,245,237,0.55)">Name people will call out</span>
+            <input value="{{ obName }}" onChange="{{ obField }}" data-field="name" placeholder="A first name is plenty" style="margin-top:8px; width:100%; border-radius:8px; border:1px solid rgba(248,245,237,0.25); background:rgba(248,245,237,0.06); padding:14px 16px; font-family:Fraunces,Georgia,serif; font-size:20px; color:#F8F5ED; box-sizing:border-box">
+          </label>
+          <label style="display:block; margin-top:20px">
+            <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:rgba(248,245,237,0.55)">Home base</span>
+            <input value="{{ obBase }}" onChange="{{ obField }}" data-field="base" placeholder="City, country — where your alarms go off" style="margin-top:8px; width:100%; border-radius:8px; border:1px solid rgba(248,245,237,0.25); background:rgba(248,245,237,0.06); padding:14px 16px; font-family:Archivo,sans-serif; font-size:15px; color:#F8F5ED; box-sizing:border-box">
+          </label>
+          <button onClick="{{ setObStep }}" data-step="1" style="margin-top:28px; width:100%; border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:15px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#F6DCA8">Next — what you chase</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ ob1 }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.26em; color:#F6DCA8">02 · What you chase</p>
+          <h1 style="margin:14px 0 0; font-family:Fraunces,Georgia,serif; font-size:36px; font-weight:300; line-height:1.05; color:#F8F5ED">Pick your hours.</h1>
+          <p style="margin:12px 0 0; font-size:14px; line-height:1.6; color:rgba(248,245,237,0.6)">This tunes your board — and tells hosts what kind of company you are.</p>
+          <div style="margin-top:24px; display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <sc-for list="{{ obActTiles }}" as="a" hint-placeholder-count="6">
+              <button onClick="{{ obToggleAct }}" data-key="{{ a.key }}" style="display:flex; align-items:center; gap:12px; border-radius:10px; border:2px solid {{ a.bd }}; background:{{ a.bg }}; padding:14px 16px; cursor:pointer; font-family:Archivo,sans-serif; transition:all .2s; text-align:left">
+                <span style="height:10px; width:10px; flex-shrink:0; border-radius:999px; background:{{ a.dot }}"></span>
+                <span style="min-width:0">
+                  <span style="display:block; font-size:14px; font-weight:500; color:#F8F5ED">{{ a.label }}</span>
+                  <span style="display:block; font-family:'Space Mono',monospace; font-size:9px; color:rgba(248,245,237,0.5); font-variant-numeric:tabular-nums">around {{ a.hour }}</span>
+                </span>
+                <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:12px; color:{{ a.check }}">✓</span>
+              </button>
+            </sc-for>
+          </div>
+          <button onClick="{{ setObStep }}" data-step="2" style="margin-top:26px; width:100%; border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:15px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#F6DCA8">Next — the deal</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ ob2 }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.26em; color:#F6DCA8">03 · The deal</p>
+          <h1 style="margin:14px 0 0; font-family:Fraunces,Georgia,serif; font-size:36px; font-weight:300; line-height:1.05; color:#F8F5ED">Read once.<br>It is short, and it matters.</h1>
+          <ul style="margin:24px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:14px">
+            <sc-for list="{{ obDeal }}" as="d" hint-placeholder-count="4">
+              <li style="display:flex; gap:14px; border-radius:8px; border:1px solid rgba(248,245,237,0.12); padding:14px 18px">
+                <span style="font-family:'Space Mono',monospace; font-size:11px; color:#E39B3F; font-variant-numeric:tabular-nums">{{ d.n }}</span>
+                <span>
+                  <span style="display:block; font-size:14px; color:#F8F5ED">{{ d.t }}</span>
+                  <span style="display:block; margin-top:2px; font-size:12px; line-height:1.5; color:rgba(248,245,237,0.55)">{{ d.d }}</span>
+                </span>
+              </li>
+            </sc-for>
+          </ul>
+          <button onClick="{{ obFinish }}" style="margin-top:26px; width:100%; border:none; border-radius:999px; background:#E39B3F; color:#0C100D; padding:16px 24px; font-family:Archivo,sans-serif; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer; transition:all .25s" style-hover="background:#F6DCA8; box-shadow:0 12px 28px -8px rgba(227,155,63,0.5)">I understand — take me to the board</button>
+          <p style="margin:12px 0 0; text-align:center; font-size:11px; color:rgba(248,245,237,0.45)">TrackBuddy verifies actions, never identities. Everyone here is a stranger until you have walked together.</p>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</main>
+</sc-if>
+
+<!-- ══════════ HOST CONSOLE ══════════ -->
+<sc-if value="{{ isConsole }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Host console" style="flex:1; background:#F8F5ED">
+  <section style="background:#0C100D; padding:104px 40px 0">
+    <div style="max-width:1200px; margin:0 auto">
+      <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:20px">
+        <div>
+          <p style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.28em; color:#F6DCA8">Host console · your event</p>
+          <h1 style="margin:12px 0 0; font-family:Fraunces,Georgia,serif; font-size:clamp(32px,3.6vw,46px); font-weight:300; line-height:1; color:#F8F5ED">Nag Tibba Sunrise Push</h1>
+          <p style="margin:10px 0 0; font-family:'Space Mono',monospace; font-size:12px; color:rgba(248,245,237,0.6); font-variant-numeric:tabular-nums">Sat 22 Aug · 05:10 · leaves in 19h 48m · <span style="color:#7BA46F">9 of 12 confirmed</span></p>
+        </div>
+        <div style="display:flex; gap:10px; padding-bottom:4px">
+          <button onClick="{{ goShare }}" style="border:1px solid rgba(248,245,237,0.3); border-radius:999px; background:transparent; color:#F8F5ED; padding:11px 20px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="border-color:#F8F5ED">Invite card</button>
+          <button onClick="{{ goMessages }}" style="border:1px solid rgba(248,245,237,0.3); border-radius:999px; background:transparent; color:#F8F5ED; padding:11px 20px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="border-color:#F8F5ED">Group chat</button>
+          <button onClick="{{ goEventBack }}" style="border:none; border-radius:999px; background:rgba(248,245,237,0.12); color:#F8F5ED; padding:11px 20px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="background:rgba(248,245,237,0.2)">Public view</button>
+        </div>
+      </div>
+      <nav style="margin-top:28px; display:flex; gap:28px; border-bottom:1px solid rgba(248,245,237,0.15)">
+        <sc-for list="{{ conTabs }}" as="t" hint-placeholder-count="4">
+          <span onClick="{{ setConTab }}" data-key="{{ t.key }}" style="position:relative; padding:0 2px 14px; font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:{{ t.color }}; cursor:pointer">
+            {{ t.label }}
+            <span style="position:absolute; bottom:-1px; left:0; height:2px; width:100%; background:{{ t.under }}"></span>
+          </span>
+        </sc-for>
+      </nav>
+    </div>
+  </section>
+  <section style="padding:36px 40px 96px">
+    <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:40px; align-items:start">
+      <div>
+        <sc-if value="{{ conRoster }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; flex-direction:column; gap:24px">
+            <div>
+              <div style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:12px">
+                <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; color:#15150F">Asking to come <span style="font-family:'Space Mono',monospace; font-size:12px; color:#C2662A">· 2</span></h2>
+                <span style="font-size:12px; color:#52504A">confirming past 12 opens the waitlist</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <sc-for list="{{ conAsking }}" as="r" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:14px; border-radius:8px; border:1px solid rgba(227,155,63,0.4); background:rgba(246,220,168,0.15); padding:14px 18px; opacity:{{ r.opacity }}">
+                    <span style="display:grid; place-items:center; height:40px; width:40px; flex-shrink:0; border-radius:999px; background:{{ r.avBg }}; color:{{ r.avFg }}; font-family:Fraunces,Georgia,serif; font-size:13px">{{ r.initials }}</span>
+                    <div style="min-width:0; flex:1">
+                      <p style="margin:0; font-size:14px; color:#15150F; font-weight:500">{{ r.name }} <span style="font-family:'Space Mono',monospace; font-size:10px; font-weight:400; color:#7BA46F">✓{{ r.vouches }} · {{ r.events }} events</span></p>
+                      <p style="margin:2px 0 0; font-size:12px; color:#52504A; font-style:italic">“{{ r.msg }}”</p>
+                    </div>
+                    <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex; gap:8px">
+                        <button onClick="{{ conDecide }}" data-id="{{ r.id }}" data-d="yes" style="border:none; border-radius:999px; background:#27481F; color:#F8F5ED; padding:9px 16px; font-family:Archivo,sans-serif; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="background:#3C6A33">Confirm</button>
+                        <button onClick="{{ conDecide }}" data-id="{{ r.id }}" data-d="no" style="border:1px solid #DDD7C6; border-radius:999px; background:#fff; color:#52504A; padding:9px 16px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="border-color:#15150F; color:#15150F">Decline</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ r.decided }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:{{ r.decidedColor }}">{{ r.decidedLabel }}</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:12px">
+                <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; color:#15150F">Confirmed <span style="font-family:'Space Mono',monospace; font-size:12px; color:#27481F">· 9 of 12</span></h2>
+                <span style="font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#52504A">check people in at the meet point</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px">
+                <sc-for list="{{ conConfirmed }}" as="p" hint-placeholder-count="6">
+                  <div style="display:flex; align-items:center; gap:14px; border-radius:8px; border:1px solid #DDD7C6; background:#fff; padding:11px 16px">
+                    <span style="display:grid; place-items:center; height:34px; width:34px; flex-shrink:0; border-radius:999px; background:{{ p.avBg }}; color:{{ p.avFg }}; font-family:'Space Mono',monospace; font-size:10px">{{ p.initials }}</span>
+                    <span style="font-size:14px; color:#15150F">{{ p.name }}</span>
+                    <sc-if value="{{ p.cohost }}" hint-placeholder-val="{{ false }}"><span style="border-radius:4px; background:rgba(227,155,63,0.18); color:#C2662A; padding:2px 8px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em">Co-host</span></sc-if>
+                    <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:10px; color:#52504A">{{ p.paid }}</span>
+                    <button onClick="{{ conCheckin }}" data-id="{{ p.id }}" style="border-radius:999px; border:1px solid {{ p.ciBd }}; background:{{ p.ciBg }}; color:{{ p.ciFg }}; padding:7px 14px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer; transition:all .2s">{{ p.ciLabel }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:baseline; justify-content:space-between; padding-bottom:12px">
+                <h2 style="margin:0; font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:400; color:#15150F">Waitlist <span style="font-family:'Space Mono',monospace; font-size:12px; color:#52504A">· in order</span></h2>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px">
+                <sc-for list="{{ conWaitlist }}" as="w" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:14px; border-radius:8px; border:1px dashed #D2C4A4; background:rgba(241,233,215,0.4); padding:11px 16px">
+                    <span style="font-family:'Space Mono',monospace; font-size:11px; color:#8A5A44; font-variant-numeric:tabular-nums">#{{ w.pos }}</span>
+                    <span style="font-size:14px; color:#15150F">{{ w.name }}</span>
+                    <span style="font-family:'Space Mono',monospace; font-size:10px; color:#52504A">since {{ w.since }}</span>
+                    <button style="margin-left:auto; border-radius:999px; border:1px solid #DDD7C6; background:#fff; color:#27481F; padding:7px 14px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; cursor:pointer" style-hover="border-color:#27481F">Promote</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ conComms }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:20px">
+            <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:22px">
+              <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Announce to everyone confirmed</h2>
+              <textarea rows="3" placeholder="Forecast holds — clear from 03:00. Meet 10 minutes early; we leave on time." style="margin-top:12px; width:100%; border-radius:8px; border:1px solid #DDD7C6; background:#F8F5ED; padding:14px 16px; font-family:Archivo,sans-serif; font-size:14px; line-height:1.6; color:#15150F; box-sizing:border-box; resize:vertical"></textarea>
+              <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center">
+                <span style="font-size:12px; color:#52504A">Lands in the group chat, pinned, and pings everyone.</span>
+                <button style="border:none; border-radius:999px; background:#0C100D; color:#F6DCA8; padding:11px 22px; font-family:Archivo,sans-serif; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; cursor:pointer" style-hover="background:#27481F">Send announcement</button>
+              </div>
+            </div>
+            <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:22px">
+              <h2 style="margin:0 0 12px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Sent earlier</h2>
+              <sc-for list="{{ conAnnounced }}" as="a" hint-placeholder-count="2">
+                <div style="border-left:2px solid #E39B3F; padding:4px 0 4px 14px; margin-bottom:14px">
+                  <p style="margin:0; font-size:14px; line-height:1.55; color:#15150F">{{ a.text }}</p>
+                  <p style="margin:4px 0 0; font-family:'Space Mono',monospace; font-size:10px; color:#52504A">{{ a.when }} · seen by {{ a.seen }}</p>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ conMoney }}" hint-placeholder-val="{{ false }}">
+          <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; overflow:hidden">
+            <div style="padding:20px 24px; border-bottom:1px solid #EFEADB; display:flex; justify-content:space-between; align-items:baseline">
+              <h2 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.2em; color:#52504A">Cost share ledger — ₹350 a head</h2>
+              <span style="font-family:'Space Mono',monospace; font-size:12px; color:#27481F; font-variant-numeric:tabular-nums">₹2,450 of ₹3,150 in</span>
+            </div>
+            <sc-for list="{{ conLedger }}" as="l" hint-placeholder-count="6">
+              <div style="display:flex; align-items:center; gap:14px; padding:13px 24px; border-bottom:1px solid #EFEADB">
+                <span style="font-size:14px; color:#15150F">{{ l.name }}</span>
+                <span style="margin-left:auto; font-family:'Space Mono',monospace; font-size:12px; color:#52504A; font-variant-numeric:tabular-nums">₹350</span>
+                <span style="width:80px; text-align:right; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:{{ l.color }}">{{ l.status }}</span>
+              </div>
+            </sc-for>
+            <p style="margin:0; padding:16px 24px; font-size:12px; line-height:1.6; color:#52504A">Costs are split at face value — fuel, permits, the cab. TrackBuddy holds no money and takes no cut; this ledger is a shared memory, not a wallet.</p>
+          </div>
+        </sc-if>
+      </div>
+      <aside style="display:flex; flex-direction:column; gap:16px; position:sticky; top:88px">
+        <div style="border-radius:10px; border:2px solid #E39B3F; background:#fff; padding:22px">
+          <h3 style="margin:0; display:flex; justify-content:space-between; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#C2662A">Exact meeting point <span style="color:#27481F">confirmed only</span></h3>
+          <p style="margin:12px 0 0; font-size:15px; color:#15150F">Gate 2, Dehradun ISBT — behind the tea stall</p>
+          <p style="margin:6px 0 0; font-size:13px; color:#52504A">Shared cab to Pantwari, roughly ₹300 each way.</p>
+          <button style="margin-top:14px; width:100%; border:1px solid #DDD7C6; border-radius:999px; background:#F8F5ED; color:#15150F; padding:10px 18px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="border-color:#E39B3F">Edit the point</button>
+        </div>
+        <div style="border-radius:10px; border:1px solid #DDD7C6; background:#fff; padding:22px">
+          <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#52504A">Co-host</h3>
+          <div style="margin-top:12px; display:flex; align-items:center; gap:12px">
+            <span style="display:grid; place-items:center; height:36px; width:36px; border-radius:999px; background:rgba(184,130,107,0.15); color:#8A5A44; font-family:'Space Mono',monospace; font-size:10px">PN</span>
+            <div style="flex:1">
+              <p style="margin:0; font-size:14px; color:#15150F">Priya Negi</p>
+              <p style="margin:1px 0 0; font-size:11px; color:#52504A">can confirm, announce and check in</p>
+            </div>
+            <span style="font-family:'Space Mono',monospace; font-size:10px; color:#52504A; cursor:pointer; border-bottom:1px solid #DDD7C6" style-hover="color:#15150F">remove</span>
+          </div>
+          <button style="margin-top:14px; width:100%; border:1px dashed #D2C4A4; border-radius:999px; background:transparent; color:#52504A; padding:10px 18px; font-family:Archivo,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer" style-hover="color:#15150F; border-color:#52504A">+ Add a co-host</button>
+        </div>
+        <div style="border-radius:10px; border:1px solid #DDD7C6; background:rgba(241,233,215,0.5); padding:22px">
+          <h3 style="margin:0; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.18em; color:#52504A">If plans change</h3>
+          <p style="margin:10px 0 0; font-size:13px; line-height:1.6; color:#52504A">Calling it off tells all nine, immediately, with your reason. Better a cancelled sunrise than a group waiting at a dark bus stand.</p>
+          <span style="margin-top:12px; display:inline-block; border-bottom:1px solid #B8826B; padding-bottom:2px; font-family:'Space Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:#B8826B; cursor:pointer" style-hover="color:#8A5A44">Call this event off</span>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+</sc-if>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer style="background:#0C100D; padding:64px 40px 0; overflow:hidden">
+  <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:48px">
+    <div>
+      <span style="display:inline-flex; align-items:center; gap:12px">
+        <span style="position:relative; display:grid; place-items:center; height:30px; width:30px; border-radius:999px; background:radial-gradient(circle at 50% 65%, #F6DCA8 0%, #E39B3F 55%, #C2662A 100%)">
+          <span style="position:absolute; bottom:-1px; left:-2px; right:-2px; height:12px; background:#0C100D; border-radius:0 0 999px 999px"></span>
+        </span>
+        <span style="font-family:Fraunces,Georgia,serif; font-size:20px; color:#F8F5ED">TrackBuddy</span>
+      </span>
+      <p style="margin:18px 0 0; max-width:280px; font-size:14px; line-height:1.65; color:rgba(248,245,237,0.45)">Find people for the hours worth waking for. A community platform by DEWDROPZ — Feel Alive.</p>
+    </div>
+    <sc-for list="{{ tbFooterCols }}" as="col" hint-placeholder-count="3">
+      <nav>
+        <div style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.2em; color:#7BA46F; text-transform:uppercase; margin-bottom:16px">{{ col.heading }}</div>
+        <ul style="margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px">
+          <sc-for list="{{ col.links }}" as="l" hint-placeholder-count="4">
+            <li><span style="font-size:13px; color:rgba(248,245,237,0.6); cursor:pointer; transition:color .2s" style-hover="color:#F8F5ED">{{ l }}</span></li>
+          </sc-for>
+        </ul>
+      </nav>
+    </sc-for>
+  </div>
+  <div style="max-width:1200px; margin:48px auto 0; border-top:1px solid rgba(248,245,237,0.1); padding:24px 0; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px">
+    <span style="font-size:12px; color:rgba(248,245,237,0.3)">© 2026 DEWDROPZ · TrackBuddy</span>
+    <span style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.14em; color:rgba(248,245,237,0.35)">Nobody is vetted. Everybody is counted. Emergency: local services first.</span>
+    <span style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.1em; color:rgba(248,245,237,0.25)">30.3165° N, 78.0322° E</span>
+  </div>
+</footer>
+
+<!-- Screen switcher (design review aid) -->
+<div style="position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:60; display:flex; gap:2px; border-radius:999px; background:rgba(12,16,13,0.88); padding:4px; backdrop-filter:blur(10px); box-shadow:0 10px 30px rgba(0,0,0,0.4); max-width:94vw; overflow-x:auto">
+  <sc-for list="{{ devTabs }}" as="d" hint-placeholder-count="11">
+    <span onClick="{{ goNav }}" data-key="{{ d.key }}" style="border-radius:999px; padding:6px 11px; font-family:'Space Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.06em; color:{{ d.fg }}; background:{{ d.bg }}; cursor:pointer; white-space:nowrap">{{ d.label }}</span>
+  </sc-for>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1440}, &quot;screen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;landing&quot;, &quot;options&quot;: [&quot;landing&quot;, &quot;discover&quot;, &quot;event&quot;, &quot;create&quot;, &quot;people&quot;, &quot;person&quot;, &quot;dashboard&quot;, &quot;messages&quot;, &quot;console&quot;, &quot;recap&quot;, &quot;share&quot;, &quot;onboarding&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Screen&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: this.props.screen ?? 'landing',
+    eventId: 'e1',
+    personId: 'meera',
+    discAct: 'all',
+    discWhen: 'all',
+    clock: '05:12',
+    counters: { out: 0, weekend: 0, sunrises: 0 },
+    createStep: 0,
+    cf: { activity: 'trekking', title: '', place: '', country: 'India', date: '2026-08-22', time: '05:10', spots: 8, diff: 'moderate', cost: 0, img: 0, story: '', bring: [] },
+    chatDraft: '',
+    obStep: 0,
+    ob: { name: '', base: '', acts: [], pace: 'steady' },
+    consoleTab: 'roster',
+    followed: [],
+    joined: [],
+    decided: {},
+    conDecided: {},
+    checkins: ['r1', 'r2'],
+    vouched: [],
+    copied: false,
+    chatId: 'c1',
+    sent: [],
+  };
+
+  IMGS = {
+    headlamp: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=1600&q=80&auto=format&fit=crop',
+    ridgeDawn: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80&auto=format&fit=crop',
+    sunrisePair: 'https://images.unsplash.com/photo-1454372182658-c712e4c5a1db?w=1600&q=80&auto=format&fit=crop',
+    ridgeWalk: 'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=1600&q=80&auto=format&fit=crop',
+    descent: 'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=1600&q=80&auto=format&fit=crop',
+    camp: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&q=80&auto=format&fit=crop',
+    lake: 'https://images.unsplash.com/photo-1501555088652-021faa106b9b?w=1600&q=80&auto=format&fit=crop',
+    mistForest: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1600&q=80&auto=format&fit=crop',
+    aerial: 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=1600&q=80&auto=format&fit=crop',
+    cloudSea: 'https://images.unsplash.com/photo-1761566333643-bf7d2c94f0ed?w=2400&q=80&auto=format&fit=crop',
+    fog: 'https://images.unsplash.com/photo-1733744237781-6eed02c60b8a?w=1600&q=80&auto=format&fit=crop',
+  };
+
+  HOURS = {
+    predawn: { label: 'Before light', color: '#8FA3C8', ink: '#2E3A56', tint: 'rgba(20,37,54,0.75)', bg: '#142536', fg: '#C9D6EC' },
+    dawn:    { label: 'First light',  color: '#E39B3F', ink: '#C2662A', tint: 'rgba(194,102,42,0.55)', bg: '#E39B3F', fg: '#0C100D' },
+    day:     { label: 'Full day',     color: '#7BA46F', ink: '#27481F', tint: 'rgba(39,72,31,0.55)', bg: '#27481F', fg: '#F8F5ED' },
+    dusk:    { label: 'Last light',   color: '#B8826B', ink: '#8A5A44', tint: 'rgba(138,90,68,0.6)', bg: '#B8826B', fg: '#0C100D' },
+    night:   { label: 'After dark',   color: '#C9D6EC', ink: '#142536', tint: 'rgba(12,16,13,0.8)', bg: '#0C100D', fg: '#F6DCA8' },
+  };
+  hourFor(t) {
+    const h = Number(String(t).slice(0, 2));
+    if (h < 5) return this.HOURS.predawn;
+    if (h < 8) return this.HOURS.dawn;
+    if (h < 17) return this.HOURS.day;
+    if (h < 20) return this.HOURS.dusk;
+    return this.HOURS.night;
+  }
+
+  EVENTS = [
+    { id: 'e1', title: 'Nag Tibba Sunrise Push', loc: 'Dehradun, India', img: 'ridgeDawn', activity: 'trekking', actLabel: 'Trekking', dow: 'Sat', day: '22', dateLine: 'Sat 22 Aug · 05:10', time: '05:10', going: 9, cap: 12, minParty: 3, diff: 'Moderate', cost: '₹350 shared', costShared: true, host: 'Aarav Mehta', hostId: 'me', vouches: 31, bucket: 'weekend', when: 'weekend', countdown: '19h 48m', mine: true, dist: '21 km', gain: '1,150 m', blurb: 'Out of the treeline by headlamp, summit for first light, maggi at the temple hut on the way down.' },
+    { id: 'e2', title: 'Perseids from the Ridge', loc: 'Kanatal, India', img: 'camp', activity: 'stargazing', actLabel: 'Stargazing', dow: 'Sat', day: '22', dateLine: 'Sat 22 Aug · 21:30', time: '21:30', going: 8, cap: 8, minParty: 4, diff: 'Easy', cost: 'Free', host: 'Priya Negi', hostId: 'priya', vouches: 9, bucket: 'weekend', when: 'weekend', countdown: '36h 08m', full: true, waitlist: 3, blurb: 'Zero moon, high ridge, meteor counting until the cold wins.' },
+    { id: 'e3', title: 'Alpe di Siusi First Light', loc: 'Dolomites, Italy', img: 'sunrisePair', activity: 'sunrise', actLabel: 'Sunrise hike', dow: 'Sun', day: '23', dateLine: 'Sun 23 Aug · 05:40', time: '05:40', going: 4, cap: 6, minParty: 2, diff: 'Easy', cost: '€12 fuel split', costShared: true, host: 'Elena Riva', hostId: 'elena', vouches: 14, bucket: 'weekend', when: 'weekend', countdown: '44h 12m', blurb: 'The plateau turns gold for about nine minutes. We will be standing in the right place.' },
+    { id: 'e4', title: 'Misty Forest 10K', loc: 'Kyoto, Japan', img: 'fog', activity: 'running', actLabel: 'Trail run', dow: 'Fri', day: '21', dateLine: 'Fri 21 Aug · 06:15', time: '06:15', going: 5, cap: 8, minParty: 2, diff: 'Moderate', cost: 'Free', host: 'Kenji Nakamura', hostId: 'kenji', vouches: 11, bucket: 'soon', when: 'week', countdown: '8h 03m', blurb: 'Cedar forest singletrack while the mist still holds. Conversational pace, strict on the regroup points.' },
+    { id: 'e5', title: 'Wetland Dawn Chorus', loc: 'Asan Barrage, India', img: 'lake', activity: 'birding', actLabel: 'Bird watching', dow: 'Fri', day: '21', dateLine: 'Fri 21 Aug · 05:20', time: '05:20', going: 3, cap: 5, minParty: 3, diff: 'Easy', cost: '₹120 shared', costShared: true, host: 'Meera Joshi', hostId: 'meera', vouches: 23, bucket: 'soon', when: 'week', countdown: '7h 08m', blurb: 'Winter migrants are early this year. Scopes provided, silence appreciated.' },
+    { id: 'e6', title: 'Loch Shore Wild Camp', loc: 'Glencoe, Scotland', img: 'descent', activity: 'camping', actLabel: 'Camping', dow: 'Fri', day: '28', dateLine: 'Fri 28 Aug · 17:30', time: '17:30', going: 4, cap: 6, minParty: 4, diff: 'Moderate', cost: '£8 shared', costShared: true, host: 'Tom Aldridge', hostId: 'tom', vouches: 12, bucket: 'next', when: 'all', countdown: null, blurb: 'One night by the water, stove coffee at dawn, out by noon.' },
+    { id: 'e7', title: 'Ridgeline Traverse Day', loc: 'Chamonix, France', img: 'ridgeWalk', activity: 'trekking', actLabel: 'Trekking', dow: 'Sat', day: '29', dateLine: 'Sat 29 Aug · 07:30', time: '07:30', going: 6, cap: 10, minParty: 3, diff: 'Difficult', cost: '€15 lift split', costShared: true, host: 'Sofia Marques', hostId: 'sofia', vouches: 18, bucket: 'next', when: 'all', countdown: null, womenOnly: true, blurb: 'A proper day on the balcony trails. Women-only, brisk but no heroics.' },
+    { id: 'e8', title: 'Everest View Approach', loc: 'Khumbu, Nepal', img: 'aerial', activity: 'trekking', actLabel: 'Trekking', dow: 'Mon', day: '07', dateLine: 'Mon 7 Sep · 4 days', time: null, days: 4, going: 3, cap: 6, minParty: 3, diff: 'Difficult', cost: '$90 shared', costShared: true, host: 'Ana Torres', hostId: 'ana', vouches: 15, bucket: 'later', when: 'all', countdown: null, blurb: 'Four days to the viewpoint and back. Measured pace, teahouse nights.' },
+    { id: 'e9', title: 'Golden Hour Descent Social', loc: 'Mussoorie, India', img: 'mistForest', activity: 'sunrise', actLabel: 'Sunset walk', dow: 'Sun', day: '30', dateLine: 'Sun 30 Aug · 17:45', time: '17:45', going: 10, cap: 14, minParty: 2, diff: 'Easy', cost: 'Free', host: 'Rohan Thapa', hostId: 'rohan', vouches: 7, bucket: 'next', when: 'all', countdown: null, blurb: 'The easy one. Bring anyone. We walk down into the lights of the valley.' },
+  ];
+  FEATURED = { id: 'e10', title: 'Cloud Sea at Dawn — Mount Batur', loc: 'Bali, Indonesia', img: 'cloudSea', activity: 'sunrise', actLabel: 'Sunrise hike', dateLine: 'Sat 22 Aug · 03:40', time: '03:40', going: 11, cap: 16, diff: 'Moderate', cost: 'Rp 90k shared', host: 'Wayan Putra', hostInitials: 'WP', vouches: 26, blurb: 'Two hours of switchbacks in the dark, then the crater rim floats above a sea of cloud. The single best sunrise this board knows about.', spots: '5 spots left', bucket: 'weekend' };
+
+  PEOPLE = [
+    { id: 'meera', name: 'Meera Joshi', base: 'Dehradun, India', mentor: true, tagline: 'Eighteen years of Garhwal ridgelines, most of them before breakfast.', acts: ['Trekking', 'Bird watching', 'Camping'], events: 56, hosted: 41, vouches: 23, followers: 412, pace: 'Steady', streak: 11, img: 'ridgeDawn' },
+    { id: 'elena', name: 'Elena Riva', base: 'Bolzano, Italy', mentor: false, tagline: 'Dolomites sunrise specialist. I know exactly where the gold lands.', acts: ['Sunrise hikes', 'Trekking'], events: 34, hosted: 19, vouches: 14, followers: 268, pace: 'Brisk', streak: 7, img: 'sunrisePair' },
+    { id: 'kenji', name: 'Kenji Nakamura', base: 'Kyoto, Japan', mentor: false, tagline: 'Misty forest runs at conversational pace. Strict about regroup points.', acts: ['Trail running', 'Trekking'], events: 41, hosted: 22, vouches: 11, followers: 190, pace: 'Fast', streak: 15, img: 'fog' },
+    { id: 'priya', name: 'Priya Negi', base: 'Mussoorie, India', mentor: false, tagline: 'Stargazer with a telescope that fits in one rucksack.', acts: ['Stargazing', 'Camping'], events: 17, hosted: 11, vouches: 9, followers: 121, pace: 'Steady', streak: 4, img: 'camp' },
+    { id: 'sofia', name: 'Sofia Marques', base: 'Chamonix, France', mentor: true, tagline: 'Balcony trails and women-only traverses. Brisk but no heroics.', acts: ['Trekking', 'Trail running'], events: 48, hosted: 27, vouches: 18, followers: 305, pace: 'Brisk', streak: 9, img: 'ridgeWalk' },
+    { id: 'tom', name: 'Tom Aldridge', base: 'Glencoe, Scotland', mentor: false, tagline: 'Wild camps by water. I bring the stove, you bring the stories.', acts: ['Camping', 'Trekking'], events: 29, hosted: 13, vouches: 12, followers: 154, pace: 'Steady', streak: 5, img: 'descent' },
+    { id: 'ana', name: 'Ana Torres', base: 'El Chaltén, Argentina', mentor: false, tagline: 'Multi-day approaches at a measured pace. Teahouse diplomacy a specialty.', acts: ['Trekking', 'Camping'], events: 37, hosted: 16, vouches: 15, followers: 233, pace: 'Steady', streak: 6, img: 'aerial' },
+    { id: 'rohan', name: 'Rohan Thapa', base: 'Rishikesh, India', mentor: false, tagline: 'The easy ones. Bring anyone — the valley lights do the work.', acts: ['Sunset walks', 'Camping'], events: 19, hosted: 8, vouches: 7, followers: 98, pace: 'Steady', streak: 3, img: 'mistForest' },
+  ];
+
+  componentDidMount() {
+    const start = Date.now();
+    this.timer = setInterval(() => {
+      const t = (Date.now() - start) / 1000;
+      const ease = (target) => Math.round(target * Math.min(1, t / 2.2) * (2 - Math.min(1, t / 2.2)));
+      const mins = 12 + Math.floor(t / 60);
+      const clock = '05:' + String(mins % 60).padStart(2, '0');
+      this.setState({ counters: { out: ease(1284), weekend: ease(163), sunrises: ease(3902) }, clock });
+      if (t > 3 && this.state.counters.sunrises >= 3902) { /* keep clock ticking only */ }
+    }, 80);
+  }
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); }
+
+  chip(on) {
+    return on
+      ? { bd: '#E39B3F', bg: '#E39B3F', fg: '#0C100D' }
+      : { bd: 'rgba(248,245,237,0.25)', bg: 'rgba(248,245,237,0.05)', fg: 'rgba(248,245,237,0.75)' };
+  }
+  chipLight(on) {
+    return on
+      ? { bd: '#27481F', bg: '#27481F', fg: '#F8F5ED' }
+      : { bd: '#DDD7C6', bg: '#fff', fg: '#52504A' };
+  }
+
+  go(screen) { this.setState({ screen }); window.scrollTo(0, 0); }
+
+  bg(url, opacity) {
+    return { position: 'absolute', inset: 0, backgroundImage: "url('" + url + "')", backgroundSize: 'cover', backgroundPosition: 'center', opacity };
+  }
+
+  eventCard(e) {
+    const hour = e.time ? this.hourFor(e.time) : this.HOURS.dawn;
+    const left = e.cap - e.going;
+    return {
+      id: e.id, title: e.title, loc: e.loc, img: this.IMGS[e.img], bg: this.bg(this.IMGS[e.img], 1),
+      dow: e.dow.toUpperCase(), day: e.day, time: e.time ?? e.days + ' days',
+      tint: hour.tint, hourBg: hour.bg, hourFg: hour.fg, hourColor: hour.color, inkColor: hour.ink,
+      lightLabel: e.time ? hour.label : 'On the trail',
+      actLabel: e.actLabel, host: e.host, hostInitials: e.host.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase(),
+      vouches: e.vouches, diff: e.diff,
+      cost: e.cost, costBg: e.cost === 'Free' ? 'rgba(123,164,111,0.15)' : 'rgba(227,155,63,0.18)', costFg: e.cost === 'Free' ? '#27481F' : '#C2662A',
+      full: !!e.full, womenOnly: !!e.womenOnly,
+      spotsText: e.full ? 'Full · ' + (e.waitlist ?? 0) + ' waiting' : left + ' spot' + (left === 1 ? '' : 's'),
+      spotsColor: e.full ? '#B8826B' : '#27481F',
+      spotsShort: e.full ? 'waitlist' : left + ' spots',
+      countdown: e.countdown, mine: !!e.mine,
+    };
+  }
+
+  getEvent(id) {
+    if (id === 'e10') return { ...this.FEATURED, dow: 'Sat', day: '22', going: 11, cap: 16, minParty: 4, costShared: true, hostId: 'wayan', bucket: 'weekend', when: 'weekend', countdown: '17h 20m' };
+    return this.EVENTS.find((e) => e.id === id) ?? this.EVENTS[0];
+  }
+
+  itinFor(e) {
+    const add = (t, m) => {
+      if (!t) return '—';
+      const [h, mm] = t.split(':').map(Number);
+      const total = (h * 60 + mm + m + 1440) % 1440;
+      return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+    };
+    const t = e.time ?? '06:00';
+    const steps = e.days
+      ? [
+          { t: 'Day 1', label: 'Meet, sort loads, walk in', d: 'Headcount at the trailhead. Nobody carries what two can split.' },
+          { t: 'Day 2', label: 'The long middle', d: 'Steady climbing, teahouse night. The group moves at the slowest comfortable pace.' },
+          { t: 'Day 3', label: 'The viewpoint', d: 'Up before light for the reason we came. Long lunch, short legs after.' },
+          { t: 'Day 4', label: 'Out and down', d: 'Back at the road by mid-afternoon. Vouches and recap photos happen here.' },
+        ]
+      : [
+          { t, label: 'Meet & headcount', d: e.loc + ' — somewhere public, with people around. We leave together, on time.' },
+          { t: add(t, 90), label: e.activity === 'stargazing' ? 'Lights off, eyes up' : 'The good part begins', d: e.activity === 'stargazing' ? 'Dark-adapted after twenty minutes. The count starts.' : 'Out of the easy ground and into the reason everyone set an alarm.' },
+          { t: add(t, 210), label: e.activity === 'stargazing' ? 'Peak of the shower' : 'The moment', d: e.blurb },
+          { t: add(t, 330), label: 'Back where we started', d: 'Group check before anyone leaves. Recap photos land in the chat.' },
+        ];
+    return steps.map((st, i) => {
+      const hour = /^\d/.test(st.t) ? this.hourFor(st.t) : this.HOURS.day;
+      const next = steps[i + 1] && /^\d/.test(steps[i + 1].t) ? this.hourFor(steps[i + 1].t) : hour;
+      return { ...st, dot: hour.bg === '#0C100D' ? '#142536' : hour.bg, ink: hour.ink, nextDot: next.bg === '#0C100D' ? '#142536' : next.bg, lineOpacity: i === steps.length - 1 ? '0' : '0.45' };
+    });
+  }
+
+  eventVals() {
+    const s = this.state;
+    const e = this.getEvent(s.eventId);
+    const card = this.eventCard({ ...e, img: e.img in this.IMGS ? e.img : 'ridgeDawn' });
+    const host = this.PEOPLE.find((p) => p.id === e.hostId);
+    const mine = !!e.mine;
+    const full = !!e.full && !mine;
+    const requested = s.joined.includes(e.id);
+    const hour = e.time ? this.hourFor(e.time) : this.HOURS.dawn;
+    const facts = [
+      e.days ? { k: 'Days', v: String(e.days) } : { k: 'Leaves', v: e.time },
+      { k: 'Going', v: e.going + '/' + e.cap },
+      { k: 'Difficulty', v: e.diff },
+      { k: 'Cost share', v: e.cost },
+    ];
+    if (e.dist) facts.splice(1, 0, { k: 'Distance', v: e.dist });
+    if (e.gain) facts.splice(2, 0, { k: 'Gain', v: e.gain });
+    const names = ['Priya Negi', 'Rohan Thapa', 'Kabir Singh', 'Ananya Bisht', 'Sana Kapoor', 'Vikram Joshi', 'Lena Fischer', 'Marco Ruiz', 'Yuki Sato', 'Dana Cole', 'Omar Haddad', 'Iris Kim', 'Leo Martin', 'Nina Rossi', 'Sam Ortega', 'Ava Chen'];
+    const roster = [{ id: e.hostId, name: e.host, tag: 'Host', bg: '#E39B3F', fg: '#0C100D', initials: card.hostInitials }].concat(
+      names.slice(0, Math.max(0, e.going - 1)).map((n, i) => ({
+        id: this.PEOPLE[i % this.PEOPLE.length].id, name: n, tag: '',
+        bg: i % 3 === 0 ? 'rgba(39,72,31,0.12)' : i % 3 === 1 ? 'rgba(20,37,54,0.12)' : 'rgba(184,130,107,0.15)',
+        fg: i % 3 === 0 ? '#27481F' : i % 3 === 1 ? '#142536' : '#8A5A44',
+        initials: n.split(/\s+/).map((w) => w[0]).join('').toUpperCase(),
+      }))
+    );
+    const meter = [];
+    for (let i = 0; i < e.cap; i++) meter.push({ bg: i < e.going ? (hour.bg === '#0C100D' ? '#F6DCA8' : hour.bg) : 'rgba(248,245,237,0.15)' });
+    const followed = s.followed.includes(e.hostId);
+    return {
+      ev: card, evBg: this.bg(card.img, 0.85), evDate: e.dateLine.split(' · ')[0] + (e.days ? ' · ' + e.days + ' days' : ''),
+      evHostId: e.hostId, evStory: e.blurb,
+      evFacts: facts, evItinerary: this.itinFor(e),
+      evBring: e.activity === 'stargazing' ? ['Warm layer (it turns cold)', 'Red-light torch', 'Flask of something hot', 'Ground mat', 'No white lights after 22:00'] : e.days ? ['40L pack', 'Sleeping bag −5°', 'Water purification', 'Cash for teahouses', 'Broken-in boots'] : ['2L water', 'Headlamp', 'Warm layer for the top', 'Grippy shoes', 'Small cash for chai', 'Charged phone'],
+      evRoster: roster,
+      evWaitlistLine: e.waitlist ? e.waitlist + ' on the waitlist — they move up in order if anyone drops.' : '',
+      evChatPreview: [
+        { initials: card.hostInitials, name: e.host, when: '2h ago', text: 'Forecast holds — clear from 03:00. Confirmed folks, check the pinned meeting point.' },
+        { initials: 'PN', name: 'Priya Negi', when: '1h ago', text: 'I have two spare headlamps if anyone is short. Also: chai thermos, obviously.' },
+      ],
+      evHostTagline: host ? host.tagline : 'Hosts the sunrise crater rim run most Saturdays.',
+      evHostStats: host ? host.events + ' events · ' + host.hosted + ' hosted · ✓' + host.vouches + ' vouched' : '38 events · 21 hosted · ✓26 vouched',
+      toggleFollowHost: () => this.setState({ followed: followed ? s.followed.filter((x) => x !== e.hostId) : [...s.followed, e.hostId] }),
+      followHostBd: followed ? '#27481F' : '#DDD7C6', followHostBg: followed ? '#27481F' : 'transparent', followHostFg: followed ? '#F8F5ED' : '#52504A',
+      followHostLabel: followed ? 'Following ✓' : 'Follow',
+      evMine: mine, evIsFull: full, evCanJoin: !mine && !full,
+      evMeter: meter, evMeterLabel: e.going + ' of ' + e.cap + ' going' + (e.minParty ? ' · unlocks the exact spot at ' + e.minParty : ''),
+      askToJoin: () => this.setState({ joined: requested ? s.joined.filter((x) => x !== e.id) : [...s.joined, e.id] }),
+      joinBg: requested ? 'rgba(123,164,111,0.25)' : '#E39B3F', joinFg: requested ? '#7BA46F' : '#0C100D',
+      joinLabel: requested ? 'Requested — host decides' : 'Ask to join',
+      waitlistLabel: requested ? 'On the waitlist · you are #' + ((e.waitlist ?? 0) + 1) : 'Join the waitlist',
+      evPointLine: mine ? 'You set this in your console. Right now it reads: “Gate 2, Dehradun ISBT — behind the tea stall.” Only your confirmed nine can see it.' : requested ? 'Arrives here the moment the host confirms you' + (e.minParty ? ' and ' + e.minParty + ' people are going.' : '.') : 'Shown only to people the host confirms. Ask to join, and it unlocks with your confirmation.',
+    };
+  }
+
+  C_ACTS = [
+    { key: 'trekking', label: 'Trekking', hour: '07:00' }, { key: 'sunrise', label: 'Sunrise hike', hour: '04:40' },
+    { key: 'birding', label: 'Bird watching', hour: '05:20' }, { key: 'running', label: 'Trail run', hour: '06:15' },
+    { key: 'camping', label: 'Camping', hour: '17:30' }, { key: 'stargazing', label: 'Stargazing', hour: '21:30' },
+  ];
+  C_IMGS = ['ridgeDawn', 'cloudSea', 'headlamp', 'ridgeWalk', 'camp', 'fog'];
+
+  createVals() {
+    const s = this.state;
+    const cf = s.cf;
+    const hour = this.hourFor(cf.time);
+    const costOn = !!cf.costOn;
+    const d = new Date(cf.date + 'T00:00:00');
+    const okTitle = cf.title.trim().length > 2, okPlace = cf.place.trim().length > 1;
+    const actLabel = (this.C_ACTS.find((a) => a.key === cf.activity) ?? this.C_ACTS[0]).label;
+    return {
+      cSteps: ['The idea', 'When & where', 'The company', 'Publish'].map((label, i) => ({ i, n: String(i + 1).padStart(2, '0'), label, color: i === s.createStep ? '#C2662A' : i < s.createStep ? '#15150F' : 'rgba(82,80,74,0.5)' })),
+      cStep0: s.createStep === 0, cStep1: s.createStep === 1, cStep2: s.createStep === 2, cStep3: s.createStep === 3,
+      setCStep: (e) => this.setState({ createStep: Number(e.currentTarget.dataset.step) }),
+      cField: (e) => this.setState({ cf: { ...this.state.cf, [e.currentTarget.dataset.field]: e.currentTarget.value } }),
+      cPickAct: (e) => { const a = this.C_ACTS.find((x) => x.key === e.currentTarget.dataset.key); this.setState({ cf: { ...cf, activity: a.key, time: a.hour } }); },
+      cActTiles: this.C_ACTS.map((a) => { const h = this.hourFor(a.hour); const on = cf.activity === a.key; return { ...a, dot: h.bg === '#0C100D' ? '#C9D6EC' : h.bg, bd: on ? '#E39B3F' : '#DDD7C6', bg: on ? 'rgba(227,155,63,0.08)' : '#fff' }; }),
+      cfTitle: cf.title, cfStory: cf.story, cfPlace: cf.place, cfCountry: cf.country, cfDate: cf.date, cfTime: cf.time,
+      cfSpots: cf.spots, cfDiff: cf.diff, cfCostOn: costOn, cfCostAmt: cf.costAmt ?? '',
+      cHourBd: hour.bg === '#0C100D' ? '#142536' : hour.bg, cHourInk: hour.ink, cHourDot: hour.bg === '#0C100D' ? '#C9D6EC' : hour.bg, cHourLabel: hour.label,
+      cPickImg: (e) => this.setState({ cf: { ...cf, img: Number(e.currentTarget.dataset.i) } }),
+      cImgTiles: this.C_IMGS.map((k, i) => ({ i, src: this.IMGS[k], bg: this.bg(this.IMGS[k], 1), ring: cf.img === i ? '0 0 0 3px #F8F5ED, 0 0 0 6px #E39B3F' : '0 0 0 1px #DDD7C6' })),
+      cDiffChips: ['easy', 'moderate', 'difficult'].map((key) => ({ key, ...this.chipLight(cf.diff === key) })),
+      cSetDiff: (e) => this.setState({ cf: { ...cf, diff: e.currentTarget.dataset.key } }),
+      cToggleCost: () => this.setState({ cf: { ...cf, costOn: !costOn } }),
+      cCostTrack: costOn ? '#27481F' : '#DDD7C6', cCostKnob: costOn ? 27 : 3,
+      cBringChips: ['2L water', 'Headlamp', 'Warm layer', 'Grippy shoes', 'Flask', 'Rain shell', 'Snacks to share', 'Power bank'].map((key) => ({ key, ...this.chipLight((cf.bring ?? []).includes(key)) })),
+      cToggleBring: (e) => { const k = e.currentTarget.dataset.key; const b = cf.bring ?? []; this.setState({ cf: { ...cf, bring: b.includes(k) ? b.filter((x) => x !== k) : [...b, k] } }); },
+      cChecklist: [
+        { ok: okTitle, label: 'A name people can say', value: cf.title || 'missing' },
+        { ok: okPlace, label: 'A place on the map', value: cf.place ? cf.place + ', ' + cf.country : 'missing' },
+        { ok: true, label: 'An hour with a colour', value: cf.time + ' · ' + hour.label },
+        { ok: true, label: 'Room for company', value: cf.spots + ' spots · ' + cf.diff },
+      ].map((c) => ({ ...c, bd: c.ok ? '#DDD7C6' : 'rgba(194,102,42,0.5)', dotBg: c.ok ? 'rgba(123,164,111,0.25)' : 'rgba(227,155,63,0.25)', dotFg: c.ok ? '#27481F' : '#C2662A', mark: c.ok ? '✓' : '!' })),
+      cPublish: () => { this.go('console'); },
+      cPvImg: this.IMGS[this.C_IMGS[cf.img]], cPvBg: this.bg(this.IMGS[this.C_IMGS[cf.img]], 1), cPvTint: hour.tint, cPvHourBg: hour.bg, cPvHourFg: hour.fg,
+      cPvDow: d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase(), cPvDay: String(d.getDate()).padStart(2, '0'),
+      cPvAct: actLabel,
+      cPvTitle: cf.title || 'Name it like you would say it', cPvTitleColor: cf.title ? '#15150F' : 'rgba(82,80,74,0.45)',
+      cPvLoc: (cf.place || '…') + ', ' + cf.country,
+      cPvSpots: cf.spots + ' spots', cPvCost: costOn ? (cf.costAmt || '₹—') + ' shared' : 'Free',
+      cPvCostBg: costOn ? 'rgba(227,155,63,0.18)' : 'rgba(123,164,111,0.15)', cPvCostFg: costOn ? '#C2662A' : '#27481F',
+    };
+  }
+
+  peopleVals() {
+    const s = this.state;
+    const per = this.PEOPLE.find((p) => p.id === s.personId) ?? this.PEOPLE[0];
+    const perFollowed = s.followed.includes(per.id);
+    const logTitles = [
+      ['Aug 16', 'Dawn Chorus at the Barrage', 'Asan Barrage · 05:20', '05:20', 'Hosted'],
+      ['Aug 09', 'Monsoon Ridge Walk', 'Landour · 07:00', '07:00', 'Hosted'],
+      ['Aug 02', 'Perseids Warm-up Night', 'Kanatal · 21:30', '21:30', 'Joined'],
+      ['Jul 26', 'Waterfall Loop, slow edition', 'Sahastradhara · 08:30', '08:30', 'Hosted'],
+      ['Jul 19', 'First Light at the Temple', 'Nag Tibba · 04:50', '04:50', 'Joined'],
+    ];
+    return {
+      peopleChips: ['Everyone', 'Mentors', 'Near you', 'Trekking', 'Stargazing', 'Trail running'].map((label, i) => ({ label, ...this.chipLight(i === 0) })),
+      mentorCards: this.PEOPLE.filter((p) => p.mentor).map((p) => ({ id: p.id, name: p.name, base: p.base, tagline: p.tagline, img: this.IMGS[p.img], bg: this.bg(this.IMGS[p.img], 0.55), statline: p.events + ' events · ' + p.hosted + ' hosted · ✓' + p.vouches + ' vouched' })),
+      personCards: this.PEOPLE.filter((p) => !p.mentor).map((p, i) => {
+        const on = s.followed.includes(p.id);
+        return {
+          id: p.id, name: p.name, base: p.base, tagline: p.tagline, acts: p.acts,
+          events: p.events, vouches: p.vouches, streak: p.streak,
+          initials: p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase(),
+          avBg: i % 3 === 0 ? 'rgba(39,72,31,0.1)' : i % 3 === 1 ? 'rgba(20,37,54,0.1)' : 'rgba(184,130,107,0.14)',
+          avFg: i % 3 === 0 ? '#27481F' : i % 3 === 1 ? '#142536' : '#8A5A44',
+          fBd: on ? '#27481F' : '#DDD7C6', fBg: on ? '#27481F' : 'transparent', fFg: on ? '#F8F5ED' : '#52504A', fLabel: on ? 'Following' : 'Follow',
+        };
+      }),
+      toggleFollow: (e) => { const id = e.currentTarget.dataset.id; this.setState({ followed: s.followed.includes(id) ? s.followed.filter((x) => x !== id) : [...s.followed, id] }); },
+      per: { ...per, img: this.IMGS[per.img], initials: per.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase(), ring: per.mentor ? '#B8826B' : '#E39B3F' },
+      perBg: this.bg(this.IMGS[per.img], 0.45),
+      perStats: [
+        { n: per.events, label: 'events' }, { n: per.hosted, label: 'hosted' }, { n: per.vouches, label: 'vouches' },
+        { n: per.followers, label: 'followers' }, { n: per.streak + ' wks', label: 'weekend streak' },
+      ],
+      toggleFollowPer: () => this.setState({ followed: perFollowed ? s.followed.filter((x) => x !== per.id) : [...s.followed, per.id] }),
+      perFollowBg: perFollowed ? 'rgba(123,164,111,0.25)' : '#E39B3F', perFollowFg: perFollowed ? '#7BA46F' : '#0C100D',
+      perFollowLabel: perFollowed ? 'Following ✓' : 'Follow',
+      perLog: logTitles.map(([date, title, sub, t, role]) => { const h = this.hourFor(t); return { date, title, sub, role, dot: h.bg === '#0C100D' ? '#142536' : h.bg, roleColor: role === 'Hosted' ? '#C2662A' : '#27481F' }; }),
+      perReviews: [
+        { text: 'Set a pace the slowest of us could hold and still got everyone up for the light. Knew the trail cold.', who: 'Ananya B.', after: 'First Light at the Temple' },
+        { text: 'The kind of host who counts heads twice at every regroup. I would follow their plan anywhere.', who: 'Tom A.', after: 'Monsoon Ridge Walk' },
+      ],
+      perBadges: [
+        { icon: '✦', bg: 'rgba(227,155,63,0.2)', t: 'First-light regular', d: '24 events that started before 06:00' },
+        { icon: '✓', bg: 'rgba(123,164,111,0.2)', t: 'Vouched ×' + per.vouches, d: 'By people who actually walked beside them' },
+        { icon: '△', bg: 'rgba(20,37,54,0.12)', t: 'High point 4,200 m', d: 'Counted from a completed event log' },
+      ],
+      perNext: this.EVENTS.filter((e) => e.hostId === per.id).slice(0, 2).map((e) => { const h = e.time ? this.hourFor(e.time) : this.HOURS.dawn; return { id: e.id, title: e.title, sub: e.dateLine + ' · ' + (e.full ? 'waitlist' : (e.cap - e.going) + ' spots'), bar: h.bg === '#0C100D' ? '#C9D6EC' : h.bg }; }),
+    };
+  }
+
+  AV = [['rgba(39,72,31,0.12)', '#27481F'], ['rgba(20,37,54,0.12)', '#142536'], ['rgba(184,130,107,0.18)', '#8A5A44'], ['rgba(227,155,63,0.2)', '#C2662A']];
+  av(i) { const [bg, fg] = this.AV[i % 4]; return { avBg: bg, avFg: fg, bg, fg }; }
+  ini(n) { return n.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase(); }
+
+  dashVals() {
+    const s = this.state;
+    const reqs = [
+      { id: 'q1', pid: 'sana', name: 'Sana Kapoor', event: 'Nag Tibba Sunrise Push', msg: 'Steady pace — I have done this trail twice. Coming from Rajpur.', cred: '6 events · ✓2 vouched · verified phone' },
+      { id: 'q2', pid: 'kenji', name: 'Vikram Joshi', event: 'Nag Tibba Sunrise Push', msg: 'Coming from Rishikesh, happy to carpool two people.', cred: '11 events · ✓4 vouched' },
+      { id: 'q3', pid: 'ananya', name: 'Lena Fischer', event: 'Nag Tibba Sunrise Push', msg: 'Visiting from Munich — sunrise hikes are my whole personality.', cred: '19 events · ✓8 vouched · first time in India' },
+      { id: 'q4', pid: 'priya', name: 'Dana Cole', event: 'Wetland Dawn Chorus co-host slot', msg: 'I can bring a second scope and call the waders.', cred: '9 events · ✓3 vouched' },
+    ];
+    const pendingCount = reqs.filter((r) => !s.decided[r.id]).length + 2;
+    const myEvents = [
+      { id: 'e1', title: 'Nag Tibba Sunrise Push', time: '05:10', date: 'Sat 22', role: 'Hosting · 2 asking', going: 9, cap: 12, tag: 'Manage', tagColor: '#C2662A', console: true },
+      { id: 'e5', title: 'Wetland Dawn Chorus', time: '05:20', date: 'Fri 21', role: 'Co-hosting with Meera', going: 3, cap: 5, tag: 'Manage', tagColor: '#C2662A', console: true },
+      { id: 'e2', title: 'Perseids from the Ridge', time: '21:30', date: 'Sat 22', role: 'Going · confirmed', going: 8, cap: 8, tag: 'Chat', tagColor: '#27481F', console: false },
+      { id: 'e3', title: 'Alpe di Siusi First Light', time: '05:40', date: 'Sun 23', role: 'Requested · host deciding', going: 4, cap: 6, tag: 'Waiting', tagColor: '#52504A', console: false },
+    ];
+    return {
+      dashStats: [
+        { n: 3, label: 'hosting this week', color: '#F6DCA8', go: 'console' },
+        { n: pendingCount, label: 'requests to decide', color: '#E39B3F', go: 'dashboard' },
+        { n: 2, label: 'going as a guest', color: '#7BA46F', go: 'discover' },
+        { n: 4, label: 'unread messages', color: '#F8F5ED', go: 'messages' },
+      ],
+      dashReqCount: pendingCount,
+      dashRequests: reqs.map((r, i) => {
+        const d = s.decided[r.id];
+        return {
+          ...r, ...this.av(i), initials: this.ini(r.name),
+          pending: !d, decided: !!d,
+          decidedLabel: d === 'yes' ? 'Confirmed ✓' : 'Declined, silently', decidedColor: d === 'yes' ? '#27481F' : '#8A5A44',
+          bd: d ? '#EFEADB' : 'rgba(227,155,63,0.45)', opacity: d ? '0.55' : '1',
+        };
+      }),
+      decideReq: (e) => this.setState({ decided: { ...s.decided, [e.currentTarget.dataset.id]: e.currentTarget.dataset.d } }),
+      dashEvents: myEvents.map((e) => {
+        const hour = this.hourFor(e.time);
+        const meter = [];
+        for (let i = 0; i < e.cap; i++) meter.push({ bg: i < e.going ? (hour.bg === '#0C100D' ? '#142536' : hour.bg) : '#EFEADB' });
+        return { ...e, bar: hour.bg === '#0C100D' ? '#142536' : hour.bg, ink: hour.ink, meter, fill: e.going + '/' + e.cap + (e.going >= e.cap ? ' · full' : ''), onClick: e.console ? () => this.go('console') : () => { this.setState({ eventId: e.id }); this.go('event'); } };
+      }),
+      dashFeed: [
+        { body: 'Rohan Thapa vouched for you after Kanatal Ridge.', when: '2h', dot: '#27481F', color: '#15150F' },
+        { body: 'Elena Riva posted Alpe di Siusi First Light — you follow her.', when: '5h', dot: '#E39B3F', color: '#15150F' },
+        { body: 'The meeting point for Perseids from the Ridge is out.', when: '1d', dot: '#27481F', color: '#15150F' },
+        { body: 'Your recap of Kanatal Ridge got 4 new photos.', when: '2d', dot: '#52504A', color: '#52504A' },
+        { body: 'Lena Fischer started following you.', when: '3d', dot: '#52504A', color: '#52504A' },
+      ],
+      dashYou: [{ n: 47, label: 'events' }, { n: 31, label: 'vouches' }, { n: 214, label: 'followers' }],
+      dashFollowing: this.EVENTS.filter((e) => ['elena', 'kenji', 'meera'].includes(e.hostId)).slice(0, 3).map((e) => {
+        const h = e.time ? this.hourFor(e.time) : this.HOURS.dawn;
+        return { id: e.id, title: e.title, sub: e.dateLine + ' · ' + e.host.split(' ')[0], bar: h.bg === '#0C100D' ? '#142536' : h.bg };
+      }),
+    };
+  }
+
+  CHATS = [
+    { id: 'c1', eventId: 'e1', title: 'Nag Tibba Sunrise Push', time: '05:10', sub: 'Sat 22 Aug · 05:10 · 9 going + you', last: 'Priya: I have two spare headlamps if anyone…', when: '1h', unread: 2, members: ['Aarav Mehta', 'Priya Negi', 'Rohan Thapa', 'Kabir Singh'] },
+    { id: 'c2', eventId: 'e2', title: 'Perseids from the Ridge', time: '21:30', sub: 'Sat 22 Aug · 21:30 · 7 going + you', last: 'Meeting point unlocked — check pinned', when: '3h', unread: 1, members: ['Priya Negi', 'Yuki Sato', 'Dana Cole', 'Omar Haddad'] },
+    { id: 'c3', eventId: 'e5', title: 'Wetland Dawn Chorus', time: '05:20', sub: 'Fri 21 Aug · 05:20 · co-hosting', last: 'Meera: scopes are packed, bring the lists', when: '6h', unread: 1, members: ['Meera Joshi', 'Sana Kapoor', 'Iris Kim'] },
+    { id: 'c4', eventId: 'e6', title: 'Kanatal Ridge · recap', time: '17:30', sub: 'Completed Sat 15 Aug · recap open', last: 'You: adding my photos tonight', when: '2d', unread: 0, members: ['Rohan Thapa', 'Priya Negi', 'Leo Martin'] },
+  ];
+
+  msgVals() {
+    const s = this.state;
+    const chat = this.CHATS.find((c) => c.id === s.chatId) ?? this.CHATS[0];
+    const hour = this.hourFor(chat.time);
+    const base = [
+      { other: true, name: 'Rohan Thapa', when: '08:12', text: 'Cab situation: I can take three from Rajpur Road at 04:20. Who wants in?' },
+      { other: true, name: 'Kabir Singh', when: '08:15', text: 'Me please. Terrible jokes included at no extra cost.' },
+      { mine: true, when: '08:31', text: 'Cab confirmed for three. Everyone else — Gate 2, 05:00 sharp, we walk at 05:10 with or without stragglers.' },
+      { system: true, text: '05:02 · Meeting point unlocked for 9 confirmed people' },
+      { other: true, name: 'Priya Negi', when: '09:04', text: 'I have two spare headlamps if anyone is short. Also: chai thermos, obviously.' },
+      { other: true, name: 'Ananya Bisht', when: '09:20', text: 'Weather check — clear from 03:00, wind at the top around 20 km/h. Perfect.' },
+    ];
+    const sentHere = s.sent.filter((m) => m.chatId === s.chatId).map((m) => ({ mine: true, when: 'now', text: m.text }));
+    return {
+      chatList: this.CHATS.map((c) => {
+        const h = this.hourFor(c.time);
+        return { ...c, bar: h.bg === '#0C100D' ? '#142536' : h.bg, bg: c.id === s.chatId ? '#fff' : 'transparent', weight: c.unread ? '600' : '400' };
+      }),
+      pickChat: (e) => this.setState({ chatId: e.currentTarget.dataset.id }),
+      thread: {
+        ...chat, bar: hour.bg === '#0C100D' ? '#142536' : hour.bg,
+        faces: chat.members.map((m, i) => ({ i: this.ini(m), ...this.av(i) })).map((f) => ({ i: f.i, bg: f.avBg, fg: f.avFg })),
+      },
+      threadMsgs: base.concat(sentHere).map((m, i) => ({ system: !!m.system, mine: !!m.mine, other: !!m.other, ...m, ...(m.other ? { initials: this.ini(m.name), ...this.av(i) } : {}) })),
+      chatDraft: s.chatDraft,
+      onDraft: (e) => this.setState({ chatDraft: e.currentTarget.value }),
+      draftKey: (e) => { if (e.key === 'Enter' && this.state.chatDraft.trim()) { this.setState({ sent: [...this.state.sent, { chatId: this.state.chatId, text: this.state.chatDraft.trim() }], chatDraft: '' }); } },
+      sendMsg: () => { if (this.state.chatDraft.trim()) this.setState({ sent: [...this.state.sent, { chatId: this.state.chatId, text: this.state.chatDraft.trim() }], chatDraft: '' }); },
+    };
+  }
+
+  recapVals() {
+    const s = this.state;
+    const people = [['Rohan Thapa', 'Host'], ['Priya Negi', 'Co-host'], ['Aarav Mehta', 'You'], ['Leo Martin', 'Went'], ['Nina Rossi', 'Went']];
+    return {
+      recapStats: [{ k: 'Went', v: '5/6' }, { k: 'Distance', v: '14 km' }, { k: 'High point', v: '2,590 m' }, { k: 'Sunrise', v: '05:49' }, { k: 'Photos', v: '23' }],
+      recapPhotos: [
+        { img: this.IMGS.camp, tag: '22:41 · the fire', span: 2, rows: 2 },
+        { img: this.IMGS.ridgeDawn, tag: '05:49 · it arrived', span: 2, rows: 1 },
+        { img: this.IMGS.headlamp, tag: '04:20 · walking in', span: 1, rows: 1 },
+        { img: this.IMGS.descent, tag: '10:15 · out and down', span: 1, rows: 1 },
+        { img: this.IMGS.sunrisePair, tag: '05:52 · witnesses', span: 2, rows: 1 },
+        { img: this.IMGS.mistForest, tag: '06:30 · the valley woke', span: 2, rows: 1 },
+      ].map((p) => ({ ...p, bg: this.bg(p.img, 1) })),
+      recapVouch: [['rohan', 'Rohan Thapa', 'Hosted — kept the fire and the plan alive'], ['priya', 'Priya Negi', 'Co-hosted — owned the descent'], ['leo', 'Leo Martin', 'First overnight, carried like a veteran'], ['nina', 'Nina Rossi', 'Called the weather right, twice']].map(([id, name, sub], i) => {
+        const on = s.vouched.includes(id);
+        return { id, name, sub, initials: this.ini(name), ...this.av(i), bd: on ? 'rgba(123,164,111,0.6)' : 'rgba(248,245,237,0.3)', bg: on ? 'rgba(123,164,111,0.2)' : '#E39B3F', fg: on ? '#7BA46F' : '#0C100D', label: on ? 'Vouched ✓' : 'Vouch' };
+      }),
+      doVouch: (e) => { const id = e.currentTarget.dataset.id; this.setState({ vouched: s.vouched.includes(id) ? s.vouched : [...s.vouched, id] }); },
+      recapReviews: [
+        { text: 'Rohan reads a ridge like other people read menus. Never felt rushed, never felt lost.', who: 'Nina R. → Rohan, host' },
+        { text: 'The 04:20 start hurt and was worth it by 05:49. This group can wake me any weekend.', who: 'Leo M. → the event' },
+      ],
+      recapWho: people.map(([name, role], i) => ({ name, role, i: this.ini(name), ...this.av(i), roleColor: role === 'Host' ? '#C2662A' : role === 'You' ? '#7BA46F' : '#52504A' })),
+    };
+  }
+
+  shareVals() {
+    const s = this.state;
+    const e = this.getEvent(s.eventId);
+    const card = this.eventCard({ ...e, img: e.img in this.IMGS ? e.img : 'ridgeDawn' });
+    return {
+      shareEv: card, shareBg: this.bg(card.img, 0.9),
+      shareStory: e.blurb,
+      shareFacts: [{ k: 'Date', v: e.dateLine.split(' · ')[0] }, { k: 'Spots', v: e.full ? 'Waitlist' : (e.cap - e.going) + ' open' }, { k: 'Cost', v: e.cost }],
+      shareSlug: e.id + '-' + e.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24),
+      copyLink: () => this.setState({ copied: true }),
+      copyLabel: s.copied ? 'copied ✓' : 'copy',
+      goEventBack: () => this.go('event'),
+    };
+  }
+
+  obVals() {
+    const s = this.state;
+    return {
+      obDots: [0, 1, 2].map((i) => ({ i, w: s.obStep === i ? 36 : 14, bg: s.obStep === i ? '#E39B3F' : i < s.obStep ? '#F6DCA8' : 'rgba(248,245,237,0.25)' })),
+      ob0: s.obStep === 0, ob1: s.obStep === 1, ob2: s.obStep === 2,
+      setObStep: (e) => this.setState({ obStep: Number(e.currentTarget.dataset.step) }),
+      obName: s.ob.name, obBase: s.ob.base,
+      obField: (e) => this.setState({ ob: { ...this.state.ob, [e.currentTarget.dataset.field]: e.currentTarget.value } }),
+      obActTiles: this.C_ACTS.map((a) => {
+        const h = this.hourFor(a.hour);
+        const on = s.ob.acts.includes(a.key);
+        return { ...a, dot: h.bg === '#0C100D' ? '#C9D6EC' : h.bg, bd: on ? '#E39B3F' : 'rgba(248,245,237,0.18)', bg: on ? 'rgba(227,155,63,0.12)' : 'rgba(248,245,237,0.04)', check: on ? '#E39B3F' : 'transparent' };
+      }),
+      obToggleAct: (e) => { const k = e.currentTarget.dataset.key; const a = s.ob.acts; this.setState({ ob: { ...s.ob, acts: a.includes(k) ? a.filter((x) => x !== k) : [...a, k] } }); },
+      obDeal: [
+        { n: '01', t: 'Nobody here is vetted', d: 'TrackBuddy counts what happens; it never checks who anyone is. Every member is a stranger until you have walked together.' },
+        { n: '02', t: 'Hosts choose their company', d: 'You ask to join; you are never auto-added. Declines are silent and owe no reason — in both directions.' },
+        { n: '03', t: 'The where stays hidden', d: 'Exact meeting points reach confirmed people only. Meet somewhere public, tell someone who is not coming.' },
+        { n: '04', t: 'You can always turn back', d: 'A bad feeling outranks any plan on this board. Leaving early is a feature, not a failure.' },
+      ],
+      obFinish: () => this.go('discover'),
+    };
+  }
+
+  conVals() {
+    const s = this.state;
+    const asking = [
+      { id: 'a1', name: 'Sana Kapoor', vouches: 2, events: 6, msg: 'Steady pace — I have done this trail twice. Coming from Rajpur.' },
+      { id: 'a2', name: 'Vikram Joshi', vouches: 4, events: 11, msg: 'Coming from Rishikesh, happy to carpool two people.' },
+    ];
+    const confirmed = [['r1', 'Priya Negi', true, 'paid'], ['r2', 'Rohan Thapa', false, 'paid'], ['r3', 'Kabir Singh', false, 'paid'], ['r4', 'Ananya Bisht', false, 'cash on the day'], ['r5', 'Lena Fischer', false, 'paid'], ['r6', 'Marco Ruiz', false, 'paid'], ['r7', 'Yuki Sato', false, 'cash on the day'], ['r8', 'Iris Kim', false, 'paid']];
+    return {
+      conTabs: [['roster', 'Roster & waitlist'], ['comms', 'Announcements'], ['money', 'Cost share']].map(([key, label]) => ({ key, label, color: s.consoleTab === key ? '#F8F5ED' : 'rgba(248,245,237,0.55)', under: s.consoleTab === key ? '#E39B3F' : 'transparent' })),
+      setConTab: (e) => this.setState({ consoleTab: e.currentTarget.dataset.key }),
+      conRoster: s.consoleTab === 'roster', conComms: s.consoleTab === 'comms', conMoney: s.consoleTab === 'money',
+      conAsking: asking.map((r, i) => {
+        const d = s.conDecided[r.id];
+        return { ...r, ...this.av(i + 1), initials: this.ini(r.name), pending: !d, decided: !!d, decidedLabel: d === 'yes' ? 'Confirmed ✓' : 'Declined, silently', decidedColor: d === 'yes' ? '#27481F' : '#8A5A44', opacity: d ? '0.55' : '1' };
+      }),
+      conDecide: (e) => this.setState({ conDecided: { ...s.conDecided, [e.currentTarget.dataset.id]: e.currentTarget.dataset.d } }),
+      conConfirmed: confirmed.map(([id, name, cohost, paid], i) => {
+        const on = s.checkins.includes(id);
+        return { id, name, cohost, paid, initials: this.ini(name), ...this.av(i), ciBd: on ? '#27481F' : '#DDD7C6', ciBg: on ? '#27481F' : 'transparent', ciFg: on ? '#F8F5ED' : '#52504A', ciLabel: on ? 'Checked in ✓' : 'Check in' };
+      }),
+      conCheckin: (e) => { const id = e.currentTarget.dataset.id; this.setState({ checkins: s.checkins.includes(id) ? s.checkins.filter((x) => x !== id) : [...s.checkins, id] }); },
+      conWaitlist: [{ pos: 1, name: 'Omar Haddad', since: 'Tue' }, { pos: 2, name: 'Ava Chen', since: 'Wed' }],
+      conAnnounced: [
+        { text: 'Forecast holds — clear from 03:00. Confirmed folks, check the pinned meeting point.', when: '2h ago', seen: '8 of 9' },
+        { text: 'Capacity bumped to 12 — two cars now. Waitlist, watch this space.', when: 'yesterday', seen: '9 of 9' },
+      ],
+      conLedger: [['Priya Negi', 'paid'], ['Rohan Thapa', 'paid'], ['Kabir Singh', 'paid'], ['Ananya Bisht', 'on the day'], ['Lena Fischer', 'paid'], ['Marco Ruiz', 'paid'], ['Yuki Sato', 'on the day'], ['Iris Kim', 'paid']].map(([name, st]) => ({ name, status: st, color: st === 'paid' ? '#27481F' : '#C2662A' })),
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const screen = s.screen;
+    const NAVKEYS = { discover: 'Discover', people: 'People', messages: 'Messages', dashboard: 'Basecamp' };
+
+    let events = this.EVENTS.filter((e) => (s.discAct === 'all' || e.activity === s.discAct) && (s.discWhen === 'all' || e.when === s.discWhen || (s.discWhen === 'week' && e.when === 'weekend')));
+    const bucketDefs = [['soon', 'In the next few days'], ['weekend', 'This weekend'], ['next', 'Next week'], ['later', 'Further out']];
+    const discBuckets = bucketDefs
+      .map(([key, label]) => { const list = events.filter((e) => e.bucket === key); return { key, label, count: list.length, events: list.map((e) => this.eventCard(e)) }; })
+      .filter((b) => b.count > 0);
+
+    const ACTS = [['all', 'All'], ['trekking', 'Trekking'], ['sunrise', 'Sunrise'], ['stargazing', 'Stargazing'], ['birding', 'Birding'], ['running', 'Running'], ['camping', 'Camping']];
+    const counts = { all: this.EVENTS.length };
+    for (const [k] of ACTS) if (k !== 'all') counts[k] = this.EVENTS.filter((e) => e.activity === k).length;
+
+    return {
+      // routing
+      isLanding: screen === 'landing', isDiscover: screen === 'discover', isEvent: screen === 'event',
+      isCreate: screen === 'create', isPeople: screen === 'people', isPerson: screen === 'person',
+      isDashboard: screen === 'dashboard', isMessages: screen === 'messages', isRecap: screen === 'recap',
+      isShare: screen === 'share', isOnboarding: screen === 'onboarding', isConsole: screen === 'console',
+      goLanding: () => this.go('landing'), goDiscover: () => this.go('discover'), goCreate: () => this.go('create'),
+      goDashboard: () => this.go('dashboard'), goRecap: () => this.go('recap'), goOnboarding: () => this.go('onboarding'),
+      goMessages: () => this.go('messages'), goShare: () => this.go('share'), goConsole: () => this.go('console'),
+      goPeople: () => this.go('people'),
+      goNav: (e) => this.go(e.currentTarget.dataset.key),
+      openEvent: (e) => { this.setState({ eventId: e.currentTarget.dataset.id }); this.go('event'); },
+      openPerson: (e) => { this.setState({ personId: e.currentTarget.dataset.id }); this.go('person'); },
+      mainNav: [['discover', 'Discover'], ['people', 'People'], ['messages', 'Messages'], ['dashboard', 'Basecamp']].map(([key, label]) => ({
+        key, label,
+        badge: key === 'messages' ? 4 : key === 'dashboard' ? 6 : 0,
+        color: screen === key ? '#F8F5ED' : 'rgba(248,245,237,0.65)',
+        under: screen === key ? '#E39B3F' : 'transparent',
+      })),
+      devTabs: [['landing', 'Landing'], ['discover', 'Discover'], ['event', 'Event'], ['create', 'Create'], ['people', 'People'], ['person', 'Profile'], ['dashboard', 'Basecamp'], ['messages', 'Chat'], ['console', 'Console'], ['recap', 'Recap'], ['share', 'Share'], ['onboarding', 'Join']].map(([key, label]) => ({ key, label, fg: screen === key ? '#0C100D' : 'rgba(248,245,237,0.7)', bg: screen === key ? '#E39B3F' : 'transparent' })),
+      tbFooterCols: [
+        { heading: 'Go', links: ['Discover', 'This weekend', 'Near you', 'Host an event'] },
+        { heading: 'Community', links: ['People', 'Mentors', 'Recaps', 'Vouching, explained'] },
+        { heading: 'Dewdropz', links: ['The shop', 'Trail journal', 'About', 'Safety'] },
+      ],
+      // landing
+      heroStats: [
+        { n: s.counters.out.toLocaleString('en-IN'), label: 'people out this week' },
+        { n: s.counters.weekend, label: 'events this weekend' },
+        { n: s.counters.sunrises.toLocaleString('en-IN'), label: 'sunrises chased in 2026' },
+      ],
+      liveClock: s.clock,
+      marquee: ['Trekking', 'Stargazing', 'Bird watching', 'First light', 'Trail running', 'Wild camping', 'Cloud seas', 'Meteor showers', 'Dawn chorus', 'Ridgelines', 'Headlamps on', 'Chai at the top'],
+      activityTiles: [
+        { label: 'Sunrise hikes', hour: '04:40', img: this.IMGS.cloudSea, tint: this.HOURS.dawn.tint, dot: '#E39B3F', count: 41 },
+        { label: 'Bird watching', hour: '05:20', img: this.IMGS.lake, tint: this.HOURS.dawn.tint, dot: '#E39B3F', count: 12 },
+        { label: 'Trail running', hour: '06:15', img: this.IMGS.fog, tint: this.HOURS.dawn.tint, dot: '#E39B3F', count: 18 },
+        { label: 'Trekking', hour: '07:30', img: this.IMGS.ridgeWalk, tint: this.HOURS.day.tint, dot: '#7BA46F', count: 64 },
+        { label: 'Wild camping', hour: '17:30', img: this.IMGS.descent, tint: this.HOURS.dusk.tint, dot: '#B8826B', count: 15 },
+        { label: 'Stargazing', hour: '21:30', img: this.IMGS.camp, tint: this.HOURS.night.tint, dot: '#C9D6EC', count: 13 },
+      ].map((t) => ({ ...t, bg: this.bg(t.img, 0.85) })),
+      howSteps: [
+        { n: '01', t: 'Find your hour', d: 'Browse by place, by activity, or by the hour you love — the board reads as a day, pre-dawn indigo through after-dark ink.' },
+        { n: '02', t: 'Ask to come', d: 'Every event is someone\u2019s plan, and they choose their company. You ask with a line about yourself; the host confirms.' },
+        { n: '03', t: 'Show up, get counted', d: 'Completed events build your record. People you walked with can vouch for you — and that record opens the harder, better stuff.' },
+      ],
+      trustChips: ['Events counted', 'Vouches earned', 'Hosts confirmed', 'Nothing self-declared'],
+      trustProof: [{ n: 56, label: 'events' }, { n: 41, label: 'hosted' }, { n: 23, label: 'vouches' }],
+      contactSheet: [
+        { img: this.IMGS.ridgeDawn, tag: 'Nag Tibba · 05:58' }, { img: this.IMGS.camp, tag: 'Kanatal · 22:41' },
+        { img: this.IMGS.sunrisePair, tag: 'Alpe di Siusi · 05:44' }, { img: this.IMGS.headlamp, tag: 'Treeline · 04:37' },
+        { img: this.IMGS.fog, tag: 'Kyoto · 06:20' }, { img: this.IMGS.descent, tag: 'Glencoe · 18:02' },
+        { img: this.IMGS.ridgeWalk, tag: 'Chamonix · 09:15' }, { img: this.IMGS.lake, tag: 'Asan · 05:31' },
+        { img: this.IMGS.ridgeDawn, tag: 'Nag Tibba · 05:58' }, { img: this.IMGS.camp, tag: 'Kanatal · 22:41' },
+        { img: this.IMGS.sunrisePair, tag: 'Alpe di Siusi · 05:44' }, { img: this.IMGS.headlamp, tag: 'Treeline · 04:37' },
+      ].map((c) => ({ ...c, bg: this.bg(c.img, 1) })),
+      // discover
+      boardStats: [{ n: this.EVENTS.length + 1, label: 'events live' }, { n: 163, label: 'this weekend' }, { n: 27, label: 'countries' }],
+      discActChips: ACTS.map(([key, label]) => ({ key, label, count: key === 'all' ? counts.all : counts[key] || '', ...this.chip(s.discAct === key) })),
+      discWhenChips: [['all', 'Any time'], ['week', '7 days'], ['weekend', 'Weekend']].map(([key, label]) => ({ key, label, ...this.chip(s.discWhen === key) })),
+      setDiscAct: (e) => this.setState({ discAct: e.currentTarget.dataset.key }),
+      setDiscWhen: (e) => this.setState({ discWhen: e.currentTarget.dataset.key }),
+      soonRail: this.EVENTS.filter((e) => e.countdown).map((e) => this.eventCard(e)),
+      featured: { ...this.FEATURED, img: this.IMGS[this.FEATURED.img] },
+      featuredBg: this.bg(this.IMGS[this.FEATURED.img], 0.9),
+      discBuckets,
+      ...this.eventVals(),
+      ...this.createVals(),
+      ...this.peopleVals(),
+      ...this.dashVals(),
+      ...this.msgVals(),
+      ...this.recapVals(),
+      ...this.shareVals(),
+      ...this.obVals(),
+      ...this.conVals(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

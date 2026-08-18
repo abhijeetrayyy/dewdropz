@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createTrekPlan, type TrekKind } from '@/actions/trekBuddy'
 import { lightForTime } from '@/lib/trek'
 import SafetyNotes from '@/components/trek/SafetyNotes'
+import CoverPicker from '@/components/trek/CoverPicker'
 
 /**
  * yyyy-mm-dd from a Date's LOCAL parts.
@@ -68,11 +69,14 @@ export default function NewPlanForm({
   kinds,
   initialActivity,
   trekGender,
+  userId,
 }: {
   /** What the board is taking today, straight from the database (057). */
   kinds: TrekKind[]
   initialActivity?: string
   trekGender: string | null
+  /** Storage writes are namespaced by it, and the bucket policy checks it. */
+  userId: string
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -98,6 +102,7 @@ export default function NewPlanForm({
     womenOnly: false,
     seniorFriendly: false,
     minTrust: 0 as 0 | 1 | 2,
+    coverUrl: null as string | null,
     languages: [] as string[],
     capacity: Math.max(4, initial.minParty),
     difficulty: 'moderate' as 'easy' | 'moderate' | 'difficult',
@@ -177,6 +182,7 @@ export default function NewPlanForm({
         languages: f.languages.length ? f.languages : undefined,
         activityOther: spec.isOpenEnded ? f.activityOther.trim() : undefined,
         nightNote: spec.needsNightNote ? f.nightNote : undefined,
+        coverUrls: f.coverUrl ? [f.coverUrl] : undefined,
       })
       if ('error' in r) { setError(r.error); return }
       router.push('/trek-buddy')
@@ -500,6 +506,17 @@ export default function NewPlanForm({
                     if it applies to you.
                   </p>
                 )}
+              </div>
+
+              <div>
+                <span className={label}>The photograph</span>
+                <div className="mt-2">
+                  <CoverPicker
+                    userId={userId}
+                    value={f.coverUrl}
+                    onChange={(coverUrl) => set({ coverUrl })}
+                  />
+                </div>
               </div>
 
               {/* Who may ask. Enforced in the database beside the women-only
