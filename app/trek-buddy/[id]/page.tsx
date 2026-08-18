@@ -7,6 +7,7 @@ import { getGuidance, getTrekMembership, getTrekPlan } from '@/actions/trekBuddy
 import { formatPrice } from '@/lib/utils'
 import PlanActions from './PlanActions'
 import PlanMasthead from '@/components/trek/PlanMasthead'
+import PlanRail from '@/components/trek/PlanRail'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import PlanChat from '@/components/trek/PlanChat'
 import { getMessages } from '@/actions/trekChat'
@@ -79,8 +80,13 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
       <main>
         <PlanMasthead plan={plan} />
 
+        {/* Two columns, the design's proportion. The left is what you read;
+            the right is what you do, and it stays with you — which is the
+            difference between a page and a screen. One column below lg,
+            because a 360px rail beside a 375px phone is not a rail. */}
         <div className="bg-paper px-6 pb-24 pt-10 md:px-10">
-          <div className="mx-auto max-w-3xl space-y-8">
+          <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 space-y-8">
             {cancelled && (
               <div className="border-l-2 border-clay bg-clay/5 px-4 py-3">
                 <p className="font-body text-sm text-text">
@@ -92,28 +98,6 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             {/* What happens next for THIS viewer, at the top, because it is the
                 only thing they came to do. Host, joiner and stranger each get a
                 different first thing to look at. */}
-            {/* The way in to the console. Only the host sees it, and the page
-                itself 404s for anybody else rather than explaining who owns
-                the walk. */}
-            {isHost && plan.status === 'open' && (
-              <Link
-                href={`/trek-buddy/${plan.id}/console`}
-                className="trek-pill trek-pill-act font-body"
-              >
-                Manage this walk →
-              </Link>
-            )}
-
-            <PlanActions
-              planId={plan.id}
-              isHost={isHost}
-              myStatus={myStatus}
-              full={full}
-              cancelled={cancelled}
-              roster={roster as { user_id: string; display_name: string; status: string; message: string | null }[]}
-              waitlistPosition={waitlistPosition}
-            />
-
             {/* The exact spot. Not conditional rendering hiding a value the page
                 already has — `meetingPoint` is read through the viewer's own
                 session, so RLS decides whether it arrives at all. */}
@@ -321,6 +305,27 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                   for that, and a self-report is only ever a mistake. */}
               {!isHost && <SafetyActions planId={plan.id} />}
             </div>
+            </div>
+
+            <PlanRail plan={plan} hasPoint={Boolean(meetingPoint)}>
+              {isHost && plan.status === 'open' && (
+                <Link
+                  href={`/trek-buddy/${plan.id}/console`}
+                  className="trek-pill trek-pill-act font-body mb-4 w-full justify-center"
+                >
+                  Manage this walk →
+                </Link>
+              )}
+              <PlanActions
+                planId={plan.id}
+                isHost={isHost}
+                myStatus={myStatus}
+                full={full}
+                cancelled={cancelled}
+                roster={roster as { user_id: string; display_name: string; status: string; message: string | null }[]}
+                waitlistPosition={waitlistPosition}
+              />
+            </PlanRail>
           </div>
         </div>
       </main>

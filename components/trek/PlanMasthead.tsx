@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
 import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
 import { formatPrice } from '@/lib/utils'
+import { BLUR_DATA_URL } from '@/lib/constants'
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '—')
 
@@ -53,16 +55,47 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
     facts.push(['Cost share', plan.cost_paise === 0 ? 'Nothing' : `${formatPrice(plan.cost_paise)} each`])
   }
 
+  const cover = plan.cover_urls?.[0] ?? null
+
   return (
     <header
       style={{ background: light.bar }}
       className="relative isolate overflow-hidden"
     >
-      {/* A single wash so the darker hours stay readable and the paler ones do
-          not glare. One layer, because the colour is doing the work. */}
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-ink/45 via-ink/15 to-ink/55" />
+      {/* The design's event hero is a photograph, full bleed. Ours was the hour
+          colour and nothing else — on a walk that HAS a cover, the picture the
+          host chose was showing on the board and then vanishing the moment
+          somebody opened the walk it belonged to.
+          
+          The hour colour stays as the ground beneath it, which is what a walk
+          with no photograph still gets. */}
+      {cover && (
+        <Image
+          src={cover}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          placeholder="blur"
+          blurDataURL={BLUR_DATA_URL}
+          className="object-cover"
+        />
+      )}
 
-      <div className="relative mx-auto max-w-3xl px-6 pb-8 pt-32 md:px-10 md:pt-36">
+      {/* Shaped to the type rather than flat: heavier at the foot where the
+          facts row sits, light through the middle where the picture should be
+          allowed to be a picture. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{
+          background: cover
+            ? 'linear-gradient(180deg, rgba(12,16,13,0.72) 0%, rgba(12,16,13,0.34) 42%, rgba(12,16,13,0.88) 100%)'
+            : 'linear-gradient(180deg, rgba(12,16,13,0.45) 0%, rgba(12,16,13,0.15) 50%, rgba(12,16,13,0.55) 100%)',
+        }}
+      />
+
+      <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-32 md:px-10 md:pt-36">
         <Link
           href="/trek-buddy"
           className="trek-label font-mono text-paper/60 transition-colors hover:text-paper"
