@@ -80,19 +80,22 @@ const ACT2_OUT = [0.67, 0.77] as const
 // Act 3's footage decodes only while it is on screen.
 const VIDEO_LIVE = 0.66
 const ACT3_IN = [0.73, 0.83] as const
-// ACT 3 is the loop, run once, scrubbed — the same trick act 2 plays with the
-// editor. Describing Trek Buddy in four columns of text was the weak beat of
-// this hero: act 2 shows the tool being USED, and act 3 was a list. So the
-// walk gets posted, people ask, the host decides, and the meeting point
-// unlocks, in that order, as you scroll.
+// ACT 3 is one moment, not a lesson.
 //
-// Each beat is where it is because the one before it has to land first — the
-// card cannot fill before it exists, and the point cannot unlock before the
-// party is there.
-const PLAN_IN    = [0.83, 0.865] as const  // the walk appears on the board
-const ASKS_IN    = [0.875, 0.915] as const // people ask to come
-const CONFIRM_IN = [0.915, 0.945] as const // the host says yes, the party fills
-const POINT_IN   = [0.95, 0.975] as const  // the exact spot is released
+// It has been three other things: a day-arc of four columns, then a scrubbed
+// walkthrough of the product's loop, then that walkthrough with a progress
+// spine. Each was more informative than the last and each was wrong for the
+// same reason — a hero act is a few seconds of scroll, and this one was
+// carrying a headline, a lede, four numbered steps, two buttons and a card of
+// 13px detail. It also wore act two's exact layout, left copy against a right
+// panel, so the film had two identical frames in it.
+//
+// The explaining now happens further down the page, where TrekBuddyBand has
+// the room to do it properly. So this returns to the hero's own stated rule:
+// one thing at a time. Centred, like act one, so the film reads
+// brand → tool → invitation with the offset editor between two centred frames.
+const ACT3_COPY = [0.84, 0.93] as const
+
 const CHAPTER_1TO2 = 0.25
 const CHAPTER_2TO3 = 0.75
 // The range does not leave between acts. It dims to a held level and stays
@@ -104,6 +107,7 @@ const RANGE_DIM = [0.12, 0.32] as const
 const RANGE_HELD = 0.26
 const RANGE_OUT = [0.62, 0.74] as const
 const RANGE_DARK = 0.76
+
 
 // "Mobile" here means how the page is *consumed*, not just how wide it is: on a
 // coarse-pointer device the scroll-scrubbed descent becomes flick-labour — three
@@ -215,7 +219,6 @@ export default function SummitHero({
   const copyRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const studioRef = useRef<HTMLDivElement>(null)
-  const boardRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   // Flipped twice in a whole scroll, not per frame: once the range has faded out
   // there is no reason to keep a WebGL loop running behind an opaque frame.
@@ -538,87 +541,17 @@ export default function SummitHero({
         { opacity: 1, scale: 1, duration: ACT3_IN[1] - ACT3_IN[0], ease: 'power2.out' },
         ACT3_IN[0]
       )
-      // ── The loop ──────────────────────────────────────────────────────
-      // Four beats, each one a thing the product actually does. Written
-      // against refs found once, because a scrub that queries the DOM per
-      // frame is a scrub that drops frames.
-      const planCard = q<HTMLElement>('[data-plan-card]')
-      if (planCard) {
-        tl.fromTo(planCard, { opacity: 0, y: 18 },
-          { opacity: 1, y: 0, duration: PLAN_IN[1] - PLAN_IN[0], ease: 'power2.out' }, PLAN_IN[0])
-      }
-
-      // The people asking, one after another rather than as a block — the
-      // point of the beat is that they arrive separately.
-      const asks = qa('[data-ask-row]')
-      if (asks.length) {
-        const per = (ASKS_IN[1] - ASKS_IN[0]) / asks.length
-        asks.forEach((row, i) => {
-          tl.fromTo(row, { opacity: 0, x: -10 },
-            { opacity: 1, x: 0, duration: per * 0.8, ease: 'power2.out' }, ASKS_IN[0] + i * per)
-        })
-      }
-
-      // The host deciding. The asks resolve into a confirmed party, so the
-      // dots fill and the roster line changes state.
-      const partyDots = qa('[data-party-dot]')
-      if (partyDots.length) {
-        const per = (CONFIRM_IN[1] - CONFIRM_IN[0]) / partyDots.length
-        partyDots.forEach((dot, i) => {
-          tl.to(dot, { backgroundColor: '#7BA46F', borderColor: '#7BA46F', duration: per * 0.6 },
-            CONFIRM_IN[0] + i * per)
-        })
-      }
-      const decided = q<HTMLElement>('[data-decided]')
-      if (decided) {
-        tl.fromTo(decided, { opacity: 0 }, { opacity: 1, duration: 0.02 }, CONFIRM_IN[1] - 0.01)
-      }
-
-      // The meeting point. The one moment the product is built around, so it
-      // gets the only reveal in the act: the redaction bar slides off it.
-      const pointRow = q<HTMLElement>('[data-point-row]')
-      const pointMask = q<HTMLElement>('[data-point-mask]')
-      if (pointRow) {
-        tl.fromTo(pointRow, { opacity: 0.35 }, { opacity: 1, duration: 0.02 }, POINT_IN[0])
-      }
-      if (pointMask) {
-        tl.to(pointMask, { scaleX: 0, transformOrigin: '100% 50%',
-          duration: POINT_IN[1] - POINT_IN[0], ease: 'power2.inOut' }, POINT_IN[0])
-      }
-
-      // The four steps, as a sequence you can see the shape of. Each one
-      // lights when its beat starts and stays lit — so the spine reads as
-      // progress rather than as a spotlight moving over a list.
-      const segs   = qa('[data-step-seg]')
-      const titles = qa('[data-step-title]')
-      const bodies = qa('[data-step-body]')
-      const marks  = [PLAN_IN[0], ASKS_IN[0], CONFIRM_IN[0], POINT_IN[0]]
-      if (segs.length === 4 && titles.length === 4 && bodies.length === 4) {
-        marks.forEach((at, i) => {
-          tl.to(segs[i], { scaleY: 1, duration: 0.018, ease: 'power2.out' }, at)
-          tl.to(titles[i], { color: '#F8F5ED', duration: 0.015 }, at)
-          // Height, not grid-template-rows. GSAP resolves `0fr` to a pixel
-          // value and then cannot interpolate it back to a fractional unit, so
-          // the tween renders garbage on the way. `height: auto` is a case its
-          // CSS plugin handles properly.
-          tl.to(bodies[i], { opacity: 1, height: 'auto', duration: 0.02 }, at)
-          if (i < 3) {
-            tl.to(bodies[i], { opacity: 0, height: 0, duration: 0.02 }, marks[i + 1])
-            // Past steps dim but stay legible — done, not gone.
-            tl.to(titles[i], { color: 'rgba(248,245,237,0.6)', duration: 0.015 }, marks[i + 1])
-          }
-        })
-      }
-
-      // The host accepting each request, one at a time, inside the beat that
-      // claims it happens.
-      const ticks = qa('[data-ask-tick]')
-      if (ticks.length) {
-        const per = (CONFIRM_IN[1] - CONFIRM_IN[0]) / ticks.length
-        ticks.forEach((t, i) => {
-          tl.fromTo(t, { opacity: 0, scale: 0.6 },
-            { opacity: 1, scale: 1, duration: per * 0.7, ease: 'back.out(2.5)' },
-            CONFIRM_IN[0] + i * per)
+      // The invitation arrives in order — eyebrow, headline, line, door —
+      // the same unhurried stagger act one opens with, so the hero closes the
+      // way it began.
+      const act3 = qa('[data-act3]')
+      if (act3.length) {
+        const span = ACT3_COPY[1] - ACT3_COPY[0]
+        const per = span / (act3.length + 1)
+        act3.forEach((el, i) => {
+          tl.fromTo(el, { opacity: 0, y: 22 },
+            { opacity: 1, y: 0, duration: per * 1.8, ease: 'power3.out' },
+            ACT3_COPY[0] + i * per)
         })
       }
 
@@ -989,22 +922,20 @@ export default function SummitHero({
         </div>
       )}
 
-      {/* ── Inside the print: Trek Buddy ──────────────────────────────────────
-          The four things people go up there to do are really four times of day —
-          the bird walk is at first light, the stargazers are out long after the
-          trekkers are asleep. So the frame is a day, not a table: one axis from
-          dawn to night, each activity standing at its hour with a tick down to
-          the light it happens in. The gradient under it is the sky at that hour.
+      {/* ── ACT 3 — Trek Buddy ────────────────────────────────────────────────
+          One moment, centred, at the same scale act one opens on. The film
+          therefore reads brand → tool → invitation, with the offset editor
+          sitting between two centred frames rather than three variations of
+          the same composition.
 
-          This is the third pass at this beat. The first drew six identical
-          contour rings (a bullseye, not topography) and lassoed four floating
-          labels together. The second was an honest table but visually inert.
-          A day reads instantly, carries real information, and is the one shape
-          this brand already thinks in. */}
+          Everything that explained the product has moved to TrekBuddyBand
+          further down the page, which has the room for it. What is left here
+          is the only thing a hero act can actually carry: the picture, the
+          line, and the door. */}
       {!staticHero && (
         <div
           ref={mapRef}
-          className="pointer-events-none absolute inset-0 z-20 flex items-center opacity-0"
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-0"
         >
           {/* The environment, and it is the argument: two people walking a ridge
               together, which is the entire product in one shot. Footage that was
@@ -1022,17 +953,16 @@ export default function SummitHero({
             preload="none"
             aria-hidden="true"
           />
-          {/* Two scrims, two jobs. The first grades the whole clip to dusk so it
-              belongs to this palette rather than to a stock library. The second is
-              weighted left, where the copy and the board live — the sky in this
-              footage is bright, and small mono type on it was unreadable. The
-              right stays open so the walkers are still the thing you see. */}
+          {/* Two passes. The first grades the clip to dusk so it belongs to this
+              palette rather than to a stock library. The second is a centred
+              vignette — the copy is centred now, so a left-weighted scrim would
+              be darkening the wrong half and leaving the type on open sky. */}
           <div
             aria-hidden="true"
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(180deg, rgba(8,13,24,0.62) 0%, rgba(9,16,28,0.52) 45%, rgba(6,10,18,0.9) 100%)',
+                'linear-gradient(180deg, rgba(8,13,24,0.72) 0%, rgba(9,16,28,0.46) 42%, rgba(6,10,18,0.88) 100%)',
             }}
           />
           <div
@@ -1040,194 +970,42 @@ export default function SummitHero({
             className="absolute inset-0"
             style={{
               background:
-                'linear-gradient(90deg, rgba(6,10,18,0.94) 0%, rgba(6,10,18,0.86) 38%, rgba(6,10,18,0.42) 68%, rgba(6,10,18,0.2) 100%)',
+                'radial-gradient(ellipse 62% 58% at 50% 52%, rgba(6,10,18,0.80) 0%, rgba(6,10,18,0.42) 55%, rgba(6,10,18,0) 100%)',
             }}
           />
 
-          {/* ONE composed frame, not four corners.
-              The first pass put the headline top-left, the buttons floating
-              mid-right, the step caption bottom-left and the card bottom-right
-              — four things in four corners with a dead middle, and the caption
-              four hundred pixels from the card it was narrating. Two columns
-              on one vertical centre fixes all of it: the argument reads down
-              the left, the product sits on the right, and the caption is
-              attached to the thing it describes. */}
-          <div className="relative mx-auto grid w-full max-w-5xl grid-cols-1 items-center gap-10 px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)] lg:gap-16 lg:px-12">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-sage" />
-                <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
-                  Trek Buddy
-                </span>
-              </div>
+          <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center px-6 text-center md:px-10">
+            <p
+              data-act3
+              className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage opacity-0"
+            >
+              Trek Buddy · Dehradun and around
+            </p>
 
-              <h2 className="mt-5 font-display text-[clamp(30px,3.6vw,50px)] font-light leading-[1.02] text-paper">
-                Never go <span className="italic text-sage">alone.</span>
-              </h2>
+            {/* Act one's scale, not a subheading's. The two centred frames of
+                the film should carry the same typographic weight. */}
+            <h2
+              data-act3
+              className="mt-6 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper opacity-0"
+            >
+              Never go <span className="italic lowercase text-sage">alone.</span>
+            </h2>
 
-              <p className="mt-4 max-w-sm font-body text-[15px] leading-relaxed text-paper/75">
-                Post the hour you are leaving. Whoever else is going that day finds you, and you
-                decide who comes.
-              </p>
+            <p
+              data-act3
+              className="mt-7 max-w-md font-body text-sm leading-relaxed text-paper/75 opacity-0 md:text-base"
+            >
+              Post the hour you are leaving. Whoever else is going that day finds you, and you
+              decide who comes.
+            </p>
 
-              {/* All four steps, always visible.
-                  They used to be one line swapping in a fixed box, which meant
-                  you could never see that there ARE four, or which one you were
-                  on — a viewer landing mid-act read a single orphan sentence.
-                  Shown as a list, each with its own rail segment, the act
-                  explains its own shape: past steps stay lit, the live one is
-                  full strength and carries the detail, the rest wait. */}
-              <ol className="mt-9 max-w-sm space-y-0">
-                {[
-                  ['01', 'Somebody posts a walk', 'The place, the hour, and how many can come.'],
-                  ['02', 'People ask to come', 'Not a join button — a request, with a message.'],
-                  ['03', 'The host decides', 'They pick the group they are spending the day with.'],
-                  ['04', 'The meeting point unlocks', 'Only for the confirmed party, and only once it is big enough.'],
-                ].map(([n, title, body]) => (
-                  <li key={n} data-step className="flex gap-4">
-                    {/* The spine. One segment per step, filling as you pass it,
-                        so progress through the act is a thing you can see. */}
-                    <span aria-hidden="true" className="relative flex w-px shrink-0 justify-center">
-                      <span className="absolute inset-0 bg-paper/15" />
-                      <span data-step-seg className="absolute inset-0 origin-top scale-y-0 bg-sage" />
-                    </span>
-
-                    <span className="min-w-0 flex-1 pb-4">
-                      <span
-                        data-step-title
-                        className="block font-mono text-[11px] uppercase tracking-[0.16em] text-paper/35"
-                      >
-                        <span className="tabular-nums">{n}</span> · {title}
-                      </span>
-                      {/* Only the live step carries its detail. Four bodies at
-                          once is a paragraph, not a sequence.
-                          Height, not grid-template-rows: GSAP resolves `0fr` to
-                          a pixel value and then cannot interpolate it back to a
-                          fractional unit, which renders garbage mid-tween.
-                          `height: auto` is a case its CSS plugin handles. */}
-                      <span
-                        data-step-body
-                        className="block h-0 overflow-hidden opacity-0"
-                      >
-                        <span className="block pt-1.5 font-body text-[13px] leading-relaxed text-paper/65">
-                          {body}
-                        </span>
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="pointer-events-auto mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <Link
-                  href="/trek-buddy"
-                  className="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 font-body text-[10px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
-                >
-                  See the board <span aria-hidden="true">↗</span>
-                </Link>
-                <Link
-                  href="/trek-buddy/people"
-                  className="border-b border-paper/25 pb-0.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/65 transition-colors duration-300 hover:text-paper"
-                >
-                  Who is out there
-                </Link>
-              </div>
-            </div>
-
-            {/* The card, and it is the point of the act, so it gets the size
-                and the ground to hold its own against a bright photograph. */}
-            <div ref={boardRef} className="min-w-0">
-              <div
-                data-plan-card
-                className="flex overflow-hidden rounded-sm border border-paper/25 bg-ink/80 opacity-0 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl"
+            <div data-act3 className="pointer-events-auto mt-9 opacity-0">
+              <Link
+                href="/trek-buddy"
+                className="inline-flex items-center gap-2 rounded-full bg-paper px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
               >
-                <span aria-hidden="true" className="w-1.5 shrink-0 bg-[#7FA471]" />
-                <div className="min-w-0 flex-1 p-6">
-                  <div className="flex items-baseline gap-2.5">
-                    <span className="font-mono text-[15px] text-[#9BC08C] tabular-nums">07:00</span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/55">
-                      First light
-                    </span>
-                  </div>
-                  <h3 className="mt-1.5 font-display text-[26px] leading-tight text-paper">
-                    Nag Tibba
-                  </h3>
-                  <p className="mt-1.5 font-body text-[13px] text-paper/60">
-                    Trekking · from Dehradun ISBT · back 16:00
-                  </p>
-
-                  <div className="mt-5 flex items-center gap-2.5">
-                    <div className="flex">
-                      {[0, 1, 2, 3].map((i) => (
-                        <span
-                          key={i}
-                          data-party-dot
-                          // A ring in the card's own ground, so four filled
-                          // circles overlapping still read as four people
-                          // rather than as one green smear.
-                          style={{
-                            marginLeft: i === 0 ? 0 : -7,
-                            boxShadow: '0 0 0 2px rgba(10,14,11,0.92)',
-                          }}
-                          className="h-6 w-6 rounded-full border border-dashed border-paper/40 bg-transparent"
-                        />
-                      ))}
-                    </div>
-                    <span
-                      data-decided
-                      className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#9BC08C] opacity-0"
-                    >
-                      4 going
-                    </span>
-                  </div>
-
-                  <ul className="mt-5 space-y-2 border-t border-paper/15 pt-4">
-                    {['Priya', 'Rahul', 'Sara'].map((who) => (
-                      <li
-                        key={who}
-                        data-ask-row
-                        className="flex items-center gap-2.5 font-body text-[13px] text-paper/70 opacity-0"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-paper/15 font-mono text-[10px] text-paper"
-                        >
-                          {who[0]}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">{who} asked to come</span>
-                        {/* The host deciding, made visible. Step 03 narrated a
-                            decision that nothing on screen actually performed —
-                            the dots filled, which is a consequence, not the act. */}
-                        <span
-                          data-ask-tick
-                          aria-hidden="true"
-                          className="shrink-0 font-mono text-[13px] leading-none text-[#9BC08C] opacity-0"
-                        >
-                          ✓
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* The withheld line — the rule the product is built on,
-                      stated as a picture rather than a sentence. */}
-                  <div data-point-row className="mt-5 border-t border-paper/15 pt-4 opacity-40">
-                    <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-paper/50">
-                      Exact meeting point
-                    </p>
-                    <div className="relative mt-2 inline-block">
-                      <p className="font-body text-[14px] text-paper">
-                        Pantwari trailhead, by the forest gate
-                      </p>
-                      <span
-                        data-point-mask
-                        aria-hidden="true"
-                        className="absolute -inset-x-1 inset-y-0 origin-right bg-paper/30"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                See the board <span aria-hidden="true">↗</span>
+              </Link>
             </div>
           </div>
         </div>
