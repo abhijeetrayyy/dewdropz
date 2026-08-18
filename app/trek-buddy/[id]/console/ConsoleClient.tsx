@@ -8,6 +8,7 @@ import { decideRequest } from '@/actions/trekBuddy'
 import {
   checkIn, updateMeetingPoint, announce, promoteWaitlisted, type ConsoleRoster,
 } from '@/actions/trekConsole'
+import InviteCardPanel from '@/components/trek/InviteCardPanel'
 
 // The host's desk for one walk.
 //
@@ -35,6 +36,7 @@ export default function ConsoleClient({
   minParty,
   goingCount,
   canCheckIn,
+  shareToken,
 }: {
   planId: string
   roster: ConsoleRoster[]
@@ -43,6 +45,7 @@ export default function ConsoleClient({
   minParty: number
   goingCount: number
   canCheckIn: boolean
+  shareToken: string | null
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -246,6 +249,7 @@ export default function ConsoleClient({
             Announce
           </button>
         </div>
+        <InviteCardPanel planId={planId} token={shareToken} />
       </aside>
     </div>
   )
