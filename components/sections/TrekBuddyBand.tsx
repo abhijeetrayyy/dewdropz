@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { BLUR_DATA_URL, DAY_ARC } from '@/lib/constants'
 import { getTrekKinds } from '@/actions/trekBuddy'
-import { createPublicSupabaseClient } from '@/lib/supabase/client'
+import { createAdminSupabaseClient } from '@/lib/supabase'
 import type { TrekKind } from '@/actions/trekBuddy'
 
 /**
@@ -28,7 +28,11 @@ import type { TrekKind } from '@/actions/trekBuddy'
  * the rest of it is trying to earn.
  */
 export default async function TrekBuddyBand() {
-  const db = createPublicSupabaseClient()
+  // Service key, not the anon key. This is a server component, so the key never
+  // reaches the browser — and as of migration 063 `anon` can no longer read
+  // profiles at all, because that read was returning every customer's email and
+  // date of birth to anyone who asked.
+  const db = createAdminSupabaseClient()
 
   const [{ count: openWalks }, { count: members }, kinds] = await Promise.all([
     db
