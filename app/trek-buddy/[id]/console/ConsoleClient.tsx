@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { decideRequest } from '@/actions/trekBuddy'
 import {
-  checkIn, updateMeetingPoint, announce, promoteWaitlisted, type ConsoleRoster,
+  checkIn, updateMeetingPoint, announce, promoteWaitlisted, addCoHost, removeCoHost,
+  type ConsoleRoster,
 } from '@/actions/trekConsole'
 import InviteCardPanel from '@/components/trek/InviteCardPanel'
 
@@ -17,14 +18,13 @@ import InviteCardPanel from '@/components/trek/InviteCardPanel'
 // "we are starting an hour later". Gathering them is most of the value: a host
 // standing at a bus stand at 05:10 should not be navigating between screens.
 //
-// Deliberately not built, and both for reasons rather than time:
+// Co-hosts landed in 082/083 with the three things they needed first: a
+// permission model, an audit trail, and this screen to see it on. A co-host can
+// confirm, announce and check in; everything else — cancelling, the meeting
+// point, appointing other co-hosts, the invite link, the recap — stays with the
+// host, so a co-host runs the party without owning the walk.
 //
-// CO-HOSTS. The design gives a co-host the power to confirm people. That is the
-// board's central safety decision, and handing it to a second person needs a
-// permission model, an audit trail and a way to see who admitted whom. It
-// deserves its own pass rather than a checkbox at the end of this one.
-//
-// WHO HAS PAID. The board takes no money and says so — the cost share is
+// STILL NOT BUILT: WHO HAS PAID. The board takes no money and says so — the cost share is
 // "split at face value on the day". A per-person paid/unpaid ledger inside the
 // app is the first step toward looking like it settles payments, and the
 // difference matters if anything ever goes wrong with one.
@@ -37,6 +37,7 @@ export default function ConsoleClient({
   goingCount,
   canCheckIn,
   shareToken,
+  nameOf,
 }: {
   planId: string
   roster: ConsoleRoster[]
@@ -46,6 +47,8 @@ export default function ConsoleClient({
   goingCount: number
   canCheckIn: boolean
   shareToken: string | null
+  /** user id -> display name, for the "confirmed by" line. */
+  nameOf: Record<string, string | null>
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -131,6 +134,8 @@ export default function ConsoleClient({
               {canCheckIn
                 ? 'Check people in at the meeting point.'
                 : 'Checking in opens twelve hours before you leave.'}
+              {' '}A co-host can confirm, announce and check in — not cancel, edit the meeting
+              point, or appoint anybody.
             </p>
           </div>
 
@@ -140,10 +145,37 @@ export default function ConsoleClient({
             <ul className="mt-3 divide-y divide-rule border-y border-rule">
               {going.map((r) => (
                 <li key={r.user_id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <Link href={`/trek-buddy/people/${r.user_id}`}
-                    className="font-body text-sm text-text underline decoration-rule underline-offset-4 hover:decoration-forest">
-                    {r.display_name}
-                  </Link>
+                  <span className="min-w-0">
+                    <Link href={`/trek-buddy/people/${r.user_id}`}
+                      className="font-body text-sm text-text underline decoration-rule underline-offset-4 hover:decoration-forest">
+                      {r.display_name}
+                    </Link>
+                    {r.is_co_host && (
+                      <span className="ml-2 rounded-full border border-forest/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-forest">
+                        Co-host
+                      </span>
+                    )}
+                    {/* Who let this person on. Invisible while the host is the
+                        only one who can, and the whole point once they are not. */}
+                    {r.decided_by && nameOf[r.decided_by] && (
+                      <span className="ml-2 font-mono text-[9px] uppercase tracking-[0.12em] text-mid">
+                        by {nameOf[r.decided_by]}
+                      </span>
+                    )}
+                    <span className="ml-2">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(
+                          () => (r.is_co_host ? removeCoHost(planId, r.user_id) : addCoHost(planId, r.user_id)),
+                          r.is_co_host ? `${r.display_name} is no longer a co-host` : `${r.display_name} can help run this walk`
+                        )}
+                        className="font-mono text-[9px] uppercase tracking-[0.12em] text-mid underline-offset-4 hover:text-forest hover:underline disabled:opacity-40"
+                      >
+                        {r.is_co_host ? 'remove' : '+ co-host'}
+                      </button>
+                    </span>
+                  </span>
                   <button
                     type="button"
                     disabled={pending || !canCheckIn}

@@ -29,7 +29,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
   const data = await getConsole(id)
   if (!data) notFound()
 
-  const { plan, roster, meetingPoint, logistics, canCheckIn } = data
+  const { plan, roster, meetingPoint, logistics, canCheckIn, nameOf } = data
   const p = plan as Record<string, never> & {
     id: string; place: string; starts_at: string; start_time: string | null
     capacity: number; going_count: number; min_party: number
@@ -91,6 +91,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
                   goingCount={p.going_count}
                   canCheckIn={canCheckIn}
                   shareToken={p.share_token}
+                  nameOf={nameOf}
                 />
               </div>
             )}
