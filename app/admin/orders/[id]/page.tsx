@@ -10,6 +10,7 @@ import { getInvoiceForOrder } from '@/lib/invoicing'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { formatPrice } from '@/lib/utils'
 import ShipmentManager from './ShipmentManager'
+import IssueInvoiceButton from '@/components/admin/IssueInvoiceButton'
 
 // One order, one page.
 //
@@ -76,6 +77,9 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     .limit(20)
 
   const addr = order.shipping_address as Record<string, string> | null
+  // The moment of supply. Dispatch is what an invoice is due against, and an
+  // order can reach 'delivered' in one click without ever being stamped shipped.
+  const dispatchedAt = (order.shipped_at ?? order.delivered_at) as string | null
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -209,11 +213,30 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                 </div>
               </>
             ) : (
-              <p className="mt-2 text-sm text-neutral-500">
-                Not issued. The invoice is raised automatically when the first parcel is
-                dispatched, and needs the shop&apos;s GSTIN and registered address filled in
-                under Tax settings.
-              </p>
+              <>
+                <p className="mt-2 text-sm text-neutral-500">
+                  Not issued. The invoice is raised automatically when the first parcel is
+                  dispatched, and needs the shop&apos;s GSTIN and registered address filled in
+                  under Tax settings.
+                </p>
+                {/* Automatic issuance only ever fires at dispatch. An order that
+                    dispatched while the GSTIN was still blank was refused then
+                    and will never be retried, so the only way it is ever
+                    invoiced is by hand from here. */}
+                {dispatchedAt && order.status !== 'cancelled' && (
+                  <>
+                    <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+                      This order already went out, so its automatic moment has passed and will
+                      not come round again.
+                    </p>
+                    <IssueInvoiceButton
+                      orderId={order.id}
+                      orderNumber={order.order_number}
+                      dispatchedAt={dispatchedAt}
+                    />
+                  </>
+                )}
+              </>
             )}
           </section>
 

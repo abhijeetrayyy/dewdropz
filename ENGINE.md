@@ -251,6 +251,19 @@ the last mile on anything admin-side.**
       equals the sum of its lines, the total reconciles, and the same order
       prints as CGST/SGST to Uttarakhand and IGST to Maharashtra. Orders placed
       before this still render their single stored Tax line.
+      **Issuance** happens at dispatch (`actions/shipments.ts`), which was the
+      only trigger there was. An order dispatched while the shop had no GSTIN is
+      refused at that moment — correctly, since a parcel must still be able to
+      leave — and lands in `uninvoiced_supplies`, where nothing ever revisited
+      it. Filling in the GSTIN later fixed future dispatches and left past ones
+      uninvoiced forever. `issueInvoiceNow` (`actions/invoicing.ts`), reachable
+      from the order page, is the way back: it refuses an order that never
+      dispatched or was cancelled, and passes no supply date so the RPC's own
+      chain (dispatch → confirmation → placement) picks it. The invoice is
+      therefore dated when the goods left, not when the button was pressed.
+      Verified live that the refusal path spends nothing: with no GSTIN set, the
+      call returns "store_settings.gstin is not set" and both `invoices` and
+      `document_serial_counters` stay empty.
       **Not built:** tax-inclusive (MRP) pricing, reverse charge, e-invoicing/IRN,
       or place-of-supply rules for services. The store prices tax-exclusive today
       and those are separate decisions, not switches.
