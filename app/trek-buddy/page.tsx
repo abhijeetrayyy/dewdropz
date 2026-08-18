@@ -6,10 +6,10 @@ import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
 import { getUnreadMessages } from '@/actions/trekChat'
 import TrekGate from '@/components/trek/TrekGate'
-import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks, getMyTrekCard, getUnreadCount, type TrekPlanRow } from '@/actions/trekBuddy'
+import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks, getMyTrekCard, getUnreadCount, type TrekPlanRow, getLeavingSoon} from '@/actions/trekBuddy'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
+import TrekShelf from '@/components/trek/TrekShelf'
 import QuickStart from '@/components/trek/QuickStart'
-import BoardFilters from '@/components/trek/BoardFilters'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import WhatTheBoardDoes from '@/components/trek/WhatTheBoardDoes'
 import RecentRecaps from '@/components/trek/RecentRecaps'
@@ -182,7 +182,7 @@ export default async function TrekBuddyPage({
   // The unfiltered board is fetched alongside the filtered one so the chips can
   // carry honest counts — a filter that says "Camping 0" is more useful than a
   // filter that has quietly disappeared.
-  const [plans, all, mine, me, unread, recaps, unreadMessages] = await Promise.all([
+  const [plans, all, mine, me, unread, recaps, soon, unreadMessages] = await Promise.all([
     getTrekBoard({
       activity: sp.activity,
       when: sp.when as 'all' | 'week' | 'weekend',
@@ -198,6 +198,7 @@ export default async function TrekBuddyPage({
     getMyTrekCard(),
     getUnreadCount(),
     getRecentRecaps(4),
+    getLeavingSoon(),
     getUnreadMessages(),
   ])
 
@@ -272,6 +273,13 @@ export default async function TrekBuddyPage({
                 </div>
               ) : (
                 <div className="space-y-8">
+                  {/* The rail first: it answers "what can I still get to",
+                      which is the only question on this page with a deadline.
+                      Everything, including these, is in the buckets below —
+                      the shelf is an index into the board, not a slice out
+                      of it. */}
+                  <TrekShelf plans={soon} />
+
                   {bucketPlans(plans).map((bucket) => (
                     <div key={bucket.key}>
                       <div className="flex items-baseline gap-3 pb-3">

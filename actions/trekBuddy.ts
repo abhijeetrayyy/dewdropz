@@ -94,6 +94,34 @@ export async function getBasecamp(): Promise<TrekPlanRow[]> {
   return (await withKindLabels((data ?? []) as TrekPlanRow[])) as TrekPlanRow[]
 }
 
+/**
+ * Walks leaving within 48 hours, soonest first.
+ *
+ * An action rather than a filter in the page because the page cannot read the
+ * clock — Date.now() during a render is impure, and this file has already had
+ * to take that lesson twice. It is also the right home: "soon" is a fact about
+ * the board, not about how it is drawn.
+ */
+export async function getLeavingSoon(): Promise<TrekPlanRow[]> {
+  const user = await getUser()
+  if (!user) return []
+
+  const now = new Date()
+  const until = new Date(now.getTime() + 48 * 3600 * 1000)
+
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_plans')
+    .select('*')
+    .eq('status', 'open')
+    .is('hidden_at', null)
+    .gt('starts_at', now.toISOString())
+    .lte('starts_at', until.toISOString())
+    .order('starts_at')
+    .limit(12)
+
+  return (await withKindLabels((data ?? []) as TrekPlanRow[])) as TrekPlanRow[]
+}
+
 /** What the signed-in member still has to supply before they can use any of this. */
 export async function getTrekMembership() {
   const user = await getUser()
