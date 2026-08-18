@@ -211,6 +211,104 @@
     }
   }
 
+  /* ── Trek Buddy ──────────────────────────────────────────────────────────
+     The board was built in the storefront's editorial voice: paper ground,
+     hairline rules, square corners, everything separated by a line and set in
+     a column. That is a PRINT layout, and it is right for a shop — a product
+     page is a page. It is wrong here, because this is not a page, it is an
+     app: things on it are objects you act on, not paragraphs you read.
+
+     So Trek Buddy moves to the layout in the design file, and these are its
+     measured values rather than an impression of them:
+
+       * PILLS. 999px is the single most-used radius in the prototype, 41
+         times against 18 for everything else combined. Every control is a
+         pill. That is where the "curves" come from — not from big soft cards.
+       * CARDS AT 6px, clipped, with NO border and NO shadow. A card is a
+         picture with a lip, held apart from its neighbours by the ground it
+         sits on. The current 2px-plus-hairline reads as a table cell.
+       * BANDS. The page alternates ink and paper sections rather than running
+         one ground the whole way. Measured down the prototype:
+         ink → paper → paper-warm → ink → paper.
+       * AMBER ACTS. The primary action is #E39B3F with ink type on it. Forest
+         green is the shop's colour and stays there; the board's is dawn.
+       * MONO CARRIES THE DATA. Space Mono appears 169 times to Archivo's 200
+         — every time, hour, count and label. Fraunces is used 33 times and
+         only for names and headlines. Numbers are instruments; words are not.
+
+     Nothing here is a new colour. Every value is a token the site already had,
+     used the way an app uses them instead of the way a magazine does. */
+  .trek-pill {
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+  }
+  /* The act. Amber ground, ink type — measured off the prototype's primary
+     button, and the only place this much saturation appears. */
+  .trek-pill-act {
+    background: var(--dawn);
+    color: var(--ink);
+  }
+  .trek-pill-act:hover { background: var(--dawn-soft); }
+  /* A control you can find but are not being pushed towards. */
+  .trek-pill-quiet {
+    border: 1px solid var(--rule);
+    color: var(--mid);
+  }
+  .trek-pill-quiet:hover { border-color: var(--text); color: var(--text); }
+  /* On an ink band, where the hairline has to be paper-side to exist at all. */
+  .trek-pill-onink {
+    border: 1px solid rgba(248, 245, 237, 0.22);
+    color: rgba(248, 245, 237, 0.82);
+  }
+  .trek-pill-onink:hover { border-color: var(--dawn); color: var(--dawn); }
+  /* Selected, on either ground. */
+  .trek-pill-on {
+    background: var(--text);
+    color: var(--paper);
+  }
+
+  /* A card. Clipped at 6px, no border, no shadow — it is held by its ground,
+     not by an edge drawn around it. */
+  .trek-card {
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .trek-card-onink { background: rgba(248, 245, 237, 0.04); }
+
+  /* The micro-label. Mono, uppercase, tracked wide — the prototype's most
+     repeated single gesture, and what makes data read as instrument rather
+     than as prose. */
+  .trek-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* A shelf: one row, scrolled sideways, with the overflow bleeding off the
+     edge rather than stopping at the container — so it reads as a row that
+     continues, which is the entire signal that there is more. */
+  .trek-shelf {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 300px);
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+  }
+  .trek-shelf::-webkit-scrollbar { display: none; }
+  .trek-shelf > * { scroll-snap-align: start; }
+
   /* ── The studio ──────────────────────────────────────────────────────────
      The print customiser used one flat near-black for the stage, the rails,
      the header and the inputs, with borders at 10% and labels at 35%. Nothing

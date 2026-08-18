@@ -147,7 +147,7 @@ export default function SafetyActions({
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button type="button" onClick={submitReport} disabled={pending || !reason}
-              className="rounded-sm bg-forest px-5 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-40">
+              className="trek-pill trek-pill-act font-body disabled:opacity-40 transition-colors hover:bg-forest-mid disabled:opacity-40">
               {pending ? 'Sending…' : 'Send report'}
             </button>
 

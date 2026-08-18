@@ -367,7 +367,7 @@ export default function NewPlanForm({
                 </span>
               </label>
               <button type="button" onClick={() => setStep(2)}
-                className="rounded-sm bg-forest px-5 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper">
+                className="trek-pill trek-pill-act font-body disabled:opacity-40">
                 Next — when
               </button>
             </div>
@@ -475,7 +475,7 @@ export default function NewPlanForm({
               </div>
 
               <button type="button" onClick={() => setStep(3)}
-                className="rounded-sm bg-forest px-5 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper">
+                className="trek-pill trek-pill-act font-body disabled:opacity-40">
                 Next — the details
               </button>
             </div>
@@ -639,7 +639,7 @@ export default function NewPlanForm({
               <SafetyNotes variant="compact" />
 
               <button type="button" onClick={() => setStep(4)}
-                className="w-full rounded-sm border border-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-forest transition-colors hover:bg-forest hover:text-paper">
+                className="trek-pill trek-pill-quiet font-body disabled:opacity-40">
                 Last look →
               </button>
             </div>
@@ -698,7 +698,7 @@ export default function NewPlanForm({
               {error && <p className="font-body text-sm text-clay">{error}</p>}
 
               <button type="submit" disabled={pending || !canPost}
-                className="w-full rounded-sm bg-forest px-6 py-3.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-40">
+                className="trek-pill trek-pill-act font-body disabled:opacity-40">
                 {pending ? 'Posting…' : 'Put it on the board'}
               </button>
               {!canPost && (

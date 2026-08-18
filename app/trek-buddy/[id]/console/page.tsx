@@ -67,11 +67,11 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link href={`/trek-buddy/${p.id}`}
-                  className="rounded-full border border-rule px-4 py-2 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:border-forest hover:text-forest">
+                  className="trek-pill trek-pill-quiet font-body disabled:opacity-40">
                   Public view
                 </Link>
                 <Link href={`/trek-buddy/${p.id}#chat`}
-                  className="rounded-full border border-rule px-4 py-2 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:border-forest hover:text-forest">
+                  className="trek-pill trek-pill-quiet font-body disabled:opacity-40">
                   Group chat
                 </Link>
               </div>

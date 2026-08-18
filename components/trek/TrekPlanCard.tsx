@@ -47,7 +47,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
   return (
     <Link
       href={`/trek-buddy/${plan.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-sm border border-rule bg-ink transition-all duration-300 hover:-translate-y-0.5 hover:border-forest/50 hover:shadow-[0_16px_40px_-24px_rgba(12,16,13,0.6)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+      className="trek-card group relative flex flex-col bg-ink transition-transform duration-300 hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dawn"
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden">
         {cover ? (
@@ -89,7 +89,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
         {/* The date, top left — a torn calendar corner, as before. */}
         <div className="absolute left-4 top-3.5 flex items-baseline gap-1.5">
           <span className="font-display text-2xl leading-none text-paper tabular-nums">{day}</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-paper/75">
+          <span className="trek-label font-mono text-paper/75">
             {month} · {weekday}
           </span>
         </div>
@@ -97,7 +97,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
         {/* The nudge, top right. */}
         <Countdown
           iso={plan.starts_at}
-          className="absolute right-3.5 top-3.5 rounded-full bg-ink/70 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-paper/90 backdrop-blur-sm tabular-nums"
+          className="trek-label absolute right-3.5 top-3.5 rounded-full bg-ink/75 px-3 py-1.5 font-mono text-paper backdrop-blur-sm tabular-nums"
         />
 
         {/* Departure hour and its light, over the dark foot of the picture. */}
@@ -109,7 +109,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
             >
               {hhmm(plan.start_time) ?? `${nights + 1} days`}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/70">
+            <span className="trek-label font-mono text-paper/70">
               {plan.start_time ? light.label : 'On the hill'}
             </span>
           </div>
@@ -121,7 +121,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
 
       {/* The facts, on paper. Keeping them off the photograph is what stops the
           card turning into a poster nobody can read. */}
-      <div className="flex flex-1 flex-col gap-2.5 bg-paper p-4">
+      <div className="flex flex-1 flex-col gap-2 bg-paper px-4 pb-4 pt-3.5">
         <p className="flex items-center gap-1.5 font-body text-xs text-mid">
           <span
             aria-hidden="true"
@@ -140,7 +140,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
         </p>
 
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-mid tabular-nums">
+          <span className="trek-label font-mono text-mid tabular-nums">
             {plan.going_count}/{plan.capacity}
           </span>
           <span
@@ -150,7 +150,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
           >
             {full ? 'Full' : `${plan.spots_left} space${plan.spots_left === 1 ? '' : 's'}`}
           </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
+          <span className="trek-label font-mono text-mid">
             {DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty}
           </span>
           {plan.women_only && (

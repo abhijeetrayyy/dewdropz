@@ -29,7 +29,7 @@ export default function YouCard({ me }: { me: MyTrekCard }) {
   return (
     <Link
       href="/trek-buddy/profile"
-      className="group block rounded-sm border border-paper/15 bg-ink/45 p-5 backdrop-blur-md transition-colors duration-300 hover:border-sage/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+      className="group block rounded-[6px] border border-paper/15 bg-ink/45 p-5 backdrop-blur-md transition-colors duration-300 hover:border-sage/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
     >
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/40">You</p>

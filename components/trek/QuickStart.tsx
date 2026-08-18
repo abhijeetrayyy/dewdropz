@@ -14,7 +14,7 @@ export default function QuickStart({ canHost }: { canHost: boolean }) {
   if (!canHost) return null
 
   return (
-    <div className="rounded-sm border border-rule bg-white p-5">
+    <div className="trek-card border border-rule bg-white p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
           Going somewhere? Start here
@@ -32,7 +32,7 @@ export default function QuickStart({ canHost }: { canHost: boolean }) {
           <Link
             key={a.key}
             href={`/trek-buddy/new?activity=${a.key}`}
-            className="group flex items-baseline justify-between gap-3 rounded-sm border border-rule px-3.5 py-3 transition-colors hover:border-forest"
+            className="group flex items-baseline justify-between gap-3 trek-card border border-rule px-3.5 py-3 transition-colors hover:border-forest"
           >
             <span className="min-w-0">
               <span className="block font-body text-sm text-text">{a.label}</span>

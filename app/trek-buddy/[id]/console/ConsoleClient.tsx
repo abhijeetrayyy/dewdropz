@@ -120,12 +120,12 @@ export default function ConsoleClient({
                     <div className="flex shrink-0 gap-2">
                       <button type="button" disabled={pending}
                         onClick={() => run(() => decideRequest(planId, r.user_id, 'confirmed'), `${r.display_name} is coming`)}
-                        className="rounded-full bg-forest px-4 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper hover:bg-forest-mid disabled:opacity-40">
+                        className="trek-pill trek-pill-act font-body disabled:opacity-40">
                         Confirm
                       </button>
                       <button type="button" disabled={pending}
                         onClick={() => run(() => decideRequest(planId, r.user_id, 'declined'))}
-                        className="rounded-full border border-rule px-4 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] text-mid hover:border-clay hover:text-clay disabled:opacity-40">
+                        className="trek-pill trek-pill-quiet font-body disabled:opacity-40">
                         Decline
                       </button>
                     </div>
@@ -282,7 +282,7 @@ export default function ConsoleClient({
               <div className="mt-3 flex gap-2">
                 <button type="button" disabled={pending}
                   onClick={() => run(() => updateMeetingPoint(planId, point, logi), 'Meeting point updated')}
-                  className="rounded-full bg-forest px-4 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper hover:bg-forest-mid disabled:opacity-40">
+                  className="trek-pill trek-pill-act font-body disabled:opacity-40">
                   Save
                 </button>
                 <button type="button" onClick={() => { setPoint(meetingPoint); setLogi(logistics); setEditingPoint(false) }}
@@ -316,7 +316,7 @@ export default function ConsoleClient({
             className="mt-2 w-full rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none" />
           <button type="button" disabled={pending || note.trim().length < 3}
             onClick={() => run(() => announce(planId, note), 'Everyone has been told')}
-            className="mt-2 w-full rounded-full bg-forest px-4 py-2 font-body text-[10px] uppercase tracking-[0.12em] text-paper hover:bg-forest-mid disabled:opacity-40">
+            className="mt-2 w-full trek-pill trek-pill-act font-body disabled:opacity-40">
             Announce
           </button>
         </div>

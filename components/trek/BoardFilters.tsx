@@ -12,7 +12,10 @@ const LANGUAGES = ['Hindi', 'English', 'Garhwali', 'Punjabi', 'Bengali']
 const chip = (on: boolean, dark: boolean) =>
   `whitespace-nowrap rounded-full border px-3 py-1.5 font-body text-[11px] uppercase tracking-[0.08em] transition-colors ${
     on
-      ? dark ? 'border-sage bg-sage text-ink' : 'border-forest bg-forest text-paper'
+      // Amber, on both grounds. The selected filter is the loudest thing on the
+      // board and the design spends its one saturated colour here; sage read as
+      // "another green among greens" on a page already full of them.
+      ? 'border-dawn bg-dawn text-ink'
       : dark
         // A real surface, not a hairline over a photograph. backdrop-blur is
         // the part that matters: it is a low-pass filter, so it collapses the

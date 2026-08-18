@@ -140,7 +140,7 @@ export default function PlanChat({
             type="button"
             onClick={send}
             disabled={pending || !body.trim()}
-            className="rounded-full bg-forest px-5 py-2 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-40"
+            className="trek-pill trek-pill-act font-body disabled:opacity-40"
           >
             {pending ? 'Sending…' : 'Send'}
           </button>

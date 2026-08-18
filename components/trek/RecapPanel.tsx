@@ -165,7 +165,7 @@ export default function RecapPanel({
           Cancel
         </button>
         <button type="button" onClick={save} disabled={pending || body.trim().length < 10}
-          className="rounded-full bg-forest px-5 py-2 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-40">
+          className="trek-pill trek-pill-act font-body disabled:opacity-40">
           {pending ? 'Saving…' : 'Save the recap'}
         </button>
       </div>
