@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
+import { getUnreadMessages } from '@/actions/trekChat'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import {
   getMyTreks, getTrekMembership, getTrekBoard, getMyTrekCard, getNotifications,
@@ -24,8 +25,9 @@ export default async function YourTreksPage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/yours')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [mine, all, me, inbox] = await Promise.all([
+  const [mine, all, me, inbox, unreadMessages] = await Promise.all([
     getMyTreks(), getTrekBoard(), getMyTrekCard(), getNotifications(),
+    getUnreadMessages(),
   ])
   const waiting = mine.going.filter((g) => g.status === 'requested')
   const confirmed = mine.going.filter((g) => g.status === 'confirmed')
@@ -34,7 +36,7 @@ export default async function YourTreksPage() {
     <>
       <NavBar />
       <main>
-        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" me={me} unread={inbox.unread} />
+        <TrekHero unreadMessages={unreadMessages} counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" me={me} unread={inbox.unread} />
 
         <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
           <div className="mx-auto max-w-5xl space-y-12">

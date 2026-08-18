@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
+import { getUnreadMessages } from '@/actions/trekChat'
 import { getTrekBoard, getTrekKinds, getMyTrekCard, getUnreadCount } from '@/actions/trekBuddy'
 import { getTrekMembership } from '@/actions/trekBuddy'
 import NewPlanForm from './NewPlanForm'
@@ -25,8 +26,9 @@ export default async function NewTrekPlanPage({
   // trek_create_plan, which is the one that actually decides.
   if (!membership.canHost) redirect('/trek-buddy')
 
-  const [all, kinds, me, unread] = await Promise.all([
+  const [all, kinds, me, unread, unreadMessages] = await Promise.all([
     getTrekBoard(), getTrekKinds(), getMyTrekCard(), getUnreadCount(),
+    getUnreadMessages(),
   ])
 
   // Only a kind the board is actually taking survives the URL — a hand-typed
@@ -37,7 +39,7 @@ export default async function NewTrekPlanPage({
     <>
       <NavBar />
       <main>
-        <TrekHero counts={{}} openCount={all.length} canHost active="new" me={me} unread={unread} />
+        <TrekHero unreadMessages={unreadMessages} counts={{}} openCount={all.length} canHost active="new" me={me} unread={unread} />
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
           {/* Left-aligned with the form beneath it rather than centred in a
               narrow column, so the page reads as one thing. The line is the

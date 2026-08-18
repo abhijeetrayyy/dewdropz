@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
+import { getUnreadMessages } from '@/actions/trekChat'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import {
   getBasecamp, getTrekBoard, getTrekMembership, getMyTrekCard, getUnreadCount,
@@ -31,19 +32,20 @@ export default async function BasecampPage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/basecamp')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [plans, following, all, me, unread] = await Promise.all([
+  const [plans, following, all, me, unread, unreadMessages] = await Promise.all([
     getBasecamp(),
     getFollowingCount(),
     getTrekBoard(),
     getMyTrekCard(),
     getUnreadCount(),
+    getUnreadMessages(),
   ])
 
   return (
     <>
       <NavBar />
       <main>
-        <TrekHero
+        <TrekHero unreadMessages={unreadMessages}
           counts={{}}
           openCount={all.length}
           canHost={membership.canHost}

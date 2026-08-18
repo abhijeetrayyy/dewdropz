@@ -24,16 +24,20 @@ export default function TrekHero({
   active,
   me,
   unread = 0,
+  unreadMessages = 0,
 }: {
   counts: Record<string, number>
   openCount: number
   canHost: boolean
   /** Which Trek Buddy page you are on. */
-  active: 'board' | 'people' | 'basecamp' | 'yours' | 'new' | 'profile'
+  active: 'board' | 'people' | 'basecamp' | 'messages' | 'yours' | 'new' | 'profile'
   /** The viewer, when they have finished joining. Drives the presence card. */
   me?: MyTrekCard | null
   /** Unread notifications, shown on the Yours tab. */
   unread?: number
+  /** Unread chat messages. Counted separately from notifications — they are
+      different things and a merged badge would clear on the wrong action. */
+  unreadMessages?: number
 }) {
   const tabs = [
     { key: 'board', label: 'The board', href: '/trek-buddy' },
@@ -41,6 +45,7 @@ export default function TrekHero({
     // Next to the directory rather than beside "Yours": it answers a question
     // about other people, not about your own walks.
     { key: 'basecamp', label: 'Basecamp', href: '/trek-buddy/basecamp' },
+    { key: 'messages', label: 'Messages', href: '/trek-buddy/messages' },
     { key: 'yours', label: 'Yours', href: '/trek-buddy/yours' },
     ...(canHost ? [{ key: 'new', label: 'Post a walk', href: '/trek-buddy/new' }] : []),
     // Was missing entirely. The profile page existed and nothing in the
@@ -133,6 +138,11 @@ export default function TrekHero({
               {t.label}
               {/* The count rides the tab it belongs to, so "something happened"
                   and "where it happened" are the same glance. */}
+              {t.key === 'messages' && unreadMessages > 0 && (
+                <span className="ml-1.5 rounded-full bg-forest px-1.5 font-mono text-[9px] text-paper tabular-nums">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+              )}
               {t.key === 'yours' && unread > 0 && (
                 <span className="ml-1.5 inline-flex min-w-[15px] items-center justify-center rounded-full bg-sage px-1 py-px font-mono text-[9px] leading-none text-ink tabular-nums">
                   {unread > 9 ? '9+' : unread}

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
+import { getUnreadMessages } from '@/actions/trekChat'
 import Evidence from '@/components/trek/Evidence'
 import TrustCard from '@/components/trek/TrustCard'
 import ProfileForm from './ProfileForm'
@@ -23,7 +24,7 @@ export default async function TrekProfilePage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/profile')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [person, vouchable, all, me, unread, kinds, trust, streak] = await Promise.all([
+  const [person, vouchable, all, me, unread, kinds, trust, streak, unreadMessages] = await Promise.all([
     getPerson(membership.userId!),
     getVouchable(),
     getTrekBoard(),
@@ -32,6 +33,7 @@ export default async function TrekProfilePage() {
     getTrekKinds(),
     getMyTrust(),
     getStreak(membership.userId!),
+    getUnreadMessages(),
   ])
   if (!person) redirect('/trek-buddy/setup')
 
@@ -43,7 +45,7 @@ export default async function TrekProfilePage() {
             wear the storefront's editorial gate instead, which is why it read
             as a page that had wandered in from another site — no tabs, no way
             back to the board, and nothing marking it as part of this thing. */}
-        <TrekHero
+        <TrekHero unreadMessages={unreadMessages}
           counts={{}}
           openCount={all.length}
           canHost={membership.canHost}

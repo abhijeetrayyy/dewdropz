@@ -82,16 +82,46 @@ export async function markChatRead(planId: string): Promise<ChatResult> {
   const user = await getUser()
   if (!user) return { ok: false, error: 'Sign in first.' }
 
-  const supabase = await createServerSupabaseClient()
-  const { error } = await supabase
-    .from('trek_message_reads')
-    .upsert(
-      { plan_id: planId, user_id: user.id, last_read_at: new Date().toISOString() },
-      { onConflict: 'plan_id,user_id' }
-    )
+  // Through the RPC so Postgres stamps the time. Sending a timestamp from this
+  // process compares two clocks, and if Node's runs behind, a message written a
+  // moment earlier stays newer than the mark meant to clear it — unread
+  // forever. The function also refuses a walk the caller is not on.
+  const { error } = await createAdminSupabaseClient()
+    .rpc('trek_mark_read', { p_plan: planId, p_actor: user.id })
 
   if (error) return { ok: false, error: error.message }
   return { ok: true }
+}
+
+export type MessageThread = {
+  plan_id: string
+  place: string
+  activity: string
+  starts_at: string
+  start_time: string | null
+  host_name: string
+  is_host: boolean
+  last_body: string
+  last_author: string
+  last_at: string
+  last_is_announcement: boolean
+  unread: number
+}
+
+/**
+ * Every conversation you are in, newest first.
+ *
+ * Uses the same predicate as getUnreadMessages, and that is load-bearing: the
+ * badge counts unread and this list is where somebody goes to clear it. If the
+ * two disagreed by so much as a status filter, the badge would count something
+ * the list never shows and could never be cleared.
+ */
+export async function getMessageThreads(): Promise<MessageThread[]> {
+  const user = await getUser()
+  if (!user) return []
+  const { data } = await createAdminSupabaseClient()
+    .rpc('trek_message_threads', { p_user: user.id, p_limit: 30 })
+  return (data ?? []) as MessageThread[]
 }
 
 /** Unread messages across every walk you are on. */

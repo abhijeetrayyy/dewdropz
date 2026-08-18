@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
+import { getUnreadMessages } from '@/actions/trekChat'
 import PersonCardTile from '@/components/trek/PersonCardTile'
 import Guidance from '@/components/trek/Guidance'
 import {
@@ -33,13 +34,14 @@ export default async function PeoplePage({
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/people')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [people, all, kinds, mentorNotes, me, unread] = await Promise.all([
+  const [people, all, kinds, mentorNotes, me, unread, unreadMessages] = await Promise.all([
     getPeople({ activity: sp.activity, homeBase: sp.home }),
     getTrekBoard(),
     getTrekKinds(),
     getGuidance({ audiences: ['first_time'], limit: 4 }),
     getMyTrekCard(),
     getUnreadCount(),
+    getUnreadMessages(),
   ])
 
   const mentors = people.filter((p) => p.mentor)
@@ -55,7 +57,7 @@ export default async function PeoplePage({
     <>
       <NavBar />
       <main>
-        <TrekHero counts={{}} openCount={all.length} canHost={membership.canHost} active="people" me={me} unread={unread} />
+        <TrekHero unreadMessages={unreadMessages} counts={{}} openCount={all.length} canHost={membership.canHost} active="people" me={me} unread={unread} />
 
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
           <div className="mx-auto max-w-5xl space-y-10">
