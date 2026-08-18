@@ -2,11 +2,34 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'motion/react'
 import { login } from '@/actions/auth'
 import { GoogleSignInButton } from './GoogleSignInButton'
 
+/**
+ * Where to go once you are in.
+ *
+ * Every gated route in the app hands login a destination and it was throwing
+ * all of them away: the middleware sends `?redirectTo=` for account, checkout
+ * and admin, Trek Buddy's pages send `?redirect=`, and this form navigated to
+ * a hardcoded /account regardless. So a customer with a full cart who hit
+ * /checkout signed in and landed on their account page, and an admin opening
+ * an order link signed in and landed there too.
+ *
+ * Both names are read because both are in use. Only same-site paths are
+ * accepted — a bare `/` prefix but not `//`, which the browser reads as
+ * protocol-relative and would turn this into an open redirect anybody could
+ * point at their own host from a link.
+ */
+function safeNext(params: URLSearchParams): string {
+  const raw = params.get('redirectTo') ?? params.get('redirect') ?? ''
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/account'
+  return raw
+}
+
 export default function LoginForm() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -26,7 +49,7 @@ export default function LoginForm() {
           setError('Invalid credentials.')
         }
       } else {
-        window.location.href = '/account'
+        window.location.href = safeNext(searchParams)
       }
     } catch {
       setError('An unexpected error occurred.')
