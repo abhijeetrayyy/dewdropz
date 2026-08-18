@@ -33,7 +33,7 @@ type Vouchable = {
   people: { user_id: string; display_name: string; vouched: boolean }[]
 }
 
-const label = 'font-mono text-[10px] uppercase tracking-[0.2em] text-mid'
+const label = 'trek-label font-mono text-mid'
 const chip = (on: boolean) =>
   `rounded-full border px-3.5 py-1.5 font-body text-xs transition-colors ${
     on ? 'border-forest bg-forest text-paper' : 'border-rule text-mid hover:border-text hover:text-text'
@@ -133,7 +133,7 @@ export default function ProfileForm({
               <input
                 value={f.displayName} onChange={(e) => set({ displayName: e.target.value })}
                 required minLength={2} maxLength={40} autoComplete="nickname"
-                className="mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text focus:border-forest focus:outline-none"
+                className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text focus:border-forest focus:outline-none"
               />
             </label>
             <p className="mt-1.5 font-body text-xs text-mid">
@@ -174,7 +174,7 @@ export default function ProfileForm({
               {PACES.map(([k, t, d]) => (
                 <button key={k} type="button" onClick={() => set({ pace: f.pace === k ? '' : k })}
                   aria-pressed={f.pace === k}
-                  className={`rounded-sm border px-3.5 py-3 text-left transition-colors ${
+                  className={`rounded-[6px] border px-3.5 py-3 text-left transition-colors ${
                     f.pace === k ? 'border-forest bg-forest/[0.06]' : 'border-rule hover:border-text'
                   }`}>
                   <span className="block font-body text-sm text-text">{t}</span>
@@ -211,7 +211,7 @@ export default function ProfileForm({
                 <button key={k} type="button"
                   onClick={() => set({ experience: f.experience === k ? '' : k })}
                   aria-pressed={f.experience === k}
-                  className={`rounded-sm border px-3.5 py-3 text-left transition-colors ${
+                  className={`rounded-[6px] border px-3.5 py-3 text-left transition-colors ${
                     f.experience === k ? 'border-forest bg-forest/[0.06]' : 'border-rule hover:border-text'
                   }`}>
                   <span className="block font-body text-sm text-text">{t}</span>
@@ -226,14 +226,14 @@ export default function ProfileForm({
               <span className={label}>Years going out</span>
               <input type="number" min={0} max={60} value={f.yearsOut ?? ''}
                 onChange={(e) => set({ yearsOut: e.target.value === '' ? null : Number(e.target.value) })}
-                className="mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text focus:border-forest focus:outline-none" />
+                className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text focus:border-forest focus:outline-none" />
             </label>
             <label className="block">
               <span className={label}>Highest you have been (m)</span>
               <input type="number" min={0} max={8849} value={f.highestM ?? ''}
                 onChange={(e) => set({ highestM: e.target.value === '' ? null : Number(e.target.value) })}
                 placeholder="3022"
-                className="mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text placeholder:text-mid/50 focus:border-forest focus:outline-none" />
+                className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text placeholder:text-mid/50 focus:border-forest focus:outline-none" />
               <span className="mt-1.5 block font-body text-xs text-mid">
                 Nobody checks this. It is here because it tells another walker more than
                 &ldquo;experienced&rdquo; does.
@@ -276,7 +276,7 @@ export default function ProfileForm({
                 value={f.intro} onChange={(e) => set({ intro: e.target.value })}
                 rows={3} maxLength={280}
                 placeholder="Slow walker, happiest above the treeline. Usually out on Sundays."
-                className="mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
+                className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
               />
             </label>
             <div className="mt-1.5 flex justify-between gap-4">
@@ -295,7 +295,7 @@ export default function ProfileForm({
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <button type="submit" disabled={pending}
-            className="rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-50">
+            className="trek-pill trek-pill-act font-body disabled:opacity-50">
             {pending ? 'Saving…' : 'Save profile'}
           </button>
           {saved && <span className="font-body text-sm text-forest">Saved.</span>}
@@ -385,7 +385,7 @@ export default function ProfileForm({
 
         <Link
           href={`/trek-buddy/people/${person.userId}`}
-          className="mt-3 inline-block border-b border-rule pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+          className="mt-3 inline-block border-b border-rule pb-0.5 trek-label font-mono text-mid transition-colors hover:text-text"
         >
           Open the real page →
         </Link>

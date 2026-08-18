@@ -65,12 +65,12 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
       <div className="relative mx-auto max-w-3xl px-6 pb-8 pt-32 md:px-10 md:pt-36">
         <Link
           href="/trek-buddy"
-          className="font-mono text-[10px] uppercase tracking-[0.16em] text-paper/60 transition-colors hover:text-paper"
+          className="trek-label font-mono text-paper/60 transition-colors hover:text-paper"
         >
           ← The board
         </Link>
 
-        <p className="mt-7 font-mono text-[10px] uppercase tracking-[0.22em] text-paper/70">
+        <p className="mt-7 trek-label font-mono text-paper/70">
           {plan.activity_label} · {plan.start_time ? light.label : `${nights + 1} days out`} · {istLong(plan.starts_at)}
         </p>
 
@@ -91,7 +91,7 @@ export default function PlanMasthead({ plan }: { plan: TrekPlanRow }) {
         <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 border-t border-paper/20 pt-5">
           {facts.map(([k, v]) => (
             <div key={k}>
-              <dt className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper/50">{k}</dt>
+              <dt className="trek-label-xs font-mono text-paper/50">{k}</dt>
               <dd className="mt-1 font-mono text-xl text-paper tabular-nums">{v}</dd>
             </div>
           ))}

@@ -18,8 +18,8 @@ export default function SafetyNotes({
 }) {
   if (variant === 'compact') {
     return (
-      <div className={`rounded-sm border border-rule bg-paper-warm/50 p-4 ${className}`}>
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+      <div className={`rounded-[6px] border border-rule bg-paper-warm/50 p-4 ${className}`}>
+        <h2 className="trek-label font-mono text-forest">
           Before you go
         </h2>
         <ul className="mt-2 space-y-1">
@@ -35,8 +35,8 @@ export default function SafetyNotes({
   }
 
   return (
-    <section className={`rounded-sm border border-rule bg-white p-6 ${className}`}>
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+    <section className={`rounded-[6px] border border-rule bg-white p-6 ${className}`}>
+      <h2 className="trek-label font-mono text-forest">
         Take care of yourself out there
       </h2>
       <p className="mt-2 max-w-xl font-body text-sm leading-relaxed text-mid">

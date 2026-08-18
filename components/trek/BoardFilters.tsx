@@ -90,8 +90,8 @@ export default function BoardFilters({
               // and it spans the full content width, so its right half floated
               // over the open part of the photograph. Measured at 2.46:1
               // against the placeholder, well under the 4.5:1 small text needs.
-              ? 'w-full rounded-sm border border-paper/30 bg-ink/70 px-3.5 py-3 font-body text-sm text-paper shadow-[0_2px_20px_-8px_rgba(0,0,0,0.6)] backdrop-blur-md placeholder:text-paper/60 focus:border-sage focus:bg-ink/80 focus:outline-none'
-              : 'w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/70 focus:border-forest focus:outline-none'
+              ? 'w-full rounded-[6px] border border-paper/30 bg-ink/70 px-3.5 py-3 font-body text-sm text-paper shadow-[0_2px_20px_-8px_rgba(0,0,0,0.6)] backdrop-blur-md placeholder:text-paper/60 focus:border-sage focus:bg-ink/80 focus:outline-none'
+              : 'w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/70 focus:border-forest focus:outline-none'
           }
         />
       </label>
@@ -123,7 +123,7 @@ export default function BoardFilters({
             away. The count keeps a filtered board from looking like an empty
             one. */}
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
-          className={`ml-auto shrink-0 whitespace-nowrap border-b pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
+          className={`ml-auto shrink-0 whitespace-nowrap border-b pb-0.5 trek-label font-mono transition-colors ${
             dark ? 'border-paper/40 text-paper/85 hover:text-paper' : 'border-rule text-mid hover:text-text'
           }`}>
           {refined > 0 ? `Refined · ${refined}` : 'More filters'} {open ? '−' : '+'}
@@ -133,7 +133,7 @@ export default function BoardFilters({
       {open && (
         <div className={`space-y-3 border-t pt-3 ${dark ? 'border-paper/25' : 'border-rule'}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`font-mono text-[10px] uppercase tracking-[0.14em] ${dark ? 'text-paper/65' : 'text-mid'}`}>
+            <span className={`trek-label font-mono ${dark ? 'text-paper/65' : 'text-mid'}`}>
               How hard
             </span>
             <button type="button" onClick={() => set('difficulty', 'all')} className={chip(difficulty === 'all', dark)}>
@@ -147,7 +147,7 @@ export default function BoardFilters({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`font-mono text-[10px] uppercase tracking-[0.14em] ${dark ? 'text-paper/65' : 'text-mid'}`}>
+            <span className={`trek-label font-mono ${dark ? 'text-paper/65' : 'text-mid'}`}>
               Speaks
             </span>
             <button type="button" onClick={() => set('language', 'all')} className={chip(language === 'all', dark)}>
@@ -174,7 +174,7 @@ export default function BoardFilters({
                   for (const k of ['difficulty', 'language', 'womenOnly', 'senior', 'spots']) next.delete(k)
                   router.replace(`${pathname}?${next.toString()}`, { scroll: false })
                 }}
-                className={`border-b pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                className={`border-b pb-0.5 trek-label font-mono transition-colors ${
                   dark ? 'border-paper/40 text-paper/80 hover:text-paper' : 'border-rule text-mid hover:text-text'
                 }`}>
                 Clear

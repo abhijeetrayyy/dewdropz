@@ -80,9 +80,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
           <div className="mx-auto max-w-3xl space-y-10">
             {isMe && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-forest/25 bg-forest/[0.04] px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-forest/25 bg-forest/[0.04] px-4 py-3">
                 <span className="font-body text-sm text-text">This is how other people see you.</span>
-                <Link href="/trek-buddy/profile" className="font-mono text-[10px] uppercase tracking-[0.14em] text-forest underline underline-offset-4">
+                <Link href="/trek-buddy/profile" className="trek-label font-mono text-forest underline underline-offset-4">
                   Edit your profile
                 </Link>
               </div>
@@ -90,7 +90,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
             {person.mentor && (
               <div className="mb-8 border-l-2 border-clay bg-clay/[0.04] px-5 py-4">
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-clay">
+                <p className="trek-label font-mono text-clay">
                   Mentor · appointed by DEWDROPZ
                 </p>
                 {person.mentorBio && (
@@ -105,7 +105,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
             <div className="grid gap-8 sm:grid-cols-2">
               <div>
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">Goes out for</h2>
+                <h2 className="trek-label font-mono text-mid">Goes out for</h2>
                 {person.activities.length ? (
                   <ul className="mt-3 flex flex-wrap gap-2">
                     {person.activities.map((a) => (
@@ -120,14 +120,14 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
                 {person.pace && (
                   <>
-                    <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.2em] text-mid">Pace</h2>
+                    <h2 className="mt-8 trek-label font-mono text-mid">Pace</h2>
                     <p className="mt-2 font-body text-sm text-text">{PACE_LABEL[person.pace] ?? person.pace}</p>
                   </>
                 )}
 
                 {person.languages.length > 0 && (
                   <>
-                    <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.2em] text-mid">Speaks</h2>
+                    <h2 className="mt-8 trek-label font-mono text-mid">Speaks</h2>
                     <p className="mt-2 font-body text-sm text-text">{person.languages.join(', ')}</p>
                   </>
                 )}
@@ -138,7 +138,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 {(person.experience || person.yearsOut || person.highestM ||
                   person.usualDays.length > 0 || person.carries.length > 0) && (
                   <>
-                    <h2 className="mt-8 font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                    <h2 className="mt-8 trek-label font-mono text-mid">
                       What they say about themselves
                     </h2>
                     <p className="mt-1.5 font-body text-xs text-mid">

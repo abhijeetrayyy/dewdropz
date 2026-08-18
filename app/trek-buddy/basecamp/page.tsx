@@ -73,7 +73,7 @@ export default async function BasecampPage() {
                 ))}
               </ul>
             ) : (
-              <div className="mt-8 rounded-sm border border-dashed border-rule px-6 py-10">
+              <div className="mt-8 rounded-[6px] border border-dashed border-rule px-6 py-10">
                 {following === 0 ? (
                   <>
                     <p className="font-body text-sm text-text">You are not following anybody yet.</p>
@@ -84,7 +84,7 @@ export default async function BasecampPage() {
                     </p>
                     <Link
                       href="/trek-buddy/people"
-                      className="mt-4 inline-block rounded-full bg-forest px-6 py-2.5 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+                      className="trek-pill trek-pill-act font-body"
                     >
                       See who is out there
                     </Link>

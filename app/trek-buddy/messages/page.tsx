@@ -55,7 +55,7 @@ export default async function MessagesPage() {
             </p>
 
             {threads.length === 0 ? (
-              <div className="mt-8 rounded-sm border border-dashed border-rule px-6 py-10">
+              <div className="mt-8 rounded-[6px] border border-dashed border-rule px-6 py-10">
                 <p className="font-body text-sm text-text">No conversations yet.</p>
                 <p className="mt-1.5 max-w-md font-body text-sm leading-relaxed text-mid">
                   A thread appears once somebody says something on a walk you are confirmed for.
@@ -81,18 +81,18 @@ export default async function MessagesPage() {
                             <p className="font-display text-lg leading-tight text-text">
                               {t.place}
                               {t.is_host && (
-                                <span className="ml-2 font-mono text-[9px] uppercase tracking-[0.14em] text-mid">
+                                <span className="ml-2 trek-label-xs font-mono text-mid">
                                   yours
                                 </span>
                               )}
                             </p>
-                            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
+                            <p className="trek-label font-mono text-mid">
                               {when(t.last_at)}
                             </p>
                           </div>
                           <p className="mt-1 truncate font-body text-sm text-mid">
                             {t.last_is_announcement && (
-                              <span className="mr-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-forest">
+                              <span className="mr-1.5 trek-label-xs font-mono text-forest">
                                 Announcement
                               </span>
                             )}
@@ -100,7 +100,7 @@ export default async function MessagesPage() {
                           </p>
                         </div>
                         {t.unread > 0 && (
-                          <span className="mt-1 grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-forest px-1.5 font-mono text-[10px] text-paper tabular-nums">
+                          <span className="mt-1 grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-dawn px-1.5 font-mono text-[10px] text-ink tabular-nums">
                             {t.unread > 9 ? '9+' : t.unread}
                           </span>
                         )}

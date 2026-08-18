@@ -47,7 +47,7 @@ export default function PlanActions({
     const queued = roster.filter((r) => r.status === 'waitlisted')
     return (
       <div className="mt-8">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+        <h2 className="trek-label font-mono text-forest">
           Your walk
         </h2>
 
@@ -73,7 +73,7 @@ export default function PlanActions({
                     disabled={pending || full}
                     onClick={() => run(() => decideRequest(planId, r.user_id, 'confirmed'))}
                     title={full ? 'This walk is full' : undefined}
-                    className="rounded-sm bg-forest px-3 py-1.5 font-body text-[10px] uppercase tracking-[0.1em] text-paper disabled:opacity-40"
+                    className="trek-pill trek-pill-act font-body disabled:opacity-40"
                   >
                     Confirm
                   </button>
@@ -81,7 +81,7 @@ export default function PlanActions({
                     type="button"
                     disabled={pending}
                     onClick={() => run(() => decideRequest(planId, r.user_id, 'declined'))}
-                    className="rounded-sm border border-rule px-3 py-1.5 font-body text-[10px] uppercase tracking-[0.1em] text-mid hover:border-text hover:text-text disabled:opacity-40"
+                    className="rounded-[6px] border border-rule px-3 py-1.5 font-body text-[10px] uppercase tracking-[0.1em] text-mid hover:border-text hover:text-text disabled:opacity-40"
                   >
                     Decline
                   </button>
@@ -257,7 +257,7 @@ export default function PlanActions({
               rows={2}
               maxLength={300}
               placeholder="Anything the host should know — pace, experience, whether you're driving."
-              className="mt-2 w-full rounded-sm border border-rule bg-white px-3 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
+              className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
             />
           </label>
           {error && <p className="mt-3 font-body text-xs text-clay">{error}</p>}
@@ -265,7 +265,7 @@ export default function PlanActions({
             type="button"
             disabled={pending}
             onClick={() => run(() => requestToJoin(planId, message))}
-            className="mt-3 rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-50"
+            className="trek-pill trek-pill-act font-body disabled:opacity-50"
           >
             {pending ? 'Asking…' : 'Ask to come'}
           </button>

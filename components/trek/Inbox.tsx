@@ -82,7 +82,7 @@ export default function Inbox({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-sm border border-dashed border-rule px-5 py-6">
+      <div className="rounded-[6px] border border-dashed border-rule px-5 py-6">
         <p className="font-body text-sm text-mid">
           Nothing has happened yet. When somebody asks to come on one of your walks, or a host
           decides about yours, it lands here.
@@ -96,7 +96,7 @@ export default function Inbox({
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-3 pb-3">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+        <h2 className="trek-label font-mono text-mid">
           What has happened
           {unread > 0 && (
             <span className="ml-2 rounded-full bg-forest px-2 py-0.5 font-mono text-[9px] text-paper tabular-nums">
@@ -114,7 +114,7 @@ export default function Inbox({
                 router.refresh()
               })
             }
-            className="border-b border-rule pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text disabled:opacity-40"
+            className="border-b border-rule pb-0.5 trek-label font-mono text-mid transition-colors hover:text-text disabled:opacity-40"
           >
             {pending ? 'Marking…' : 'Mark all read'}
           </button>
@@ -147,7 +147,7 @@ export default function Inbox({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2.5">
                   <span
-                    className={`font-mono text-[10px] uppercase tracking-[0.14em] ${
+                    className={`trek-label font-mono ${
                       meta.tone === 'bad'
                         ? 'text-clay'
                         : meta.tone === 'good'
@@ -184,7 +184,7 @@ export default function Inbox({
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="mt-3 border-b border-rule pb-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
+          className="mt-3 border-b border-rule pb-0.5 trek-label font-mono text-mid transition-colors hover:text-text"
         >
           {showAll ? 'Show less' : `Show all ${items.length}`}
         </button>

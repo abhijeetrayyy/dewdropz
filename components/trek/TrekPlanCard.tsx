@@ -144,7 +144,7 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
             {plan.going_count}/{plan.capacity}
           </span>
           <span
-            className={`font-mono text-[10px] uppercase tracking-[0.14em] ${
+            className={`trek-label font-mono ${
               full ? 'text-clay' : 'text-forest'
             }`}
           >
@@ -154,12 +154,12 @@ export default function TrekPlanCard({ plan }: { plan: TrekPlanRow }) {
             {DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty}
           </span>
           {plan.women_only && (
-            <span className="rounded-full border border-clay/50 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-clay">
+            <span className="rounded-full border border-clay/50 px-2 py-0.5 trek-label-xs font-mono text-clay">
               Women only
             </span>
           )}
           {plan.senior_friendly && (
-            <span className="rounded-full border border-forest/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-forest">
+            <span className="rounded-full border border-forest/40 px-2 py-0.5 trek-label-xs font-mono text-forest">
               Senior friendly
             </span>
           )}

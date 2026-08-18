@@ -32,8 +32,8 @@ export default function YouCard({ me }: { me: MyTrekCard }) {
       className="group block rounded-[6px] border border-paper/15 bg-ink/45 p-5 backdrop-blur-md transition-colors duration-300 hover:border-sage/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-paper/40">You</p>
-        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-paper/40 transition-colors group-hover:text-sage">
+        <p className="trek-label-xs font-mono text-paper/40">You</p>
+        <span className="trek-label-xs font-mono text-paper/40 transition-colors group-hover:text-sage">
           Edit →
         </span>
       </div>
@@ -69,7 +69,7 @@ export default function YouCard({ me }: { me: MyTrekCard }) {
             <p className={`font-mono text-lg leading-none tabular-nums ${n ? 'text-paper' : 'text-paper/30'}`}>
               {n as number}
             </p>
-            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-paper/40">
+            <p className="mt-1 trek-label-xs font-mono text-paper/40">
               {label as string}
             </p>
           </div>
@@ -81,7 +81,7 @@ export default function YouCard({ me }: { me: MyTrekCard }) {
           a game. */}
       <div className="mt-4 border-t border-paper/12 pt-3.5">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-paper/40">
+          <p className="trek-label-xs font-mono text-paper/40">
             Your profile
           </p>
           <p className="font-mono text-[10px] tabular-nums text-paper/55">

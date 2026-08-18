@@ -120,7 +120,7 @@ export default async function TrekBuddyPage({
           />
           <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
             <div className="mx-auto max-w-2xl">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">
+              <p className="trek-label font-mono text-forest">
                 {open === 0
                   ? 'Nothing on the board yet'
                   : `${open} walk${open === 1 ? '' : 's'} on the board`}
@@ -157,7 +157,7 @@ export default async function TrekBuddyPage({
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
                   href="/auth/login?redirect=/trek-buddy"
-                  className="rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
+                  className="trek-pill trek-pill-act font-body"
                 >
                   Sign in
                 </Link>
@@ -223,7 +223,7 @@ export default async function TrekBuddyPage({
             {involved > 0 && (
               <Link
                 href="/trek-buddy/yours"
-                className="flex items-center justify-between gap-4 rounded-sm border border-forest/25 bg-forest/[0.04] px-4 py-3 transition-colors hover:border-forest/50"
+                className="flex items-center justify-between gap-4 rounded-[6px] border border-forest/25 bg-forest/[0.04] px-4 py-3 transition-colors hover:border-forest/50"
               >
                 <span className="font-body text-sm text-text">
                   You are on {involved} {involved === 1 ? 'walk' : 'walks'}
@@ -231,7 +231,7 @@ export default async function TrekBuddyPage({
                     <span className="text-mid"> · hosting {mine.hosting.length}</span>
                   )}
                 </span>
-                <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-forest">
+                <span className="shrink-0 trek-label font-mono text-forest">
                   See yours →
                 </span>
               </Link>
@@ -239,20 +239,20 @@ export default async function TrekBuddyPage({
 
             <div>
               <div className="flex flex-wrap items-baseline justify-between gap-3 pb-4">
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                <h2 className="trek-label font-mono text-mid">
                   {plans.length === 0
                     ? filtering ? 'Nothing matches' : 'Nothing on the board'
                     : `${plans.length} coming up`}
                 </h2>
                 {filtering && (
-                  <Link href="/trek-buddy" className="font-mono text-[10px] uppercase tracking-[0.14em] text-forest underline underline-offset-4">
+                  <Link href="/trek-buddy" className="trek-label font-mono text-forest underline underline-offset-4">
                     Clear filters
                   </Link>
                 )}
               </div>
 
               {plans.length === 0 ? (
-                <div className="rounded-sm border border-dashed border-rule px-6 py-16 text-center">
+                <div className="rounded-[6px] border border-dashed border-rule px-6 py-16 text-center">
                   <h3 className="font-display text-[clamp(20px,2.6vw,28px)] text-text">
                     {filtering ? 'Nothing matches that yet.' : 'The board is empty.'}
                   </h3>
@@ -264,7 +264,7 @@ export default async function TrekBuddyPage({
                   {!filtering && membership.canHost && (
                     <Link
                       href="/trek-buddy/new"
-                      className="mt-6 inline-block rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
+                      className="trek-pill trek-pill-act font-body"
                     >
                       Post the first one
                     </Link>
@@ -275,7 +275,7 @@ export default async function TrekBuddyPage({
                   {bucketPlans(plans).map((bucket) => (
                     <div key={bucket.key}>
                       <div className="flex items-baseline gap-3 pb-3">
-                        <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-text">
+                        <h3 className="trek-label font-mono text-text">
                           {bucket.label}
                         </h3>
                         <span aria-hidden="true" className="h-px flex-1 bg-rule" />
@@ -305,7 +305,7 @@ export default async function TrekBuddyPage({
             <QuickStart canHost={membership.canHost} />
 
             {!membership.canHost && (
-              <p className="rounded-sm border border-rule bg-white px-4 py-3 font-body text-sm text-mid">
+              <p className="rounded-[6px] border border-rule bg-white px-4 py-3 font-body text-sm text-mid">
                 Hosting is invite-only while this is new.{' '}
                 <Link href="/contact" className="text-forest underline underline-offset-4">
                   Ask us

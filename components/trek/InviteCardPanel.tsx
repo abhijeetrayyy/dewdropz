@@ -59,8 +59,8 @@ export default function InviteCardPanel({
   }
 
   return (
-    <div className="rounded-sm border border-rule p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+    <div className="rounded-[6px] border border-rule p-4">
+      <p className="trek-label font-mono text-forest">
         Bring a friend
       </p>
 
@@ -74,15 +74,15 @@ export default function InviteCardPanel({
             readOnly
             value={url}
             onFocus={(e) => e.currentTarget.select()}
-            className="mt-2 w-full rounded-sm border border-rule bg-paper-warm/50 px-3 py-2 font-mono text-xs text-text"
+            className="mt-2 w-full rounded-[6px] border border-rule bg-paper-warm/50 px-3 py-2 font-mono text-xs text-text"
           />
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={copy}
-              className="rounded-full bg-forest px-4 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper hover:bg-forest-mid">
+              className="trek-pill trek-pill-act font-body">
               Copy link
             </button>
             <button type="button" onClick={revoke} disabled={pending}
-              className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid hover:text-clay disabled:opacity-40">
+              className="trek-label font-mono text-mid hover:text-clay disabled:opacity-40">
               Stop sharing
             </button>
           </div>
@@ -98,7 +98,7 @@ export default function InviteCardPanel({
             it, so a walk is never quietly public.
           </p>
           <button type="button" onClick={mint} disabled={pending}
-            className="mt-3 w-full rounded-full border border-forest px-4 py-2 font-body text-[10px] uppercase tracking-[0.12em] text-forest transition-colors hover:bg-forest hover:text-paper disabled:opacity-40">
+            className="trek-pill trek-pill-quiet font-body disabled:opacity-40">
             {pending ? 'Making…' : 'Make an invite link'}
           </button>
         </>

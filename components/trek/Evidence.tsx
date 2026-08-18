@@ -73,7 +73,7 @@ export default function Evidence({
 
   return (
     <div>
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+      <h2 className="trek-label font-mono text-mid">
         What is known
       </h2>
       <ul className="mt-3 divide-y divide-rule border-y border-rule">

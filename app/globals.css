@@ -39,6 +39,11 @@
 
   --altitude:    #142536; /* blue hour / dusk */
   --clay:        #B8826B;
+  /* Clay's shadow side, and already in the system — it is the `ink` the dusk
+     hour band uses for type. Promoted to a token because clay itself measures
+     3.26:1 on white, which is under AA for the 10px labels it was being used
+     for. This is 5.79:1. */
+  --clay-deep:   #8A5A44;
   --ink:         #0C100D; /* night */
   --text:        #15150F;
   --mid:         #52504A;
@@ -99,6 +104,7 @@
   --color-altitude:    var(--altitude);
   --color-sage:        var(--sage);
   --color-clay:        var(--clay);
+  --color-clay-deep:   var(--clay-deep);
   --color-dawn:        var(--dawn);
   --color-dawn-soft:   var(--dawn-soft);
   --color-ember:       var(--ember);
@@ -290,6 +296,12 @@
   .trek-label {
     font-size: 10px;
     letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .trek-label-xs {
+    font-size: 9px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
   }
 

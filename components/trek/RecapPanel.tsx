@@ -86,7 +86,7 @@ export default function RecapPanel({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="mt-3 rounded-full bg-forest px-5 py-2 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+            className="trek-pill trek-pill-act font-body"
           >
             Write the recap
           </button>
@@ -99,7 +99,7 @@ export default function RecapPanel({
         {recap.photo_urls.length > 0 && (
           <ul className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {recap.photo_urls.map((u) => (
-              <li key={u} className="relative aspect-[4/3] overflow-hidden rounded-sm">
+              <li key={u} className="relative aspect-[4/3] overflow-hidden rounded-[6px]">
                 <Image src={u} alt="" fill sizes="(min-width: 640px) 30vw, 45vw"
                   placeholder="blur" blurDataURL={BLUR_DATA_URL} className="object-cover" />
               </li>
@@ -129,7 +129,7 @@ export default function RecapPanel({
         rows={5}
         maxLength={1200}
         placeholder="Clear all the way up. Nine of us, maggi at the temple hut, back at the cars by two."
-        className="w-full rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
+        className="w-full rounded-[6px] border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
       />
 
       <input ref={input} type="file" accept="image/*" className="sr-only"
@@ -138,7 +138,7 @@ export default function RecapPanel({
       {photos.length > 0 && (
         <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {photos.map((u) => (
-            <li key={u} className="relative aspect-square overflow-hidden rounded-sm">
+            <li key={u} className="relative aspect-square overflow-hidden rounded-[6px]">
               <Image src={u} alt="" fill sizes="25vw" className="object-cover" />
               <button
                 type="button"
@@ -155,13 +155,13 @@ export default function RecapPanel({
       <div className="mt-3 flex flex-wrap items-center gap-3">
         {photos.length < MAX_PHOTOS && (
           <button type="button" onClick={() => input.current?.click()} disabled={busy}
-            className="font-mono text-[10px] uppercase tracking-[0.14em] text-forest underline-offset-4 hover:underline disabled:opacity-50">
+            className="trek-label font-mono text-forest underline-offset-4 hover:underline disabled:opacity-50">
             {busy ? 'Uploading…' : `+ Add a photograph (${photos.length}/${MAX_PHOTOS})`}
           </button>
         )}
         <span className="flex-1" />
         <button type="button" onClick={() => setEditing(false)}
-          className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid hover:text-text">
+          className="trek-label font-mono text-mid hover:text-text">
           Cancel
         </button>
         <button type="button" onClick={save} disabled={pending || body.trim().length < 10}

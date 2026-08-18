@@ -130,7 +130,7 @@ export default function PlanChat({
           rows={2}
           maxLength={1000}
           placeholder="Still on for 07:00?"
-          className="w-full rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
+          className="w-full rounded-[6px] border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
         />
         <div className="mt-2 flex items-center justify-between gap-3">
           <p className="font-body text-xs text-mid">

@@ -54,7 +54,7 @@ export default function PersonCardTile({ person }: { person: PersonSummary }) {
   return (
     <Link
       href={`/trek-buddy/people/${person.userId}`}
-      className="group flex h-full flex-col gap-3 rounded-sm border border-rule bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-forest/50 hover:shadow-[0_10px_30px_-18px_rgba(12,16,13,0.4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+      className="group flex h-full flex-col gap-3 rounded-[6px] border border-rule bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-forest/50 hover:shadow-[0_10px_30px_-18px_rgba(12,16,13,0.4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
     >
       <div className="flex items-start gap-3.5">
         <Monogram name={person.displayName} mentor={person.mentor} />
@@ -62,7 +62,7 @@ export default function PersonCardTile({ person }: { person: PersonSummary }) {
           <div className="flex flex-wrap items-baseline gap-x-2">
             <h3 className="font-display text-lg leading-tight text-text">{person.displayName}</h3>
             {person.mentor && (
-              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-clay">
+              <span className="trek-label-xs font-mono text-clay">
                 Mentor
               </span>
             )}
@@ -109,7 +109,7 @@ export default function PersonCardTile({ person }: { person: PersonSummary }) {
         <Stat n={person.walksHosted} label="hosted" dim={person.walksHosted === 0} />
         <Stat n={person.vouches} label="vouched" dim={person.vouches === 0} />
         {person.pace && (
-          <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.12em] text-mid">
+          <span className="ml-auto trek-label-xs font-mono text-mid">
             {PACE_SHORT[person.pace] ?? person.pace}
           </span>
         )}
@@ -124,7 +124,7 @@ function Stat({ n, label, dim }: { n: number; label: string; dim?: boolean }) {
       <span className={`font-mono text-sm tabular-nums ${dim ? 'text-mid/50' : 'text-text'}`}>
         {n}
       </span>
-      <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-mid">{label}</span>
+      <span className="trek-label-xs font-mono text-mid">{label}</span>
     </span>
   )
 }

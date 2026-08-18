@@ -49,9 +49,9 @@ const shortDay = (d: string) =>
 
 const LANGUAGES = ['Hindi', 'English', 'Garhwali', 'Punjabi', 'Bengali']
 
-const label = 'font-mono text-[10px] uppercase tracking-[0.2em] text-mid'
+const label = 'trek-label font-mono text-mid'
 const field =
-  'mt-2 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text placeholder:text-mid/60 focus:border-forest focus:outline-none'
+  'mt-2 w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-base text-text placeholder:text-mid/60 focus:border-forest focus:outline-none'
 const hint = 'mt-1.5 block font-body text-xs leading-relaxed text-mid'
 
 /** The four steps, named. Posting a walk is a sequence, so it is numbered. */
@@ -268,7 +268,7 @@ export default function NewPlanForm({
           {STEPS.map((s, i) => (
             <li key={s}>
               <button type="button" onClick={() => setStep(i)}
-                className={`font-mono text-[10px] uppercase tracking-[0.14em] transition-colors ${
+                className={`trek-label font-mono transition-colors ${
                   i === step ? 'text-forest' : i < step ? 'text-text' : 'text-mid/50'
                 }`}>
                 <span className="tabular-nums">{String(i + 1).padStart(2, '0')}</span> {s}
@@ -300,7 +300,7 @@ export default function NewPlanForm({
                     <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
                       {group.map((a) => (
                         <button key={a.key} type="button" onClick={() => pickActivity(a.key)}
-                          className="flex items-baseline justify-between gap-3 rounded-sm border border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
+                          className="flex items-baseline justify-between gap-3 rounded-[6px] border border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
                           <span>
                             <span className="block font-body text-sm text-text">{a.label}</span>
                             <span className="block font-body text-xs text-mid">{a.blurb}</span>
@@ -320,7 +320,7 @@ export default function NewPlanForm({
                   are getting, this one asks you. */}
               {kinds.filter((k) => k.isOpenEnded).map((a) => (
                 <button key={a.key} type="button" onClick={() => pickActivity(a.key)}
-                  className="mt-6 flex w-full items-baseline justify-between gap-3 rounded-sm border border-dashed border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
+                  className="mt-6 flex w-full items-baseline justify-between gap-3 rounded-[6px] border border-dashed border-rule px-4 py-3.5 text-left transition-colors hover:border-forest">
                   <span>
                     <span className="block font-body text-sm text-text">{a.label}</span>
                     <span className="block font-body text-xs text-mid">
@@ -445,7 +445,7 @@ export default function NewPlanForm({
                   )}
                 </div>
               ) : (
-                <div className="rounded-sm border border-dashed border-rule px-4 py-4">
+                <div className="rounded-[6px] border border-dashed border-rule px-4 py-4">
                   <p className="font-body text-sm text-text">
                     {days} days on the hill — no hours stated.
                   </p>
@@ -485,7 +485,7 @@ export default function NewPlanForm({
             <div className="space-y-6">
               <h2 className="font-display text-2xl text-text">The details</h2>
 
-              <div className="rounded-sm border border-forest/30 bg-forest/[0.04] p-5">
+              <div className="rounded-[6px] border border-forest/30 bg-forest/[0.04] p-5">
                 <label className="block">
                   <span className={label}>Exact meeting point</span>
                   <input value={f.meetingPoint} onChange={(e) => set({ meetingPoint: e.target.value })}
@@ -504,7 +504,7 @@ export default function NewPlanForm({
               </div>
 
               {spec.needsNightNote && (
-                <label className="block rounded-sm border border-clay/40 bg-clay/[0.04] p-5">
+                <label className="block rounded-[6px] border border-clay/40 bg-clay/[0.04] p-5">
                   <span className={label}>How does everyone get back in the dark?</span>
                   <textarea value={f.nightNote} onChange={(e) => set({ nightNote: e.target.value })}
                     rows={2} minLength={10} maxLength={400} required
@@ -673,7 +673,7 @@ export default function NewPlanForm({
                   ['Photograph', f.coverUrl ? 'Added' : 'None'],
                 ] as const).map(([k, v]) => (
                   <div key={k} className="flex gap-4 py-2.5">
-                    <dt className="w-36 shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
+                    <dt className="w-36 shrink-0 trek-label font-mono text-mid">
                       {k}
                     </dt>
                     <dd className="min-w-0 flex-1 font-body text-sm text-text">{v}</dd>
@@ -684,8 +684,8 @@ export default function NewPlanForm({
               {/* The one thing on this screen that is not a summary. It is the
                   board's central safety rule and the last moment to explain it
                   before a host wonders why nobody can find them. */}
-              <div className="rounded-sm border border-rule bg-paper-warm/50 p-4">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+              <div className="rounded-[6px] border border-rule bg-paper-warm/50 p-4">
+                <p className="trek-label font-mono text-forest">
                   Held back on purpose
                 </p>
                 <p className="mt-2 font-body text-xs leading-relaxed text-mid">

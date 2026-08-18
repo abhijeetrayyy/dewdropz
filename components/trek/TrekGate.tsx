@@ -38,7 +38,7 @@ export default function TrekGate({
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-ink/70 via-ink/25 to-transparent" />
 
       <div className="relative mx-auto max-w-3xl px-6 pb-12 pt-32 md:px-10 md:pt-36">
-        <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-sage">{eyebrow}</p>
+        <p className="trek-label font-mono text-sage">{eyebrow}</p>
         <h1 className="mt-4 max-w-xl font-display text-[clamp(30px,5vw,50px)] font-light leading-[0.98] text-paper">
           {title}
         </h1>

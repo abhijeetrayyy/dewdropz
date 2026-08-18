@@ -76,12 +76,12 @@ export default function CoverPicker({
       />
 
       {value ? (
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-sm border border-rule">
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[6px] border border-rule">
           <Image src={value} alt="" fill sizes="(min-width: 640px) 50vw, 92vw" className="object-cover" />
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="absolute right-2 top-2 rounded-full bg-ink/75 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-paper backdrop-blur-sm hover:bg-ink"
+            className="absolute right-2 top-2 rounded-full bg-ink/75 px-3 py-1 trek-label font-mono text-paper backdrop-blur-sm hover:bg-ink"
           >
             Remove
           </button>
@@ -91,7 +91,7 @@ export default function CoverPicker({
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-1.5 rounded-sm border border-dashed border-rule bg-paper-warm/40 transition-colors hover:border-forest/50 hover:bg-paper-warm disabled:opacity-60"
+          className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-1.5 rounded-[6px] border border-dashed border-rule bg-paper-warm/40 transition-colors hover:border-forest/50 hover:bg-paper-warm disabled:opacity-60"
         >
           <span className="font-body text-sm text-text">
             {busy ? 'Uploading…' : 'Add a photograph'}

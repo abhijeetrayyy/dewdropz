@@ -39,7 +39,7 @@ export default function SetupForm({ suggestedName }: { suggestedName: string }) 
           minLength={2}
           maxLength={40}
           autoComplete="nickname"
-          className="mt-2 w-full rounded-sm border border-rule bg-white px-3 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
+          className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
         />
         <span className="mt-1.5 block font-body text-xs text-mid">
           Not your delivery name. A first name is plenty.
@@ -54,7 +54,7 @@ export default function SetupForm({ suggestedName }: { suggestedName: string }) 
           onChange={(e) => setDob(e.target.value)}
           required
           autoComplete="bday"
-          className="mt-2 w-full rounded-sm border border-rule bg-white px-3 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
+          className="mt-2 w-full rounded-[6px] border border-rule bg-white px-3 py-2.5 font-body text-sm text-text focus:border-forest focus:outline-none"
         />
         <span className="mt-1.5 block font-body text-xs text-mid">
           Trek Buddy is for adults. We do not show this to anyone.
@@ -66,7 +66,7 @@ export default function SetupForm({ suggestedName }: { suggestedName: string }) 
           least an acknowledgement of something the person has seen. */}
       <SafetyNotes variant="compact" className="mt-8" />
 
-      <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-sm border border-rule bg-white p-4">
+      <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-[6px] border border-rule bg-white p-4">
         <input
           type="checkbox"
           checked={accept}
@@ -86,7 +86,7 @@ export default function SetupForm({ suggestedName }: { suggestedName: string }) 
       <button
         type="submit"
         disabled={pending}
-        className="mt-8 w-full rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-50"
+        className="trek-pill trek-pill-act font-body disabled:opacity-50"
       >
         {pending ? 'Saving…' : 'Join the board'}
       </button>

@@ -46,7 +46,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
       <main className="bg-paper">
         <section className="px-6 pb-24 pt-28 md:px-10">
           <div className="mx-auto max-w-6xl">
-            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mid">
+            <p className="trek-label font-mono text-mid">
               Host console · your walk
             </p>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -78,7 +78,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
             </div>
 
             {p.status === 'cancelled' ? (
-              <p className="mt-10 rounded-sm border border-clay/40 bg-clay/5 px-4 py-3 font-body text-sm text-clay">
+              <p className="mt-10 rounded-[6px] border border-clay/40 bg-clay/5 px-4 py-3 font-body text-sm text-clay">
                 This walk was called off. Nothing here can be changed.
               </p>
             ) : (

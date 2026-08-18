@@ -19,7 +19,7 @@ export default function RecentRecaps({ recaps }: { recaps: RecapCard[] }) {
 
   return (
     <section className="mt-14">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+      <h2 className="trek-label font-mono text-forest">
         It happened
       </h2>
       <p className="mt-2 max-w-lg font-body text-sm leading-relaxed text-mid">
@@ -32,7 +32,7 @@ export default function RecentRecaps({ recaps }: { recaps: RecapCard[] }) {
           <li key={r.plan_id}>
             <Link
               href={`/trek-buddy/${r.plan_id}`}
-              className="group block overflow-hidden rounded-sm border border-rule transition-colors hover:border-forest/50"
+              className="group block overflow-hidden rounded-[6px] border border-rule transition-colors hover:border-forest/50"
             >
               {r.photo_urls[0] ? (
                 <div className="relative aspect-[4/3] overflow-hidden">
@@ -50,7 +50,7 @@ export default function RecentRecaps({ recaps }: { recaps: RecapCard[] }) {
                 <div aria-hidden="true" className="aspect-[4/3] bg-paper-warm" />
               )}
               <div className="p-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
+                <p className="trek-label font-mono text-mid">
                   {new Date(r.starts_at).toLocaleDateString('en-IN', {
                     timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short',
                   })}

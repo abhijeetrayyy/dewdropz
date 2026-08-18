@@ -18,8 +18,8 @@ import { BOARD_CHECKS, BOARD_LIMITS } from '@/lib/trek'
 // half somebody deciding whether to rely on a badge actually needs.
 export default function WhatTheBoardDoes({ className = '' }: { className?: string }) {
   return (
-    <section className={`rounded-sm border border-rule bg-white p-6 ${className}`}>
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+    <section className={`rounded-[6px] border border-rule bg-white p-6 ${className}`}>
+      <h2 className="trek-label font-mono text-forest">
         What the board does
       </h2>
       <p className="mt-2 max-w-xl font-body text-sm leading-relaxed text-mid">
@@ -36,7 +36,7 @@ export default function WhatTheBoardDoes({ className = '' }: { className?: strin
         ))}
       </dl>
 
-      <h3 className="mt-8 border-t border-rule pt-6 font-mono text-[10px] uppercase tracking-[0.18em] text-clay">
+      <h3 className="mt-8 border-t border-rule pt-6 trek-label font-mono text-clay-deep">
         And where it stops
       </h3>
       <p className="mt-2 max-w-xl font-body text-sm leading-relaxed text-mid">

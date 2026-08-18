@@ -16,7 +16,7 @@ export default function QuickStart({ canHost }: { canHost: boolean }) {
   return (
     <div className="trek-card border border-rule bg-white p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+        <h2 className="trek-label font-mono text-forest">
           Going somewhere? Start here
         </h2>
         <Link

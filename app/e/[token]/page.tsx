@@ -50,11 +50,11 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <main className="min-h-screen bg-ink">
       <div className="mx-auto max-w-lg px-6 py-12">
-        <p className="text-center font-mono text-[10px] uppercase tracking-[0.28em] text-paper/60">
+        <p className="text-center trek-label font-mono text-paper/60">
           You have been invited
         </p>
 
-        <article className="mt-6 overflow-hidden rounded-sm border border-paper/15 bg-paper">
+        <article className="mt-6 overflow-hidden rounded-[6px] border border-paper/15 bg-paper">
           <div className="relative aspect-[16/10]">
             <Image src={cover} alt="" fill sizes="(min-width: 640px) 512px, 92vw"
               placeholder="blur" blurDataURL={BLUR_DATA_URL} className="object-cover" />
@@ -65,7 +65,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
                 <span className="font-mono text-sm tabular-nums" style={{ color: light.onDark }}>
                   {card.start_time ? card.start_time.slice(0, 5) : '—'}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-paper/75">
+                <span className="trek-label font-mono text-paper/75">
                   {light.label}
                 </span>
               </p>
@@ -86,21 +86,21 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             <dl className="mt-5 grid grid-cols-3 gap-x-4 gap-y-4">
               {facts.map(([k, v]) => (
                 <div key={k}>
-                  <dt className="font-mono text-[9px] uppercase tracking-[0.16em] text-mid">{k}</dt>
+                  <dt className="trek-label-xs font-mono text-mid">{k}</dt>
                   <dd className="mt-0.5 font-body text-sm text-text">{v}</dd>
                 </div>
               ))}
             </dl>
 
             {card.women_only && (
-              <p className="mt-4 rounded-sm border border-clay/40 px-3 py-2 font-body text-xs text-clay">
+              <p className="mt-4 rounded-[6px] border border-clay/40 px-3 py-2 font-body text-xs text-clay">
                 This walk is open to women only. The board enforces that when you ask to come.
               </p>
             )}
 
             <Link
               href="/trek-buddy"
-              className="mt-6 block rounded-full bg-forest px-6 py-3 text-center font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+              className="trek-pill trek-pill-act font-body"
             >
               Ask to join on Trek Buddy
             </Link>

@@ -103,7 +103,7 @@ export default function DepthFields({
               <button
                 type="button"
                 onClick={() => set({ itinerary: itinerary.filter((_, n) => n !== i) })}
-                className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-mid hover:text-clay"
+                className="mt-2 trek-label font-mono text-mid hover:text-clay"
               >
                 Remove
               </button>
@@ -117,7 +117,7 @@ export default function DepthFields({
             onClick={() =>
               set({ itinerary: [...itinerary, { at: '06:00', label: '' }] })
             }
-            className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-forest underline-offset-4 hover:underline"
+            className="mt-2 trek-label font-mono text-forest underline-offset-4 hover:underline"
           >
             + Add a moment
           </button>
@@ -143,7 +143,7 @@ export default function DepthFields({
               <button
                 type="button"
                 onClick={() => set({ bring: bring.filter((_, n) => n !== i) })}
-                className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid hover:text-clay"
+                className="trek-label font-mono text-mid hover:text-clay"
               >
                 Remove
               </button>
@@ -154,7 +154,7 @@ export default function DepthFields({
           <button
             type="button"
             onClick={() => set({ bring: [...bring, ''] })}
-            className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-forest underline-offset-4 hover:underline"
+            className="mt-2 trek-label font-mono text-forest underline-offset-4 hover:underline"
           >
             + Add something
           </button>

@@ -76,7 +76,7 @@ export default function TrustCard({ trust }: { trust: MyTrust }) {
 
   return (
     <section>
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+      <p className="trek-label font-mono text-mid">
         How far you have come
       </p>
 
@@ -126,7 +126,7 @@ export default function TrustCard({ trust }: { trust: MyTrust }) {
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder="98765 43210"
-                  className="min-w-0 flex-1 rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-text focus:outline-none"
+                  className="min-w-0 flex-1 rounded-[6px] border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-text focus:outline-none"
                 />
                 <button
                   type="button"
@@ -154,7 +154,7 @@ export default function TrustCard({ trust }: { trust: MyTrust }) {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   placeholder="000000"
-                  className="w-36 rounded-sm border border-rule bg-paper px-3 py-2 font-mono text-sm tracking-[0.3em] text-text placeholder:text-mid/60 focus:border-text focus:outline-none"
+                  className="w-36 rounded-[6px] border border-rule bg-paper px-3 py-2 font-mono text-sm tracking-[0.3em] text-text placeholder:text-mid/60 focus:border-text focus:outline-none"
                 />
                 <button
                   type="button"
@@ -176,7 +176,7 @@ export default function TrustCard({ trust }: { trust: MyTrust }) {
           )}
 
           {problem && (
-            <div className="mt-3 rounded-sm border border-amber-300 bg-amber-50 p-3">
+            <div className="mt-3 rounded-[6px] border border-amber-300 bg-amber-50 p-3">
               <p className="font-body text-xs leading-relaxed text-amber-900">{problem}</p>
               {providerMissing && (
                 <p className="mt-2 font-body text-xs leading-relaxed text-amber-800">

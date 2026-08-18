@@ -66,7 +66,7 @@ export default async function PeoplePage({
                 I do. Anything else is a facet nobody uses. */}
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                <span className="trek-label font-mono text-mid">
                   Sets off from
                 </span>
                 <Link href="/trek-buddy/people" className={chip(!sp.home)}>Anywhere</Link>
@@ -82,7 +82,7 @@ export default async function PeoplePage({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                <span className="trek-label font-mono text-mid">
                   Goes out for
                 </span>
                 <Link
@@ -104,7 +104,7 @@ export default async function PeoplePage({
             </div>
 
             {people.length === 0 ? (
-              <div className="rounded-sm border border-dashed border-rule px-6 py-16 text-center">
+              <div className="rounded-[6px] border border-dashed border-rule px-6 py-16 text-center">
                 <p className="font-display text-xl text-text">
                   {filtering ? 'Nobody matches that yet.' : 'Nobody has joined the board yet.'}
                 </p>
@@ -115,7 +115,7 @@ export default async function PeoplePage({
                 </p>
                 <Link
                   href="/trek-buddy/profile"
-                  className="mt-6 inline-flex rounded-sm bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid"
+                  className="mt-6 inline-flex trek-pill trek-pill-act font-body"
                 >
                   Set up how you look
                 </Link>
@@ -126,7 +126,7 @@ export default async function PeoplePage({
                     A badge nobody explains is decoration. */}
                 {mentors.length > 0 && (
                   <div>
-                    <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-clay">
+                    <h2 className="trek-label font-mono text-clay">
                       People who have done a lot of this
                     </h2>
                     <p className="mt-2 max-w-lg font-body text-sm leading-relaxed text-mid">
@@ -143,7 +143,7 @@ export default async function PeoplePage({
 
                 {rest.length > 0 && (
                   <div>
-                    <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+                    <h2 className="trek-label font-mono text-mid">
                       {rest.length} {rest.length === 1 ? 'other person' : 'others'} on the board
                     </h2>
                     <ul className="mt-5 grid gap-3 sm:grid-cols-2">

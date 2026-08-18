@@ -32,7 +32,7 @@ const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '—')
 function Block({ label, children, id }: { label: string; children: React.ReactNode; id?: string }) {
   return (
     <section id={id} className="scroll-mt-24 border-t border-rule pt-6">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">{label}</h2>
+      <h2 className="trek-label font-mono text-mid">{label}</h2>
       <div className="mt-3">{children}</div>
     </section>
   )
@@ -98,7 +98,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             {isHost && plan.status === 'open' && (
               <Link
                 href={`/trek-buddy/${plan.id}/console`}
-                className="mt-8 inline-block rounded-full bg-forest px-6 py-2.5 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+                className="trek-pill trek-pill-act font-body"
               >
                 Manage this walk →
               </Link>
@@ -124,7 +124,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                   {logistics && <p className="mt-1.5 font-body text-sm text-mid">{logistics}</p>}
                 </div>
               ) : (
-                <div className="rounded-sm border border-dashed border-rule px-4 py-5">
+                <div className="rounded-[6px] border border-dashed border-rule px-4 py-5">
                   <p className="font-body text-sm leading-relaxed text-mid">
                     {confirmed
                       ? `Unlocks when ${plan.min_party} people are going. Right now there are ${plan.going_count}.`
@@ -141,7 +141,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                       />
                     ))}
                   </div>
-                  <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-mid tabular-nums">
+                  <p className="mt-2 trek-label font-mono text-mid tabular-nums">
                     {plan.going_count} of {plan.min_party}
                   </p>
                 </div>
@@ -284,7 +284,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                 {/* Written out rather than templated with dashes: a trek with
                     no stated hour must not produce "at —, back by —" in the one
                     message somebody sends home before walking into the hills. */}
-                <p className="mt-3 rounded-sm bg-paper-warm px-4 py-3 font-body text-sm leading-relaxed text-text">
+                <p className="mt-3 rounded-[6px] bg-paper-warm px-4 py-3 font-body text-sm leading-relaxed text-text">
                   I&apos;m going {plan.activity_label.toLowerCase()} at {plan.place} on{' '}
                   {istDay(plan.starts_at)}
                   {multiDay

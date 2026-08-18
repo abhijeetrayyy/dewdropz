@@ -39,7 +39,7 @@ export default function Guidance({
   return (
     <section className={dark ? 'text-paper' : 'text-text'}>
       <h2
-        className={`font-mono text-[10px] uppercase tracking-[0.2em] ${
+        className={`trek-label font-mono ${
           dark ? 'text-paper/45' : 'text-mid'
         }`}
       >
@@ -56,7 +56,7 @@ export default function Guidance({
           <div key={audience}>
             {groups.length > 1 && (
               <p
-                className={`font-mono text-[10px] uppercase tracking-[0.16em] ${
+                className={`trek-label font-mono ${
                   audience === 'women'
                     ? dark ? 'text-clay' : 'text-clay'
                     : dark ? 'text-sage' : 'text-forest'

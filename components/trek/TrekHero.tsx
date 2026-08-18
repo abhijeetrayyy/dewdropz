@@ -101,7 +101,7 @@ export default function TrekHero({
             that side and the member's own presence had nowhere to live. */}
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
+            <p className="trek-label font-mono text-sage">
               Trek Buddy · Dehradun and around
             </p>
 
@@ -139,7 +139,7 @@ export default function TrekHero({
               {/* The count rides the tab it belongs to, so "something happened"
                   and "where it happened" are the same glance. */}
               {t.key === 'messages' && unreadMessages > 0 && (
-                <span className="ml-1.5 rounded-full bg-forest px-1.5 font-mono text-[9px] text-paper tabular-nums">
+                <span className="ml-1.5 rounded-full bg-dawn px-1.5 font-mono text-[9px] text-ink tabular-nums">
                   {unreadMessages > 9 ? '9+' : unreadMessages}
                 </span>
               )}

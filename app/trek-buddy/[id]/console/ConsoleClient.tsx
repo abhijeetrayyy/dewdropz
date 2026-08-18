@@ -167,14 +167,14 @@ export default function ConsoleClient({
                       {r.display_name}
                     </Link>
                     {r.is_co_host && (
-                      <span className="ml-2 rounded-full border border-forest/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-forest">
+                      <span className="ml-2 rounded-full border border-forest/40 px-2 py-0.5 trek-label-xs font-mono text-forest">
                         Co-host
                       </span>
                     )}
                     {/* Who let this person on. Invisible while the host is the
                         only one who can, and the whole point once they are not. */}
                     {r.decided_by && nameOf[r.decided_by] && (
-                      <span className="ml-2 font-mono text-[9px] uppercase tracking-[0.12em] text-mid">
+                      <span className="ml-2 trek-label-xs font-mono text-mid">
                         by {nameOf[r.decided_by]}
                       </span>
                     )}
@@ -186,7 +186,7 @@ export default function ConsoleClient({
                           () => (r.is_co_host ? removeCoHost(planId, r.user_id) : addCoHost(planId, r.user_id)),
                           r.is_co_host ? `${r.display_name} is no longer a co-host` : `${r.display_name} can help run this walk`
                         )}
-                        className="font-mono text-[9px] uppercase tracking-[0.12em] text-mid underline-offset-4 hover:text-forest hover:underline disabled:opacity-40"
+                        className="trek-label-xs font-mono text-mid underline-offset-4 hover:text-forest hover:underline disabled:opacity-40"
                       >
                         {r.is_co_host ? 'remove' : '+ co-host'}
                       </button>
@@ -204,7 +204,7 @@ export default function ConsoleClient({
                           type="button"
                           disabled={pending}
                           onClick={() => run(() => setCostState(planId, r.user_id, state))}
-                          className={`rounded-full px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.1em] disabled:opacity-40 ${
+                          className={`rounded-full px-2.5 py-1 trek-label-xs font-mono disabled:opacity-40 ${
                             r.cost_state === state
                               ? 'bg-text text-paper'
                               : 'border border-rule text-mid hover:border-text hover:text-text'
@@ -252,7 +252,7 @@ export default function ConsoleClient({
                   </span>
                   <button type="button" disabled={pending}
                     onClick={() => run(() => promoteWaitlisted(planId, r.user_id), `${r.display_name} moved up`)}
-                    className="rounded-full border border-rule px-4 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] text-mid hover:border-forest hover:text-forest disabled:opacity-40">
+                    className="trek-pill trek-pill-quiet font-body disabled:opacity-40">
                     Move up
                   </button>
                 </li>
@@ -263,18 +263,18 @@ export default function ConsoleClient({
       </div>
 
       <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-        <div className="rounded-sm border border-rule bg-paper-warm/40 p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+        <div className="rounded-[6px] border border-rule bg-paper-warm/40 p-4">
+          <p className="trek-label font-mono text-forest">
             Exact meeting point
           </p>
           {editingPoint ? (
             <>
               <input value={point} onChange={(e) => setPoint(e.target.value)}
                 placeholder="Gate 2, behind the tea stall"
-                className="mt-2 w-full rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text focus:border-forest focus:outline-none" />
+                className="mt-2 w-full rounded-[6px] border border-rule bg-paper px-3 py-2 font-body text-sm text-text focus:border-forest focus:outline-none" />
               <input value={logi} onChange={(e) => setLogi(e.target.value)}
                 placeholder="Shared cab from ISBT, roughly ₹300 each way"
-                className="mt-2 w-full rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text focus:border-forest focus:outline-none" />
+                className="mt-2 w-full rounded-[6px] border border-rule bg-paper px-3 py-2 font-body text-sm text-text focus:border-forest focus:outline-none" />
               <p className="mt-2 font-body text-xs leading-relaxed text-mid">
                 Everyone already confirmed is told it changed. Somebody still waiting on you is
                 not — they have never seen the old one.
@@ -286,7 +286,7 @@ export default function ConsoleClient({
                   Save
                 </button>
                 <button type="button" onClick={() => { setPoint(meetingPoint); setLogi(logistics); setEditingPoint(false) }}
-                  className="font-mono text-[10px] uppercase tracking-[0.12em] text-mid hover:text-text">
+                  className="trek-label font-mono text-mid hover:text-text">
                   Cancel
                 </button>
               </div>
@@ -303,8 +303,8 @@ export default function ConsoleClient({
           )}
         </div>
 
-        <div className="rounded-sm border border-rule p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+        <div className="rounded-[6px] border border-rule p-4">
+          <p className="trek-label font-mono text-forest">
             Tell everyone
           </p>
           <p className="mt-2 font-body text-xs leading-relaxed text-mid">
@@ -313,7 +313,7 @@ export default function ConsoleClient({
           </p>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={1000}
             placeholder="Road is washed out past Pantwari — we are leaving an hour later."
-            className="mt-2 w-full rounded-sm border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none" />
+            className="mt-2 w-full rounded-[6px] border border-rule bg-paper px-3 py-2 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none" />
           <button type="button" disabled={pending || note.trim().length < 3}
             onClick={() => run(() => announce(planId, note), 'Everyone has been told')}
             className="mt-2 w-full trek-pill trek-pill-act font-body disabled:opacity-40">

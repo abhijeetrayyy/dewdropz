@@ -110,9 +110,9 @@ export default function SafetyActions({
           {subjectId ? 'Report or block' : 'Report this walk'}
         </button>
       ) : (
-        <div className="rounded-sm border border-rule bg-paper-warm p-5">
+        <div className="rounded-[6px] border border-rule bg-paper-warm p-5">
           <div className="flex items-baseline justify-between gap-4">
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">
+            <h3 className="trek-label font-mono text-mid">
               {subjectId ? `Report ${who}` : 'Report this walk'}
             </h3>
             <button type="button" onClick={() => setOpen(false)}
@@ -140,7 +140,7 @@ export default function SafetyActions({
             rows={3}
             maxLength={800}
             placeholder="What happened? Dates and specifics help more than anything."
-            className="mt-4 w-full rounded-sm border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
+            className="mt-4 w-full rounded-[6px] border border-rule bg-white px-3.5 py-2.5 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
           />
 
           {error && <p className="mt-3 font-body text-sm text-clay">{error}</p>}
@@ -158,7 +158,7 @@ export default function SafetyActions({
               confirmBlock ? (
                 <span className="flex items-center gap-3">
                   <button type="button" onClick={submitBlock} disabled={pending}
-                    className="rounded-sm border border-clay px-4 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-clay transition-colors hover:bg-clay hover:text-paper disabled:opacity-40">
+                    className="rounded-[6px] border border-clay px-4 py-2.5 font-body text-[10px] uppercase tracking-[0.12em] text-clay transition-colors hover:bg-clay hover:text-paper disabled:opacity-40">
                     Yes, block {who}
                   </button>
                   <button type="button" onClick={() => setConfirmBlock(false)}
