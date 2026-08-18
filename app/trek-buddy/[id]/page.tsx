@@ -6,6 +6,8 @@ import { getGuidance, getTrekMembership, getTrekPlan } from '@/actions/trekBuddy
 import PlanActions from './PlanActions'
 import PlanMasthead from '@/components/trek/PlanMasthead'
 import SafetyNotes from '@/components/trek/SafetyNotes'
+import PlanChat from '@/components/trek/PlanChat'
+import { getMessages } from '@/actions/trekChat'
 import SafetyActions from '@/components/trek/SafetyActions'
 import Guidance from '@/components/trek/Guidance'
 import { DAY_PART_LABEL, lightForTime } from '@/lib/trek'
@@ -42,6 +44,11 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   if (!data) notFound()
 
   const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition } = data
+
+  // Fetched through the viewer's own session inside the action, so a caller who
+  // is not on the walk gets an empty list from the policy rather than a refusal
+  // this page would have to handle.
+  const messages = await getMessages(id)
   const full = plan.spots_left <= 0
   const cancelled = plan.status === 'cancelled'
   const confirmed = myStatus === 'confirmed'
@@ -195,6 +202,17 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             {plan.night_note && (
               <Block label={`${DAY_PART_LABEL[plan.day_part]} · getting back`}>
                 <p className="font-body text-sm leading-relaxed text-text">{plan.night_note}</p>
+              </Block>
+            )}
+
+            {/* The party's conversation. Shown to the confirmed party and the
+                host, which is exactly who RLS lets read it — the condition here
+                decides whether a box appears, not whether anybody can see the
+                messages. Getting it wrong would render an empty box, not leak a
+                word. */}
+            {(confirmed || isHost) && (
+              <Block label="Group chat">
+                <PlanChat planId={plan.id} messages={messages} meId={membership.userId!} />
               </Block>
             )}
 
