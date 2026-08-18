@@ -22,11 +22,16 @@ export default function TaxSettingsCard() {
     getStoreSettings().then(setSettings).catch(() => toast.error('Failed to load tax settings'))
   }, [])
 
-  async function save() {
+  // Set when the server rejects the GSTIN on its check character alone. Holds
+  // the reason so it can be shown in full, and its presence is what puts the
+  // override button on screen — see lib/gstin.ts for why that override exists.
+  const [checksumDoubt, setChecksumDoubt] = useState<string | null>(null)
+
+  async function save(acceptGstinChecksum = false) {
     if (!settings) return
     setSaving(true)
     try {
-      await updateStoreSettings({
+      const result = await updateStoreSettings({
         enable_tax: settings.enable_tax,
         gst_percentage: settings.gst_percentage,
         origin_state: settings.origin_state,
@@ -38,7 +43,19 @@ export default function TaxSettingsCard() {
         seller_postal_code: settings.seller_postal_code?.trim() || null,
         seller_state_code: settings.seller_state_code?.trim() || null,
         invoice_signatory_name: settings.invoice_signatory_name?.trim() || null,
-      })
+      }, { acceptGstinChecksum })
+
+      if (!result.ok) {
+        // A checksum doubt is held on screen rather than in a toast: it asks
+        // the owner to compare fifteen characters against a certificate, which
+        // is not a thing to do before a toast times out.
+        if (result.kind === 'checksum') setChecksumDoubt(result.error)
+        else toast.error(result.error)
+        return
+      }
+
+      setChecksumDoubt(null)
+      setSettings(result.settings)
       toast.success('Tax settings saved')
     } catch {
       toast.error('Could not save')
@@ -82,10 +99,37 @@ export default function TaxSettingsCard() {
               Applies to every order. Per-product rates are the table below.
             </p>
           </div>
-          <Button size="sm" onClick={save} disabled={saving}>
+          <Button size="sm" onClick={() => save()} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
         </div>
+
+        {checksumDoubt && (
+          <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3">
+            <p className="text-sm font-medium text-amber-900">
+              This GSTIN does not pass its own check character
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800">{checksumDoubt}</p>
+            <p className="mt-2 text-xs leading-relaxed text-amber-800">
+              A GSTIN carries a check character so a typo can be caught before it reaches a
+              document. Nothing has been saved. If you have compared it against the certificate
+              and it is correct, save it anyway — the check is a guard, not the authority.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => save(true)}
+                disabled={saving}
+              >
+                Save anyway
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setChecksumDoubt(null)}>
+                Let me re-check it
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 grid gap-4 sm:grid-cols-4">
           <div className="sm:col-span-4 flex items-center gap-2">

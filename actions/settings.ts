@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import type { StoreSettings, HomeConfig } from '@/types/database'
+import { validateGstin } from '@/lib/gstin'
 
 // Matches migration 025_home_config.sql's column default — needed here too
 // because the *row* already exists (store_settings has been a singleton since
@@ -85,9 +86,53 @@ export async function getStoreSettings() {
   return { ...data, home_config: normalizeHomeConfig(data.home_config) } as StoreSettings
 }
 
-export async function updateStoreSettings(input: Partial<Omit<StoreSettings, 'id' | 'updated_at'>>) {
+/**
+ * Result of a settings write.
+ *
+ * Returned rather than thrown because Next.js masks Server Action error
+ * messages in production builds — a thrown "your GSTIN check character is
+ * wrong" reaches the browser as a generic failure, which is precisely the
+ * detail the person retyping a 15-character legal identifier needs. `kind`
+ * lets the caller distinguish a refusal it may offer to override from one it
+ * must not.
+ */
+export type SettingsResult =
+  | { ok: true; settings: StoreSettings }
+  | { ok: false; error: string; kind: 'checksum' | 'invalid' }
+
+export async function updateStoreSettings(
+  input: Partial<Omit<StoreSettings, 'id' | 'updated_at'>>,
+  opts?: { acceptGstinChecksum?: boolean }
+): Promise<SettingsResult> {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
+
+  // Checked here rather than only in the form: this is a server action, so the
+  // form is not the only way in, and a bad GSTIN is not a bad form field — it
+  // is a defective tax invoice with a spent serial number behind it.
+  if (input.gstin != null && input.gstin !== '') {
+    const check = validateGstin(input.gstin)
+    if (!check.ok) {
+      if (check.kind !== 'checksum') {
+        return { ok: false, kind: 'invalid', error: `That GSTIN is not valid. ${check.reason}` }
+      }
+      if (!opts?.acceptGstinChecksum) {
+        return { ok: false, kind: 'checksum', error: check.reason }
+      }
+    }
+    input = { ...input, gstin: check.ok ? check.value : input.gstin.trim().toUpperCase() }
+  }
+
+  // issue_invoice refuses when these two disagree, and it refuses at dispatch —
+  // long after whoever typed them has left the screen. Catching it at the point
+  // of entry turns a silently uninvoiceable shop into a visible typo.
+  if (input.gstin && input.seller_state_code && input.gstin.slice(0, 2) !== input.seller_state_code) {
+    return {
+      ok: false,
+      kind: 'invalid',
+      error: `The GSTIN starts with ${input.gstin.slice(0, 2)} but the seller state code is ${input.seller_state_code}. One of the two is wrong, and both are printed on every invoice.`,
+    }
+  }
 
   const { data, error } = await supabase
     .from('store_settings')
@@ -96,8 +141,8 @@ export async function updateStoreSettings(input: Partial<Omit<StoreSettings, 'id
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) return { ok: false, kind: 'invalid', error: error.message }
 
   revalidatePath('/', 'layout') // Revalidate everything as settings affect global state
-  return data as StoreSettings
+  return { ok: true, settings: data as StoreSettings }
 }

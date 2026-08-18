@@ -39,10 +39,14 @@ export default function SettingsPage() {
     if (!settings) return
     setSaving(true)
     try {
-      await updateStoreSettings({
+      const result = await updateStoreSettings({
         store_name: settings.store_name,
         support_email: settings.support_email,
       })
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
       toast.success('Settings saved')
     } catch {
       toast.error('Failed to save settings')

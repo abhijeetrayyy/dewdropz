@@ -62,7 +62,8 @@ export function HomepageEngine() {
     if (!config) return
     setSaving(true)
     try {
-      await updateStoreSettings({ home_config: config })
+      const result = await updateStoreSettings({ home_config: config })
+      if (!result.ok) throw new Error(result.error)
       toast.success('Homepage settings saved')
     } catch {
       toast.error('Failed to save homepage settings')
