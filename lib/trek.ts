@@ -104,8 +104,8 @@ export const SAFETY_NOTES: { title: string; body: string }[] = [
     body: 'Before you set off, send a person at home the place, the start time and when you expect to be back. It is the single most useful thing you can do, and it costs one message.',
   },
   {
-    title: 'Nobody here has been checked',
-    body: 'DEWDROPZ does not verify identity, experience or fitness, and does not lead or supervise any of this. Treat everyone as what they are — a stranger on the internet who likes the outdoors.',
+    title: 'Nobody here has had their identity checked',
+    body: 'The board does check some things, and is precise about which — none of them is identity, experience or fitness. DEWDROPZ does not lead or supervise any of this. Everyone here is still a stranger you met on the internet.',
   },
   {
     title: 'Meet where there are people',
@@ -122,6 +122,68 @@ export const SAFETY_NOTES: { title: string; body: string }[] = [
   {
     title: 'In an emergency, call 112',
     body: 'That is the national emergency number and it works from any phone. DEWDROPZ does not receive it and cannot help you on a hillside.',
+  },
+]
+
+// ── What the board actually does ─────────────────────────────────────────────
+//
+// The take-care notes above are things a walker has to do. These are things the
+// board does, and they were nowhere on the site: the only statement it made
+// about safety was that it checked nothing, which was both an overstatement of
+// its own helplessness and the first thing a cautious person read.
+//
+// Every line here describes a rule enforced in Postgres, not an intention. They
+// are written as what they stop, because a promise is only worth reading if you
+// can tell what it would have prevented.
+//
+// Nothing aspirational goes in this list. If a rule is not enforced yet it does
+// not appear, and the limits below carry the rest.
+export const BOARD_CHECKS: { title: string; body: string }[] = [
+  {
+    title: 'The meeting point is withheld',
+    body: 'The exact spot is never on the public page. It reaches confirmed walkers only once enough people are going, so a walk nobody joins hands its address to nobody.',
+  },
+  {
+    title: 'The host chooses who comes',
+    body: 'You ask; you are not added. Every walk is a person deciding who they will spend the day with, and that decision is the only vetting a board like this can honestly offer.',
+  },
+  {
+    title: 'A host can set a bar to ask',
+    body: 'A walk can be limited to people with a verified phone number, or to people two others have vouched for after actually walking with them. The database refuses the request; it is not a note asking politely.',
+  },
+  {
+    title: 'A vouch has to be earned',
+    body: 'You can only vouch for somebody you were confirmed alongside on a walk that has already happened. Two accounts cannot vouch for each other into credibility.',
+  },
+  {
+    title: 'Women-only walks are enforced',
+    body: 'Only a woman can post one, and only women can ask to join. This is checked when the request is written, not when the page is drawn.',
+  },
+  {
+    title: 'Phone numbers stay off the board',
+    body: 'Numbers, emails and handles are refused in every free-text field, and anything caught goes to a person to look at. Arrangements stay on the walk’s own page, which is what keeps them reviewable.',
+  },
+]
+
+// The other half, and it is not the small print. Somebody deciding whether to
+// rely on a badge needs to know exactly how far it reaches, and every line here
+// is a limit a reasonable person would otherwise assume away.
+export const BOARD_LIMITS: { title: string; body: string }[] = [
+  {
+    title: 'A verified phone is not a verified person',
+    body: 'It proves somebody holds that SIM. Not their name, not their age, not that they are who the profile says. It makes a throwaway account cost money and effort, and that is the whole of the claim.',
+  },
+  {
+    title: 'Women-only rests on a self-declared field',
+    body: 'The board enforces the rule strictly, but it enforces it against what people said about themselves, because the alternative is collecting identity documents. Choose who you accept accordingly.',
+  },
+  {
+    title: 'No one checks experience or fitness',
+    body: 'Years out, altitude and pace on a profile are typed in by the person whose profile it is. A hard walk with a confident stranger is still a hard walk with a stranger.',
+  },
+  {
+    title: 'DEWDROPZ is not on the walk',
+    body: 'Nobody organises, leads, supervises or follows up on any of this, and no one is watching a screen while you are out. In an emergency, call 112.',
   },
 ]
 

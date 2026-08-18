@@ -10,6 +10,7 @@ import TrekPlanCard from '@/components/trek/TrekPlanCard'
 import QuickStart from '@/components/trek/QuickStart'
 import BoardFilters from '@/components/trek/BoardFilters'
 import SafetyNotes from '@/components/trek/SafetyNotes'
+import WhatTheBoardDoes from '@/components/trek/WhatTheBoardDoes'
 import { ACTIVITIES } from '@/lib/trek'
 
 export const metadata: Metadata = {
@@ -304,6 +305,7 @@ export default async function TrekBuddyPage({
               </p>
             )}
 
+            <WhatTheBoardDoes className="mb-6" />
             <SafetyNotes />
 
             <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">

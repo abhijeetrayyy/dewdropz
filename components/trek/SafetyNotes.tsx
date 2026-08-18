@@ -40,8 +40,8 @@ export default function SafetyNotes({
         Take care of yourself out there
       </h2>
       <p className="mt-2 max-w-xl font-body text-sm leading-relaxed text-mid">
-        This board introduces people who have not met. Read this once — it is the
-        part that actually keeps you safe, and none of it is DEWDROPZ&apos;s doing.
+        This board introduces people who have not met. The rules above are the board&apos;s;
+        these are yours — and out in the hills, yours are the ones doing the work.
       </p>
       <dl className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {SAFETY_NOTES.map((n) => (
