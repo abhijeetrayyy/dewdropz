@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
@@ -27,9 +28,9 @@ function istDay(iso: string) {
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '—')
 
 /** A section on this page. Ruled and labelled, so the page scans. */
-function Block({ label, children }: { label: string; children: React.ReactNode }) {
+function Block({ label, children, id }: { label: string; children: React.ReactNode; id?: string }) {
   return (
-    <section className="border-t border-rule pt-6">
+    <section id={id} className="scroll-mt-24 border-t border-rule pt-6">
       <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-mid">{label}</h2>
       <div className="mt-3">{children}</div>
     </section>
@@ -90,6 +91,18 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             {/* What happens next for THIS viewer, at the top, because it is the
                 only thing they came to do. Host, joiner and stranger each get a
                 different first thing to look at. */}
+            {/* The way in to the console. Only the host sees it, and the page
+                itself 404s for anybody else rather than explaining who owns
+                the walk. */}
+            {isHost && plan.status === 'open' && (
+              <Link
+                href={`/trek-buddy/${plan.id}/console`}
+                className="mt-8 inline-block rounded-full bg-forest px-6 py-2.5 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+              >
+                Manage this walk →
+              </Link>
+            )}
+
             <PlanActions
               planId={plan.id}
               isHost={isHost}
@@ -232,7 +245,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                 messages. Getting it wrong would render an empty box, not leak a
                 word. */}
             {(confirmed || isHost) && (
-              <Block label="Group chat">
+              <Block label="Group chat" id="chat">
                 <PlanChat planId={plan.id} messages={messages} meId={membership.userId!} />
               </Block>
             )}
