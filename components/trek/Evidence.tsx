@@ -16,7 +16,14 @@ import type { PersonCard } from '@/actions/trekBuddy'
 // The customer row is the one thing this board has that no other trekking board
 // does — a delivered order means a real person accepted a parcel at a real
 // address in India and paid for it.
-export default function Evidence({ person }: { person: PersonCard }) {
+export default function Evidence({
+  person,
+  streak = 0,
+}: {
+  person: PersonCard
+  /** Weeks out in a row, derived in Postgres. See migration 078. */
+  streak?: number
+}) {
   const walks = person.walksHosted + person.walksJoined
 
   // Each row states its own absence rather than being negated by a template.
@@ -50,6 +57,18 @@ export default function Evidence({ person }: { person: PersonCard }) {
       off: 'Nobody has vouched for them',
       proves: 'Only someone who was on a completed walk with them can say this.',
     },
+    // Shown only when it is running. A dormant streak rendered as "0 weeks in a
+    // row" turns a nice thing into a reproach, and this list is evidence about
+    // somebody, not a scoreboard they are losing.
+    ...(streak > 0
+      ? [{
+          on: true,
+          label: streak === 1 ? 'Out this week' : `Out ${streak} weeks running`,
+          off: '',
+          proves:
+            'Counted back from the most recent week they were out, from walks that actually happened.',
+        }]
+      : []),
   ]
 
   return (

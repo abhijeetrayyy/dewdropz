@@ -371,6 +371,10 @@ export async function getTrekPlan(planId: string) {
     plan: labelled as TrekPlanRow,
     isHost,
     myStatus: (mine?.status as string) ?? null,
+    // Computed here rather than in the page: reading the clock during a render
+    // is impure, and this is the same question the recap trigger answers in
+    // Postgres — the page only decides what to draw from it.
+    walkIsOver: new Date((plan as { ends_at: string }).ends_at).getTime() < Date.now(),
     // Only computed when it means something. A position for somebody who is
     // confirmed, declined or not involved is a number with no referent.
     waitlistPosition:

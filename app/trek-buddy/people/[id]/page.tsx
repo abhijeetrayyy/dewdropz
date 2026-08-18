@@ -9,6 +9,7 @@ import SafetyActions from '@/components/trek/SafetyActions'
 import Guidance from '@/components/trek/Guidance'
 import FollowButton from '@/components/trek/FollowButton'
 import { getFollowState } from '@/actions/trekSocial'
+import { getStreak } from '@/actions/trekRecap'
 import { EXPERIENCE_LABEL } from '@/components/trek/PersonCardTile'
 import { getGuidance, getPerson, getTrekKinds, getTrekMembership } from '@/actions/trekBuddy'
 import { DAY_ARC } from '@/lib/constants'
@@ -59,6 +60,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
   // Skipped entirely on your own page — there is no button to feed.
   const follow = isMe ? { following: false, followers: 0 } : await getFollowState(id)
+  const streak = await getStreak(id)
 
   const mentorNotes = person.mentor
     ? await getGuidance({ audiences: ['first_time', 'all'], limit: 5 })
@@ -163,7 +165,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 )}
               </div>
 
-              <Evidence person={person} />
+              <Evidence person={person} streak={streak} />
 
               {/* Under the counted facts, because it is a preference and they
                   are evidence. Never shown on your own page: following

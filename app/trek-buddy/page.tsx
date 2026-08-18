@@ -11,6 +11,8 @@ import QuickStart from '@/components/trek/QuickStart'
 import BoardFilters from '@/components/trek/BoardFilters'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import WhatTheBoardDoes from '@/components/trek/WhatTheBoardDoes'
+import RecentRecaps from '@/components/trek/RecentRecaps'
+import { getRecentRecaps } from '@/actions/trekRecap'
 import { ACTIVITIES } from '@/lib/trek'
 
 export const metadata: Metadata = {
@@ -179,7 +181,7 @@ export default async function TrekBuddyPage({
   // The unfiltered board is fetched alongside the filtered one so the chips can
   // carry honest counts — a filter that says "Camping 0" is more useful than a
   // filter that has quietly disappeared.
-  const [plans, all, mine, me, unread] = await Promise.all([
+  const [plans, all, mine, me, unread, recaps] = await Promise.all([
     getTrekBoard({
       activity: sp.activity,
       when: sp.when as 'all' | 'week' | 'weekend',
@@ -194,6 +196,7 @@ export default async function TrekBuddyPage({
     getMyTreks(),
     getMyTrekCard(),
     getUnreadCount(),
+    getRecentRecaps(4),
   ])
 
   const counts: Record<string, number> = { all: all.length }
@@ -309,8 +312,12 @@ export default async function TrekBuddyPage({
               </p>
             )}
 
-            <WhatTheBoardDoes className="mb-6" />
-            <SafetyNotes />
+            <RecentRecaps recaps={recaps} />
+
+            <div className="mt-14">
+              <WhatTheBoardDoes className="mb-6" />
+              <SafetyNotes />
+            </div>
 
             <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
               DEWDROPZ does not organise, lead, vet or supervise these walks, and does not check

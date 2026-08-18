@@ -11,6 +11,7 @@ import {
   getVouchable, getUnreadCount
 } from '@/actions/trekBuddy'
 import { getMyTrust } from '@/actions/trekTrust'
+import { getStreak } from '@/actions/trekRecap'
 
 export const metadata: Metadata = {
   title: 'Your Trek Buddy profile — DEWDROPZ',
@@ -22,7 +23,7 @@ export default async function TrekProfilePage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/profile')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [person, vouchable, all, me, unread, kinds, trust] = await Promise.all([
+  const [person, vouchable, all, me, unread, kinds, trust, streak] = await Promise.all([
     getPerson(membership.userId!),
     getVouchable(),
     getTrekBoard(),
@@ -30,6 +31,7 @@ export default async function TrekProfilePage() {
     getUnreadCount(),
     getTrekKinds(),
     getMyTrust(),
+    getStreak(membership.userId!),
   ])
   if (!person) redirect('/trek-buddy/setup')
 
@@ -63,7 +65,7 @@ export default async function TrekProfilePage() {
 
             {/* The counted half, shown first and not editable — you cannot type
                 your way to experience here. */}
-            <Evidence person={person} />
+            <Evidence person={person} streak={streak} />
 
             {/* Directly under it, because it is the same kind of thing: facts
                 about you that were earned rather than written. */}

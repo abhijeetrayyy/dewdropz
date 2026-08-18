@@ -8,6 +8,8 @@ import PlanMasthead from '@/components/trek/PlanMasthead'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import PlanChat from '@/components/trek/PlanChat'
 import { getMessages } from '@/actions/trekChat'
+import RecapPanel from '@/components/trek/RecapPanel'
+import { getRecap } from '@/actions/trekRecap'
 import SafetyActions from '@/components/trek/SafetyActions'
 import Guidance from '@/components/trek/Guidance'
 import { DAY_PART_LABEL, lightForTime } from '@/lib/trek'
@@ -43,12 +45,14 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   const data = await getTrekPlan(id)
   if (!data) notFound()
 
-  const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition } = data
+  const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition, walkIsOver } = data
 
   // Fetched through the viewer's own session inside the action, so a caller who
   // is not on the walk gets an empty list from the policy rather than a refusal
   // this page would have to handle.
   const messages = await getMessages(id)
+
+  const recap = walkIsOver ? await getRecap(id) : null
   const full = plan.spots_left <= 0
   const cancelled = plan.status === 'cancelled'
   const confirmed = myStatus === 'confirmed'
@@ -202,6 +206,23 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
             {plan.night_note && (
               <Block label={`${DAY_PART_LABEL[plan.day_part]} · getting back`}>
                 <p className="font-body text-sm leading-relaxed text-text">{plan.night_note}</p>
+              </Block>
+            )}
+
+            {/* What happened. Shown to everyone once it exists, because a walk
+                that demonstrably took place is the only argument this board can
+                make that is not a promise. The composer appears for the host
+                alone, and only after the walk — RLS and the trigger enforce
+                both, so this condition governs a button, not access. */}
+            {(recap || (isHost && walkIsOver)) && (
+              <Block label={recap ? 'How it went' : 'Write the recap'}>
+                <RecapPanel
+                  planId={plan.id}
+                  userId={membership.userId!}
+                  recap={recap}
+                  canWrite={isHost && walkIsOver}
+                  hostName={plan.host_name}
+                />
               </Block>
             )}
 
