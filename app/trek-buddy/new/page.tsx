@@ -39,17 +39,23 @@ export default async function NewTrekPlanPage({
       <main>
         <TrekHero counts={{}} openCount={all.length} canHost active="new" me={me} unread={unread} />
         <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
-          <div className="mx-auto max-w-xl">
-            <h2 className="font-display text-[clamp(24px,3.2vw,32px)] leading-tight text-text">
-              Where are you going?
+          {/* Left-aligned with the form beneath it rather than centred in a
+              narrow column, so the page reads as one thing. The line is the
+              design's and it is doing real work: what follows is long, and a
+              host who thinks of it as paperwork abandons it halfway. */}
+          <div className="mx-auto max-w-5xl">
+            <h2 className="max-w-2xl font-display text-[clamp(26px,4vw,44px)] font-light leading-[1.08] text-text">
+              You are not filling a form.
+              <br />
+              <span className="italic text-forest">You are writing an invitation.</span>
             </h2>
-            <p className="mt-2 font-body text-sm leading-relaxed text-mid">
+            <p className="mt-4 max-w-lg font-body text-sm leading-relaxed text-mid">
               Pick what you are doing and the hours fill themselves in. People ask to come, and
               you decide who does.
             </p>
           </div>
           <div className="mt-8">
-            <NewPlanForm kinds={kinds} initialActivity={initial} trekGender={membership.trekGender} userId={membership.userId!} />
+            <NewPlanForm kinds={kinds} initialActivity={initial} trekGender={membership.trekGender} userId={membership.userId!} hostName={membership.displayName ?? "You"} />
           </div>
         </section>
       </main>

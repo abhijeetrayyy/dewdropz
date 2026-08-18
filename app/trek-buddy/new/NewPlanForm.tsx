@@ -3,12 +3,13 @@
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { TrekMoment } from '@/actions/trekBuddy'
+import type { TrekMoment, TrekPlanRow } from '@/actions/trekBuddy'
 import { createTrekPlan, type TrekKind } from '@/actions/trekBuddy'
-import { lightForTime } from '@/lib/trek'
+import { DIFFICULTY_LABEL, lightForTime } from '@/lib/trek'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import CoverPicker from '@/components/trek/CoverPicker'
 import DepthFields from '@/components/trek/DepthFields'
+import TrekPlanCard from '@/components/trek/TrekPlanCard'
 
 /**
  * yyyy-mm-dd from a Date's LOCAL parts.
@@ -54,7 +55,7 @@ const field =
 const hint = 'mt-1.5 block font-body text-xs leading-relaxed text-mid'
 
 /** The four steps, named. Posting a walk is a sequence, so it is numbered. */
-const STEPS = ['What', 'Where', 'How long', 'The details'] as const
+const STEPS = ['The idea', 'Where', 'How long', 'The company', 'Publish'] as const
 
 // Posting a walk, as a composer rather than a form.
 //
@@ -72,6 +73,7 @@ export default function NewPlanForm({
   initialActivity,
   trekGender,
   userId,
+  hostName,
 }: {
   /** What the board is taking today, straight from the database (057). */
   kinds: TrekKind[]
@@ -79,6 +81,8 @@ export default function NewPlanForm({
   trekGender: string | null
   /** Storage writes are namespaced by it, and the bucket policy checks it. */
   userId: string
+  /** Shown on the preview card, because the board shows whose walk it is. */
+  hostName: string
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -208,6 +212,51 @@ export default function NewPlanForm({
   const dayLabel = new Date(f.startsOn + 'T00:00:00').toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short',
   })
+
+  // The form's state, shaped as the row the board would have loaded. Fields the
+  // card does not read are filled with something honest rather than something
+  // clever — nothing here is written anywhere, it exists for one render.
+  const preview: TrekPlanRow = {
+    id: 'preview',
+    host_id: userId,
+    host_name: hostName,
+    activity: f.activity,
+    activity_other: spec.isOpenEnded ? f.activityOther : null,
+    activity_label: spec.isOpenEnded ? f.activityOther || 'Something else' : spec.label,
+    place: f.place || 'Where are you going?',
+    meet_area: f.meetArea || '…',
+    starts_on: f.startsOn,
+    ends_on: f.endsOn,
+    start_time: f.timed ? f.startTime : '06:00',
+    back_by: f.backBy,
+    // The card reads starts_at for both the date block and the countdown, so a
+    // preview needs a real instant, not the date alone.
+    starts_at: new Date(`${f.startsOn}T${f.timed ? f.startTime : '06:00'}:00+05:30`).toISOString(),
+    ends_at: new Date(`${f.endsOn}T${f.backBy || '17:00'}:00+05:30`).toISOString(),
+    day_part: 'day',
+    min_party: spec.minParty,
+    night_note: null,
+    capacity: f.capacity,
+    going_count: 1,
+    spots_left: Math.max(0, f.capacity - 1),
+    effort: 'moderate' as TrekPlanRow['effort'],
+    difficulty: f.difficulty,
+    women_only: f.womenOnly,
+    senior_friendly: f.seniorFriendly,
+    languages: f.languages,
+    cover_urls: f.coverUrl ? [f.coverUrl] : [],
+    distance_km: f.distanceKm.trim() === '' ? null : Number(f.distanceKm),
+    gain_m: f.gainM.trim() === '' ? null : Number(f.gainM),
+    cost_paise: f.costRupees.trim() === '' ? null : Math.round(Number(f.costRupees) * 100),
+    bring: f.bring,
+    itinerary: f.itinerary,
+    is_live: true,
+    note: f.note || null,
+    status: 'open',
+    cancelled_at: null,
+    cancel_reason: null,
+    hidden_at: null,
+  }
 
   return (
     <form onSubmit={submit} className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -589,11 +638,68 @@ export default function NewPlanForm({
 
               <SafetyNotes variant="compact" />
 
+              <button type="button" onClick={() => setStep(4)}
+                className="w-full rounded-sm border border-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-forest transition-colors hover:bg-forest hover:text-paper">
+                Last look →
+              </button>
+            </div>
+          )}
+
+          {/* Publish. Its own step because posting a walk spends something —
+              strangers read it, plan around it and turn up. Until now the
+              button sat at the bottom of the longest step, so the last thing
+              anyone saw before committing was a packing list. */}
+          {step === 4 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="font-display text-2xl text-text">Last look, then it is live.</h2>
+                <p className="mt-1.5 font-body text-sm text-mid">
+                  The card on the right is exactly what the board will show.
+                </p>
+              </div>
+
+              <dl className="divide-y divide-rule border-y border-rule">
+                {([
+                  ['Doing', spec.isOpenEnded ? f.activityOther || '—' : spec.label],
+                  ['Going to', f.place || '—'],
+                  ['Meeting around', f.meetArea || '—'],
+                  ['Exact spot', f.meetingPoint || '—'],
+                  ['Day', dayLabel + (days > 1 ? ` · ${days} days` : '')],
+                  ['Leaving', f.timed ? f.startTime : 'No stated hour'],
+                  ['Spots', `${f.capacity} including you`],
+                  ['How hard', DIFFICULTY_LABEL[f.difficulty] ?? f.difficulty],
+                  ['Who can ask', ['Anyone on the board', 'People with a verified phone', 'People who have been vouched for'][f.minTrust]],
+                  ['Cost share', f.costRupees.trim() === '' ? 'Not stated' : `₹${f.costRupees} each`],
+                  ['Photograph', f.coverUrl ? 'Added' : 'None'],
+                ] as const).map(([k, v]) => (
+                  <div key={k} className="flex gap-4 py-2.5">
+                    <dt className="w-36 shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
+                      {k}
+                    </dt>
+                    <dd className="min-w-0 flex-1 font-body text-sm text-text">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {/* The one thing on this screen that is not a summary. It is the
+                  board's central safety rule and the last moment to explain it
+                  before a host wonders why nobody can find them. */}
+              <div className="rounded-sm border border-rule bg-paper-warm/50 p-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest">
+                  Held back on purpose
+                </p>
+                <p className="mt-2 font-body text-xs leading-relaxed text-mid">
+                  The exact meeting point does not go on the public page. It reaches the people you
+                  have confirmed, and only once {spec.minParty} are going — so a walk nobody joins
+                  never hands out an address.
+                </p>
+              </div>
+
               {error && <p className="font-body text-sm text-clay">{error}</p>}
 
               <button type="submit" disabled={pending || !canPost}
                 className="w-full rounded-sm bg-forest px-6 py-3.5 font-body text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-forest-mid disabled:opacity-40">
-                {pending ? 'Posting…' : 'Post this walk'}
+                {pending ? 'Posting…' : 'Put it on the board'}
               </button>
               {!canPost && (
                 <p className="text-center font-body text-xs text-mid">
@@ -606,51 +712,27 @@ export default function NewPlanForm({
         </div>
       </div>
 
-      {/* The card they are building, live. Same visual language as the board, so
-          what you write is literally what other people will read. */}
+      {/* The card they are building, live.
+          
+          This renders the REAL TrekPlanCard from the form's own state rather
+          than a hand-built lookalike. The lookalike that used to be here was
+          written when the board was text-on-paper, and it kept rendering that
+          layout after the board became photographs — so a screen headed "how it
+          will look" was showing a design that no longer existed anywhere. A
+          preview that can drift from the thing it previews is worse than none,
+          because it is believed. This one cannot drift: it is the same
+          component. */}
       <aside className="lg:sticky lg:top-24 lg:self-start">
-        <p className={label}>How it will look</p>
-        <div style={{ background: light.wash }}
-          className="mt-3 flex overflow-hidden rounded-sm border border-rule">
-          <span aria-hidden="true" style={{ background: light.bar }} className="w-1 shrink-0" />
-          <div className="min-w-0 flex-1 p-4">
-            <div className="flex items-baseline gap-2">
-              <span style={{ color: light.ink }} className="font-mono text-sm tabular-nums">
-                {f.timed ? f.startTime : `${days} days`}
-              </span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
-                {f.timed ? light.label : 'On the hill'}
-              </span>
-            </div>
-            <h3 className="mt-1 font-display text-xl leading-tight text-text">
-              {f.place || <span className="text-mid/50">Where are you going?</span>}
-            </h3>
-            <p className="mt-1 font-body text-xs text-mid">
-              {spec.isOpenEnded ? f.activityOther || 'Something else' : spec.label} · from {f.meetArea || '…'}
-              {days > 1 ? ` · ${days} days` : f.timed ? ` · back ${f.backBy}` : ''}
-            </p>
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-mid tabular-nums">
-              {dayLabel} · 1/{f.capacity} · {f.difficulty}
-            </p>
-            {(f.womenOnly || f.seniorFriendly) && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {f.womenOnly && (
-                  <span className="rounded-full border border-clay/50 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-clay">
-                    Women only
-                  </span>
-                )}
-                {f.seniorFriendly && (
-                  <span className="rounded-full border border-forest/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-forest">
-                    Senior friendly
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+        <p className={label}>Live preview — what the board sees</p>
+        <div className="mt-3">
+          <TrekPlanCard plan={preview} />
         </div>
         <p className="mt-3 font-body text-xs leading-relaxed text-mid">
           The exact meeting point is never on this card. It reaches people only once{' '}
           {spec.minParty} are going and you have confirmed them.
+        </p>
+        <p className="mt-2 font-body text-xs leading-relaxed text-mid">
+          Change the hour and the card changes colour — the board sorts a day by its light.
         </p>
       </aside>
     </form>
