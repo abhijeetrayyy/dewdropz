@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { decideRequest } from '@/actions/trekBuddy'
 import {
-  checkIn, updateMeetingPoint, announce, promoteWaitlisted, addCoHost, removeCoHost,
+  checkIn, updateMeetingPoint, announce, promoteWaitlisted, addCoHost, removeCoHost, setCostState,
   type ConsoleRoster,
 } from '@/actions/trekConsole'
 import InviteCardPanel from '@/components/trek/InviteCardPanel'
@@ -24,7 +24,11 @@ import InviteCardPanel from '@/components/trek/InviteCardPanel'
 // point, appointing other co-hosts, the invite link, the recap — stays with the
 // host, so a co-host runs the party without owning the walk.
 //
-// STILL NOT BUILT: WHO HAS PAID. The board takes no money and says so — the cost share is
+// COST SHARE. Built after being held back twice, and shaped by the objection
+// rather than in spite of it: three states and a name, no amounts per person,
+// no history, nothing transacted. It is a host's memory aid for a shared cab,
+// and the copy says so wherever it appears — because the moment this reads as
+// a ledger the site maintains, it is a ledger the site is answerable for. The board takes no money and says so — the cost share is
 // "split at face value on the day". A per-person paid/unpaid ledger inside the
 // app is the first step toward looking like it settles payments, and the
 // difference matters if anything ever goes wrong with one.
@@ -38,6 +42,7 @@ export default function ConsoleClient({
   canCheckIn,
   shareToken,
   nameOf,
+  costPaise,
 }: {
   planId: string
   roster: ConsoleRoster[]
@@ -49,6 +54,8 @@ export default function ConsoleClient({
   shareToken: string | null
   /** user id -> display name, for the "confirmed by" line. */
   nameOf: Record<string, string | null>
+  /** Null or zero means the walk has no cost share, and none of this appears. */
+  costPaise: number | null
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -60,6 +67,8 @@ export default function ConsoleClient({
   const asking = roster.filter((r) => r.status === 'requested')
   const going = roster.filter((r) => r.status === 'confirmed')
   const queued = roster.filter((r) => r.status === 'waitlisted')
+  const hasCost = (costPaise ?? 0) > 0
+  const settled = going.filter((r) => r.cost_state !== 'owed').length
 
   // Two result shapes meet here: the console actions return {ok}, and
   // decideRequest — which predates them — returns {error} | {success}. Rather
@@ -139,6 +148,13 @@ export default function ConsoleClient({
             </p>
           </div>
 
+          {hasCost && going.length > 0 && (
+            <p className="mt-2 font-body text-xs leading-relaxed text-mid">
+              {settled} of {going.length} have squared up. This is your own note — nothing is paid
+              through this site and DEWDROPZ never sees the money.
+            </p>
+          )}
+
           {going.length === 0 ? (
             <p className="mt-3 font-body text-sm text-mid">Nobody confirmed yet.</p>
           ) : (
@@ -176,6 +192,29 @@ export default function ConsoleClient({
                       </button>
                     </span>
                   </span>
+                  {hasCost && (
+                    <span className="flex shrink-0 gap-1">
+                      {([
+                        ['settled', 'Settled'],
+                        ['on_the_day', 'On the day'],
+                        ['owed', 'Not yet'],
+                      ] as const).map(([state, label]) => (
+                        <button
+                          key={state}
+                          type="button"
+                          disabled={pending}
+                          onClick={() => run(() => setCostState(planId, r.user_id, state))}
+                          className={`rounded-full px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.1em] disabled:opacity-40 ${
+                            r.cost_state === state
+                              ? 'bg-text text-paper'
+                              : 'border border-rule text-mid hover:border-text hover:text-text'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </span>
+                  )}
                   <button
                     type="button"
                     disabled={pending || !canCheckIn}

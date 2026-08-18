@@ -34,6 +34,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
     id: string; place: string; starts_at: string; start_time: string | null
     capacity: number; going_count: number; min_party: number
     difficulty: 'easy' | 'moderate' | 'difficult'; status: string; share_token: string | null
+    cost_paise: number | null
   }
 
   const day = new Date(p.starts_at).toLocaleDateString('en-IN', {
@@ -92,6 +93,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
                   canCheckIn={canCheckIn}
                   shareToken={p.share_token}
                   nameOf={nameOf}
+                  costPaise={p.cost_paise}
                 />
               </div>
             )}

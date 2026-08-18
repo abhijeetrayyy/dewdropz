@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import { getGuidance, getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
+import { formatPrice } from '@/lib/utils'
 import PlanActions from './PlanActions'
 import PlanMasthead from '@/components/trek/PlanMasthead'
 import SafetyNotes from '@/components/trek/SafetyNotes'
@@ -46,7 +47,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   const data = await getTrekPlan(id)
   if (!data) notFound()
 
-  const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition, walkIsOver } = data
+  const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition, walkIsOver, myCostState } = data
 
   // Fetched through the viewer's own session inside the action, so a caller who
   // is not on the walk gets an empty list from the policy rather than a refusal
@@ -236,6 +237,28 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                   canWrite={isHost && walkIsOver}
                   hostName={plan.host_name}
                 />
+              </Block>
+            )}
+
+            {/* What the host has you down as for the cost share.
+                
+                Shown to the walker on purpose. A note a host keeps about you
+                that you cannot see is the version of this worth objecting to;
+                reading it is what makes it correctable, and the line below is
+                careful that this is two people and a cab fare, not a bill. */}
+            {confirmed && plan.cost_paise != null && plan.cost_paise > 0 && (
+              <Block label="The cost share">
+                <p className="font-body text-sm text-text">
+                  {formatPrice(plan.cost_paise)} each
+                  {myCostState === 'settled' && ' — the host has you down as squared up.'}
+                  {myCostState === 'on_the_day' && ' — the host has you down as paying on the day.'}
+                  {(myCostState === 'owed' || myCostState === null) && ' — not settled yet.'}
+                </p>
+                <p className="mt-1.5 font-body text-xs leading-relaxed text-mid">
+                  Split at face value between the people going. Nothing is paid through this site
+                  and DEWDROPZ never sees the money — this is the host&apos;s own note, so sort it
+                  out with them directly.
+                </p>
               </Block>
             )}
 

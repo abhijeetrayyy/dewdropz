@@ -346,7 +346,7 @@ export async function getTrekPlan(planId: string) {
 
   const [{ data: plan }, { data: mine }, { data: details }] = await Promise.all([
     admin.from('trek_plans').select('*').eq('id', planId).maybeSingle(),
-    admin.from('trek_plan_requests').select('status, message, decided_at')
+    admin.from('trek_plan_requests').select('status, message, decided_at, cost_state')
       .eq('plan_id', planId).eq('user_id', user.id).maybeSingle(),
     session.from('trek_plan_details').select('meeting_point, logistics').eq('plan_id', planId).maybeSingle(),
   ])
@@ -371,6 +371,10 @@ export async function getTrekPlan(planId: string) {
     plan: labelled as TrekPlanRow,
     isHost,
     myStatus: (mine?.status as string) ?? null,
+    // Your own settlement state, shown back to you. A note a host keeps ABOUT
+    // you that you cannot see is the version of this feature worth objecting
+    // to; being able to read it is what makes it correctable.
+    myCostState: (mine?.cost_state as 'owed' | 'settled' | 'on_the_day' | undefined) ?? null,
     // Computed here rather than in the page: reading the clock during a render
     // is impure, and this is the same question the recap trigger answers in
     // Postgres — the page only decides what to draw from it.

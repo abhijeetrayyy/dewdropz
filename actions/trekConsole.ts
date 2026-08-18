@@ -75,6 +75,23 @@ export async function removeCoHost(planId: string, userId: string): Promise<Cons
   return call('trek_remove_co_host', { p_plan: planId, p_user: userId }, planId)
 }
 
+/**
+ * The host's note on who has squared up the cost share.
+ *
+ * Not a payment record — no amount is stored per person, nothing is
+ * transacted, and no money moves through this site. It is a memory aid for
+ * somebody standing at a bus stand with eight people and one shared cab.
+ * Co-hosts included, because collecting for the cab is exactly what a co-host
+ * does while the host is parking.
+ */
+export async function setCostState(
+  planId: string,
+  userId: string,
+  state: 'owed' | 'settled' | 'on_the_day'
+): Promise<ConsoleResult> {
+  return call('trek_set_cost_state', { p_plan: planId, p_user: userId, p_state: state }, planId)
+}
+
 export type ConsoleRoster = {
   user_id: string
   display_name: string
@@ -84,6 +101,7 @@ export type ConsoleRoster = {
   created_at: string
   decided_by: string | null
   checked_in_by: string | null
+  cost_state: 'owed' | 'settled' | 'on_the_day'
   /** Filled in from the co-host table, so the roster can show the badge. */
   is_co_host?: boolean
 }
@@ -99,7 +117,7 @@ export async function getConsole(planId: string) {
 
   const [{ data: roster }, { data: details }] = await Promise.all([
     admin.from('trek_plan_requests')
-      .select('user_id, display_name, status, message, checked_in_at, created_at, decided_by, checked_in_by')
+      .select('user_id, display_name, status, message, checked_in_at, created_at, decided_by, checked_in_by, cost_state')
       .eq('plan_id', planId)
       .order('created_at'),
     admin.from('trek_plan_details').select('meeting_point, logistics').eq('plan_id', planId).maybeSingle(),
