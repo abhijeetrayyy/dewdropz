@@ -24,6 +24,33 @@ export async function GET(request: Request) {
   }
 
   const dryRun = new URL(request.url).searchParams.get('dryRun') === '1'
+
+  // Without a mail transport this sweep is destructive, not merely useless.
+  // Each cart is stamped with `recovery_sent_at` *before* its email goes out
+  // (see lib/abandonedCarts.ts — stamping afterwards would risk a mail loop),
+  // and the query only ever looks at carts where that stamp is NULL. So a run
+  // with RESEND_API_KEY unset marks every abandoned cart as reminded, sends
+  // nothing, and no future run will ever pick those customers up again.
+  //
+  // Scheduling this hourly made that reachable without anybody deciding to,
+  // which is why the refusal lives here rather than in the workflow: the
+  // workflow cannot see the server's environment, and this endpoint should be
+  // just as safe to curl by hand.
+  //
+  // Dry runs are exempt. They neither send nor stamp, and previewing the list
+  // is exactly what an operator wants before wiring up Resend.
+  if (!dryRun && !process.env.RESEND_API_KEY) {
+    return NextResponse.json(
+      {
+        error: 'RESEND_API_KEY is not configured',
+        detail:
+          'Refusing to run: carts are stamped before sending, so this would consume the recovery list without mailing anyone.',
+        hint: 'Add ?dryRun=1 to preview who would be emailed.',
+      },
+      { status: 503 }
+    )
+  }
+
   const result = await recoverAbandonedCarts({ dryRun })
   return NextResponse.json({ dryRun, ...result })
 }

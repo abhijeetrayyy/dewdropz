@@ -207,9 +207,22 @@ the last mile on anything admin-side.**
       **Not built:** drip sequences, discount-bearing "come back" codes, or a
       campaign engine. One reminder, one email. Training customers to abandon
       carts because a coupon always follows is an expensive habit to buy.
+      **Scheduled** by `.github/workflows/recover-abandoned-carts.yml`, hourly
+      from 09:00 to 22:00 IST (`30 3-16 * * *` — GitHub cron is UTC). Hourly is
+      enough for a 6-hour window, and the waking-hours restriction is deliberate:
+      a cart reminder at 4am is a worse experience than one that waits for
+      breakfast, and small-hours mail is what teaches an inbox to treat a sender
+      as spam.
       **Email delivery itself is unverified** — no `RESEND_API_KEY` is set in
-      this environment, so the sweep reports those carts as `skipped` after
-      stamping them. Everything either side of the send is verified live.
+      this environment. Until one is, the route **refuses real runs with a 503**
+      and the workflow treats that as a warning rather than a failure. That
+      refusal is not tidiness: stamping happens before the send and the sweep
+      only reads unstamped carts, so one unguarded run would have marked every
+      abandoned cart as reminded, mailed nobody, and made those customers
+      permanently unreachable by recovery. Putting the sweep on a schedule is
+      what made that reachable without anyone deciding to. `?dryRun=1` is exempt
+      — it neither sends nor stamps — so the list is still previewable.
+      Everything either side of the send is verified live.
 - [x] **Tax rules.** Migration `036` (applied): `tax_rates` (HSN + price band +
       rate), `products.hsn_code`, per-line tax snapshotted onto `order_items`,
       a `tax_breakdown` summary and `tax_is_igst` on the order, and
