@@ -29,7 +29,7 @@ export default function TrekHero({
   openCount: number
   canHost: boolean
   /** Which Trek Buddy page you are on. */
-  active: 'board' | 'people' | 'yours' | 'new' | 'profile'
+  active: 'board' | 'people' | 'basecamp' | 'yours' | 'new' | 'profile'
   /** The viewer, when they have finished joining. Drives the presence card. */
   me?: MyTrekCard | null
   /** Unread notifications, shown on the Yours tab. */
@@ -38,6 +38,9 @@ export default function TrekHero({
   const tabs = [
     { key: 'board', label: 'The board', href: '/trek-buddy' },
     { key: 'people', label: 'Who is out there', href: '/trek-buddy/people' },
+    // Next to the directory rather than beside "Yours": it answers a question
+    // about other people, not about your own walks.
+    { key: 'basecamp', label: 'Basecamp', href: '/trek-buddy/basecamp' },
     { key: 'yours', label: 'Yours', href: '/trek-buddy/yours' },
     ...(canHost ? [{ key: 'new', label: 'Post a walk', href: '/trek-buddy/new' }] : []),
     // Was missing entirely. The profile page existed and nothing in the

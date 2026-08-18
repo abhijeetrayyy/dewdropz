@@ -70,6 +70,30 @@ export type TrekPlanRow = {
   hidden_at: string | null
 }
 
+/**
+ * Basecamp: what the people you follow are doing next.
+ *
+ * Lives here rather than beside the other social actions because a plan row is
+ * not finished when Postgres hands it over — `activity_label` is joined on in
+ * TypeScript by withKindLabels, and a version of this that skipped that step
+ * type-checked cleanly (the cast hid it) and would have rendered every card
+ * with an undefined kind.
+ *
+ * Ordered by departure, not by when it was posted. A feed sorted by recency
+ * answers "what has happened"; this one has to answer "what can I still get
+ * to", and a walk leaving on Saturday matters more than one posted an hour ago
+ * for next month.
+ */
+export async function getBasecamp(): Promise<TrekPlanRow[]> {
+  const user = await getUser()
+  if (!user) return []
+
+  const { data } = await createAdminSupabaseClient()
+    .rpc('trek_basecamp', { p_user: user.id, p_limit: 30 })
+
+  return (await withKindLabels((data ?? []) as TrekPlanRow[])) as TrekPlanRow[]
+}
+
 /** What the signed-in member still has to supply before they can use any of this. */
 export async function getTrekMembership() {
   const user = await getUser()

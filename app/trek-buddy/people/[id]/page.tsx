@@ -7,6 +7,8 @@ import TrekGate from '@/components/trek/TrekGate'
 import Evidence from '@/components/trek/Evidence'
 import SafetyActions from '@/components/trek/SafetyActions'
 import Guidance from '@/components/trek/Guidance'
+import FollowButton from '@/components/trek/FollowButton'
+import { getFollowState } from '@/actions/trekSocial'
 import { EXPERIENCE_LABEL } from '@/components/trek/PersonCardTile'
 import { getGuidance, getPerson, getTrekKinds, getTrekMembership } from '@/actions/trekBuddy'
 import { DAY_ARC } from '@/lib/constants'
@@ -54,6 +56,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   // Labels come from the kinds table now, so a profile listing an activity an
   // admin added last week does not render the raw key.
   const kindLabel = Object.fromEntries((await getTrekKinds()).map((k) => [k.key, k.label]))
+
+  // Skipped entirely on your own page — there is no button to feed.
+  const follow = isMe ? { following: false, followers: 0 } : await getFollowState(id)
 
   const mentorNotes = person.mentor
     ? await getGuidance({ audiences: ['first_time', 'all'], limit: 5 })
@@ -159,6 +164,18 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </div>
 
               <Evidence person={person} />
+
+              {/* Under the counted facts, because it is a preference and they
+                  are evidence. Never shown on your own page: following
+                  yourself is nonsense the database also refuses. */}
+              {!isMe && (
+                <FollowButton
+                  personId={id}
+                  personName={person.displayName}
+                  initialFollowing={follow.following}
+                  followers={follow.followers}
+                />
+              )}
             </div>
 
             {mentorNotes.length > 0 && (
