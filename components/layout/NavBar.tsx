@@ -142,6 +142,25 @@ export default function NavBar() {
   }
   useEffect(() => () => { if (closeTimer.current) window.clearTimeout(closeTimer.current) }, [])
 
+  // Which hero act is holding the frame, mirrored into state.
+  //
+  // This used to be done purely in CSS, with an arbitrary variant —
+  // `[body[data-hero-act=studio]_&]:text-paper` — and the colour half of it
+  // never worked. The ring beside it did, on the same element, from the same
+  // class string, and an identical string on a freshly created sibling
+  // resolved correctly; only the real anchor stayed dim. Whatever the cause,
+  // a cue that fails silently on one property and not another is not worth
+  // keeping: this reads the attribute and applies the class in JS, where it
+  // can be seen and tested.
+  const [heroAct, setHeroAct] = useState('')
+  useEffect(() => {
+    const read = () => setHeroAct(document.body.dataset.heroAct ?? '')
+    read()
+    const mo = new MutationObserver(read)
+    mo.observe(document.body, { attributes: true, attributeFilter: ['data-hero-act'] })
+    return () => mo.disconnect()
+  }, [])
+
   useEffect(() => {
     if (!openMenu) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenMenu(null) }
@@ -222,12 +241,20 @@ export default function NavBar() {
 
       <nav className="hidden items-center gap-7 justify-self-center lg:flex xl:gap-9">
         {NAV_LINKS.map((link) => {
-          // While the hero's studio act holds the frame, this link is where the
-          // eye should go next — the frame is showing the tool, and this is the
+          // While an act of the hero holds the frame, the nav item that act is
+          // about lights up — the frame is showing the thing, and this is the
           // site's permanent door to it. SummitHero writes `data-hero-act` on
-          // <body> at the act boundaries and the arbitrary variant below reads
+          // <body> at the act boundaries and the arbitrary variants below read
           // it, so the cue costs no state, no context and no re-render up here.
-          const isStudioDoor = link.href === '/customize'
+          //
+          // Act two has always done this for the studio. Act three now does it
+          // for Trek Buddy, which is the act that most needed it: it introduces
+          // a product by name, and the header was sitting inert while it did.
+          const actDoor =
+            link.href === '/customize' ? 'studio'
+            : link.href === '/trek-buddy' ? 'trek'
+            : null
+          const spotlit = actDoor !== null && actDoor === heroAct
           const open = openMenu === link.label
           // Where you are, marked. A nav that never says which section you are
           // in makes every page feel like it arrived from nowhere.
@@ -240,8 +267,16 @@ export default function NavBar() {
               onClick={() => setOpenMenu(null)}
               aria-expanded={link.menu ? open : undefined}
               className={`group relative block py-2 font-body text-xs uppercase tracking-[0.12em] transition-colors duration-300 ${
-                active || open ? 'text-paper' : 'text-paper/70 hover:text-paper'
-              } ${isStudioDoor ? '[body[data-hero-act=studio]_&]:text-paper' : ''}`}
+                // One colour utility, never two. Appending `text-paper`
+                // alongside `text-paper/70` puts two same-specificity rules on
+                // the element, and the stylesheet's own order decides which
+                // wins — not the order they appear in the attribute. The dimmer
+                // one was winning, which is why the highlight lit its ring but
+                // never its text.
+                active || open || spotlit
+                  ? 'text-paper'
+                  : 'text-paper/70 hover:text-paper'
+              }`}
             >
               {link.label}
               {/* One rule under the label doing two jobs: it is drawn for the
@@ -253,10 +288,14 @@ export default function NavBar() {
                   active || open ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                 }`}
               />
-              {isStudioDoor && (
+              {/* The ring, on the same state as the colour. One mechanism, so
+                  the two halves of the cue cannot disagree again. */}
+              {actDoor !== null && (
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full border border-sage/60 opacity-0 transition-opacity duration-500 [body[data-hero-act=studio]_&]:animate-pulse [body[data-hero-act=studio]_&]:opacity-100 motion-reduce:animate-none"
+                  className={`pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full border border-sage/60 transition-opacity duration-500 motion-reduce:animate-none ${
+                    spotlit ? 'animate-pulse opacity-100' : 'opacity-0'
+                  }`}
                 />
               )}
             </Link>

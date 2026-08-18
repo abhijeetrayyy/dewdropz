@@ -411,8 +411,13 @@ export default function SummitHero({
             setRangeLive((was) => (was === live ? was : live))
             const vid = self.progress > VIDEO_LIVE
             setVideoLive((was) => (was === vid ? was : vid))
+            // Which act is holding the frame, published on <body> so the nav
+            // can light the door that matches it. Act two already did this for
+            // the studio; act three now does it for Trek Buddy, so the header
+            // answers the hero instead of sitting inert through it.
             const inStudio = self.progress >= ACT2_IN[0] && self.progress < ACT2_OUT[1]
-            const flag = inStudio ? 'studio' : ''
+            const inTrek = self.progress >= ACT3_IN[0]
+            const flag = inStudio ? 'studio' : inTrek ? 'trek' : ''
             if (document.body.dataset.heroAct !== flag) document.body.dataset.heroAct = flag
           },
         },
@@ -975,12 +980,22 @@ export default function SummitHero({
           />
 
           <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center px-6 text-center md:px-10">
-            <p
-              data-act3
-              className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage opacity-0"
-            >
-              Trek Buddy · Dehradun and around
-            </p>
+            {/* The name, at a size you actually read.
+                It was a 10px eyebrow — the same weight as a caption — on the
+                one frame of the film whose whole job is to introduce a product
+                by name. If somebody scrolls the hero and cannot afterwards
+                tell you what the thing is called, the act has failed however
+                good the picture is. */}
+            <div data-act3 className="opacity-0">
+              <p className="font-mono text-[clamp(15px,2.1vw,26px)] uppercase leading-none tracking-[0.42em] text-sage">
+                {/* The trailing letter-space is padding, not a gap: wide
+                    tracking pushes the last glyph off-centre otherwise. */}
+                <span className="-mr-[0.42em]">Trek&nbsp;Buddy</span>
+              </p>
+              <p className="mt-3.5 font-mono text-[10px] uppercase tracking-[0.24em] text-paper/50">
+                Dehradun and around
+              </p>
+            </div>
 
             {/* Act one's scale, not a subheading's. The two centred frames of
                 the film should carry the same typographic weight. */}
@@ -1004,7 +1019,7 @@ export default function SummitHero({
                 href="/trek-buddy"
                 className="inline-flex items-center gap-2 rounded-full bg-paper px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
               >
-                See the board <span aria-hidden="true">↗</span>
+                Find trek buddies <span aria-hidden="true">↗</span>
               </Link>
             </div>
           </div>
