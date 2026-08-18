@@ -458,6 +458,7 @@ export async function createTrekPlan(input: {
   logistics?: string
   nightNote?: string
   womenOnly?: boolean
+  minTrust?: 0 | 1 | 2
   seniorFriendly?: boolean
   languages?: string[]
   coverUrls?: string[]
@@ -486,6 +487,7 @@ export async function createTrekPlan(input: {
     p_languages: input.languages ?? [],
     p_cover_urls: input.coverUrls ?? [],
     p_activity_other: input.activityOther?.trim() || null,
+    p_min_trust: input.minTrust ?? 0,
     p_actor: user.id,
   }, ['/trek-buddy'])
 

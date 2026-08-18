@@ -97,6 +97,7 @@ export default function NewPlanForm({
     backBy: initial.defaultBackBy,
     womenOnly: false,
     seniorFriendly: false,
+    minTrust: 0 as 0 | 1 | 2,
     languages: [] as string[],
     capacity: Math.max(4, initial.minParty),
     difficulty: 'moderate' as 'easy' | 'moderate' | 'difficult',
@@ -497,6 +498,39 @@ export default function NewPlanForm({
                       Set that on your profile
                     </Link>{' '}
                     if it applies to you.
+                  </p>
+                )}
+              </div>
+
+              {/* Who may ask. Enforced in the database beside the women-only
+                  gate, so it holds whatever route a request arrives by.
+                  Deliberately not called "safety level": it filters who can
+                  ask, and a host still chooses who actually comes. */}
+              <div className="space-y-3">
+                <span className={label}>Who can ask to come</span>
+                {([
+                  [0, 'Anyone on the board', 'Everyone who has joined and filled in a profile.'],
+                  [1, 'People with a verified phone', 'A confirmed mobile number. It proves they hold a SIM, not who they are — but it makes a throwaway account cost something.'],
+                  [2, 'People who have been vouched for', 'Two people who actually walked with them said so afterwards. The hardest to fake, and the smallest group.'],
+                ] as const).map(([value, name, why]) => (
+                  <label key={value} className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="radio"
+                      name="minTrust"
+                      checked={f.minTrust === value}
+                      onChange={() => set({ minTrust: value })}
+                      className="mt-1 h-4 w-4 accent-clay"
+                    />
+                    <span>
+                      <span className="block font-body text-sm text-text">{name}</span>
+                      <span className="block font-body text-xs text-mid">{why}</span>
+                    </span>
+                  </label>
+                ))}
+                {f.minTrust > 0 && (
+                  <p className="font-body text-xs leading-relaxed text-mid">
+                    Worth knowing: this is a young board, so a higher bar can mean nobody is able
+                    to ask yet. You can lower it later if the walk stays empty.
                   </p>
                 )}
               </div>

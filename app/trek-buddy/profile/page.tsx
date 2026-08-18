@@ -4,11 +4,13 @@ import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import TrekHero from '@/components/trek/TrekHero'
 import Evidence from '@/components/trek/Evidence'
+import TrustCard from '@/components/trek/TrustCard'
 import ProfileForm from './ProfileForm'
 import {
   getMyTrekCard, getPerson, getTrekBoard, getTrekKinds, getTrekMembership,
   getVouchable, getUnreadCount
 } from '@/actions/trekBuddy'
+import { getMyTrust } from '@/actions/trekTrust'
 
 export const metadata: Metadata = {
   title: 'Your Trek Buddy profile — DEWDROPZ',
@@ -20,13 +22,14 @@ export default async function TrekProfilePage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/profile')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [person, vouchable, all, me, unread, kinds] = await Promise.all([
+  const [person, vouchable, all, me, unread, kinds, trust] = await Promise.all([
     getPerson(membership.userId!),
     getVouchable(),
     getTrekBoard(),
     getMyTrekCard(),
     getUnreadCount(),
     getTrekKinds(),
+    getMyTrust(),
   ])
   if (!person) redirect('/trek-buddy/setup')
 
@@ -61,6 +64,10 @@ export default async function TrekProfilePage() {
             {/* The counted half, shown first and not editable — you cannot type
                 your way to experience here. */}
             <Evidence person={person} />
+
+            {/* Directly under it, because it is the same kind of thing: facts
+                about you that were earned rather than written. */}
+            {trust && <TrustCard trust={trust} />}
           </div>
 
           <div className="mt-12">
