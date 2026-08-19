@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Fraunces, Archivo, Space_Mono } from 'next/font/google'
+import { Fraunces, Archivo, Space_Mono, Newsreader, Inter, IBM_Plex_Mono } from 'next/font/google'
 import LenisProvider from '@/providers/LenisProvider'
 import { IntroProvider } from '@/providers/IntroProvider'
 import { CartProvider } from '@/providers/CartProvider'
@@ -55,6 +55,53 @@ const spaceMono = Space_Mono({
   display: 'swap',
 })
 
+// ─── The Trek Buddy stack ────────────────────────────────────────────────────
+// A second, quieter set of three, scoped to the board and used nowhere else.
+//
+// The shop's voice is Fraunces and Archivo: a wonky optical serif over an
+// industrial gothic, warm and a little aged, with Space Mono's retro cut for
+// texture. That is a good voice for a company that prints garments — it is
+// characterful, and character is what sells a T-shirt.
+//
+// It is the wrong voice for this. Trek Buddy is where somebody decides whether
+// to get into a car at four in the morning with people they have never met. The
+// type there has one job, which is to be believed. Fraunces at 300 weight and
+// 100px is a magazine cover; Space Mono on every label reads as a craft studio.
+// Neither says "this is a system that will hold when it matters".
+//
+//   display — Newsreader. A reading serif with a real optical-size axis, drawn
+//     for long-form journalism. Set at 400 and 500 rather than hairline, it is
+//     sober and adult without being cold, and it carries a 48px headline as a
+//     STATEMENT rather than as decoration.
+//
+//   body — Inter. Deliberately the most neutral interface face there is. The
+//     shop rejected Inter precisely because it is the default of every SaaS
+//     product of the last five years — and here that is the argument FOR it: an
+//     interface people are trusting with a safety decision should recede, and
+//     legibility at 13px in bright sun on a hillside beats personality.
+//
+//   mono — IBM Plex Mono, and used far more sparingly than Space Mono was. A
+//     number, a time, a count, a coordinate. Not every label on the screen.
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  axes: ['opsz'],
+  variable: '--font-tb-display',
+  display: 'swap',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-tb-body',
+  display: 'swap',
+})
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-tb-mono',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'DEWDROPZ — Feel Alive',
   description: 'Premium Indian outdoor trekking and adventure gear.',
@@ -66,7 +113,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${archivo.variable} ${spaceMono.variable}`}>
+    <html lang="en" className={`${fraunces.variable} ${archivo.variable} ${spaceMono.variable} ${newsreader.variable} ${inter.variable} ${plexMono.variable}`}>
       <body className="bg-paper text-text antialiased">
         <AnalyticsProvider>
           <WishlistProvider>

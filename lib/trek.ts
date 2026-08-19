@@ -193,49 +193,153 @@ export const BOARD_LIMITS: { title: string; body: string }[] = [
 // leave. 05:20 and 21:40 are not two rows in a list, they are two completely
 // different undertakings, and the board should say so before you read a word.
 //
-// So every plan carries a vertical bar coloured by its departure hour, and
-// scanning the board reads as scanning a day — the early starts are indigo, the
-// middle of the day is paper, the evening is clay, the dark is ink. It is the
-// same day-arc the homepage hero already tells, reused as an index.
+// This is now the whole system rather than a stripe. One departure time drives
+// SIX values, and between them they colour every surface the walk appears on:
 //
-// Not decoration: it is the fastest possible answer to "is there anything early
-// this week?", which is the question people actually arrive with.
+//   color  — type and dots on an INK ground
+//   ink    — type and dots on a PAPER ground
+//   tint   — the foot of the photograph, so a sunrise card is warm and a
+//            midnight one is cold before you have read the hour
+//   bg/fg  — a filled pill, a meter segment, a timeline node
+//   bar    — the rail down the side of a row (ink, night-substituted)
+//
+// Scanning the board is therefore scanning a day: indigo before light, amber at
+// first light, green through the middle, clay at dusk, pale blue after dark.
+//
+// THE NIGHT PROBLEM, and why `dotColor` exists. Night's natural fill is #0C100D
+// — the same near-black as the ink bands and the card scrims. Painted straight,
+// a night walk's dot vanishes on a dark surface and its pill vanishes on a
+// light one. So the substitution is a function, called at every site, rather
+// than a ternary re-derived by hand in fifteen components:
+//
+//   on a light ground → #142536 (the blue hour, dark enough to read as night)
+//   on a dark ground  → #C9D6EC (starlight, and the only pale value here)
+export type HourGround = 'light' | 'dark'
+
 export type HourLight = {
-  key: 'predawn' | 'morning' | 'midday' | 'dusk' | 'night'
+  key: 'predawn' | 'dawn' | 'day' | 'dusk' | 'night'
   label: string
-  /** The rail itself. */
-  bar: string
-  /** Type colour that survives on the card's own ground. */
+  /** Type and dots on an ink ground. */
+  color: string
+  /** Type and dots on a paper ground. */
   ink: string
-  /**
-   * The same hour, legible on ink.
-   *
-   * Needed the moment cards became photographs: the card's foot is an 0.86
-   * scrim of ink, and `bar` is chosen to read against paper. Measured against
-   * #0C100D, predawn came out at 1.69:1 and midday at 1.86:1 — not "a bit
-   * low", but invisible. Every value here clears 4.5:1.
-   */
+  /** The scrim over the foot of a photograph. */
+  tint: string
+  /** A filled pill, a meter segment, a timeline node. */
+  bg: string
+  /** Type on that fill. */
+  fg: string
+
+  // ── Kept from the first version so nothing has to migrate in one commit ──
+  /** The rail down the side of a row. Night-substituted for paper. */
+  bar: string
+  /** The hour, legible on ink. Same value as `color`. */
   onDark: string
-  /** A wash behind the card for the two ends of the day. */
+  /** A wash behind a card at the two ends of the day. */
   wash: string
 }
 
 const LIGHTS: Record<HourLight['key'], HourLight> = {
-  // onDark values and their measured contrast against #0C100D:
-  //   predawn 7.86:1   morning 6.80:1   midday 10.33:1   dusk 5.88:1   night 13.34:1
-  predawn: { key: 'predawn', label: 'Before light', bar: '#2E3A56', ink: '#2E3A56', onDark: '#8FA6D8', wash: 'rgba(46,58,86,0.05)' },
-  morning: { key: 'morning', label: 'First light',  bar: '#7FA471', ink: '#3C6A33', onDark: '#7FA471', wash: 'transparent' },
-  midday:  { key: 'midday',  label: 'Full day',     bar: '#27481F', ink: '#27481F', onDark: '#A8C79C', wash: 'transparent' },
-  dusk:    { key: 'dusk',    label: 'Last light',   bar: '#B8826B', ink: '#8A5A44', onDark: '#B8826B', wash: 'rgba(184,130,107,0.06)' },
-  night:   { key: 'night',   label: 'After dark',   bar: '#0C100D', ink: '#0C100D', onDark: '#DDD7C6', wash: 'rgba(12,16,13,0.05)' },
+  // Every value is pulled back from the first pass, which took the prototype's
+  // hues at full chroma and painted card feet and pill fills with them. At that
+  // saturation the hour stopped being an index and became a mood: a board of
+  // eight walks was eight different bright colours, which is a paint chart, not
+  // information. These sit at roughly four-fifths of that, they are checked
+  // against both grounds, and they are used SMALL — a dot, a 4px rail, a thin
+  // meter fill, a bordered pill. The photograph is allowed to be the bright
+  // thing on the card; the hour is allowed to be legible.
+  predawn: {
+    key: 'predawn', label: 'Before light',
+    color: '#9FB1CE', ink: '#3A4A66', tint: 'rgba(24,34,52,0.72)',
+    bg: '#2C3A54', fg: '#DCE4F0',
+    bar: '#3A4A66', onDark: '#9FB1CE', wash: 'rgba(58,74,102,0.06)',
+  },
+  dawn: {
+    key: 'dawn', label: 'First light',
+    color: '#D9A560', ink: '#8A5A17', tint: 'rgba(122,80,28,0.55)',
+    bg: '#A76F1E', fg: '#FBF3E4',
+    bar: '#8A5A17', onDark: '#D9A560', wash: 'rgba(167,111,30,0.06)',
+  },
+  day: {
+    key: 'day', label: 'Full day',
+    color: '#8FB394', ink: '#1F4A2E', tint: 'rgba(24,58,36,0.55)',
+    bg: '#1F4A2E', fg: '#F2F7F3',
+    bar: '#1F4A2E', onDark: '#8FB394', wash: 'rgba(31,74,46,0.05)',
+  },
+  dusk: {
+    key: 'dusk', label: 'Last light',
+    color: '#C09A85', ink: '#7A5140', tint: 'rgba(96,64,50,0.6)',
+    bg: '#8A5D48', fg: '#F7EFEA',
+    bar: '#7A5140', onDark: '#C09A85', wash: 'rgba(122,81,64,0.06)',
+  },
+  night: {
+    key: 'night', label: 'After dark',
+    color: '#B9C4D8', ink: '#22303F', tint: 'rgba(14,18,22,0.78)',
+    bg: '#1A222D', fg: '#D7DEE9',
+    bar: '#22303F', onDark: '#B9C4D8', wash: 'rgba(26,34,45,0.05)',
+  },
 }
 
-/** Which light a departure falls in. Takes 'HH:MM' or 'HH:MM:SS'. */
-export function lightForTime(time: string): HourLight {
-  const h = Number(time.slice(0, 2))
-  if (h < 6) return LIGHTS.predawn
-  if (h < 9) return LIGHTS.morning
-  if (h < 16) return LIGHTS.midday
-  if (h < 19) return LIGHTS.dusk
+/**
+ * Which light a departure falls in. Takes 'HH:MM' or 'HH:MM:SS'.
+ *
+ * The boundaries are the design's, not the clock's: 05:00 is when the sky in
+ * the foothills starts to go, 08:00 is when the light stops being an event,
+ * 17:00 is when it starts being one again, 20:00 is dark.
+ */
+export function lightForTime(time: string | null | undefined): HourLight {
+  // A walk with no stated hour is almost always a multi-day one, and those
+  // leave in the morning. 06:00 puts it in `dawn`, which is honest.
+  const h = Number((time ?? '06:00').slice(0, 2))
+  if (Number.isNaN(h)) return LIGHTS.dawn
+  if (h < 5) return LIGHTS.predawn
+  if (h < 8) return LIGHTS.dawn
+  if (h < 17) return LIGHTS.day
+  if (h < 20) return LIGHTS.dusk
   return LIGHTS.night
+}
+
+/** Every band, in the order a day passes. For the day-arc index. */
+export const HOUR_BANDS: HourLight[] = [
+  LIGHTS.predawn, LIGHTS.dawn, LIGHTS.day, LIGHTS.dusk, LIGHTS.night,
+]
+
+/**
+ * A solid fill that will actually be visible on the ground you are painting on.
+ *
+ * Use this for every dot, meter segment, timeline node and pill fill. Calling
+ * `light.bg` directly is a bug for night, and only for night, which is exactly
+ * the kind of bug that ships.
+ */
+export function dotColor(light: HourLight, ground: HourGround): string {
+  // Night's fill is a deep slate rather than the near-black it used to be, so
+  // it no longer disappears into an ink band — but it is still the one band
+  // dark enough to need lifting when it lands on one.
+  if (light.key !== 'night') return light.bg
+  return ground === 'dark' ? '#8797AE' : light.bg
+}
+
+/** Type colour for the hour, on whichever ground it lands. */
+export function hourInk(light: HourLight, ground: HourGround): string {
+  return ground === 'dark' ? light.color : light.ink
+}
+
+/** The scrim laid over the foot of a photograph, so the card carries its hour. */
+export function scrimForHour(light: HourLight, from = 40): string {
+  return `linear-gradient(180deg, transparent ${from}%, ${light.tint} 100%)`
+}
+
+/**
+ * The field a card falls back to when the host has not given a photograph.
+ *
+ * Deliberately handsome rather than apologetic: a board of coverless walks
+ * should still look composed, so a host is tempted into adding a picture rather
+ * than shamed into it.
+ */
+export function coverlessField(light: HourLight): string {
+  // Mixed most of the way to ink rather than used at full strength. A card
+  // with no photograph should read as a quiet field in the hour's colour, not
+  // as the loudest tile on the board — which is what happened when the raw
+  // hue ran to 0%: a coverless dawn walk out-shouted six real photographs.
+  return `linear-gradient(158deg, color-mix(in srgb, ${light.bar} 48%, #101311) 0%, #101311 74%)`
 }

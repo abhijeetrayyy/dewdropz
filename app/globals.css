@@ -50,6 +50,42 @@
   --light:       #94917F;
   --rule:        #DDD7C6;
   --rule-warm:   #D2C4A4; /* rules that sit on paper-warm / paper-deep */
+  --rule-soft:   #EFEADB; /* the hairline INSIDE a card, quieter than the one
+                             between cards — without it a card's own divisions
+                             shout as loudly as its edge */
+  --surface:     #FFFFFF; /* a card lifted off the paper. Named, so components
+                             stop reaching for a literal white. */
+  /* Defaults for the Trek Buddy scope's extra steps. The storefront never
+     references these; they exist so Tailwind has something to generate the
+     utilities from, and `.trek-scope` overrides all of them. */
+  --faint:       #B4B8B2;
+  --ink-raised:  #191D1A;
+  --sage-soft:   #E7EFE8;
+  --amber-wash:  #F7F0E2;
+  --clay-wash:   #F5EDE8;
+  --slate:       #47597A;
+  --slate-soft:  #B9C4D8;
+
+  /* ── The radius ladder ───────────────────────────────────────────────────
+     Monotonic with surface size, and the only legal values. A board where a
+     chip, a card and a panel all sit at 6px has no hierarchy of enclosure —
+     everything reads as the same kind of object, which is most of why the
+     old board felt like a table. */
+  --r-bar:    2px;  /* rails, active underlines                              */
+  --r-stamp:  3px;  /* a caption burned into a photograph                    */
+  --r-tag:    4px;  /* micro cost / difficulty tags                          */
+  --r-input:  6px;  /* inputs, photo tiles, date chips, hover plates         */
+  --r-card:   8px;  /* the standard card and the standard row                */
+  --r-panel: 10px;  /* a rail card, a featured hero, an action panel         */
+  --r-shell: 14px;  /* the messages shell, the invite card                   */
+
+  /* ── Elevation ───────────────────────────────────────────────────────────
+     Long throw, large negative spread, no visible edge. A card is held above
+     the paper by the shadow of a real object, not outlined by a 1px box. */
+  --shadow-card:  0 12px 32px -16px rgba(12, 16, 13, 0.35);
+  --shadow-lift:  0 20px 40px -20px rgba(12, 16, 13, 0.35);
+  --shadow-panel: 0 24px 50px -24px rgba(12, 16, 13, 0.55);
+  --shadow-float: 0 40px 90px -30px rgba(12, 16, 13, 0.50);
 
   --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
@@ -109,6 +145,15 @@
   --color-dawn-soft:   var(--dawn-soft);
   --color-ember:       var(--ember);
   --color-rule-warm:   var(--rule-warm);
+  --color-rule-soft:   var(--rule-soft);
+  --color-faint:       var(--faint);
+  --color-ink-raised:  var(--ink-raised);
+  --color-sage-soft:   var(--sage-soft);
+  --color-amber-wash:  var(--amber-wash);
+  --color-clay-wash:   var(--clay-wash);
+  --color-slate:       var(--slate);
+  --color-slate-soft:  var(--slate-soft);
+  --color-surface:     var(--surface);
   --color-ink:        var(--ink);
   --color-text:       var(--text);
   --color-mid:        var(--mid);
@@ -151,6 +196,138 @@
      through to Tailwind's default system stack and rendered in a different
      typeface on every operating system. */
   --font-mono:    var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   TREK BUDDY — a second, quieter design language
+   ═════════════════════════════════════════════════════════════════════════════
+   The shop and the board are the same company and they are not the same job.
+
+   DEWDROPZ sells garments, and its language is warm, aged and characterful:
+   cream paper, a wonky optical serif, an industrial gothic, a retro monospace,
+   and one loud amber. That is right for a shop. Every one of those choices is
+   wrong here, and the reason is not taste — it is what the screen is being
+   asked to do. Trek Buddy is where a woman decides whether to get into a
+   shared cab at 04:30 with five people she has never met; where somebody over
+   sixty works out whether a "moderate" walk will leave them behind; where a
+   person who has never been outdoors in their life decides whether this is for
+   them at all. The interface that carries those decisions has exactly one job,
+   which is to be believed.
+
+   So the board takes its own tokens, scoped to `.trek-scope` and applied by
+   `app/trek-buddy/layout.tsx`. Nothing outside it changes.
+
+   WHAT MOVED, AND WHY
+
+     GROUND. Cream (#F8F5ED) is a warm, printed, editorial surface — it reads
+     as paper stock, which is charming and is also why the board looked like a
+     zine. The ground here is a near-neutral off-white with the yellow taken
+     out: it recedes, photographs sit on it honestly, and green and slate stop
+     going muddy against it.
+
+     ACTION IS GREEN, NOT AMBER. The prototype spent its one saturated colour
+     on every primary button, so a page could carry six amber pills and none of
+     them meant anything. Worse, saturated amber is the colour of a promotion.
+     The primary act is now deep forest — the calmest confident colour a
+     product about being outdoors can use — and amber is demoted to the one
+     thing it is genuinely good at: THIS IS ABOUT TO LEAVE. If it is amber on
+     this board, a clock is running.
+
+     LESS SATURATION EVERYWHERE. Every hue is pulled back roughly a fifth.
+     Confidence in an interface is carried by restraint and by contrast, not by
+     chroma; a serious tool is quiet and legible, and it lets the photographs
+     and the faces be the only bright things on the screen.
+
+     TYPE. Newsreader over Inter over IBM Plex Mono, declared in
+     `app/layout.tsx`. And mono is now RATIONED: it is for a number, a time, a
+     count or a coordinate, never for a heading, a button or a sentence.
+   ═════════════════════════════════════════════════════════════════════════ */
+.trek-scope {
+  /* ── Type ─────────────────────────────────────────────────────────────── */
+  --font-display: var(--font-tb-display);
+  --font-body:    var(--font-tb-body);
+  --font-mono:    var(--font-tb-mono);
+
+  /* ── Ground ───────────────────────────────────────────────────────────── */
+  --paper:      #FAFAF8; /* the page                                        */
+  --paper-warm: #F3F3EF; /* a raised or advisory band                       */
+  --paper-deep: #E9E9E3; /* the deepest band                                */
+  --surface:    #FFFFFF; /* a card lifted off the page                      */
+
+  /* ── Ink ──────────────────────────────────────────────────────────────── */
+  --ink:        #0F1210; /* a control surface, and the dark bands           */
+  --ink-raised: #191D1A; /* a card on an ink band                           */
+
+  /* ── Type colour. Four steps, and every one measured on --paper:
+       text 15.8:1 · mid 6.9:1 · light 3.6:1 (large and non-essential only)  */
+  --text:  #171A18;
+  --mid:   #575C56;
+  --light: #8B908A;
+  --faint: #B4B8B2;
+
+  /* ── Rules. Three weights, because a card's internal division must not
+       shout as loudly as the edge between two cards.                        */
+  --rule:      #E4E4DE;
+  --rule-soft: #EFEFEA;
+  --rule-warm: #D8D8D0;
+
+  /* ── Green. The primary. Trust, confirmation, completion, and the act.
+       #1F4A2E measures 10.4:1 on paper and 8.9:1 against white type.         */
+  --forest:      #1F4A2E;
+  --forest-mid:  #2B6440;
+  --forest-deep: #12301F;
+  --sage:        #6E9B79;
+  --sage-soft:   #E7EFE8;
+
+  /* ── Amber. URGENCY ONLY. Not a button colour, not a brand colour: a walk
+       that is about to leave, an unread count, a thing waiting on you.
+       Pulled down from #E39B3F, which was a promotion; this is a warning
+       lamp, and it measures 4.6:1 on paper so it can carry small type.       */
+  --dawn:      #A76F1E;
+  --dawn-soft: #E8D9BC;
+  --ember:     #8A5A17;
+  --amber-wash: #F7F0E2;
+
+  /* ── Clay. Where something stops: a limit, a full walk, a waitlist, a
+       cancellation. Never red — red is an error, and none of these are.      */
+  --clay:      #99694F;
+  --clay-deep: #7A5140;
+  --clay-wash: #F5EDE8;
+
+  /* ── Slate. Night, before light, and the blue hour.                       */
+  --altitude:  #1E2A3A;
+  --slate:     #47597A;
+  --slate-soft:#B9C4D8;
+
+  /* ── Elevation. Shallower and tighter than the shop's — a serious tool
+       lifts things a few millimetres, not a few centimetres.                 */
+  --shadow-card:  0 1px 2px rgba(23, 26, 24, 0.04), 0 8px 24px -16px rgba(23, 26, 24, 0.22);
+  --shadow-lift:  0 2px 4px rgba(23, 26, 24, 0.05), 0 18px 36px -20px rgba(23, 26, 24, 0.28);
+  --shadow-panel: 0 2px 6px rgba(23, 26, 24, 0.06), 0 24px 48px -28px rgba(23, 26, 24, 0.4);
+  --shadow-float: 0 8px 16px rgba(23, 26, 24, 0.08), 0 40px 80px -40px rgba(23, 26, 24, 0.45);
+
+  /* ── Radius. One step calmer at the top end. 14px corners on a 900px card
+       read as a consumer app; 12px reads as a document.                      */
+  --r-bar:    2px;
+  --r-stamp:  3px;
+  --r-tag:    4px;
+  --r-input:  6px;
+  --r-card:   8px;
+  --r-panel: 10px;
+  --r-shell: 12px;
+
+  background-color: var(--paper);
+  color: var(--text);
+  /* Inter's default figures are proportional; a board full of times, counts
+     and distances wants them to line up in columns without every call site
+     asking. */
+  font-feature-settings: 'cv05' 1, 'ss03' 1;
+}
+
+/* Selection follows the primary rather than the shop's forest-on-cream. */
+.trek-scope ::selection {
+  background-color: var(--forest);
+  color: var(--paper);
 }
 
 @layer base {
@@ -244,66 +421,127 @@
 
      Nothing here is a new colour. Every value is a token the site already had,
      used the way an app uses them instead of the way a magazine does. */
+  /* ── Controls ────────────────────────────────────────────────────────────
+     One shape, three jobs, and the job is carried by FILL rather than by
+     colour-of-the-week:
+
+       act    — the one thing this screen wants you to do. Deep forest, paper
+                type. There is at most one on a screen.
+       quiet  — a control you can find but are not being pushed toward.
+       urgent — reserved for a clock: a walk about to leave, a request waiting
+                on you. Amber, and amber is nothing else.
+
+     Uppercase and wide tracking are gone from the button face. Small caps at
+     0.12em is a display gesture — it says "brand" — and a button that a person
+     presses while deciding whether to spend a day with strangers should say
+     what it does in a normal voice. Sentence case, 13px, medium weight. */
   .trek-pill {
     border-radius: 999px;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 10px 20px;
-    line-height: 1;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
+    padding: 11px 22px;
+    line-height: 1.1;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+    transition:
+      background-color 200ms ease,
+      color 200ms ease,
+      border-color 200ms ease,
+      box-shadow 200ms ease;
   }
-  /* The act. Amber ground, ink type — measured off the prototype's primary
-     button, and the only place this much saturation appears. */
+
+  .trek-pill-sm {
+    font-size: 12px;
+    padding: 8px 16px;
+  }
+
+  .trek-pill-lg {
+    font-size: 14px;
+    padding: 14px 28px;
+  }
+
   .trek-pill-act {
-    background: var(--dawn);
-    color: var(--ink);
+    background: var(--forest);
+    color: var(--paper);
+    border: 1px solid var(--forest);
   }
-  .trek-pill-act:hover { background: var(--dawn-soft); }
-  /* A control you can find but are not being pushed towards. */
+  .trek-pill-act:hover { background: var(--forest-mid); border-color: var(--forest-mid); }
+
   .trek-pill-quiet {
-    border: 1px solid var(--rule);
-    color: var(--mid);
+    border: 1px solid var(--rule-warm);
+    color: var(--text);
+    background: transparent;
   }
-  .trek-pill-quiet:hover { border-color: var(--text); color: var(--text); }
-  /* On an ink band, where the hairline has to be paper-side to exist at all. */
+  .trek-pill-quiet:hover { border-color: var(--text); background: var(--paper-warm); }
+
+  /* A clock is running. Nothing else on the board may take this colour. */
+  .trek-pill-urgent {
+    background: var(--amber-wash);
+    color: var(--ember);
+    border: 1px solid color-mix(in srgb, var(--dawn) 40%, transparent);
+  }
+  .trek-pill-urgent:hover { border-color: var(--dawn); }
+
+  /* On an ink band, where a hairline has to be paper-side to exist at all. */
   .trek-pill-onink {
-    border: 1px solid rgba(248, 245, 237, 0.22);
-    color: rgba(248, 245, 237, 0.82);
+    border: 1px solid rgba(250, 250, 248, 0.24);
+    color: rgba(250, 250, 248, 0.86);
+    background: transparent;
   }
-  .trek-pill-onink:hover { border-color: var(--dawn); color: var(--dawn); }
+  .trek-pill-onink:hover { border-color: rgba(250, 250, 248, 0.7); background: rgba(250, 250, 248, 0.06); }
+
+  .trek-pill-actinv {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--paper);
+  }
+  .trek-pill-actinv:hover { background: #ffffff; }
+
   /* Selected, on either ground. */
   .trek-pill-on {
     background: var(--text);
     color: var(--paper);
+    border: 1px solid var(--text);
   }
 
-  /* A card. Clipped at 6px, no border, no shadow — it is held by its ground,
-     not by an edge drawn around it. */
-  .trek-card {
-    border-radius: 6px;
-    overflow: hidden;
-    background: var(--paper);
-  }
-  .trek-card-onink { background: rgba(248, 245, 237, 0.04); }
+  /* ── Labels ──────────────────────────────────────────────────────────────
+     The old `.trek-label` was 10px mono at 0.18em and it was used for section
+     heads, statuses, buttons, tab names and captions — which is why every
+     screen read at one volume. It survives, restricted to a KEY: the word
+     above a number, the name of a section. Nothing you press, nothing that
+     states a state, and never a heading on its own.
 
-  /* The micro-label. Mono, uppercase, tracked wide — the prototype's most
-     repeated single gesture, and what makes data read as instrument rather
-     than as prose. */
+     And it is no longer monospace by default. Mono is for figures; a key set
+     in mono is a typographic costume. */
   .trek-label {
-    font-size: 10px;
-    letter-spacing: 0.18em;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    line-height: 1.2;
   }
 
   .trek-label-xs {
-    font-size: 9px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  /* An eyebrow above a headline. One per screen. */
+  .trek-eyebrow {
+    font-size: 11px;
+    font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+    line-height: 1.2;
   }
+
+  /* The card species now live below, with the radius ladder and the elevation
+     tokens they depend on. */
 
   /* A shelf: one row, scrolled sideways, with the overflow bleeding off the
      edge rather than stopping at the container — so it reads as a row that
@@ -320,6 +558,197 @@
   }
   .trek-shelf::-webkit-scrollbar { display: none; }
   .trek-shelf > * { scroll-snap-align: start; }
+
+  /* ── Figures ─────────────────────────────────────────────────────────────
+     The single biggest reason the board read as a document: every number in
+     it was set at 10px in grey mono, the same size and weight as the word
+     next to it. "41 walks live" is not a sentence — it is an instrument
+     reading, and an instrument sets the number large and the unit small.
+
+     `.trek-datum` stacks the key OVER the figure, which is how a dashboard,
+     a dial and a departures board all do it. `.trek-label` is now reserved
+     for keys and section stamps and may not be used for a heading, a button
+     or a status. */
+  .trek-figure {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 21px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trek-figure-lg {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: clamp(24px, 2.6vw, 30px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trek-datum-key {
+    display: block;
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  /* A headline. Newsreader wants to be set at a real weight and a real size,
+     not at 300 across a whole viewport — a hairline serif at 100px is a
+     fashion masthead, and this is not one. */
+  .trek-h1 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(30px, 3.6vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+  }
+
+  .trek-h2 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(23px, 2.4vw, 31px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .trek-h3 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 500;
+    font-size: 19px;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+  }
+
+  /* A lede. The one place a serif is allowed to be large and loose. */
+  .trek-lede {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(17px, 1.5vw, 20px);
+    line-height: 1.6;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────────
+     Three species, and the difference between them is enclosure, not colour:
+     a ROW is held by a hairline, a CARD is held by a shadow, a PANEL is a
+     surface you act on. Using one where another belongs is what made every
+     block on the plan page look like every other block. */
+  .trek-card {
+    border-radius: var(--r-card);
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .trek-card-onink {
+    background: rgba(248, 245, 237, 0.04);
+    box-shadow: none;
+  }
+
+  .trek-row {
+    border-radius: var(--r-card);
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .trek-panel {
+    border-radius: var(--r-panel);
+    box-shadow: var(--shadow-panel);
+  }
+
+  /* Provisional, locked, or not yet real. Never a solid edge — a dashed one
+     is the only honest way to draw a thing that is being held back. */
+  .trek-provisional {
+    border-radius: var(--r-card);
+    border: 1px dashed var(--rule-warm);
+    background: rgba(241, 233, 215, 0.5);
+  }
+
+  /* The lift. Two millimetres, not eight — a card that jumps under the
+     pointer reads as a toy, and a row that jumps reads as a bug, because a
+     list is a surface and a card is an object. */
+  .trek-liftable {
+    transition:
+      transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .trek-liftable:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
+
+  /* ── Glass ───────────────────────────────────────────────────────────────
+     Blur scales with the element, so a 20px caption chip and a 64px fixed
+     bar do not sit in the same plane. */
+  .trek-glass-sm { background: rgba(15, 18, 16, 0.66); backdrop-filter: blur(6px); }
+  .trek-glass    { background: rgba(15, 18, 16, 0.7); backdrop-filter: blur(8px); }
+  .trek-glass-lg { background: rgba(15, 18, 16, 0.62); backdrop-filter: blur(12px); }
+
+  /* ── The band ────────────────────────────────────────────────────────────
+     One measure for the whole product. The old feature ran max-w-2xl, 3xl,
+     5xl, 6xl and 7xl on five consecutive surfaces, so nothing lined up
+     vertically as you scrolled and every page felt like a different site. */
+  .trek-band {
+    padding-inline: 24px;
+  }
+
+  @media (min-width: 768px) {
+    .trek-band { padding-inline: 40px; }
+  }
+
+  .trek-measure {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  /* ── Motion ──────────────────────────────────────────────────────────────
+     Three keyframes for the entire product, so the whole thing has one pulse
+     rather than a different idea of liveliness per component. */
+  @keyframes tb-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+  }
+
+  @keyframes tb-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* `.tb-pulse` is the only ambient motion left, and it may sit only next to
+     something genuinely live. The ken-burns drift and the scrolling marquee
+     went with the rejected prototype: a photograph that will not hold still
+     and a strip of words sliding past are the two gestures that made a board
+     people trust their Saturday to read like a landing page. */
+  .tb-pulse    { animation: tb-pulse 2s ease-in-out infinite; }
+  .tb-rise     { animation: tb-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tb-pulse,
+    .tb-rise { animation: none; }
+
+    .trek-liftable:hover { transform: none; }
+  }
+
+  /* ── Scroll rails ────────────────────────────────────────────────────────
+     A row that bleeds off the edge is the only signal that says "there is
+     more this way" without spending a control on saying it. */
+  .trek-rail {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .trek-rail::-webkit-scrollbar { display: none; }
+  .trek-rail > * { scroll-snap-align: start; flex-shrink: 0; }
 
   /* ── The studio ──────────────────────────────────────────────────────────
      The print customiser used one flat near-black for the stage, the rails,
