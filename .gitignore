@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...and this is that opt-in. .env.example carries no values, only the
+# variable names and placeholders a new clone needs in order to boot, so
+# it is the one env file that is useless unless it is committed.
+!.env.example
 
 # vercel
 .vercel
