@@ -1,42 +1,55 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import NavBar from '@/components/layout/NavBar'
-import FooterSection from '@/components/layout/FooterSection'
-import TrekHero from '@/components/trek/TrekHero'
-import { getUnreadMessages } from '@/actions/trekChat'
-import TrekGate from '@/components/trek/TrekGate'
-import { getTrekBoard, getTrekMembership, getOpenPlanCount, getMyTreks, getMyTrekCard, getUnreadCount, type TrekPlanRow, getLeavingSoon} from '@/actions/trekBuddy'
+import TrekLanding from '@/components/trek/TrekLanding'
 import TrekPlanCard from '@/components/trek/TrekPlanCard'
-import TrekShelf from '@/components/trek/TrekShelf'
-import { bucketPlans } from '@/lib/trekBuckets'
-import QuickStart from '@/components/trek/QuickStart'
-import SafetyNotes from '@/components/trek/SafetyNotes'
+import SoonRail from '@/components/trek/SoonRail'
+import FeaturedPlan from '@/components/trek/FeaturedPlan'
+import BoardFilters from '@/components/trek/BoardFilters'
 import WhatTheBoardDoes from '@/components/trek/WhatTheBoardDoes'
+import DayArc from '@/components/trek/ui/DayArc'
+import EmptyState from '@/components/trek/ui/EmptyState'
+import QuickStart from '@/components/trek/QuickStart'
 import RecentRecaps from '@/components/trek/RecentRecaps'
+import { Datum, Eyebrow, ShelfHead } from '@/components/trek/ui/Bits'
+import {
+  getBoardPulse, getLeavingSoon, getTrekBoard, getTrekMembership,
+  type TrekPlanRow,
+} from '@/actions/trekBuddy'
+import { bucketPlans } from '@/lib/trekBuckets'
 import { getRecentRecaps } from '@/actions/trekRecap'
-import { ACTIVITIES } from '@/lib/trek'
+import { ACTIVITIES, lightForTime } from '@/lib/trek'
 
 export const metadata: Metadata = {
-  title: 'Trek Buddy — DEWDROPZ',
-  description: 'Post a day walk near Dehradun and find people to go with. Members only.',
+  title: 'TrekBuddy — DEWDROPZ',
+  description: 'A members’ noticeboard for going outdoors together, around Dehradun. Members only.',
   // Who is going where, and when, is not something to hand a crawler.
   robots: { index: false, follow: false },
 }
 
-// The board.
+// The board — and the only door to it.
 //
-// Signed out, this is a pitch and one integer. Signed in without onboarding, it
-// is a door to the four questions. Only an onboarded adult member sees an actual
-// list of walks — there is no anonymous read policy on any Trek Buddy table, so
-// that is enforced in the database rather than by this component choosing not
-// to render.
-
+// There were two: `/trek-buddy` and `/trek-buddy/discover`, showing the same
+// walks in two layouts under two headers, which meant every walk had two
+// differently-styled doors and no member could tell which one was the product.
+// Discover now redirects here, and this page is the discover layout, because
+// that was the better of the two.
+//
+// Three bands, and the banding is the point — a page that changes ground under
+// your feet is telling you the job changed:
+//
+//   INK · the control surface. What am I looking at, how much of it is there,
+//     which part of the day do I want, and how do I narrow it. All of that
+//     happens once, before a single walk appears.
+//   INK → PAPER · what is leaving inside 48 hours, on the seam, running off
+//     the edge.
+//   PAPER · one walk given the width, then everything cut into the buckets
+//     people actually think in.
 export default async function TrekBuddyPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    activity?: string; when?: string; q?: string
+    activity?: string; when?: string; q?: string; light?: string
     difficulty?: string; language?: string
     womenOnly?: string; senior?: string; spots?: string
   }>
@@ -44,82 +57,26 @@ export default async function TrekBuddyPage({
   const sp = await searchParams
   const membership = await getTrekMembership()
 
+  // ── Signed out ──────────────────────────────────────────────────────────
+  // A pitch, on evidence. No walk is named and no person is shown: there is no
+  // anonymous read policy on any Trek Buddy table, and this page does not go
+  // looking for one.
   if (!membership.signedIn) {
-    const open = await getOpenPlanCount()
+    const pulse = await getBoardPulse()
     return (
-      <>
-        <NavBar />
-        <main>
-          <TrekGate
-            eyebrow="Trek Buddy · Dehradun and around"
-            title={<>Never go <span className="italic text-sage">alone.</span></>}
-            lede="Members post the hour they are going, and other members ask to come. Not a booking platform, and nobody pays for a place."
-          />
-          <section className="bg-paper px-6 pb-24 pt-12 md:px-10">
-            <div className="mx-auto max-w-2xl">
-              <p className="trek-label font-mono text-forest">
-                {open === 0
-                  ? 'Nothing on the board yet'
-                  : `${open} walk${open === 1 ? '' : 's'} on the board`}
-              </p>
-              <h2 className="mt-3 font-display text-[clamp(22px,3.2vw,32px)] leading-tight text-text">
-                You need an account to see who is going where.
-              </h2>
-              <p className="mt-3 max-w-md font-body text-sm leading-relaxed text-mid">
-                Walks are visible to signed-in members only, and the exact meeting point is shown
-                to nobody but the people the host has confirmed. That is deliberate, and it is the
-                reason this page is not a list.
-              </p>
-
-              {/* What they are signing in TO. Three lines, so the decision is
-                  informed rather than a leap. */}
-              <ol className="mt-8 space-y-4 border-t border-rule pt-6">
-                {[
-                  ['Find one', 'Browse walks near Dehradun by day, by hour and by activity.'],
-                  ['Ask to come', 'The host confirms or declines. Nobody joins automatically.'],
-                  ['Meet the group', 'The exact spot arrives once enough people are going.'],
-                ].map(([t, d], i) => (
-                  <li key={t} className="flex gap-4">
-                    <span className="mt-0.5 font-mono text-[10px] text-mid tabular-nums">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span>
-                      <span className="block font-body text-sm text-text">{t}</span>
-                      <span className="block font-body text-xs text-mid">{d}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href="/auth/login?redirect=/trek-buddy"
-                  className="trek-pill trek-pill-act font-body"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/treks"
-                  className="self-center border-b border-rule pb-1 font-body text-[10px] uppercase tracking-[0.12em] text-mid transition-colors hover:text-text"
-                >
-                  Read the trail guide instead
-                </Link>
-              </div>
-            </div>
-          </section>
-        </main>
-        <FooterSection />
-      </>
+      <TrekLanding
+        openCount={pulse.open}
+        weekendCount={pulse.weekend}
+        peopleCount={pulse.members}
+        activityCounts={pulse.byActivity}
+      />
     )
   }
 
   // A page whose only content is a button to another page is a wasted click.
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  // The unfiltered board is fetched alongside the filtered one so the chips can
-  // carry honest counts — a filter that says "Camping 0" is more useful than a
-  // filter that has quietly disappeared.
-  const [plans, all, mine, me, unread, recaps, soon, unreadMessages] = await Promise.all([
+  const [plans, all, soon, recaps] = await Promise.all([
     getTrekBoard({
       activity: sp.activity,
       when: sp.when as 'all' | 'week' | 'weekend',
@@ -131,150 +88,253 @@ export default async function TrekBuddyPage({
       hasSpots: sp.spots === '1',
     }),
     getTrekBoard(),
-    getMyTreks(),
-    getMyTrekCard(),
-    getUnreadCount(),
-    getRecentRecaps(4),
     getLeavingSoon(),
-    getUnreadMessages(),
+    getRecentRecaps(4),
   ])
 
+  // The chips carry honest counts off the UNFILTERED board — a filter that
+  // says "Camping 0" is more useful than one that hides itself.
   const counts: Record<string, number> = { all: all.length }
   for (const a of ACTIVITIES) counts[a.key] = all.filter((p) => p.activity === a.key).length
 
-  const filtering = Boolean(
-    sp.activity || sp.q || (sp.when && sp.when !== 'all') ||
-    sp.difficulty || sp.language || sp.womenOnly || sp.senior || sp.spots
-  )
-  const involved = mine.hosting.length + mine.going.length
+  // The day arc counts the same way, and then filters the board by band.
+  const lightCounts: Record<string, number> = {}
+  for (const p of all) {
+    const k = lightForTime(p.start_time).key
+    lightCounts[k] = (lightCounts[k] ?? 0) + 1
+  }
+
+  const activeLight = sp.light ?? null
+  const shown = activeLight
+    ? plans.filter((p) => lightForTime(p.start_time).key === activeLight)
+    : plans
+
+  const hrefForLight = (key: string | null) => {
+    const q = new URLSearchParams()
+    for (const [k, v] of Object.entries(sp)) if (v && k !== 'light') q.set(k, String(v))
+    if (key) q.set('light', key)
+    const s = q.toString()
+    return s ? `/trek-buddy?${s}` : '/trek-buddy'
+  }
+
+  // One walk given the whole width. Chosen, not curated: the soonest one that
+  // still has room, preferring one with a photograph to give.
+  const inRail = new Set(soon.map((p) => p.id))
+  const candidates = shown.filter((p) => !inRail.has(p.id))
+  const featured: TrekPlanRow | undefined =
+    candidates.find((p) => p.spots_left > 0 && p.cover_urls?.length > 0) ??
+    candidates.find((p) => p.spots_left > 0)
+  const rest = featured ? shown.filter((p) => p.id !== featured.id) : shown
+  const buckets = bucketPlans(rest)
+
+  const filtered =
+    Boolean(sp.q || sp.activity || sp.when || sp.difficulty || sp.language ||
+      sp.womenOnly || sp.senior || sp.spots || sp.light)
+
+  // Counted off the UNFILTERED board, like the chip counts, so the header
+  // describes the board rather than describing the cut of it you happen to be
+  // looking at. The last two are here because they are the two facts a person
+  // is most likely to be looking for and least likely to guess exist: a walk
+  // only women may join, and a walk whose host has said outright that it is
+  // paced for somebody who does not want to be chased up a hill.
+  const withRoom = all.filter((p) => p.spots_left > 0).length
+  const womenOnlyCount = all.filter((p) => p.women_only).length
+  const seniorCount = all.filter((p) => p.senior_friendly).length
 
   return (
     <>
-      <NavBar />
-      <main>
-        <TrekHero unreadMessages={unreadMessages} counts={counts} openCount={all.length} canHost={membership.canHost} active="board" me={me} unread={unread} />
-
-        <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
-          <div className="mx-auto max-w-5xl space-y-10">
-            {/* One line, not a panel — what you are already part of belongs at
-                the top of the board but must not push the board off the screen. */}
-            {involved > 0 && (
-              <Link
-                href="/trek-buddy/yours"
-                className="flex items-center justify-between gap-4 rounded-[6px] border border-forest/25 bg-forest/[0.04] px-4 py-3 transition-colors hover:border-forest/50"
-              >
-                <span className="font-body text-sm text-text">
-                  You are on {involved} {involved === 1 ? 'walk' : 'walks'}
-                  {mine.hosting.length > 0 && (
-                    <span className="text-mid"> · hosting {mine.hosting.length}</span>
-                  )}
-                </span>
-                <span className="shrink-0 trek-label font-mono text-forest">
-                  See yours →
-                </span>
-              </Link>
-            )}
-
-            <div>
-              <div className="flex flex-wrap items-baseline justify-between gap-3 pb-4">
-                <h2 className="trek-label font-mono text-mid">
-                  {plans.length === 0
-                    ? filtering ? 'Nothing matches' : 'Nothing on the board'
-                    : `${plans.length} coming up`}
-                </h2>
-                {filtering && (
-                  <Link href="/trek-buddy" className="trek-label font-mono text-forest underline underline-offset-4">
-                    Clear filters
-                  </Link>
+      {/* ── Band one · the control surface ──────────────────────────────── */}
+      <section className="trek-band bg-ink pb-7 pt-28 md:pt-32">
+        <div className="trek-measure">
+          <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+            {/* The masthead was "What is <em>on.</em>" — 60px Newsreader at
+                weight 300 with the last word in italic amber. Three problems in
+                one line: it is a slogan rather than a name, so a member landing
+                here could not tell what screen they were on; hairline serif at
+                60px is a fashion masthead; and amber on this board means a
+                clock is running, which is not what a full stop means. So the
+                headline says what the screen is, and the line under it says
+                what is on it — in the actual numbers, which is also the most
+                honest thing a young board can do. */}
+            <div className="max-w-2xl">
+              <Eyebrow tone="ondark">A members’ noticeboard · around Dehradun</Eyebrow>
+              <h1 className="trek-h1 mt-3.5 text-paper">The board</h1>
+              <p className="mt-4 font-body text-[15px] leading-[1.65] text-paper/70">
+                {all.length === 0 ? (
+                  'Nothing is on the board right now. The first walk posted is the one that makes it a board.'
+                ) : (
+                  <>
+                    <span className="font-mono text-paper tabular-nums">{all.length}</span>{' '}
+                    {all.length === 1 ? 'walk is' : 'walks are'} on the board, and{' '}
+                    {soon.length === 0 ? (
+                      'none of them leaves inside the next 48 hours'
+                    ) : (
+                      <>
+                        <span className="font-mono text-paper tabular-nums">{soon.length}</span>{' '}
+                        {soon.length === 1 ? 'leaves' : 'leave'} inside 48 hours
+                      </>
+                    )}
+                    . Every one of them states its distance, its climb and how hard it is before
+                    you ask to join.
+                  </>
                 )}
-              </div>
-
-              {plans.length === 0 ? (
-                <div className="rounded-[6px] border border-dashed border-rule px-6 py-16 text-center">
-                  <h3 className="font-display text-[clamp(20px,2.6vw,28px)] text-text">
-                    {filtering ? 'Nothing matches that yet.' : 'The board is empty.'}
-                  </h3>
-                  <p className="mx-auto mt-3 max-w-sm font-body text-sm leading-relaxed text-mid">
-                    {filtering
-                      ? 'Try a wider date range, or clear the filters to see everything.'
-                      : 'Nothing here is invented, so it stays empty until someone posts a real walk. If you know where you are going this week, that someone is you.'}
-                  </p>
-                  {!filtering && membership.canHost && (
-                    <Link
-                      href="/trek-buddy/new"
-                      className="trek-pill trek-pill-act font-body"
-                    >
-                      Post the first one
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {/* The rail first: it answers "what can I still get to",
-                      which is the only question on this page with a deadline.
-                      Everything, including these, is in the buckets below —
-                      the shelf is an index into the board, not a slice out
-                      of it. */}
-                  <TrekShelf plans={soon} />
-
-                  {bucketPlans(plans).map((bucket) => (
-                    <div key={bucket.key}>
-                      <div className="flex items-baseline gap-3 pb-3">
-                        <h3 className="trek-label font-mono text-text">
-                          {bucket.label}
-                        </h3>
-                        <span aria-hidden="true" className="h-px flex-1 bg-rule" />
-                        <span className="font-mono text-[10px] text-mid tabular-nums">
-                          {bucket.plans.length}
-                        </span>
-                      </div>
-                      {/* A grid now the cards are photographs. One column on a
-                          phone so the picture keeps its size — a photo-led card
-                          shrunk into a two-up on a 375px screen is a thumbnail,
-                          and a thumbnail of a hillside tells you nothing. */}
-                      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {bucket.plans.map((p) => (
-                          <li key={p.id}>
-                            <TrekPlanCard plan={p} />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Below the board, not above it: someone who came to browse should
-                reach the walks first, and someone who came to post scrolls once. */}
-            <QuickStart canHost={membership.canHost} />
-
-            {!membership.canHost && (
-              <p className="rounded-[6px] border border-rule bg-white px-4 py-3 font-body text-sm text-mid">
-                Hosting is invite-only while this is new.{' '}
-                <Link href="/contact" className="text-forest underline underline-offset-4">
-                  Ask us
-                </Link>{' '}
-                and we will turn it on for you.
               </p>
-            )}
-
-            <RecentRecaps recaps={recaps} />
-
-            <div className="mt-14">
-              <WhatTheBoardDoes className="mb-6" />
-              <SafetyNotes />
             </div>
+            <dl className="flex gap-8 pb-1">
+              <Datum k="with room" v={withRoom} tone="dark" />
+              <Datum k="women only" v={womenOnlyCount} tone="dark" />
+              <Datum k="senior friendly" v={seniorCount} tone="dark" />
+            </dl>
+          </div>
 
-            <p className="border-t border-rule pt-6 font-body text-xs leading-relaxed text-mid">
-              DEWDROPZ does not organise, lead, vet or supervise these walks, and does not check
-              who anyone is. You are meeting strangers in the hills at your own risk. In an
-              emergency call <span className="text-text">112</span>.
-            </p>
+          <form action="/trek-buddy" className="mt-7">
+            <label htmlFor="q" className="sr-only">Search walks by place</label>
+            <input
+              id="q"
+              name="q"
+              defaultValue={sp.q ?? ''}
+              placeholder="Search a place or a peak — Nag Tibba, Benog, Mussoorie…"
+              className="w-full rounded-[var(--r-input)] border border-paper/25 bg-paper/[0.06] px-4 py-3.5 font-body text-sm text-paper backdrop-blur-[8px] placeholder:text-paper/45 focus:border-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+            />
+          </form>
+
+          {/* The day, as an index. The fastest possible answer to "is there
+              anything early this week?", which is the question people arrive
+              with — and it is also the control that answers it. */}
+          <div className="mt-6">
+            <DayArc counts={lightCounts} active={activeLight as never} hrefFor={hrefForLight as never} />
+          </div>
+
+          <div className="mt-6">
+            <BoardFilters counts={counts} tone="dark" withSearch={false} />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Band two · what you can still get to ────────────────────────── */}
+      {soon.length > 0 && (
+        <section
+          className="trek-band"
+          style={{ background: 'linear-gradient(180deg, var(--ink) 0%, var(--ink) 62%, var(--paper) 62%)' }}
+        >
+          <div className="trek-measure">
+            <SoonRail plans={soon} />
           </div>
         </section>
-      </main>
-      <FooterSection />
+      )}
+
+      {/* ── Band three · the board ──────────────────────────────────────── */}
+      <section className="trek-band bg-paper pb-24 pt-10">
+        <div className="trek-measure flex flex-col gap-12">
+          {shown.length === 0 ? (
+            <EmptyState
+              title={
+                filtered
+                  ? 'Nothing matches that yet.'
+                  : 'Nothing is on the board right now.'
+              }
+              body={
+                filtered ? (
+                  <>
+                    The board is small and honest about it — {all.length} walk
+                    {all.length === 1 ? '' : 's'} live in total. Widen the hour, or post the one
+                    you were going to go on anyway.
+                  </>
+                ) : (
+                  <>
+                    Nobody has posted a walk yet. The first one on a board is the one that makes it
+                    a board, and it is usually somebody going somewhere they were going anyway.
+                  </>
+                )
+              }
+              action={
+                membership.canHost
+                  ? { label: 'Post a walk', href: '/trek-buddy/new' }
+                  : { label: 'Finish your profile', href: '/trek-buddy/profile' }
+              }
+              secondary={filtered ? { label: 'Clear the filters', href: '/trek-buddy' } : undefined}
+            />
+          ) : (
+            <>
+              {featured && <FeaturedPlan plan={featured} />}
+
+              {buckets.map((b) => (
+                <div key={b.key}>
+                  <ShelfHead title={b.label} count={b.plans.length} />
+                  <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {b.plans.map((p) => (
+                      <li key={p.id} className="flex">
+                        <TrekPlanCard plan={p} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+
+              {/* The one act, at the foot, for somebody who read the whole
+                  board and did not find their walk on it. */}
+              {membership.canHost && (
+                <div className="trek-provisional flex flex-wrap items-center justify-between gap-5 px-6 py-7">
+                  <p className="max-w-md font-body text-sm leading-relaxed text-mid">
+                    Nothing here is the walk you had in mind? Post it — a plan with an hour on it
+                    finds company far more often than a message asking whether anyone is going.
+                  </p>
+                  <Link href="/trek-buddy/new" className="trek-pill trek-pill-act font-body">
+                    Post a walk
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* The six ways to start one. On an empty board this is the most
+              useful thing on the screen, and on a full one it is still the
+              fastest route from "I was going anyway" to a posted walk — the
+              component existed and was mounted nowhere. */}
+          {membership.canHost && shown.length === 0 && <QuickStart canHost />}
+        </div>
+      </section>
+
+      {/* ── Band four · what already happened ───────────────────────────
+          Everything above this line is a promise. A walk with photographs and
+          a paragraph written after the fact is the only thing on the board
+          that could not have been posted by somebody who never left the
+          house — which makes it the most persuasive section here, and it was
+          rendering nowhere. */}
+      {recaps.length > 0 && (
+        <section className="trek-band border-t border-rule bg-paper py-16 md:py-20">
+          <div className="trek-measure">
+            <RecentRecaps recaps={recaps} />
+          </div>
+        </section>
+      )}
+
+      {/* ── Band four · what this board enforces, and where that stops ────
+          The signed-out landing page argues the safety model in full, and a
+          member never sees that page again after the day they join. So from
+          the moment they are signed in, the only account of what the board
+          actually enforces lived on a plan page they might never scroll to —
+          which meant the honest half of the product was, in practice, shown
+          once to strangers and never again to the people relying on it.
+
+          It goes at the foot of the board because that is where the argument
+          belongs: above it are two dozen invitations from people nobody has
+          checked, and the last thing under them should be the plain account of
+          what asking to join one does and does not get you. It renders whether
+          or not there are walks — an empty board is if anything the better
+          moment to read it. */}
+      <section className="trek-band border-t border-rule-warm bg-paper-warm py-16 md:py-20">
+        <div className="trek-measure">
+          <h2 className="trek-h2 max-w-3xl text-text">
+            What this board enforces, and where that enforcement stops.
+          </h2>
+          <p className="mt-4 max-w-2xl font-body text-[15px] leading-relaxed text-mid">
+            Both halves, in the same type at the same weight — because only one of them is
+            reassuring and you need the other one more.
+          </p>
+          <WhatTheBoardDoes className="mt-10" />
+        </div>
+      </section>
     </>
   )
 }
