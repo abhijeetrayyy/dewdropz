@@ -1,3 +1,4 @@
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLUR_DATA_URL } from '@/lib/constants'
@@ -14,9 +15,15 @@ import type { Collection } from '@/types/database'
 export default function CollectionsRow({
   collections,
   featuredSlugs = [],
+  stop,
 }: {
   collections: Collection[]
   featuredSlugs?: string[]
+  /** The day-arc stop, from lib/trail.ts via app/page.tsx. This section used
+   *  to print "11:00 · The Ridge" from a string literal while the rail beside
+   *  it read 05:50 off the wrapper — a 5h10 contradiction, both visible at
+   *  once on a wide screen. */
+  stop: TrailStop
 }) {
   const shown =
     featuredSlugs.length > 0
@@ -36,7 +43,7 @@ export default function CollectionsRow({
       <div className="max-w-7xl mx-auto">
         <div className="mb-10 flex items-end justify-between">
           <div>
-            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">11:00 · The Ridge</div>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
             <h2 className="font-display text-[clamp(30px,4.4vw,46px)] text-text mt-2">
               Three collections. One philosophy.
             </h2>

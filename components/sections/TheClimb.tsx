@@ -1,5 +1,6 @@
 'use client'
 
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -7,6 +8,9 @@ import { motion } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import { formatPrice } from '@/lib/utils'
+import { firstAvailableVariant, isSoldOut, priceFor } from '@/lib/variants'
+import { trackEvent } from '@/lib/analytics'
+import { toast } from 'sonner'
 import type { ProductWithCollection, HomeClimbStation, HomeConfig } from '@/types/database'
 
 type Station = HomeClimbStation & { product: ProductWithCollection }
@@ -18,8 +22,39 @@ function StationRow({ station, index }: { station: Station; index: number }) {
   const flip = index % 2 === 1
   const p = station.product
 
+  // `variants[0]` used to decide your size. It is not the smallest size and
+  // not a default — `sort_order` is DEFAULT 0 and set by no migration, so the
+  // rows tie and the database returns them in whatever order it likes, which
+  // can differ between two renders. Nothing checked stock either.
+  const variant = firstAvailableVariant(p)
+  const soldOut = isSoldOut(p)
+
   function handleAdd() {
-    addItem({ slug: p.slug, name: p.name, price: p.price, image: p.images?.[0] ?? '', size: p.variants?.[0]?.name ?? '', variantId: p.variants?.[0]?.id ?? null })
+    if (soldOut) return
+    const price = priceFor(p, variant)
+    addItem({
+      slug: p.slug,
+      name: p.name,
+      price,
+      image: p.images?.[0] ?? '',
+      size: variant?.name ?? '',
+      variantId: variant?.id ?? null,
+    })
+    // The funnel had never seen a homepage add-to-cart: `trackEvent` was
+    // imported at three call sites and none of them was on this page.
+    trackEvent('add_to_cart', {
+      currency: 'INR',
+      value: price,
+      items: [{ item_id: p.slug, item_name: p.name, item_variant: variant?.name ?? '' }],
+    })
+    // The button label changing for 1,600ms was the entire confirmation, and
+    // it did not say WHAT had been added. Now the size is named, in the toast
+    // and in the label, so a wrong pick is visible immediately rather than on
+    // the doorstep.
+    toast.success('Added to cart', {
+      description: `${p.name}${variant ? `, size ${variant.name}` : ''} — ${formatPrice(price)}`,
+      action: { label: 'View cart', onClick: () => { window.location.href = '/cart' } },
+    })
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }
@@ -74,10 +109,11 @@ function StationRow({ station, index }: { station: Station; index: number }) {
           <button
             type="button"
             onClick={handleAdd}
+            disabled={soldOut}
             data-cursor="magnetic"
             className="font-body text-[10px] tracking-[0.14em] uppercase text-text border-b border-forest/40 pb-0.5 hover:text-forest hover:border-forest transition-colors duration-300"
           >
-            {added ? 'Added ✓' : 'Add to cart'}
+            {soldOut ? 'Sold out' : added ? `Added${variant ? ` · ${variant.name}` : ''} ✓` : 'Add to cart'}
           </button>
           <Link
             href={`/products/${p.slug}`}
@@ -99,9 +135,14 @@ function StationRow({ station, index }: { station: Station; index: number }) {
 export default function TheClimb({
   config,
   products,
+  stop,
 }: {
   config: HomeConfig['climb']
   products: ProductWithCollection[]
+  /** The day-arc stop. This section printed "08:30 · The Climb" under a
+   *  wrapper reading 11:00 — the one that made the sun run backwards, since
+   *  the section above it printed 13:00. */
+  stop: TrailStop
 }) {
   if (!config.enabled) return null
 
@@ -113,7 +154,7 @@ export default function TheClimb({
     <section className="bg-paper px-6 md:px-10 py-24 md:py-32">
       <div className="max-w-6xl mx-auto">
         <div className="mb-16 md:mb-20 max-w-2xl">
-          <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">08:30 · The Climb</div>
+          <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
           <h2 className="mt-3 font-display font-light text-[clamp(32px,5vw,54px)] text-text leading-[1.05]">
             {config.headline}
           </h2>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { trekFontVars } from '@/app/trek-fonts'
 import TrekTopBar from '@/components/trek/TrekTopBar'
 import TrekFooter from '@/components/trek/TrekFooter'
 import { Toaster } from '@/components/ui/toaster'
@@ -26,7 +27,7 @@ export default async function TrekBuddyLayout({ children }: { children: ReactNod
     : [0, 0]
 
   return (
-    <div className="trek-scope flex min-h-screen flex-col bg-paper">
+    <div className={`${trekFontVars} trek-scope flex min-h-screen flex-col bg-paper`}>
       <TrekTopBar
         signedIn={membership.signedIn}
         displayName={membership.signedIn ? membership.displayName : null}

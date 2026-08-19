@@ -23,6 +23,9 @@ import { getCategories } from '@/actions/categories'
 import { getStoreSettings } from '@/actions/settings'
 import { getFeaturedReviews } from '@/actions/reviews'
 import { getShowcaseRails } from '@/actions/showcase'
+// The day arc, declared once. Sections receive their stop instead of printing
+// their own — four of them used to contradict the wrapper directly above them.
+import { TRAIL_STOPS } from '@/lib/trail'
 
 // The homepage sells from the same catalogue, so it takes the same window.
 export const revalidate = 60
@@ -62,7 +65,7 @@ export default async function Home() {
     <>
       <NavBar />
       <TrailSpine />
-      <main>
+      <main id="main">
         <SummitHero products={products} collections={collections} />
 
         {/* ORDER PER THE CLIENT DOCUMENT, "Homepage Structure":
@@ -73,25 +76,25 @@ export default async function Home() {
             The trail HUD reads its chapters from these data-trail-* wrappers
             in DOM order, so the hours were re-cut to keep ascending down the
             page rather than jumping back to dawn halfway. */}
-        <div data-trail-time="05:50" data-trail-alt="5,200M" data-trail-label="First light">
-          <CollectionsRow collections={collections} featuredSlugs={featured_collection_slugs} />
+        <div data-trail-time={TRAIL_STOPS.collections.time} data-trail-alt={TRAIL_STOPS.collections.alt} data-trail-label={TRAIL_STOPS.collections.label}>
+          <CollectionsRow collections={collections} featuredSlugs={featured_collection_slugs} stop={TRAIL_STOPS.collections} />
         </div>
         {/* ShopByCategory suppresses itself when no category has stock, and a
             section that stands down has to take its trail chapter with it or
             the HUD announces a stop that is not there. */}
         {hasStockedCategory && (
-          <div data-trail-time="06:40" data-trail-alt="4,980M" data-trail-label="Pack check">
-            <ShopByCategory categories={categories} products={products} featuredSlugs={featured_category_slugs} />
+          <div data-trail-time={TRAIL_STOPS.categories.time} data-trail-alt={TRAIL_STOPS.categories.alt} data-trail-label={TRAIL_STOPS.categories.label}>
+            <ShopByCategory categories={categories} products={products} featuredSlugs={featured_category_slugs} stop={TRAIL_STOPS.categories} />
           </div>
         )}
-        <div data-trail-time="08:30" data-trail-alt="4,600M" data-trail-label="Made to order">
+        <div data-trail-time={TRAIL_STOPS.trust.time} data-trail-alt={TRAIL_STOPS.trust.alt} data-trail-label={TRAIL_STOPS.trust.label}>
           <TrustBand />
         </div>
-        <div data-trail-time="09:40" data-trail-alt="4,400M" data-trail-label="The kit">
+        <div data-trail-time={TRAIL_STOPS.kit.time} data-trail-alt={TRAIL_STOPS.kit.alt} data-trail-label={TRAIL_STOPS.kit.label}>
           <SeasonKit config={season_kit} allProducts={products} collections={collections} />
         </div>
-        <div data-trail-time="11:00" data-trail-alt="4,200M" data-trail-label="The climb">
-          <TheClimb config={climb} products={products} />
+        <div data-trail-time={TRAIL_STOPS.climb.time} data-trail-alt={TRAIL_STOPS.climb.alt} data-trail-label={TRAIL_STOPS.climb.label}>
+          <TheClimb config={climb} products={products} stop={TRAIL_STOPS.climb} />
         </div>
         {/* ShowcaseRails is unplugged from the homepage, not deleted — the
             component and its admin config stay. With three products in the
@@ -100,17 +103,17 @@ export default async function Home() {
             720px of scroll. It earns its place back when there is a catalogue
             big enough for "just added" to mean something. */}
         {false && <ShowcaseRails rails={rails} />}
-        <div data-trail-time="14:30" data-trail-alt="3,800M" data-trail-label="The workbench">
-          <DesignYourOwn products={products} />
+        <div data-trail-time={TRAIL_STOPS.workbench.time} data-trail-alt={TRAIL_STOPS.workbench.alt} data-trail-label={TRAIL_STOPS.workbench.label}>
+          <DesignYourOwn products={products} stop={TRAIL_STOPS.workbench} />
         </div>
-        <div data-trail-time="15:30" data-trail-alt="3,600M" data-trail-label="Golden hour">
-          <HomeTrails />
+        <div data-trail-time={TRAIL_STOPS.trails.time} data-trail-alt={TRAIL_STOPS.trails.alt} data-trail-label={TRAIL_STOPS.trails.label}>
+          <HomeTrails stop={TRAIL_STOPS.trails} />
         </div>
         {/* Trek Buddy had no place on the homepage at all — only the hero's
             third act, which a visitor sees for a few hundred pixels of scroll
             and cannot read properly. Placed at last light because that is when
             you work out who you are going with tomorrow. */}
-        <div data-trail-time="17:30" data-trail-alt="3,500M" data-trail-label="Last light">
+        <div data-trail-time={TRAIL_STOPS.trekBuddy.time} data-trail-alt={TRAIL_STOPS.trekBuddy.alt} data-trail-label={TRAIL_STOPS.trekBuddy.label}>
           <TrekBuddyBand />
         </div>
         {/* Community renders null until real approved reviews exist. The trail
@@ -118,15 +121,15 @@ export default async function Home() {
             from these data-trail-* attributes, so leaving it in advertised a
             "The way down" stop on the journey that had nothing behind it. */}
         {reviews.length > 0 && (
-          <div data-trail-time="18:30" data-trail-alt="3,400M" data-trail-label="The way down">
-            <Community reviews={reviews} />
+          <div data-trail-time={TRAIL_STOPS.community.time} data-trail-alt={TRAIL_STOPS.community.alt} data-trail-label={TRAIL_STOPS.community.label}>
+            <Community reviews={reviews} stop={TRAIL_STOPS.community} />
           </div>
         )}
-        <div data-trail-time="19:30" data-trail-alt="2,900M" data-trail-label="Basecamp">
-          <BrandPulse stats={stats} />
+        <div data-trail-time={TRAIL_STOPS.basecamp.time} data-trail-alt={TRAIL_STOPS.basecamp.alt} data-trail-label={TRAIL_STOPS.basecamp.label}>
+          <BrandPulse stats={stats} stop={TRAIL_STOPS.basecamp} />
         </div>
-        <div data-trail-time="21:00" data-trail-alt="2,700M" data-trail-label="Radio check">
-          <NewsletterBar />
+        <div data-trail-time={TRAIL_STOPS.dispatch.time} data-trail-alt={TRAIL_STOPS.dispatch.alt} data-trail-label={TRAIL_STOPS.dispatch.label}>
+          <NewsletterBar stop={TRAIL_STOPS.dispatch} />
         </div>
       </main>
       <FooterSection />

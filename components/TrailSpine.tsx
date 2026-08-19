@@ -34,15 +34,25 @@ export default function TrailSpine() {
         const doc = document.documentElement
         const max = doc.scrollHeight - window.innerHeight
         setProgress(max > 0 ? Math.min(1, window.scrollY / max) : 0)
-        setStop(
-          active
-            ? {
-                time: active.dataset.trailTime ?? '',
-                alt: active.dataset.trailAlt ?? '',
-                label: active.dataset.trailLabel ?? '',
-              }
-            : null
-        )
+        // Guarded. This used to allocate a fresh object every animation frame
+        // and hand it to setStop unconditionally, so the rail re-rendered
+        // sixty times a second to redraw two strings that change perhaps ten
+        // times in the whole page. SummitHero's own scrub guards exactly this
+        // way; this one never did.
+        const next = active
+          ? {
+              time: active.dataset.trailTime ?? '',
+              alt: active.dataset.trailAlt ?? '',
+              label: active.dataset.trailLabel ?? '',
+            }
+          : null
+        setStop((prev) => {
+          if (prev === next) return prev
+          if (!prev || !next) return next
+          return prev.time === next.time && prev.alt === next.alt && prev.label === next.label
+            ? prev
+            : next
+        })
       })
     }
 
@@ -59,7 +69,16 @@ export default function TrailSpine() {
   return (
     <div
       aria-hidden="true"
-      className={`fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center gap-3 pointer-events-none mix-blend-difference text-white transition-opacity duration-500 ${
+      // `xl`, not `lg`. Measured at exactly 1024px — the old breakpoint — this
+      // rail ends at x=37 and the nearest section content starts at x=40: four
+      // pixels of clearance. It does not overlap, but it is one font metric
+      // away from doing so, and overlapping content is the original sin this
+      // element was rotated ninety degrees to escape. The page's container is
+      // max-w-6xl with px-10, so a real gutter only exists once the viewport
+      // is wider than the container; below that the content is flush to the
+      // padding and the rail is squatting in it. At xl there is ~67px of
+      // clearance, which is a margin rather than a coincidence.
+      className={`fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col items-center gap-3 pointer-events-none mix-blend-difference text-white transition-opacity duration-500 ${
         stop ? 'opacity-100' : 'opacity-0'
       }`}
     >
@@ -83,6 +102,18 @@ export default function TrailSpine() {
           className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-white transition-[top] duration-200"
           style={{ top: `${progress * 100}%` }}
         />
+      </div>
+      {/* The label. It has been read into state since this component was
+          written and never once rendered — `grep -c label` returned three
+          hits, all outside the JSX. So every "First light", "Pack check" and
+          "The way down" declared in page.tsx was displayed to nobody, on any
+          device, while the two numbers that mean least to a stranger got the
+          whole rail. It is the readable half of the readout and it goes first. */}
+      <div
+        className="font-mono text-[10px] uppercase tracking-[0.18em]"
+        style={{ writingMode: 'vertical-rl' }}
+      >
+        {stop?.label ?? ''}
       </div>
       <div
         className="font-mono text-[9px] tracking-[0.12em] tabular-nums opacity-70"

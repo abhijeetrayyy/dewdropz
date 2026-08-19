@@ -1,5 +1,5 @@
-import type { Metadata } from 'next'
-import { Fraunces, Archivo, Space_Mono, Newsreader, Inter, IBM_Plex_Mono } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Fraunces, Archivo, Space_Mono } from 'next/font/google'
 import LenisProvider from '@/providers/LenisProvider'
 import { IntroProvider } from '@/providers/IntroProvider'
 import { CartProvider } from '@/providers/CartProvider'
@@ -8,6 +8,7 @@ import CustomCursor from '@/components/CustomCursor'
 import Grain from '@/components/Grain'
 import AnalyticsProvider from '@/providers/AnalyticsProvider'
 import { WishlistProvider } from '@/providers/WishlistProvider'
+import ShopToaster from '@/components/shop/ShopToaster'
 import './globals.css'
 
 // ─── The type system ─────────────────────────────────────────────────────────
@@ -55,56 +56,60 @@ const spaceMono = Space_Mono({
   display: 'swap',
 })
 
-// ─── The Trek Buddy stack ────────────────────────────────────────────────────
-// A second, quieter set of three, scoped to the board and used nowhere else.
-//
-// The shop's voice is Fraunces and Archivo: a wonky optical serif over an
-// industrial gothic, warm and a little aged, with Space Mono's retro cut for
-// texture. That is a good voice for a company that prints garments — it is
-// characterful, and character is what sells a T-shirt.
-//
-// It is the wrong voice for this. Trek Buddy is where somebody decides whether
-// to get into a car at four in the morning with people they have never met. The
-// type there has one job, which is to be believed. Fraunces at 300 weight and
-// 100px is a magazine cover; Space Mono on every label reads as a craft studio.
-// Neither says "this is a system that will hold when it matters".
-//
-//   display — Newsreader. A reading serif with a real optical-size axis, drawn
-//     for long-form journalism. Set at 400 and 500 rather than hairline, it is
-//     sober and adult without being cold, and it carries a 48px headline as a
-//     STATEMENT rather than as decoration.
-//
-//   body — Inter. Deliberately the most neutral interface face there is. The
-//     shop rejected Inter precisely because it is the default of every SaaS
-//     product of the last five years — and here that is the argument FOR it: an
-//     interface people are trusting with a safety decision should recede, and
-//     legibility at 13px in bright sun on a hillside beats personality.
-//
-//   mono — IBM Plex Mono, and used far more sparingly than Space Mono was. A
-//     number, a time, a count, a coordinate. Not every label on the screen.
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  axes: ['opsz'],
-  variable: '--font-tb-display',
-  display: 'swap',
-})
+// The Trek Buddy stack — Newsreader, Inter and IBM Plex Mono — used to be
+// declared here, so every page on the site preloaded all three. Measured on
+// the homepage: 205.6 KB of a 324 KB font payload rendering zero glyphs,
+// because they are wired to `--font-tb-*` and those variables are only read
+// inside `.trek-scope`, which the homepage never renders. They now live in
+// `app/trek-fonts.ts` and are applied by the two surfaces that use them.
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-tb-body',
-  display: 'swap',
-})
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dewdropz.shop'
 
-const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-tb-mono',
-  display: 'swap',
-})
-
+// ─── Metadata ────────────────────────────────────────────────────────────────
+// What was here: a title and a description, and nothing else. No
+// `metadataBase`, no `openGraph`, no image, no canonical — so every share of
+// this domain on WhatsApp, which is how a brand like this actually travels in
+// India, rendered as a grey rectangle.
+//
+// The description also read "Premium Indian outdoor trekking and adventure
+// gear", for a business whose own hero spends a paragraph explaining that it
+// is not an expedition outfitter: it prints apparel and drinkware to order.
+// The one line Google shows was advertising a different shop.
 export const metadata: Metadata = {
-  title: 'DEWDROPZ — Feel Alive',
-  description: 'Premium Indian outdoor trekking and adventure gear.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'DEWDROPZ — mountain-inspired apparel, printed to order',
+    template: '%s · DEWDROPZ',
+  },
+  description:
+    'Heavyweight blanks and drinkware, cut oversized and printed one at a time in Dehradun. Put your own artwork on any of them. Cash on delivery across India.',
+  applicationName: 'DEWDROPZ',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'DEWDROPZ',
+    locale: 'en_IN',
+    url: '/',
+    title: 'DEWDROPZ — mountain-inspired apparel, printed to order',
+    description:
+      'Heavyweight blanks and drinkware, printed one at a time in Dehradun. Put your own artwork on any of them.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DEWDROPZ — mountain-inspired apparel, printed to order',
+    description:
+      'Heavyweight blanks and drinkware, printed one at a time in Dehradun. Put your own artwork on any of them.',
+  },
+  robots: { index: true, follow: true },
+}
+
+// The browser chrome on Android matches the hero's ground instead of flashing
+// cream above a near-black page during load.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F8F5ED' },
+    { media: '(prefers-color-scheme: dark)', color: '#101E17' },
+  ],
 }
 
 export default function RootLayout({
@@ -113,8 +118,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${archivo.variable} ${spaceMono.variable} ${newsreader.variable} ${inter.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${fraunces.variable} ${archivo.variable} ${spaceMono.variable}`}>
       <body className="bg-paper text-text antialiased">
+        {/* The first tab stop on every page. There were nineteen tab stops
+            between the top of the homepage and its <h1>, and no way past
+            them — `grep -rni skip` across the layout, the page and
+            components/layout/ returned nothing. */}
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <AnalyticsProvider>
           <WishlistProvider>
             <CartProvider>
@@ -123,6 +135,11 @@ export default function RootLayout({
                 <CustomCursor />
                 <Grain />
                 <LenisProvider>{children}</LenisProvider>
+                {/* sonner has been a dependency for this project's whole life
+                    and <Toaster/> was mounted only in /admin and /trek-buddy,
+                    so every toast fired from the storefront rendered nothing.
+                    The cart could change with no confirmation of any kind. */}
+                <ShopToaster />
               </IntroProvider>
             </CartProvider>
           </WishlistProvider>

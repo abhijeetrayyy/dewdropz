@@ -8,10 +8,12 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { gsap } from '@/lib/gsap'
-import { useIntro } from '@/providers/IntroProvider'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import type { Collection, Product } from '@/types/database'
-import { resolveSeason, type Season } from './HeroWeather'
+// From `lib/season`, NOT `./HeroWeather` — that module imports three.js and
+// @react-three/fiber at module scope, so pulling one pure helper out of it put
+// the whole engine in the initial document. See lib/season.ts.
+import { resolveSeason, type Season } from '@/lib/season'
 import { formatPrice } from '@/lib/utils'
 import type { DragState } from './TerrainScene'
 
@@ -158,7 +160,7 @@ function WeatherRail({
   onPick: (s: Season) => void
 }) {
   return (
-    <div data-summit-reveal className="invisible" role="group" aria-label="Weather on the range">
+    <div data-hero-reveal data-summit-reveal role="group" aria-label="Weather on the range">
       <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/50">
         Change the weather
       </p>
@@ -207,7 +209,6 @@ export default function SummitHero({
   products?: Product[]
   collections?: Collection[]
 }) {
-  const { introDone } = useIntro()
   const sectionRef = useRef<HTMLElement>(null)
   const progressRef = useRef(0)
   const dragRef = useRef<DragState>({ yaw: 0, pitch: 0, active: false })
@@ -224,6 +225,10 @@ export default function SummitHero({
   // there is no reason to keep a WebGL loop running behind an opaque frame.
   const [rangeLive, setRangeLive] = useState(true)
   const [videoLive, setVideoLive] = useState(false)
+  /** Which act holds the frame. Already published to document.body for the
+   *  nav; mirrored into state because the two hidden acts need `inert`
+   *  toggled in the render tree, and a body dataset attribute cannot do that. */
+  const [heroAct, setHeroAct] = useState<'' | 'studio' | 'trek'>('')
   const [reduceMotion, setReduceMotion] = useState(false)
   const [ambientMobile, setAmbientMobile] = useState(false)
   const [segments, setSegments] = useState(90)
@@ -337,26 +342,23 @@ export default function SummitHero({
     setMounted(true)
   }, [])
 
-  // Headline entrance, gated on the site preloader finishing.
-  useEffect(() => {
-    if (!introDone || !sectionRef.current) return
-    const ctx = gsap.context(() => {
-      // Reduced motion gets the finished frame, not a slower version of the
-      // entrance.
-      if (reduceMotion) {
-        gsap.set('[data-summit-reveal]', { autoAlpha: 1 })
-        return
-      }
-      gsap.fromTo(
-        '[data-summit-reveal]',
-        { autoAlpha: 0, y: 26, filter: 'blur(8px)' },
-        // Deliberately unhurried stagger — each element gets its own beat, so the
-        // hold reads as a sequence (headline → line → door → hint), never a wall.
-        { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 1.2, stagger: 0.26, ease: 'power3.out' }
-      )
-    }, sectionRef)
-    return () => ctx.revert()
-  }, [introDone, reduceMotion])
+  // ── The headline entrance is no longer JavaScript's business ─────────────
+  //
+  // What stood here: a gsap.fromTo over `[data-summit-reveal]`, gated on
+  // `introDone`, animating `autoAlpha` from 0 with a 0.26s stagger across five
+  // elements at 1.2s each. Those five shipped `class="invisible"` in the
+  // server HTML, so until this effect ran there were no words on the page at
+  // all — 3.79s to the last call to action on mobile, with the <h1> ineligible
+  // for Largest Contentful Paint the whole time, and a permanently blank hero
+  // if the chunk holding GSAP never arrived.
+  //
+  // It is a CSS keyframe now (`hero-in` in globals.css, gated on
+  // prefers-reduced-motion), which needs no class on <html>, no inline script,
+  // no hydration suppression and no dead-man timer — all of which the first
+  // attempt at this fix required, to protect a stagger.
+  //
+  // `data-summit-reveal` stays on the elements only as a marker; nothing reads
+  // it any more. `data-hero-reveal` is what the stylesheet animates.
 
   // The descent — desktop only. Reduced motion and touch devices skip the pin
   // entirely: the summit hold becomes a living, time-driven vista (camera drift,
@@ -393,7 +395,13 @@ export default function SummitHero({
         scrollTrigger: {
           trigger: section,
           start: 'top top',
-          end: '+=440%',
+          // 4.4 viewport-heights of pinned scroll, cut to 1.8 on the
+          // council's recommendation. `+=440%` resolves against viewport
+          // height, so it was 4.4 screens pinned and ~5.4 to clear before the
+          // page moved at all — with no clickable product anywhere inside it.
+          // TerrainScene.tsx:794 still describes this as "260%", which it has
+          // not been for some time.
+          end: '+=180%',
           pin: true,
           scrub: true,
           // No anticipatePin. It guards against a flicker when a fast native
@@ -419,6 +427,7 @@ export default function SummitHero({
             const inTrek = self.progress >= ACT3_IN[0]
             const flag = inStudio ? 'studio' : inTrek ? 'trek' : ''
             if (document.body.dataset.heroAct !== flag) document.body.dataset.heroAct = flag
+            setHeroAct((was) => (was === flag ? was : (flag as '' | 'studio' | 'trek')))
           },
         },
       })
@@ -576,6 +585,7 @@ export default function SummitHero({
 
     return () => {
       document.body.dataset.heroAct = ''
+      setHeroAct('')
       tl.scrollTrigger?.kill(true)
       tl.revert()
       tl.kill()
@@ -617,7 +627,7 @@ export default function SummitHero({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
-      className="relative h-[100svh] overflow-hidden bg-[#101E17] select-none"
+      className="on-dark relative h-[100svh] overflow-hidden bg-[#101E17] select-none"
     >
       {/* Poster behind the canvas — first paint is instant regardless of GPU. */}
       <div
@@ -636,7 +646,16 @@ export default function SummitHero({
           once it is gone we stop rendering it (`rangeLive`), so the back half of
           the hero costs no WebGL at all. */}
       <div ref={rangeRef} className="absolute inset-0">
-        {mounted && (
+        {/* ── Who actually gets the mountain ───────────────────────────────
+            This condition was one word: `mounted`. No `!ambientMobile`, no
+            `!reduceMotion`. So a phone downloaded the engine, mounted a WebGL
+            renderer and rendered a full-screen backing store in order to drive
+            a camera whose scroll progress never moves — the ScrollTrigger that
+            drives it returns early on touch. The scene was built at full cost
+            and then held on frame one, for the devices least able to afford it.
+            The gradient poster above is what those visitors get instead, and
+            it is what they were effectively looking at anyway. */}
+        {mounted && !ambientMobile && !reduceMotion && (
           <div className={`absolute inset-0 transition-opacity duration-1000 ${sceneReady ? 'opacity-100' : 'opacity-0'}`}>
             <TerrainScene
               progressRef={progressRef}
@@ -694,13 +713,13 @@ export default function SummitHero({
         <div className="flex w-full items-start">
           <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center lg:-mt-2">
             <div className="flex flex-col items-center">
-              <p data-summit-reveal className="invisible font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
+              <p data-hero-reveal data-summit-reveal className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
                 Printed in Dehradun · 30.3165° N
               </p>
 
               <h1 className="mt-5 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper">
-                <span data-summit-reveal className="invisible block">Go where</span>
-                <span data-summit-reveal className="invisible block italic text-sage">you feel alive.</span>
+                <span data-hero-reveal data-summit-reveal className="block">Go where</span>
+                <span data-hero-reveal data-summit-reveal className="block italic text-sage">you feel alive.</span>
               </h1>
 
               {/* Repositioned per the client brief: the shop is not an expedition
@@ -708,23 +727,37 @@ export default function SummitHero({
                   blanks and printing, which reads as a supplier describing its
                   process; the brief asks for apparel and everyday essentials that
                   happen to be mountain-inspired. */}
-              <p data-summit-reveal className="invisible mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
+              <p data-hero-reveal data-summit-reveal className="mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
                 Inspired by mountains. Made for everyday journeys.
                 Apparel and drinkware, printed one at a time with your design on it.
               </p>
 
-              <div data-summit-reveal className="invisible mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-                <Link
-                  href="/customize"
-                  className="inline-flex items-center gap-2 rounded-full bg-paper px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
-                >
-                  Design yours <span aria-hidden="true">↗</span>
-                </Link>
+              {/* ── The two doors, and which one is louder ──────────────────
+                  These were the other way round. "Design yours" — go and do
+                  some graphic design — was the filled pill, while "Shop the
+                  drop — from ₹X" was a hairline underline at `text-paper/65`
+                  on a 25%-opacity border. The loudest control on the front
+                  page of a clothing shop asked a stranger who arrived from an
+                  advertisement eleven seconds ago, and has not yet seen a
+                  garment, to open a design tool.
+
+                  Buying is the majority intent and takes the primary button;
+                  customising is the differentiator and takes a real secondary
+                  — bordered at /50 rather than /25, and at full `text-paper`
+                  instead of /65, which was 4.6:1 on this ground. Both are now
+                  44px tall; the underline was 21.5. */}
+              <div data-hero-reveal data-summit-reveal className="mt-9 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
                 <Link
                   href="/shop"
-                  className="border-b border-paper/25 pb-1 font-body text-[11px] uppercase tracking-[0.14em] text-paper/65 transition-colors duration-300 hover:text-paper"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-paper px-8 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
                 >
                   {fromPrice ? `Shop the drop — from ${fromPrice}` : 'Shop the drop'}
+                </Link>
+                <Link
+                  href="/customize"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-paper/50 px-7 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:border-paper hover:bg-paper/10"
+                >
+                  Design yours <span aria-hidden="true">↗</span>
                 </Link>
               </div>
 
@@ -734,8 +767,8 @@ export default function SummitHero({
                   down. Same ticks, laid on their side. */}
               {weather && (
                 <div
-                  data-summit-reveal
-                  className="invisible mt-10 flex items-center gap-4 lg:hidden"
+                  data-hero-reveal data-summit-reveal
+                  className="mt-10 flex items-center gap-4 lg:hidden"
                   role="group"
                   aria-label="Weather on the range"
                 >
@@ -786,6 +819,18 @@ export default function SummitHero({
       {!staticHero && (
         <div
           ref={studioRef}
+          /* `inert` — the fix for two links you could tab to but never see.
+             `opacity: 0` does not remove anything from the tab order, and
+             neither act container carried aria-hidden, visibility:hidden or
+             inert (the word appears three times in this file's comments and
+             zero times as an attribute). Inside each sits a link that
+             deliberately re-enables itself with pointer-events-auto, so a
+             keyboard user tabbed into an invisible call to action inside a
+             pinned section that does not scroll — and the page simply stopped
+             responding. The scrub already publishes which act holds the frame;
+             this reads the same value and takes the other two out of the
+             document entirely. */
+          inert={heroAct !== 'studio'}
           className="pointer-events-none absolute inset-0 z-[15] flex items-center justify-center px-6 opacity-0"
         >
           {/* The room. A pool of light behind the bench so the panels sit on
@@ -940,6 +985,7 @@ export default function SummitHero({
       {!staticHero && (
         <div
           ref={mapRef}
+          inert={heroAct !== 'trek'}
           className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-0"
         >
           {/* The environment, and it is the argument: two people walking a ridge
@@ -1046,8 +1092,8 @@ export default function SummitHero({
 
       {!reduceMotion && !staticHero && (
         <div
-          data-summit-reveal
-          className="invisible pointer-events-none absolute bottom-8 left-1/2 z-20 -translate-x-1/2 font-body text-[9px] uppercase tracking-[0.2em] text-paper/40"
+          data-hero-reveal data-summit-reveal
+          className="pointer-events-none absolute bottom-8 left-1/2 z-20 -translate-x-1/2 font-body text-[9px] uppercase tracking-[0.2em] text-paper/40"
         >
           Scroll ↓
         </div>

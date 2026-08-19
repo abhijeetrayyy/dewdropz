@@ -1,5 +1,6 @@
 'use client'
 
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { subscribeToNewsletter } from '@/actions/reviews'
@@ -23,7 +24,12 @@ const DISPATCH_PROMISES = [
   },
 ]
 
-export default function NewsletterBar() {
+export default function NewsletterBar({ stop }: { stop?: TrailStop }) {
+  // Optional, because this section is also mounted on /about, /collections,
+  // /collections/[slug], /journal, /sustainability and /treks. The day arc is
+  // a HOMEPAGE conceit — a clock time reading "21:00 · Radio check" on the
+  // About page is not a drift, it is a category error. Those pages get the
+  // dispatch's own name and no hour.
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -42,7 +48,7 @@ export default function NewsletterBar() {
   }
 
   return (
-    <section className="relative bg-forest-deep border-t border-paper/10 px-6 md:px-10 py-20 md:py-28 overflow-hidden">
+    <section className="on-dark relative bg-forest-deep border-t border-paper/10 px-6 md:px-10 py-20 md:py-28 overflow-hidden">
       {/* Faint contour rings, like the elevation lines on a trek map */}
       <svg
         aria-hidden="true"
@@ -58,7 +64,9 @@ export default function NewsletterBar() {
 
       <div className="relative max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
         <div>
-          <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">21:00 · Radio check — The Trail Dispatch</div>
+          <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">
+            {stop ? `${stopEyebrow(stop)} — ` : ''}The Trail Dispatch
+          </div>
           <h2 className="mt-4 font-display font-light text-[clamp(30px,4.4vw,48px)] text-paper leading-[1.1]">
             One email a month.
             <br />

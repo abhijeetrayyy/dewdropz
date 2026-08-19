@@ -1,3 +1,4 @@
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Link from 'next/link'
 import DesignYourOwnConfigurator from '@/components/customize/DesignYourOwnConfigurator'
 import { ContourLines } from '@/components/ui/ContourLines'
@@ -11,7 +12,15 @@ import type { ProductWithCollection } from '@/types/database'
 // The interactive part lives in DesignYourOwnConfigurator (a client component)
 // so this section stays a server component and the homepage only ships client
 // JS for the one piece that actually needs it.
-export default function DesignYourOwn({ products }: { products: ProductWithCollection[] }) {
+export default function DesignYourOwn({
+  products,
+  stop,
+}: {
+  products: ProductWithCollection[]
+  /** Agreed with its wrapper already; takes the prop anyway so it cannot
+   *  start disagreeing later. That is the whole point of one source. */
+  stop: TrailStop
+}) {
   const blanks = products.filter((p) => p.is_customizable && (p.customization_config?.colors?.length ?? 0) > 0)
   if (blanks.length === 0) return null
 
@@ -33,7 +42,7 @@ export default function DesignYourOwn({ products }: { products: ProductWithColle
       <div className="relative mx-auto max-w-7xl">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">14:30 · The Workbench</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">{stopEyebrow(stop)}</div>
             <h2 className="mt-3 font-display text-[clamp(32px,5vw,54px)] leading-[1.03] text-text">
               Go on — make it yours.
             </h2>

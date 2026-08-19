@@ -1,3 +1,4 @@
+import { trekFontVars } from '@/app/trek-fonts'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -87,7 +88,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   }
 
   return (
-    <main className="trek-scope flex min-h-screen flex-col bg-paper">
+    <main className={`${trekFontVars} trek-scope flex min-h-screen flex-col bg-paper`}>
       {/* The whole of this page's chrome. A name and a rule: enough that the
           card is sitting on something that belongs to somebody, and not one
           link into a product this person cannot sign into yet. */}

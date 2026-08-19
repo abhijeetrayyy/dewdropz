@@ -24,6 +24,8 @@ import { useIntro } from '@/providers/IntroProvider'
 // pretending to be terrain. It's also materially faster to run: one width
 // tween instead of five synced properties recalculated every frame.
 
+const SESSION_KEY = 'dewdropz_intro_seen'
+
 export default function Preloader() {
   const { finishIntro } = useIntro()
   // Admin is a working tool, not the brand experience — it never gets this.
@@ -41,10 +43,38 @@ export default function Preloader() {
   const skippedRef = useRef(false)
 
   useEffect(() => {
-    if (isAdminRoute.current) {
+    // ── Who never sees this ────────────────────────────────────────────────
+    //
+    // The loader gated on nothing. Its readout counted a plain object from 0
+    // to 100 with a `power1.inOut` ease, so the number decelerated into 100 as
+    // though it were straining against real work; it waited on no fetch, no
+    // font, no decode, no `readyState`. It held the page for 2.1 seconds with
+    // `body.overflow = hidden` throughout, and `sessionStorage` appeared
+    // nowhere in the file — so it replayed on every refresh, every back from
+    // checkout, every return visit. It had no reduced-motion check.
+    //
+    // A loading screen on a storefront is latency the business chose to add.
+    // It now runs once per session, never for reduced motion, never in admin.
+    let alreadySeen = false
+    try {
+      alreadySeen = window.sessionStorage.getItem(SESSION_KEY) === '1'
+    } catch {
+      // Private browsing can throw on sessionStorage. Treat as seen: showing
+      // the loader is the failure mode that costs the visitor time.
+      alreadySeen = true
+    }
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (isAdminRoute.current || alreadySeen || reduceMotion) {
       finishIntro()
       setVisible(false)
       return
+    }
+
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, '1')
+    } catch {
+      // nothing to do — worst case it shows again next load
     }
 
     document.body.style.overflow = 'hidden'
@@ -56,7 +86,7 @@ export default function Preloader() {
     }
 
     // Safety net: if gsap ever fails silently, show the site anyway.
-    const safety = setTimeout(hide, 4000)
+    const safety = setTimeout(hide, 1600)
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -78,7 +108,7 @@ export default function Preloader() {
     tl.fromTo(
       lineFillRef.current,
       { width: '0%' },
-      { width: '100%', duration: 1.3, ease: 'power1.inOut' },
+      { width: '100%', duration: 0.6, ease: 'power1.inOut' },
       0.15
     )
 
@@ -90,7 +120,7 @@ export default function Preloader() {
       counter,
       {
         value: 100,
-        duration: 1.3,
+        duration: 0.6,
         ease: 'power1.inOut',
         onUpdate: () => {
           if (countRef.current) countRef.current.textContent = String(Math.round(counter.value)).padStart(3, '0')
@@ -99,10 +129,13 @@ export default function Preloader() {
       0.15
     )
 
-    // A short, still hold once the line completes — long enough to register as
-    // a deliberate beat, short enough to never feel like a stall.
-    tl.add(() => finishIntro(), 1.55)
-    tl.to(panelRef.current, { autoAlpha: 0, duration: 0.5, ease: 'power2.inOut' }, 1.6)
+    // The hold, cut from 1.55s to 0.62s. The hero's copy is released by
+    // `finishIntro`, so every millisecond here is a millisecond the headline
+    // and the price are not on screen — that is how the first call to action
+    // came to land at 3.79s. The bar and counter still complete; they just do
+    // it in the time a loading screen is actually worth.
+    tl.add(() => finishIntro(), 0.62)
+    tl.to(panelRef.current, { autoAlpha: 0, duration: 0.34, ease: 'power2.inOut' }, 0.66)
 
     return () => {
       clearTimeout(safety)

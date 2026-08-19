@@ -1,3 +1,4 @@
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLUR_DATA_URL, TRAILS } from '@/lib/constants'
@@ -21,7 +22,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 // to. The month strip carries over from /treks because season is the single
 // most consequential decision on any of these routes, and twelve cells say it
 // faster than a paragraph.
-export default function HomeTrails() {
+export default function HomeTrails({ stop }: { stop: TrailStop }) {
   // Four, chosen for range rather than order: the beginner's snow summit, the
   // valley walk, the monsoon bloom, and the high pass.
   const featured = ['kedarkantha', 'har-ki-dun', 'valley-of-flowers', 'kuari-pass']
@@ -33,7 +34,7 @@ export default function HomeTrails() {
   const lead = featured[0]
 
   return (
-    <section className="relative overflow-hidden bg-forest-deep">
+    <section className="on-dark relative overflow-hidden bg-forest-deep">
       {/* ── The plate: a real ridge, held under a warm scrim so type survives on
              top of it. This is the page's only full-bleed photograph. ───────── */}
       <div className="absolute inset-0">
@@ -64,7 +65,7 @@ export default function HomeTrails() {
         <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[19ch] sm:max-w-2xl">
             <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-dawn-soft">
-              15:30 · Golden hour
+              {stopEyebrow(stop)}
             </div>
             {/* The page's largest type after the hero — this is the site's second
                 thesis and should look like it. Capped at 60px: at the old 74px

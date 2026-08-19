@@ -340,6 +340,104 @@
 }
 
 @layer base {
+  /* ═══════════════════════════════════════════════════════════════════════
+     THE HERO ENTRANCE
+     ═══════════════════════════════════════════════════════════════════════
+     The hero's copy — both spans of the <h1>, the value proposition and both
+     buttons — used to ship `class="invisible"` in the SERVER HTML and wait for
+     a GSAP chain gated behind the preloader. Measured 3.79s to the last call
+     to action on mobile. `visibility: hidden` elements are not Largest
+     Contentful Paint candidates, so the browser had nothing to score for the
+     whole of that, and one dropped chunk left the page permanently wordless.
+
+     This is CSS, deliberately, and it is the second attempt. The first was an
+     inline script that set a class on <html> before first paint so JS could
+     own the animation; it worked, and it also put a hydration mismatch on the
+     root element and a `<script>` tag warning into every render. That is a lot
+     of machinery — and a lot of new failure surface — to protect a 1.2 second
+     stagger on first load.
+
+     A keyframe needs none of it. The copy is in the HTML, it animates on
+     arrival, there is nothing to hydrate and nothing to fail. If the
+     stylesheet somehow never lands, the text is still there and still black on
+     the page. `both` holds the start frame so there is no flash of the
+     finished state before the animation begins. */
+  @keyframes hero-in {
+    from { transform: translate3d(0, 14px, 0); }
+    to   { transform: none; }
+  }
+
+  /* Opacity is deliberately NOT animated, and that is the whole lesson of this
+     fix. The original bug was the hero's words being held hostage by an
+     animation; an opacity keyframe reintroduces exactly that hostage in a new
+     costume. A CSS animation stalls whenever the browser throttles it — a
+     background tab is the common case — and I watched these six elements sit
+     at `opacity: 0.327` indefinitely with `document.visibilityState` reporting
+     "hidden". A visitor who opens the page in a background tab and comes back
+     to it would find the headline half-faded.
+     
+     Transform cannot do that. A stalled rise leaves the copy fully opaque and
+     at most fourteen pixels low, which is legible. The entrance still reads;
+     it simply cannot cost anyone the words. */
+  [data-hero-reveal] { opacity: 1; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-hero-reveal] {
+      animation: hero-in 620ms var(--ease-out) backwards;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     FOCUS. There was none.
+     ═══════════════════════════════════════════════════════════════════════
+     846 lines of stylesheet with zero `focus-visible` rules, and three focus
+     declarations across the eighteen components the homepage mounts — one of
+     which is a comment. Repo-wide, `focus-visible:outline-sage` appears on 83
+     lines and 80 of them are inside Trek Buddy, the free social board. The
+     shop, where the card comes out, had one: the weather picker.
+
+     Sage measures 2.61:1 on paper and 5.44:1 on forest-deep, so it cannot be
+     the ring on both grounds. Forest is the default (9.48:1 on paper); dark
+     sections opt into sage by carrying `.on-dark`. */
+  :focus-visible {
+    outline: 2px solid var(--forest);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--sage);
+  }
+  /* Never strip the ring without replacing it. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* The skip link: the first tab stop, and off-screen until it is wanted.
+     There were nineteen tab stops between the top of the homepage and its
+     <h1>, with no way past them. */
+  .skip-link {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    z-index: 300;
+    transform: translate(-50%, -130%);
+    background: var(--forest);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 12px 22px;
+    border-radius: 0 0 4px 4px;
+    transition: transform 140ms var(--ease-out);
+  }
+  .skip-link:focus-visible {
+    transform: translate(-50%, 0);
+    outline-color: var(--sage);
+    outline-offset: -4px;
+  }
+
   html {
     scroll-behavior: auto;
   }

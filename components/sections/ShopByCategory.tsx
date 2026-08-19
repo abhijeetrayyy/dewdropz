@@ -1,3 +1,4 @@
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLUR_DATA_URL } from '@/lib/constants'
@@ -10,12 +11,16 @@ export default function ShopByCategory({
   categories,
   products,
   featuredSlugs = [],
+  stop,
 }: {
   categories: Category[]
   products: ProductWithCollection[]
   /** Admin's pick, in their order. Empty = every active top-level category,
    *  which is what this section did before the setting existed. */
   featuredSlugs?: string[]
+  /** The day-arc stop. Was the literal "13:00 · Pack Check" under a wrapper
+   *  that said 06:40 — the largest of the four drifts at 6h20. */
+  stop: TrailStop
 }) {
   const shown = featuredSlugs.length
     ? featuredSlugs.map((s) => categories.find((c) => c.slug === s)).filter((c): c is Category => Boolean(c))
@@ -39,7 +44,7 @@ export default function ShopByCategory({
       <div className="max-w-7xl mx-auto">
         <div className="mb-12 flex items-end justify-between">
           <div>
-            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">13:00 · Pack Check</div>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
             <h2 className="font-display text-[clamp(34px,5vw,54px)] text-text mt-2">
               What are you packing for?
             </h2>

@@ -1,5 +1,6 @@
 'use client'
 
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -18,7 +19,16 @@ const ROTATE_INTERVAL = 7000
 // from the `reviews` table and renders NOTHING until real ones exist, rather
 // than holding a shape with invented content. Every field below maps to a real
 // column; nothing is synthesised.
-export default function Community({ reviews }: { reviews: FeaturedReview[] }) {
+export default function Community({
+  reviews,
+  stop,
+}: {
+  reviews: FeaturedReview[]
+  /** The day-arc stop. Printed "16:30 · The Way Down" under a wrapper saying
+   *  18:30 — invisible in practice only because this section renders null
+   *  until real approved reviews exist. */
+  stop: TrailStop
+}) {
   const [active, setActive] = useState(0)
   const [paused, setPaused] = useState(false)
 
@@ -50,7 +60,7 @@ export default function Community({ reviews }: { reviews: FeaturedReview[] }) {
       <div className="max-w-7xl mx-auto">
         <div className="mb-14 md:mb-16 flex items-end justify-between">
           <div>
-            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">16:30 · The Way Down</div>
+            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
             <h2 className="mt-3 font-display font-light text-[clamp(30px,4.5vw,48px)] text-text leading-[1.1]">
               Worn. Tested. Reported back.
             </h2>

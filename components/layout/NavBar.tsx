@@ -505,13 +505,19 @@ export default function NavBar() {
           </Link>
         )}
 
+        {/* Measured at 24 × 8 pixels — two 1px rules and a 6px gap — which is
+            one third of the WCAG 2.5.8 minimum in one dimension and a quarter
+            of it in the other. It is also the ONLY door off the homepage below
+            1024px, since the whole nav collapses into it. The bars are
+            unchanged; the button around them is now a real 44px target. */}
         <button
           aria-label="Menu"
+          aria-expanded={menuOpen}
           onClick={() => setMenuOpen((v) => !v)}
-          className="lg:hidden flex flex-col gap-1.5 w-6 text-paper"
+          className="lg:hidden -mr-2 flex h-11 w-11 flex-col items-center justify-center gap-1.5 text-paper"
         >
-          <span className="block h-px w-full bg-current" />
-          <span className="block h-px w-full bg-current" />
+          <span className="block h-px w-6 bg-current" />
+          <span className="block h-px w-6 bg-current" />
         </button>
       </div>
 

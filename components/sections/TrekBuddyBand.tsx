@@ -70,7 +70,7 @@ export default async function TrekBuddyBand() {
   ]
 
   return (
-    <section className="relative overflow-hidden bg-ink">
+    <section className="on-dark relative overflow-hidden bg-ink">
       <Image
         src={DAY_ARC.theStart}
         alt=""

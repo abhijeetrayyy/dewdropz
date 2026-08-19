@@ -34,29 +34,13 @@ import * as THREE from 'three'
 //   • clear season            → no particles; only the air changes
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Season = 'rain' | 'snow' | 'fog' | 'clear'
-
-/** Real Uttarakhand seasons, by month. Matches the trail guide's own windows. */
-export function seasonForDate(d = new Date()): Season {
-  const m = d.getMonth() // 0-indexed
-  if (m === 11 || m <= 1) return 'snow' // Dec–Feb: winter snow
-  if (m >= 6 && m <= 8) return 'rain' // Jul–Sep: monsoon
-  if (m === 2 || m === 3) return 'fog' // Mar–Apr: valley cloud before the heat
-  return 'clear' // May–Jun pre-monsoon, Oct–Nov post-monsoon
-}
-
-/** `?season=snow|rain|clear` forces a season, for previewing the other three
- *  quarters of the year without changing the system clock. Read-only and
- *  ignored unless the value is one of the three — so an arbitrary query string
- *  can never put the hero into an undefined state. */
-export function resolveSeason(search?: string, fallback?: Season): Season {
-  const v = new URLSearchParams(search ?? '').get('season')
-  if (v === 'snow' || v === 'rain' || v === 'fog' || v === 'clear') return v
-  // Defaults to `clear` at the call site: no particles is the cheapest possible
-  // first paint, and it makes the weather something a visitor chooses rather
-  // than something imposed on them before they have seen the mountain at all.
-  return fallback ?? seasonForDate()
-}
+// Season parsing lives in `lib/season.ts`, a module with no 3D dependency.
+// SummitHero imports `resolveSeason` statically, and importing it from HERE
+// dragged 883 KB of three.js into the initial document on every device and
+// defeated the dynamic import of TerrainScene entirely. Re-exported so this
+// module's existing callers are unchanged. See lib/season.ts.
+export { seasonForDate, resolveSeason, type Season } from '@/lib/season'
+import type { Season } from '@/lib/season'
 
 type Profile = {
   count: number

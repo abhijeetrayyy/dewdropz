@@ -1,5 +1,6 @@
 'use client'
 
+import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -17,7 +18,13 @@ import type { HomeStat } from '@/types/database'
 // to be four hardcoded claims ("12,000+ trekkers geared up") that nobody had
 // measured; a storefront should not publish invented numbers, so the band now
 // renders only what an owner actually entered in /admin/settings.
-export default function BrandPulse({ stats = [] }: { stats?: HomeStat[] }) {
+export default function BrandPulse({
+  stats = [],
+  stop,
+}: {
+  stats?: HomeStat[]
+  stop: TrailStop
+}) {
   const sectionRef = useRef<HTMLElement>(null)
   const numberRefs = useRef<(HTMLSpanElement | null)[]>([])
 
@@ -50,7 +57,7 @@ export default function BrandPulse({ stats = [] }: { stats?: HomeStat[] }) {
   }, [stats])
 
   return (
-    <section ref={sectionRef} className="relative bg-forest-deep border-t border-paper/10 px-6 md:px-10 py-28 md:py-36 overflow-hidden">
+    <section ref={sectionRef} className="on-dark relative bg-forest-deep border-t border-paper/10 px-6 md:px-10 py-28 md:py-36 overflow-hidden">
       <Image
         src={STATS_BG_IMAGE}
         alt="Sunrise over a Himalayan summit, seen from above the clouds"
@@ -63,7 +70,7 @@ export default function BrandPulse({ stats = [] }: { stats?: HomeStat[] }) {
       <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/70 to-ink pointer-events-none" />
 
       <div className="relative max-w-3xl mx-auto text-center">
-        <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">19:30 · Basecamp</div>
+        <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">{stopEyebrow(stop)}</div>
         <motion.h2
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
