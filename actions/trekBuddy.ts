@@ -68,6 +68,12 @@ export type TrekPlanRow = {
   cancelled_at: string | null
   cancel_reason: string | null
   hidden_at: string | null
+  /**
+   * Where the VIEWER stands on this walk, attached after the query — see
+   * `withViewerStatus`. Absent on any surface that has not asked for it, which
+   * is why it is optional rather than nullable.
+   */
+  viewer_status?: ViewerStatus
 }
 
 /**
@@ -91,7 +97,10 @@ export async function getBasecamp(): Promise<TrekPlanRow[]> {
   const { data } = await createAdminSupabaseClient()
     .rpc('trek_basecamp', { p_user: user.id, p_limit: 30 })
 
-  return (await withKindLabels((data ?? []) as TrekPlanRow[])) as TrekPlanRow[]
+  return withViewerStatus(
+    await withKindLabels((data ?? []) as TrekPlanRow[]),
+    user.id
+  ) as Promise<TrekPlanRow[]>
 }
 
 /**
@@ -203,6 +212,48 @@ export async function saveTrekProfile(input: {
  * render the raw key, `sunrise_point`, on the board. One lookup per request,
  * shared by every row it decorates.
  */
+/** Where the viewer stands on a walk. `null` means no relationship at all. */
+export type ViewerStatus = 'hosting' | 'requested' | 'waitlisted' | 'confirmed' | null
+
+/**
+ * Attach the viewer's own relationship to each walk.
+ *
+ * A board of eleven walks that cannot say which ones you already asked to join
+ * is a board you have to hold in your head. You could ask twice, or scroll past
+ * your own walk without recognising it, and the only way to find out was to
+ * open each one. The card knew everything about the walk and nothing about you.
+ *
+ * This reads only the viewer's OWN request rows, so it widens nothing: RLS
+ * already lets a member read their own requests, and the admin client here is
+ * scoped to `user_id = the caller` rather than to a plan's whole roster.
+ */
+async function withViewerStatus<T extends { id: string; host_id: string }>(
+  rows: T[],
+  userId: string
+): Promise<(T & { viewer_status: ViewerStatus })[]> {
+  if (!rows.length) return []
+
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_plan_requests')
+    .select('plan_id, status')
+    .eq('user_id', userId)
+    .in('plan_id', rows.map((r) => r.id))
+
+  const mine = new Map(
+    ((data ?? []) as { plan_id: string; status: string }[]).map((r) => [r.plan_id, r.status])
+  )
+
+  return rows.map((r) => {
+    // Hosting wins over anything else: the host cannot also be a joiner, and
+    // `trek_requests_host_is_not_a_joiner` enforces exactly that.
+    if (r.host_id === userId) return { ...r, viewer_status: 'hosting' as const }
+    const s = mine.get(r.id)
+    const viewer_status: ViewerStatus =
+      s === 'confirmed' || s === 'requested' || s === 'waitlisted' ? s : null
+    return { ...r, viewer_status }
+  })
+}
+
 async function withKindLabels<T extends { activity: string; activity_other?: string | null }>(
   rows: T[]
 ): Promise<(T & { activity_label: string })[]> {
@@ -277,7 +328,7 @@ export async function getTrekBoard(filters?: {
 
   if (filters?.hasSpots) rows = rows.filter((r) => r.spots_left > 0)
   if (filters?.mine) rows = rows.filter((r) => r.host_id === user.id)
-  return withKindLabels(rows)
+  return withViewerStatus(await withKindLabels(rows), user.id)
 }
 
 /** Everything this member is involved in — hosting or going. */

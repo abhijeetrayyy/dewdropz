@@ -59,6 +59,20 @@ export default function TrekPlanCard({
   )
   const cover = plan.cover_urls?.[0] ?? null
 
+  // Where YOU stand on this walk. A board that cannot say which walks you have
+  // already asked to join is a board you have to hold in your head — you could
+  // ask twice, or scroll past your own walk without recognising it. It sits on
+  // the photograph rather than in the body because it is the first thing you
+  // want to know when scanning, and it replaces the countdown, which matters
+  // far less once you are already on the walk.
+  const YOURS: Record<string, { label: string; cls: string }> = {
+    hosting:   { label: 'You are hosting', cls: 'bg-forest text-paper' },
+    confirmed: { label: 'You are going',   cls: 'bg-forest text-paper' },
+    requested: { label: 'You asked',       cls: 'bg-paper text-forest' },
+    waitlisted:{ label: 'You are waiting', cls: 'bg-paper text-clay-deep' },
+  }
+  const yours = plan.viewer_status ? YOURS[plan.viewer_status] : undefined
+
   return (
     <Link
       href={`/trek-buddy/${plan.id}`}
@@ -106,7 +120,13 @@ export default function TrekPlanCard({
             name lives in the body where it has the full width, which is the
             difference between "Nag Tibba" and "Nagtibba to Pantwari trav…". */}
         <div className="absolute inset-x-3 bottom-3 flex items-center gap-2">
-          {cancelled ? (
+          {yours ? (
+            <span
+              className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${yours.cls}`}
+            >
+              {yours.label}
+            </span>
+          ) : cancelled ? (
             <span className="trek-glass-sm rounded-full px-2.5 py-1 text-[11px] font-medium text-[#C09A85]">
               Called off
             </span>
