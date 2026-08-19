@@ -111,7 +111,7 @@ export default function TrekTopBar({
               >
                 {n.label}
                 {n.badge ? (
-                  <span className="ml-2 inline-flex min-w-[18px] items-center justify-center rounded-full bg-dawn px-1.5 py-px font-mono text-[10px] font-medium leading-[1.5] text-paper tabular-nums">
+                  <span className="ml-2 inline-flex min-w-[18px] items-center justify-center rounded-full bg-ember px-1.5 py-px font-mono text-[10px] font-semibold leading-[1.5] text-paper tabular-nums">
                     {n.badge > 9 ? '9+' : n.badge}
                   </span>
                 ) : null}
@@ -139,7 +139,7 @@ export default function TrekTopBar({
               <Link
                 href="/trek-buddy/profile"
                 aria-label="Your profile"
-                className="rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+                className="trek-tap rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
               >
                 <Avatar
                   name={displayName || 'You'}
@@ -183,7 +183,7 @@ export default function TrekTopBar({
               />
               {n.label}
               {n.badge ? (
-                <span className="absolute right-[22%] top-2 grid h-4 min-w-4 place-items-center rounded-full bg-dawn px-1 font-mono text-[9px] leading-none text-paper tabular-nums">
+                <span className="absolute right-[22%] top-2 grid h-4 min-w-4 place-items-center rounded-full bg-ember px-1 font-mono text-[9px] font-semibold leading-none text-paper tabular-nums">
                   {n.badge > 9 ? '9+' : n.badge}
                 </span>
               ) : null}

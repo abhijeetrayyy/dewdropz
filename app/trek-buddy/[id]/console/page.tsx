@@ -38,7 +38,12 @@ function Reading({
   /** `urgent` is spent on the one count that is somebody waiting on you. */
   tone?: 'paper' | 'sage' | 'urgent'
 }) {
-  const tones = { paper: 'text-paper', sage: 'text-sage', urgent: 'text-dawn' }
+  // This strip sits on the ink band, which decides which amber it can be.
+  // `--dawn` measures 4.06:1 on ink and `--ember` 3.19 — ember is the amber for
+  // PAPER, and using it here made the one urgent figure the least readable
+  // thing in the row. `--dawn-soft` is the amber that survives on ink, and it
+  // is already what the leaving-soon rail uses for the same job.
+  const tones = { paper: 'text-paper', sage: 'text-sage', urgent: 'text-dawn-soft' }
   return (
     <div>
       <dt className="trek-label-xs text-paper/50">{k}</dt>

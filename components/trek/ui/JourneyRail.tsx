@@ -89,7 +89,12 @@ export default function JourneyRail({
                 className={`trek-label-xs block leading-none ${
                   done
                     ? dark ? 'text-paper' : 'text-text'
-                    : dark ? 'text-paper/45' : 'text-light'
+                    // A stage you have not reached is still the NAME of a
+                    // stage — it is how somebody reads what the loop is. At
+                    // --light it measured 3.25:1 at 10px. The hollow dot and
+                    // the grey connector already say "not yet"; the word does
+                    // not have to be hard to read as well.
+                    : dark ? 'text-paper/60' : 'text-mid'
                 }`}
               >
                 {s.label}

@@ -223,16 +223,24 @@ export function ShelfHead({
   title,
   count,
   action,
+  as: As = 'h2',
   className = '',
 }: {
   title: ReactNode
   count?: ReactNode
   action?: ReactNode
+  /**
+   * `h2` by default, because everywhere this is used it is a top-level section
+   * under the page's own h1. It was hard-coded to `h3`, which skipped a level
+   * on every screen that carries one — and a heading outline with a hole in it
+   * is how a screen-reader user loses the shape of the page.
+   */
+  as?: 'h2' | 'h3'
   className?: string
 }) {
   return (
     <div className={`flex items-baseline gap-3.5 pb-4.5 ${className}`}>
-      <h3 className="trek-h2 text-text">{title}</h3>
+      <As className="trek-h2 text-text">{title}</As>
       <span aria-hidden="true" className="h-px flex-1 bg-rule" />
       {count !== undefined && (
         <span className="font-mono text-[13px] text-mid tabular-nums">{count}</span>

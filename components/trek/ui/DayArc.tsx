@@ -89,7 +89,10 @@ export default function DayArc({
       {/* This is a sentence, and it was set as though it were an instrument
           reading: 9px mono, uppercased, tracked to 0.16em. Mono is rationed to
           figures now, so the count keeps it and the prose beside it does not. */}
-      <p className={`mt-2.5 font-body text-[11px] leading-relaxed ${dark ? 'text-paper/40' : 'text-light'}`}>
+      {/* paper/40 measured 3.71:1 on ink and --light 4.4:1 on paper, both
+          under AA for 11px. This line explains the whole colour system; it is
+          the last caption that should be hard to read. */}
+      <p className={`mt-2.5 font-body text-[11px] leading-relaxed ${dark ? 'text-paper/60' : 'text-mid'}`}>
         <span className="font-mono tabular-nums">{total}</span> on the board · every walk carries
         the colour of the hour it leaves
       </p>

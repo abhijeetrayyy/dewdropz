@@ -76,7 +76,10 @@ export function Lockup({
         </span>
         <span
           className={`mt-[3px] text-[9px] font-medium uppercase tracking-[0.16em] ${
-            dark ? 'text-paper/45' : 'text-light'
+            // 4.21:1 at paper/45 and 4.42:1 as --light — both under AA for
+            // 9px type. /60 measures 5.6:1 and --mid 6.9:1, and neither is
+            // loud enough to compete with the wordmark above it.
+            dark ? 'text-paper/60' : 'text-mid'
           }`}
         >
           by Dewdropz

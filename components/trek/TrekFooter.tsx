@@ -85,7 +85,11 @@ export default function TrekFooter({
                   <li key={l.href}>
                     <Link
                       href={l.href}
-                      className="font-body text-sm text-paper/65 transition-colors hover:text-paper"
+                      // `inline-block` + padding: as a bare inline link this was a
+                      // 17px tap target, under the 24px floor. The padding costs
+                      // nothing on a mouse and makes the column reachable with a
+                      // thumb.
+                      className="inline-block py-1 font-body text-sm text-paper/65 transition-colors hover:text-paper"
                     >
                       {l.label}
                     </Link>
@@ -96,7 +100,7 @@ export default function TrekFooter({
           ))}
         </div>
 
-        <p className="mt-14 border-t border-paper/[0.12] pt-6 font-body text-xs leading-relaxed text-paper/45">
+        <p className="mt-14 border-t border-paper/[0.12] pt-6 font-body text-xs leading-relaxed text-paper/65">
           DEWDROPZ does not organise, lead, vet or supervise anything posted here, and has not
           checked who anyone is. Meet somewhere public, tell someone who is not coming, and turn
           back if it feels wrong. In an emergency, call 112.

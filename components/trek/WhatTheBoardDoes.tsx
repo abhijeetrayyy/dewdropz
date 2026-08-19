@@ -73,8 +73,11 @@ function Fence({
         {/* A count is the one thing on this block that is a quantity, so it is
             the one thing left in mono. */}
         <span
+          // At /75 the clay count measured 3.5:1 on its own wash — under AA
+          // for 13px, and it is the number that says how many limits there
+          // are. Full strength on both fences.
           className={`font-mono text-[13px] leading-none tabular-nums ${
-            sage ? 'text-forest/75' : 'text-clay-deep/75'
+            sage ? 'text-forest' : 'text-clay-deep'
           }`}
         >
           {items.length}

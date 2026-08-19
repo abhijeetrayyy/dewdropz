@@ -262,7 +262,16 @@
        text 15.8:1 · mid 6.9:1 · light 3.6:1 (large and non-essential only)  */
   --text:  #171A18;
   --mid:   #575C56;
-  --light: #8B908A;
+  /* Measured on --paper: text 15.8:1 · mid 6.9:1 · light 4.6:1 · faint 2.6:1.
+     `--light` was #8B908A, which is 3.25:1 — under AA, and it was carrying
+     real text in six places: the unreached stage names on the journey rail
+     (the labels that explain what the loop IS), the "0 on" counts on the
+     landing, recap captions, the composer's placeholders and its inactive step
+     numbers. It is now the AA FLOOR rather than a decorative grey, and it is
+     still two clear steps below --mid so the hierarchy survives.
+     --faint keeps the old value and is for decoration only: a rule, a dot, a
+     disabled glyph. It must never carry a word that has to be read. */
+  --light: #6F756D;
   --faint: #B4B8B2;
 
   /* ── Rules. Three weights, because a card's internal division must not
@@ -504,6 +513,35 @@
     background: var(--text);
     color: var(--paper);
     border: 1px solid var(--text);
+  }
+
+  /* ── Touch ───────────────────────────────────────────────────────────────
+     A 31px pill is a 31px target, and on a phone that is the difference
+     between pressing "Bird watching" and pressing "Trekking". Measured on the
+     people directory at 390px, every filter chip came out at 31px tall and the
+     profile avatar at 32×32.
+
+     Scoped to `pointer: coarse` so nothing changes for a mouse: a 44px pill on
+     a desktop toolbar would look like a mistake, and the reason to grow them is
+     the finger, not the screen width. `trek-tap` is for a control whose visible
+     size is deliberately small — an avatar, an icon — and grows only its hit
+     area rather than its appearance. */
+  @media (pointer: coarse) {
+    .trek-pill    { min-height: 44px; }
+    .trek-pill-sm { min-height: 40px; }
+
+    .trek-tap {
+      position: relative;
+    }
+    .trek-tap::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 44px;
+      height: 44px;
+      transform: translate(-50%, -50%);
+    }
   }
 
   /* ── Labels ──────────────────────────────────────────────────────────────

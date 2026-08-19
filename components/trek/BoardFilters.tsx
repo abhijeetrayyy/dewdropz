@@ -37,7 +37,11 @@ const chip = (on: boolean, dark: boolean) =>
 
 /** The count inside a chip. A figure, so it is the one thing here set in mono. */
 const chipCount = (on: boolean) =>
-  `ml-1.5 font-mono text-[12px] tabular-nums ${on ? 'opacity-75' : 'opacity-60'}`
+  // opacity-60 put the unselected count at 3.5:1. The count is the
+  // most useful thing on a filter chip — it says whether pressing it
+  // is worth anything — so it stays legible and separates from the
+  // label by weight instead.
+  `ml-1.5 font-mono text-[12px] font-medium tabular-nums ${on ? 'opacity-80' : 'opacity-85'}`
 
 /** The key above a row of chips. A key, not a heading and not a control. */
 const groupKey = (dark: boolean) => `trek-label ${dark ? 'text-paper/60' : 'text-mid'}`

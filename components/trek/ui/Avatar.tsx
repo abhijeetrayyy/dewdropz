@@ -23,7 +23,9 @@ const TINTS: { bg: string; fg: string }[] = [
   { bg: 'rgba(31,74,46,0.10)',   fg: '#1F4A2E' },
   { bg: 'rgba(58,74,102,0.10)',  fg: '#3A4A66' },
   { bg: 'rgba(122,81,64,0.12)',  fg: '#7A5140' },
-  { bg: 'rgba(138,90,23,0.12)',  fg: '#8A5A17' },
+  // Darker than --ember, because this fg sits on its own amber wash rather
+  // than on bare paper — 4.44:1 there against 4.9 on paper.
+  { bg: 'rgba(138,90,23,0.12)',  fg: '#754E13' },
 ]
 
 // The same four, lifted so they still read on an ink band.

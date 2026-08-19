@@ -215,7 +215,7 @@ export default async function MessagesPage({
                             count of things said to you that you have not read
                             is by definition a thing waiting on you. */}
                         {t.unread > 0 && (
-                          <span className="grid h-5 min-w-5 shrink-0 self-center place-items-center rounded-full bg-dawn px-1.5 font-mono text-[11px] font-medium text-paper tabular-nums">
+                          <span className="grid h-5 min-w-5 shrink-0 self-center place-items-center rounded-full bg-ember px-1.5 font-mono text-[11px] font-semibold text-paper tabular-nums">
                             <span className="sr-only">Unread: </span>
                             {t.unread > 9 ? '9+' : t.unread}
                           </span>
