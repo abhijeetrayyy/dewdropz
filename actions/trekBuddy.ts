@@ -358,6 +358,56 @@ export async function getOpenPlanCount() {
 }
 
 /**
+ * The board's pulse — counts, and nothing that identifies anybody.
+ *
+ * The signed-out page used to make its whole case in prose and then print one
+ * integer. That is backwards: the most persuasive thing a young platform can
+ * say is exactly how much is happening, including when the answer is "not
+ * much yet", because a number nobody would choose to publish reads as true.
+ *
+ * Deliberately aggregate-only. Who is going where stays behind the login, and
+ * this returns totals a crawler could not turn into a person — which is why it
+ * may run without a session at all.
+ */
+export async function getBoardPulse() {
+  const admin = createAdminSupabaseClient()
+  const now = new Date().toISOString()
+
+  const [plans, members] = await Promise.all([
+    admin
+      .from('trek_plans')
+      .select('activity, starts_at')
+      .eq('status', 'open')
+      .is('hidden_at', null)
+      .gt('starts_at', now),
+    admin
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .not('trek_display_name', 'is', null),
+  ])
+
+  const rows = (plans.data ?? []) as { activity: string; starts_at: string }[]
+
+  const byActivity: Record<string, number> = {}
+  let weekend = 0
+  for (const r of rows) {
+    byActivity[r.activity] = (byActivity[r.activity] ?? 0) + 1
+    // IST, because a walk leaving 06:00 Saturday is on Saturday wherever the
+    // server happens to be standing.
+    const ist = new Date(new Date(r.starts_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+    const d = ist.getDay()
+    if (d === 0 || d === 6) weekend++
+  }
+
+  return {
+    open: rows.length,
+    weekend,
+    members: members.count ?? 0,
+    byActivity,
+  }
+}
+
+/**
  * One plan, plus whatever this viewer is entitled to see of it.
  *
  * The meeting point is read through the CALLER'S session, not the service-role
@@ -650,6 +700,15 @@ export type PersonCard = {
   walksHosted: number
   walksJoined: number
   vouches: number
+  /**
+   * 0 joined · 1 phone verified · 2 phone verified and vouched for twice.
+   *
+   * Migration 065 added this to `trek_person_card` for exactly one reason —
+   * "a host looking at somebody's card sees a vouch count and nothing about
+   * phone verification" — and then the action layer dropped the column on the
+   * floor, so the screen it was written for never got it. Carried now.
+   */
+  trustRung: number | null
 }
 
 /** One person, as everybody else sees them. */
@@ -683,7 +742,59 @@ export async function getPerson(userId: string): Promise<PersonCard | null> {
     walksHosted: Number(r.walks_hosted ?? 0),
     walksJoined: Number(r.walks_joined ?? 0),
     vouches: Number(r.vouches ?? 0),
+    trustRung: r.trust_rung == null ? null : Number(r.trust_rung),
   }
+}
+
+/**
+ * The walks this person is hosting next.
+ *
+ * The profile was a dead end: it counted how many walks somebody had hosted and
+ * then gave you no way to reach the one they are hosting on Saturday. You could
+ * read that a person was worth going out with and have nowhere to go with it.
+ *
+ * Deliberately the same four guards `getTrekBoard` uses — open, not hidden, in
+ * the future, soonest first — so a walk that is not on the board cannot appear
+ * on a profile instead. A back door into cancelled or hidden plans is exactly
+ * the kind of thing a second query grows when it invents its own filters.
+ */
+export async function getPersonPlans(userId: string): Promise<TrekPlanRow[]> {
+  const viewer = await getUser()
+  if (!viewer) return []
+
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_plans')
+    .select('*')
+    .eq('host_id', userId)
+    .eq('status', 'open')
+    .is('hidden_at', null)
+    .gt('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true })
+    .limit(8)
+
+  return (await withKindLabels((data ?? []) as TrekPlanRow[])) as TrekPlanRow[]
+}
+
+/**
+ * Who the viewer already follows, as a set of ids.
+ *
+ * The directory shows a follow control on every card, and the only existing
+ * read is `getFollowState(personId)` — two queries per person, so drawing one
+ * screen of sixty cards would cost a hundred and twenty round trips. This is
+ * the same answer in one query, and the page turns it into a Set.
+ *
+ * It reads nothing the viewer cannot already see: these are their own rows.
+ */
+export async function getFollowedIds(): Promise<string[]> {
+  const user = await getUser()
+  if (!user) return []
+
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_follows')
+    .select('followed_id')
+    .eq('follower_id', user.id)
+
+  return ((data ?? []) as { followed_id: string }[]).map((r) => r.followed_id)
 }
 
 /**
@@ -765,6 +876,9 @@ export async function markNotificationsRead() {
   const { error } = await createAdminSupabaseClient()
     .rpc('trek_mark_notifications_read', { p_actor: user.id })
   if (error) return { error: error.message }
+  // /yours is a redirect now and basecamp is where the feed actually lives;
+  // without this the badge cleared but the list it belongs to did not.
+  revalidatePath('/trek-buddy/basecamp')
   revalidatePath('/trek-buddy/yours')
   revalidatePath('/trek-buddy')
   return { success: true as const }
@@ -845,6 +959,15 @@ export type PersonSummary = {
   walksHosted: number
   walksJoined: number
   vouches: number
+  /**
+   * 0 joined · 1 phone verified · 2 phone verified and vouched for twice.
+   * SELECTed by `trek_people` since migration 065 and dropped here until now.
+   *
+   * Optional because the profile composer builds a summary out of unsaved form
+   * state to preview the card with, and an unsaved form has no rung — the card
+   * draws the ladder only when it is actually given one.
+   */
+  trustRung?: number | null
 }
 
 /**
@@ -879,6 +1002,7 @@ export async function getPeople(opts?: { activity?: string; homeBase?: string; l
     walksHosted: Number(r.walks_hosted ?? 0),
     walksJoined: Number(r.walks_joined ?? 0),
     vouches: Number(r.vouches ?? 0),
+    trustRung: r.trust_rung == null ? null : Number(r.trust_rung),
   }))
 }
 

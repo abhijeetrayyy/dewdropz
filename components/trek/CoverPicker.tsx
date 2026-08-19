@@ -76,12 +76,31 @@ export default function CoverPicker({
       />
 
       {value ? (
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[6px] border border-rule">
+        // THE DOUBLE HALO. A media tile that has been chosen is ringed twice —
+        // a paper gap, then forest — rather than given a coloured border. Two
+        // reasons it is drawn as a box-shadow: rings cost no layout, so the
+        // tile does not jump six pixels the moment a photograph lands; and a
+        // border laid directly against a photograph reads as a frame the
+        // picture came with, while a gap reads as a selection somebody made.
+        //
+        // The outer ring used to be dawn. Amber on this board now means one
+        // thing only — a clock is running — and a photograph a host has picked
+        // is not urgent, it is settled. Forest is the colour of a decision that
+        // has been made, which is exactly what a selected cover is.
+        <div
+          className="relative aspect-[16/10] w-full overflow-hidden rounded-[var(--r-input)]"
+          style={{ boxShadow: '0 0 0 3px var(--paper), 0 0 0 6px var(--forest)' }}
+        >
           <Image src={value} alt="" fill sizes="(min-width: 640px) 50vw, 92vw" className="object-cover" />
+          {/* A stamp burned into the photograph, so it takes the stamp class the
+              rest of the board uses rather than its own 9px mono. */}
+          <span className="trek-glass-sm trek-label-xs absolute bottom-2 left-2 rounded-full px-2.5 py-1 text-paper">
+            On the card
+          </span>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="absolute right-2 top-2 rounded-full bg-ink/75 px-3 py-1 trek-label font-mono text-paper backdrop-blur-sm hover:bg-ink"
+            className="trek-glass-sm absolute right-2 top-2 rounded-full px-3 py-1.5 font-body text-xs font-medium leading-none text-paper transition-colors hover:text-paper/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
           >
             Remove
           </button>
@@ -91,9 +110,12 @@ export default function CoverPicker({
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-1.5 rounded-[6px] border border-dashed border-rule bg-paper-warm/40 transition-colors hover:border-forest/50 hover:bg-paper-warm disabled:opacity-60"
+          className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-[var(--r-input)] border-2 border-dashed border-rule-warm bg-paper-warm/40 transition-colors duration-200 hover:border-forest hover:bg-paper-warm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage disabled:opacity-60"
         >
-          <span className="font-body text-sm text-text">
+          {/* The face of a button, so it is set like one: sentence case, body
+              type, no tracking. It was 10px ember mono at 0.16em, which is a
+              caption costume on the one control in this component. */}
+          <span className="font-body text-[15px] font-medium leading-none text-forest">
             {busy ? 'Uploading…' : 'Add a photograph'}
           </span>
           <span className="max-w-xs px-6 text-center font-body text-xs leading-relaxed text-mid">

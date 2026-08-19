@@ -20,6 +20,15 @@ export type TrekMessage = {
   display_name: string
   body: string
   created_at: string
+  /**
+   * Whether the host marked this as an announcement (079/083 write it through
+   * `trek_announce`). It was selected nowhere, so the one message in a thread
+   * that is a CHANGE TO THE PLAN — "we are starting an hour later" — arrived at
+   * the UI indistinguishable from somebody asking about parking, and got drawn
+   * as chatter. The thread list has always known this (`last_is_announcement`);
+   * the thread itself did not.
+   */
+  is_announcement: boolean
 }
 
 export type ChatResult = { ok: true } | { ok: false; error: string }
@@ -28,7 +37,7 @@ export async function getMessages(planId: string): Promise<TrekMessage[]> {
   const supabase = await createServerSupabaseClient()
   const { data } = await supabase
     .from('trek_messages')
-    .select('id, user_id, display_name, body, created_at')
+    .select('id, user_id, display_name, body, created_at, is_announcement')
     .eq('plan_id', planId)
     .order('created_at', { ascending: true })
     .limit(200)

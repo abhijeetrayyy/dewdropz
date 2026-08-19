@@ -1,106 +1,18 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import NavBar from '@/components/layout/NavBar'
-import FooterSection from '@/components/layout/FooterSection'
-import TrekHero from '@/components/trek/TrekHero'
-import { getUnreadMessages } from '@/actions/trekChat'
-import TrekPlanCard from '@/components/trek/TrekPlanCard'
-import {
-  getMyTreks, getTrekMembership, getTrekBoard, getMyTrekCard, getNotifications,
-} from '@/actions/trekBuddy'
-import Inbox from '@/components/trek/Inbox'
 
-export const metadata: Metadata = {
-  title: 'Your walks — DEWDROPZ',
-  robots: { index: false, follow: false },
-}
-
-// The third page, and the reason the product has a shape somebody can hold:
-// the board is everyone's, this is yours. Two lists, because "I am taking
-// people somewhere" and "I asked to go with someone" are different jobs with
-// different anxieties — one is a duty, the other is a wait.
-export default async function YourTreksPage() {
-  const membership = await getTrekMembership()
-  if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/yours')
-  if (!membership.onboarded) redirect('/trek-buddy/setup')
-
-  const [mine, all, me, inbox, unreadMessages] = await Promise.all([
-    getMyTreks(), getTrekBoard(), getMyTrekCard(), getNotifications(),
-    getUnreadMessages(),
-  ])
-  const waiting = mine.going.filter((g) => g.status === 'requested')
-  const confirmed = mine.going.filter((g) => g.status === 'confirmed')
-
-  return (
-    <>
-      <NavBar />
-      <main>
-        <TrekHero unreadMessages={unreadMessages} counts={{}} openCount={all.length} canHost={membership.canHost} active="yours" me={me} unread={inbox.unread} />
-
-        <section className="bg-paper px-6 pb-24 pt-10 md:px-10">
-          <div className="mx-auto max-w-5xl space-y-12">
-            {/* First on the page, because it is the only thing here that is
-                new since you last looked. */}
-            <Inbox items={inbox.items} unread={inbox.unread} />
-            <div>
-              <div className="flex flex-wrap items-baseline justify-between gap-3 pb-4">
-                <h2 className="trek-label font-mono text-mid">
-                  You are hosting {mine.hosting.length}
-                </h2>
-                {membership.canHost && (
-                  <Link href="/trek-buddy/new" className="trek-label font-mono text-forest underline underline-offset-4">
-                    Post another
-                  </Link>
-                )}
-              </div>
-              {mine.hosting.length === 0 ? (
-                <p className="rounded-[6px] border border-dashed border-rule px-5 py-8 text-center font-body text-sm text-mid">
-                  {membership.canHost
-                    ? 'You have not posted a walk. The board fills up when people who are already going say so.'
-                    : 'Hosting is invite-only while this is new.'}
-                </p>
-              ) : (
-                <ul className="grid gap-3">
-                  {mine.hosting.map((p) => <li key={p.id}><TrekPlanCard plan={p} /></li>)}
-                </ul>
-              )}
-            </div>
-
-            <div>
-              <h2 className="pb-4 trek-label font-mono text-mid">
-                You are going on {confirmed.length}
-              </h2>
-              {confirmed.length === 0 ? (
-                <p className="rounded-[6px] border border-dashed border-rule px-5 py-8 text-center font-body text-sm text-mid">
-                  Nothing confirmed yet. Ask to come on something from the{' '}
-                  <Link href="/trek-buddy" className="text-forest underline underline-offset-4">board</Link>.
-                </p>
-              ) : (
-                <ul className="grid gap-3">
-                  {confirmed.map(({ plan }) => <li key={plan.id}><TrekPlanCard plan={plan} /></li>)}
-                </ul>
-              )}
-            </div>
-
-            {waiting.length > 0 && (
-              <div>
-                <h2 className="pb-4 trek-label font-mono text-mid">
-                  Waiting on a host — {waiting.length}
-                </h2>
-                <ul className="grid gap-3">
-                  {waiting.map(({ plan }) => <li key={plan.id}><TrekPlanCard plan={plan} /></li>)}
-                </ul>
-                <p className="mt-3 font-body text-xs text-mid">
-                  Hosts are people, not a system. If nobody has answered by the day before, assume
-                  it is not happening and make another plan.
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
-      <FooterSection />
-    </>
-  )
+// "Yours" WAS half of a dashboard.
+//
+// It held the inbox and three lists of identical cards — hosting, going,
+// waiting — while `/basecamp` held the other half: a feed of what the people
+// you follow had posted. Two pages, neither of which answered the question a
+// member arrives with, and both of which had to be visited to find out what
+// was waiting on you.
+//
+// Basecamp has absorbed everything this page could show: the inbox is the feed
+// in its left column, and the three card lists are one list of meter rows
+// ordered by departure. So this is a redirect rather than a page — every link
+// and bookmark that pointed here still lands somewhere true, and there is one
+// account home instead of two halves of one.
+export default async function YourTreksRedirect() {
+  redirect('/trek-buddy/basecamp')
 }
