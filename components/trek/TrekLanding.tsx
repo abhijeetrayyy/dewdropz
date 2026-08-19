@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { BLUR_DATA_URL, DAY_ARC } from '@/lib/constants'
 import {
-  ACTIVITIES, BOARD_CHECKS, BOARD_LIMITS, DAY_PART_LABEL, SAFETY_NOTES,
+  ACTIVITIES, BOARD_CHECKS, BOARD_LIMITS, SAFETY_NOTES,
   dotColor, lightForTime,
 } from '@/lib/trek'
 import JourneyRail from './ui/JourneyRail'
@@ -39,67 +39,37 @@ import { Datum } from './ui/Bits'
 //
 // There is one photograph, it is quiet, and nothing on the page moves.
 
-const PATHWAYS: {
-  key: string
-  who: string
-  worry: string
-  provisions: string[]
-}[] = [
+const PATHWAYS: { who: string; line: string; proof: string }[] = [
   {
-    key: 'first',
-    who: 'You have never done this before',
-    worry: '“I will be the slowest, and everyone else will already know each other.”',
-    provisions: [
-      'Every walk states its difficulty, its distance and its climb before you ask to join — no walk on this board is allowed to be vague about how hard it is.',
-      'Hosts write the day out hour by hour, so you can picture yourself inside it instead of guessing.',
-      'Walks marked for a slower pace exist, and the filter for them is on the board, not buried.',
-      'You ask; you are not added. If a host thinks a walk is wrong for you, they say so before the day, which is the kindest possible moment to find out.',
-    ],
+    who: 'Never done this before',
+    line: 'Every walk states its distance, its climb and how hard it is before you ask.',
+    proof: 'No walk may be vague about it',
   },
   {
-    key: 'women',
-    who: 'You are a woman deciding whether this is safe',
-    worry: '“Who is actually going to be there, and who has checked?”',
-    provisions: [
-      'Women-only walks are enforced in the database, not by a note asking politely: only a woman can post one and only women can ask to join.',
-      'The exact meeting point is never on a public page. It reaches confirmed walkers only, and only once enough people are going.',
-      'A host can require a verified phone number, or two vouches from people you have actually walked with, before anyone may even ask.',
-      'Phone numbers, emails and handles are refused in every free-text field, so arrangements stay on the walk’s own page where they remain reviewable.',
-      'You can report or block anybody, at any point, and you never have to explain why.',
-    ],
+    who: 'A woman weighing it up',
+    line: 'Women-only walks are enforced in the database, and the meeting point is never public.',
+    proof: 'Checked on write, not on render',
   },
   {
-    key: 'senior',
-    who: 'You are older, or you walk at your own pace',
-    worry: '“I have been told ‘easy’ before and then been left behind.”',
-    provisions: [
-      'Senior-friendly is a field a host sets deliberately, and it is a filter on the board.',
-      'Pace is stated on a profile and on a walk, in words rather than in numbers nobody can calibrate.',
-      'Distance, total climb and the hour you are expected back are all on the card, before you click.',
-      'You can leave at any point on any walk. That is stated to everybody, on the walk itself, not only to you.',
-    ],
+    who: 'Older, or your own pace',
+    line: 'Senior-friendly is a filter, and pace is stated in words rather than numbers.',
+    proof: 'You can turn back at any point',
   },
   {
-    key: 'experienced',
-    who: 'You have been going for years',
-    worry: '“Is this serious, or is it a meetup group?”',
-    provisions: [
-      'Every number on this platform is counted from what happened — walks completed, people who vouched after being confirmed alongside you. None of it can be typed in.',
-      'Overnight and after-dark outings carry their own rules: a larger minimum party, and a host who must write down how everyone gets back in the dark.',
-      'Hosts get a real console — roster, waitlist in order, check-in at the meeting point, announcements, and a cost-share ledger at face value.',
-      'You can host a walk you were going on anyway in about two minutes, and set the bar for who may ask.',
-    ],
+    who: 'Years of this already',
+    line: 'Every figure is counted from walks that happened. None of it can be typed in.',
+    proof: 'Hosts get a real console',
   },
 ]
 
 const QUESTIONS: { q: string; a: string }[] = [
   {
     q: 'Does it cost anything?',
-    a: 'No. Nobody pays for a place on a walk and DEWDROPZ takes no cut of anything. Some walks split real costs at face value — fuel, a permit, a shared cab — and when they do, the amount is shown on the card before you ask to join. The platform holds no money; the ledger in a host’s console is a shared memory, not a wallet.',
+    a: 'No. Nobody pays for a place and DEWDROPZ takes no cut. Some walks split real costs at face value — fuel, a permit, a shared cab — and the amount is on the card before you ask. The platform holds no money.',
   },
   {
     q: 'Who is checking that these people are who they say they are?',
-    a: 'Nobody, and that is stated everywhere rather than buried. The platform verifies actions, never identities: that a phone number is held, that a walk was completed, that a vouch came from somebody confirmed alongside you. It cannot verify a name, an age, or that somebody is fit for the day they signed up to. Everyone here is a stranger you met on the internet until you have walked together.',
+    a: 'Nobody. The platform verifies actions, never identities — that a number is held, that a walk was completed, that a vouch came from somebody who was there. It cannot verify a name, an age, or fitness. Everyone here is a stranger until you have walked together.',
   },
   {
     q: 'What stops somebody just turning up?',
@@ -256,39 +226,33 @@ export default function TrekLanding({
         </div>
       </section>
 
-      {/* ── 3 · Who it is for ────────────────────────────────────────────── */}
-      <section className="trek-band bg-paper py-20 md:py-24">
+      {/* ── 3 · Who it is for ────────────────────────────────────────────
+          Four people, one line each. This was four cards carrying five long
+          bullets apiece — around 400 words to say something a reader decides
+          about in three seconds ("is one of these me?"). The full provision
+          for each of them is on the walk itself, where it is load-bearing;
+          here it only has to be recognisable. */}
+      <section className="trek-band bg-paper py-16 md:py-20">
         <div className="trek-measure">
-          <p className="trek-eyebrow text-forest">Who this is for</p>
+          <p className="trek-eyebrow text-ember">Who this is for</p>
           <h2 className="trek-h2 mt-4 max-w-2xl text-text">
-            Four people arrive at this page with four different fears. Here is what the platform
-            does about each one.
+            Four people arrive with four different worries.
           </h2>
 
-          <div className="mt-12 grid gap-4 lg:grid-cols-2">
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {PATHWAYS.map((p) => (
-              <article
-                key={p.key}
-                className="trek-card flex flex-col p-6 md:p-8"
-              >
+              <li key={p.who} className="trek-card flex flex-col p-5">
                 <h3 className="trek-h3 text-text">{p.who}</h3>
-                <p className="mt-3 border-l-2 border-rule-warm pl-4 font-body text-[14px] italic leading-relaxed text-mid">
-                  {p.worry}
+                <p className="mt-2.5 flex-1 font-body text-[13.5px] leading-relaxed text-mid">
+                  {p.line}
                 </p>
-                <ul className="mt-6 space-y-3.5 border-t border-rule-soft pt-5">
-                  {p.provisions.map((t) => (
-                    <li key={t} className="flex gap-3">
-                      <span
-                        aria-hidden="true"
-                        className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-sage"
-                      />
-                      <span className="font-body text-[14px] leading-relaxed text-mid">{t}</span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
+                <p className="mt-4 flex items-center gap-2 border-t border-rule-soft pt-3 font-body text-[12px] text-forest">
+                  <span aria-hidden="true">✓</span>
+                  {p.proof}
+                </p>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
@@ -332,188 +296,221 @@ export default function TrekLanding({
         </div>
       </section>
 
-      {/* ── 5 · Enforced, and where it stops ─────────────────────────────── */}
-      <section className="trek-band bg-paper py-20 md:py-24">
+      {/* ── 5 · Enforced, and where it stops ─────────────────────────────
+          The most important block on the page, and the one that was hardest to
+          read: ten titles each followed by a forty-word paragraph, twenty of
+          them across two columns, all at the same weight. A reader scanning it
+          learned nothing, and a reader actually reading it gave up.
+
+          The TITLES carry the argument now — six things the database enforces,
+          four places it stops — and every body is still here, one tap under a
+          disclosure, because the limits are the half somebody relying on a
+          badge genuinely needs. Nothing was deleted; it stopped being the
+          first read. */}
+      <section className="trek-band bg-paper py-16 md:py-20">
         <div className="trek-measure">
-          <p className="trek-eyebrow text-forest">The safety model, in full</p>
-          <h2 className="trek-h2 mt-4 max-w-3xl text-text">
-            Six rules the database enforces, and four places where that enforcement stops. Both
-            halves are here, in the same type, because only one of them is reassuring and you need
-            the other one more.
-          </h2>
-
-          <div className="mt-12 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[var(--r-panel)] border border-forest/20 bg-sage-soft/50 p-6 md:p-8">
-              <p className="trek-label text-forest">Enforced, not promised</p>
-              <p className="mt-2 font-body text-[13px] leading-relaxed text-mid">
-                Every line here describes a rule that runs in Postgres. Nothing aspirational is on
-                this list.
-              </p>
-              <ul className="mt-6 space-y-5">
-                {BOARD_CHECKS.map((c) => (
-                  <li key={c.title} className="border-t border-forest/12 pt-4 first:border-0 first:pt-0">
-                    <p className="font-body text-[15px] font-medium leading-snug text-text">
-                      {c.title}
-                    </p>
-                    <p className="mt-1.5 font-body text-[13.5px] leading-relaxed text-mid">
-                      {c.body}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-[var(--r-panel)] border border-clay/25 bg-clay-wash/60 p-6 md:p-8">
-              <p className="trek-label text-clay-deep">And where it stops</p>
-              <p className="mt-2 font-body text-[13px] leading-relaxed text-mid">
-                This is not small print. Somebody deciding whether to rely on a badge needs to know
-                exactly how far it reaches.
-              </p>
-              <ul className="mt-6 space-y-5">
-                {BOARD_LIMITS.map((c) => (
-                  <li key={c.title} className="border-t border-clay/20 pt-4 first:border-0 first:pt-0">
-                    <p className="font-body text-[15px] font-medium leading-snug text-text">
-                      {c.title}
-                    </p>
-                    <p className="mt-1.5 font-body text-[13.5px] leading-relaxed text-mid">
-                      {c.body}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 6 · How a record is built ────────────────────────────────────── */}
-      <section className="trek-band bg-ink py-20 md:py-24">
-        <div className="trek-measure">
-          <p className="trek-eyebrow text-sage">Reputation</p>
-          <h2 className="trek-h2 mt-4 max-w-2xl text-paper">Counted, never claimed.</h2>
-          <p className="mt-5 max-w-2xl font-body text-[15px] leading-[1.7] text-paper/65">
-            There are no stars here and no green ticks. What a profile carries is a count of things
-            that happened: walks completed, walks hosted, and vouches written by people who were
-            confirmed alongside you on a walk that has already taken place. None of it can be typed
-            in. It is also, deliberately, a narrow claim — it says somebody turned up and behaved
-            well enough that another walker would say so. It does not say they are experienced, or
-            fit, or safe.
-          </p>
-
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
-            {[
-              ['01', 'A completed walk', 'Recorded when the day has passed and the host confirmed you were on it. This is the only unit the whole system is built from.'],
-              ['02', 'A vouch', 'Written afterwards, by one confirmed walker about another. It cannot be written before the walk, and it cannot be written by somebody who was not there.'],
-              ['03', 'A rung', 'What those two add up to. A host can require a rung before anybody may ask to join — so a reputation is not a badge, it is access.'],
-            ].map(([n, t, d]) => (
-              <div
-                key={n}
-                className="rounded-[var(--r-card)] border border-paper/12 bg-paper/[0.03] p-6"
-              >
-                <span className="font-mono text-[12px] text-sage tabular-nums">{n}</span>
-                <h3 className="trek-h3 mt-3 text-paper">{t}</h3>
-                <p className="mt-2.5 font-body text-[13.5px] leading-relaxed text-paper/60">{d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7 · Kinds of outing ──────────────────────────────────────────── */}
-      <section className="trek-band bg-paper py-20 md:py-24">
-        <div className="trek-measure">
-          <p className="trek-eyebrow text-forest">What gets posted</p>
+          <p className="trek-eyebrow text-ember">The safety model</p>
           <h2 className="trek-h2 mt-4 max-w-2xl text-text">
-            Six kinds of outing, each with its own hours and its own rules.
+            Six rules the database enforces. Four places it stops.
           </h2>
-          <p className="mt-4 max-w-2xl font-body text-[15px] leading-relaxed text-mid">
-            These are not categories on a form. The permitted departure window, the minimum number
-            of people before the meeting point is released, and whether the host has to write down
-            how everyone gets back in the dark are all different per kind — and all of them are
-            checked when the walk is posted.
+          <p className="mt-4 max-w-xl font-body text-[15px] leading-relaxed text-mid">
+            Both halves get the same width and the same weight — only one of them is reassuring,
+            and you need the other one more.
           </p>
 
-          <div className="mt-12 overflow-hidden rounded-[var(--r-panel)] border border-rule bg-surface">
-            <div className="hidden grid-cols-[1.6fr_1fr_1fr_0.8fr_1.4fr] gap-4 border-b border-rule bg-paper-warm/60 px-6 py-3.5 md:grid">
-              {['Outing', 'Departs between', 'Usually', 'Live now', 'The rule it carries'].map((h) => (
-                <span key={h} className="trek-label-xs text-mid">
-                  {h}
-                </span>
-              ))}
-            </div>
-
-            <ul>
-              {ACTIVITIES.map((a) => {
-                const light = lightForTime(a.defaultStart)
-                const n = activityCounts[a.key] ?? 0
-                return (
-                  <li
-                    key={a.key}
-                    className="grid gap-2 border-b border-rule-soft px-6 py-5 last:border-0 md:grid-cols-[1.6fr_1fr_1fr_0.8fr_1.4fr] md:items-center md:gap-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        aria-hidden="true"
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: dotColor(light, 'light') }}
-                      />
-                      <span>
-                        <span className="block font-body text-[15px] font-medium text-text">
-                          {a.label}
-                        </span>
-                        <span className="block font-body text-[13px] text-mid">{a.blurb}</span>
-                      </span>
-                    </div>
-
-                    <span className="font-mono text-[13px] text-text tabular-nums">
-                      {a.startMin}–{a.startMax}
-                    </span>
-
-                    <span className="font-mono text-[13px] text-mid tabular-nums">
-                      {a.defaultStart} → {a.defaultBackBy}
-                      {a.endsNextDay && <span className="ml-1 text-light">+1</span>}
-                    </span>
-
+          <div className="mt-10 grid gap-4 lg:grid-cols-2">
+            {[
+              { tone: 'sage' as const, key: 'Enforced', items: BOARD_CHECKS },
+              { tone: 'clay' as const, key: 'Where it stops', items: BOARD_LIMITS },
+            ].map(({ tone, key, items }) => {
+              const sage = tone === 'sage'
+              return (
+                <div
+                  key={key}
+                  className={`rounded-[var(--r-panel)] border p-6 md:p-7 ${
+                    sage
+                      ? 'border-forest/20 bg-sage-soft/50'
+                      : 'border-clay/25 bg-clay-wash/60'
+                  }`}
+                >
+                  <div className="flex items-baseline gap-3">
+                    <p className={`trek-label ${sage ? 'text-forest' : 'text-clay-deep'}`}>{key}</p>
+                    <span
+                      aria-hidden="true"
+                      className={`h-px flex-1 ${sage ? 'bg-forest/20' : 'bg-clay/25'}`}
+                    />
                     <span
                       className={`font-mono text-[13px] tabular-nums ${
-                        n > 0 ? 'text-forest' : 'text-light'
+                        sage ? 'text-forest/70' : 'text-clay-deep/70'
                       }`}
                     >
-                      {n}
+                      {items.length}
                     </span>
+                  </div>
 
-                    <span className="font-body text-[13px] leading-relaxed text-mid">
-                      {DAY_PART_LABEL[a.dayPart]} · {a.minParty} people before the point is
-                      released
-                      {a.needsNightNote && ' · the host must say how everyone gets back in the dark'}
-                    </span>
-                  </li>
-                )
-              })}
+                  <ul className="mt-5 space-y-0">
+                    {items.map((it) => (
+                      <li
+                        key={it.title}
+                        className={`border-t py-3 first:border-0 first:pt-0 ${
+                          sage ? 'border-forest/12' : 'border-clay/20'
+                        }`}
+                      >
+                        <details className="group">
+                          <summary className="flex cursor-pointer list-none items-start gap-3 font-body text-[15px] leading-snug text-text [&::-webkit-details-marker]:hidden">
+                            <span
+                              aria-hidden="true"
+                              className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${
+                                sage ? 'bg-forest' : 'bg-clay'
+                              }`}
+                            />
+                            <span className="flex-1">{it.title}</span>
+                            <span
+                              aria-hidden="true"
+                              className="mt-0.5 shrink-0 text-mid transition-transform duration-200 group-open:rotate-45"
+                            >
+                              +
+                            </span>
+                          </summary>
+                          <p className="mt-2 pl-[18px] font-body text-[13.5px] leading-relaxed text-mid">
+                            {it.body}
+                          </p>
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 6 · Reputation, and the things that are your job ────────────
+          Two sections became one band. "How a record is built" was three cards
+          of paragraphs saying what three words say; the six take-care notes
+          were 240 words of advice on a page whose reader has not joined yet.
+          The notes are kept in full, one tap away, and they appear again in
+          the places they are actually load-bearing — the walk, and the
+          onboarding. */}
+      <section className="trek-band bg-ink py-16 md:py-20">
+        <div className="trek-measure grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <p className="trek-eyebrow text-sage">Reputation</p>
+            <h2 className="trek-h2 mt-4 text-paper">Counted, never claimed.</h2>
+            <p className="mt-4 max-w-md font-body text-[15px] leading-relaxed text-paper/65">
+              No stars and no green ticks. Three things add up, and none of them can be typed in.
+            </p>
+
+            <ol className="mt-8 space-y-0">
+              {[
+                ['A completed walk', 'the host confirmed you were on it'],
+                ['A vouch', 'written afterwards, by somebody who was there'],
+                ['A rung', 'what those add up to — and a host can require one'],
+              ].map(([t, d], i) => (
+                <li
+                  key={t}
+                  className="flex items-baseline gap-4 border-t border-paper/12 py-3.5 first:border-0 first:pt-0"
+                >
+                  <span className="font-mono text-[12px] text-sage tabular-nums">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="font-body text-[15px] text-paper">{t}</span>
+                  <span className="ml-auto text-right font-body text-[13px] text-paper/55">{d}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="lg:pt-2">
+            <p className="trek-eyebrow text-sage">Before you go</p>
+            <h2 className="trek-h2 mt-4 text-paper">Six things that are your job, not ours.</h2>
+
+            <ul className="mt-8 space-y-0">
+              {SAFETY_NOTES.map((n, i) => (
+                <li key={n.title} className="border-t border-paper/12 py-3 first:border-0 first:pt-0">
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-baseline gap-4 font-body text-[15px] text-paper [&::-webkit-details-marker]:hidden">
+                      <span className="font-mono text-[12px] text-paper/40 tabular-nums">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="flex-1">{n.title}</span>
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 text-paper/40 transition-transform duration-200 group-open:rotate-45"
+                      >
+                        +
+                      </span>
+                    </summary>
+                    <p className="mt-2 pl-8 font-body text-[13.5px] leading-relaxed text-paper/60">
+                      {n.body}
+                    </p>
+                  </details>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
       </section>
 
-      {/* ── 8 · Before you go ────────────────────────────────────────────── */}
-      <section className="trek-band border-y border-rule-warm bg-paper-warm py-20 md:py-24">
+      {/* ── 7 · What gets posted ─────────────────────────────────────────
+          The six kinds, as a strip rather than the five-column table this was.
+          The table stated the permitted departure window, the usual hours, the
+          live count, the day part and the minimum party for each — accurate,
+          and far more than anybody needs before joining. What survives is the
+          part that is visual: the kind, the hour it usually leaves at in that
+          hour's own colour, and whether anything is on right now. */}
+      <section className="trek-band border-y border-rule-warm bg-paper-warm py-14 md:py-16">
         <div className="trek-measure">
-          <p className="trek-eyebrow text-forest">Before you go</p>
-          <h2 className="trek-h2 mt-4 max-w-2xl text-text">
-            Six things that are your job, not the platform’s.
-          </h2>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="trek-eyebrow text-ember">What gets posted</p>
+              <h2 className="trek-h2 mt-4 max-w-xl text-text">
+                Six kinds of outing, each with its own hours.
+              </h2>
+            </div>
+            <p className="max-w-xs font-body text-[13.5px] leading-relaxed text-mid">
+              Every walk carries the colour of the hour it leaves at, so a board reads as a day
+              passing.
+            </p>
+          </div>
 
-          <ol className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2 lg:grid-cols-3">
-            {SAFETY_NOTES.map((n, i) => (
-              <li key={n.title} className="border-t border-rule-warm pt-5">
-                <span className="font-mono text-[12px] text-forest tabular-nums">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <h3 className="trek-h3 mt-2.5 text-text">{n.title}</h3>
-                <p className="mt-2 font-body text-[13.5px] leading-relaxed text-mid">{n.body}</p>
-              </li>
-            ))}
-          </ol>
+          <ul className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ACTIVITIES.map((a) => {
+              const light = lightForTime(a.defaultStart)
+              const n = activityCounts[a.key] ?? 0
+              return (
+                <li
+                  key={a.key}
+                  className="flex items-center gap-3.5 rounded-[var(--r-card)] border border-rule bg-surface px-4 py-3.5"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: dotColor(light, 'light') }}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-body text-[14.5px] font-medium text-text">
+                      {a.label}
+                    </span>
+                    <span className="block font-body text-[12.5px] text-mid">{a.blurb}</span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block font-mono text-[13px] text-text tabular-nums">
+                      {a.defaultStart}
+                    </span>
+                    <span
+                      className={`block font-mono text-[11px] tabular-nums ${
+                        n > 0 ? 'text-forest' : 'text-light'
+                      }`}
+                    >
+                      {n} on
+                    </span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       </section>
 
