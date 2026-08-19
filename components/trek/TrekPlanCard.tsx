@@ -62,7 +62,15 @@ export default function TrekPlanCard({
   return (
     <Link
       href={`/trek-buddy/${plan.id}`}
-      className={`trek-card trek-liftable group flex flex-col focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage ${
+      // `w-full` is load-bearing and its absence was the whole bug. Every
+      // caller wraps this in `<li className="flex">` inside a grid whose
+      // columns are a fixed 389px — but a flex item's base width is `auto`,
+      // so without this the card shrink-wrapped its own content and came out
+      // at 290, 317, 320, 329, 330, 341, 354, 366 and 389px across one board.
+      // Nine widths, nine image heights, and a 99px hole beside the narrowest
+      // one. It read as "every card is a different size and the spacing is
+      // irregular", which is exactly what it was.
+      className={`trek-card trek-liftable group flex w-full flex-col focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage ${
         cancelled ? 'opacity-60' : ''
       }`}
     >
@@ -116,15 +124,42 @@ export default function TrekPlanCard({
         </div>
       </Cover>
 
-      {/* The instrument panel. Kept off the photograph, because type on a
-          picture is a poster and a poster cannot be read at a glance. */}
-      <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-3.5">
+      {/* The instrument panel, and every row in it has a RESERVED height.
+          Kept off the photograph, because type on a picture is a poster and a
+          poster cannot be read at a glance.
+
+          WHY THE HEIGHTS ARE PINNED. Measured across one board, this card came
+          out at 367, 391, 398, 414 and 429px — five heights, because every
+          block was free to grow: a two-word place name took one line and a
+          six-word one took two, the meta line wrapped when a walk happened to
+          state both distance and climb, and a walk that was women-only AND had
+          a cost pushed the tag row onto a second line. Inside a grid row the
+          tallest card dragged its neighbours up to match, so the damage showed
+          as ragged gaps BETWEEN rows and between buckets rather than inside
+          them — which is exactly the "irregular sizes, irregular spacing" this
+          reads as.
+
+          A card in a grid is a module. Its job is to be identical to its
+          neighbours so the eye can compare the CONTENTS; a card that resizes
+          itself around its content makes the layout the thing you notice.
+          So: the kicker and the meta line get one line each and truncate, the
+          title reserves two lines whether or not it needs them, and the tag row
+          never wraps. Content varies; the frame does not. */}
+      <div className="flex flex-1 flex-col px-4 pb-4 pt-3.5">
         <div className="min-w-0">
-          <p className="trek-label-xs" style={{ color: hourInk(light, 'light') }}>
+          <p
+            className="trek-label-xs truncate"
+            style={{ color: hourInk(light, 'light') }}
+          >
             {plan.activity_label} · {plan.start_time ? light.label : 'On the hill'}
           </p>
-          <h3 className="trek-h3 mt-2 text-text">{plan.place}</h3>
-          <p className="mt-1.5 truncate font-body text-[13px] text-mid">
+
+          {/* Two lines, always. `min-h` is the reservation and `line-clamp`
+              is the cap, so a one-word place and a seven-word one occupy the
+              same box. 2 × 1.25 line-height at 19px ≈ 48px. */}
+          <h3 className="trek-h3 mt-2 line-clamp-2 min-h-[48px] text-text">{plan.place}</h3>
+
+          <p className="mt-1 truncate font-body text-[13px] text-mid">
             From {plan.meet_area}
             {nights > 0
               ? ` · ${nights + 1} days`
@@ -141,12 +176,20 @@ export default function TrekPlanCard({
           capacity={plan.capacity}
           light={light}
           captionClassName="text-mid"
+          className="mt-3.5"
         />
 
-        <div className="mt-auto flex items-center gap-2 border-t border-rule-soft pt-3">
+        <div className="mt-auto flex items-center gap-2 overflow-hidden border-t border-rule-soft pt-3">
           <Avatar name={plan.host_name} id={plan.host_id} size={24} />
-          <span className="min-w-0 truncate font-body text-[13px] text-mid">{plan.host_name}</span>
-          <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate font-body text-[13px] text-mid">
+            {plan.host_name}
+          </span>
+          {/* `flex-nowrap` plus `shrink-0` tags: a walk that is women-only and
+              has a cost used to push this onto a second line and make the whole
+              card taller than its neighbours. It now runs off its own right
+              edge instead, which costs at most one tag on the narrowest card
+              and never costs the grid its rhythm. */}
+          <span className="flex shrink-0 flex-nowrap items-center gap-1.5">
             {/* A cost is a fact about the walk, not a clock running out on the
                 reader. In amber it sat in the same register as "leaving in two
                 hours" and read as a warning about money; neutral, it reads as

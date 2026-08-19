@@ -104,7 +104,12 @@ function Fence({
 
 export default function WhatTheBoardDoes({ className = '' }: { className?: string }) {
   return (
-    <div className={`grid items-start gap-4 lg:grid-cols-2 ${className}`}>
+    <div // Not `items-start`. The two fences hold six rules and four limits, so
+    // top-aligning them left one panel 258px taller than the other and the
+    // pair read as an accident. They are an argument in two halves given
+    // deliberately equal weight — matching their heights is the visual form of
+    // that claim, and it costs a little whitespace in the shorter one.
+    className={`grid gap-4 lg:grid-cols-2 ${className}`}>
       <Fence
         tone="sage"
         heading="What the board does"

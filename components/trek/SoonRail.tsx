@@ -43,10 +43,10 @@ export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
             const light = lightForTime(p.start_time)
             const left = p.spots_left
             return (
-              <li key={p.id} className="w-[280px]">
+              <li key={p.id} className="flex w-[280px]">
                 <Link
                   href={`/trek-buddy/${p.id}`}
-                  className="trek-liftable group block overflow-hidden rounded-[var(--r-card)] bg-ink-raised shadow-[0_12px_32px_-16px_rgba(0,0,0,0.6)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+                  className="trek-liftable group flex w-full flex-col overflow-hidden rounded-[var(--r-card)] bg-ink-raised shadow-[0_12px_32px_-16px_rgba(0,0,0,0.6)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
                 >
                   <Cover
                     src={p.cover_urls?.[0] ?? null}
@@ -64,7 +64,7 @@ export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
                     />
                   </Cover>
 
-                  <div className="px-4 pb-4 pt-3.5">
+                  <div className="flex flex-1 flex-col px-4 pb-4 pt-3.5">
                     <div className="flex items-center gap-2">
                       <span
                         aria-hidden="true"
@@ -90,14 +90,17 @@ export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
                       {p.distance_km ? ` · ${p.distance_km} km` : ''}
                     </p>
 
-                    {(p.women_only || p.senior_friendly) && (
-                      <span className="mt-2.5 flex flex-wrap gap-1.5">
-                        {p.women_only && <Tag tone="clay">Women only</Tag>}
-                        {p.senior_friendly && <Tag tone="sage">Senior friendly</Tag>}
-                      </span>
-                    )}
+                    {/* Rendered whether or not there is a tag to put in it.
+                        A rail is a row of identical modules, and letting this
+                        block collapse on the walks that carry no constraint
+                        made those cards shorter than their neighbours — the
+                        row then read as ragged rather than as a row. */}
+                    <span className="mt-2.5 flex h-[22px] flex-nowrap items-start gap-1.5 overflow-hidden">
+                      {p.women_only && <Tag tone="clay">Women only</Tag>}
+                      {p.senior_friendly && <Tag tone="sage">Senior friendly</Tag>}
+                    </span>
 
-                    <p className="mt-2.5 border-t border-paper/12 pt-2.5 font-body text-[12px] text-paper/70">
+                    <p className="mt-auto border-t border-paper/12 pt-2.5 font-body text-[12px] text-paper/70">
                       {left > 0 ? (
                         <>
                           <span className="font-mono text-[13px] text-paper tabular-nums">
