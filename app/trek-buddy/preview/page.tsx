@@ -97,7 +97,7 @@ export default async function TrekPreviewPage() {
 
           <div>
             <ShelfHead title="The board" count={rest.length} />
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((p) => (
                 <li key={p.id} className="flex">
                   <TrekPlanCard plan={p} />
@@ -109,7 +109,7 @@ export default async function TrekPreviewPage() {
           {/* ── The parts, on their own ─────────────────────────────────── */}
           <div>
             <ShelfHead title="The parts" />
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid auto-rows-fr gap-4 md:grid-cols-2">
               <div className="trek-card p-6">
                 <SectionLabel>Seats, and quorum</SectionLabel>
                 <div className="mt-5 space-y-6">
@@ -190,7 +190,7 @@ export default async function TrekPreviewPage() {
           {/* ── People ───────────────────────────────────────────────── */}
           <div>
             <ShelfHead title="People" count={PREVIEW_PEOPLE.length} />
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {PREVIEW_PEOPLE.map((p, i) => (
                 <li key={p.id} className="flex">
                   <PersonCardTile

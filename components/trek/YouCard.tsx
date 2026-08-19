@@ -91,7 +91,7 @@ export default function YouCard({
 
       {/* The counted half, same three figures the board shows strangers about
           you. Seeing your own zeros is the honest version of a nudge. */}
-      <dl className="mt-4.5 grid grid-cols-3 gap-2.5 border-t border-paper/12 pt-4">
+      <dl className="mt-4.5 grid auto-rows-fr grid-cols-3 gap-2.5 border-t border-paper/12 pt-4">
         <Datum k={been === 1 ? 'walk' : 'walks'} v={been} tone="dark" />
         <Datum k="hosted" v={me.walksHosted} tone="dark" />
         <Datum k="vouches" v={me.vouches} tone="dark" />

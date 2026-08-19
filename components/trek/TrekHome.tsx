@@ -243,7 +243,7 @@ export default function TrekHome({
                 </div>
               </div>
 
-              <dl className="mt-5 grid grid-cols-3 gap-2 border-t border-rule-soft pt-4">
+              <dl className="mt-5 grid auto-rows-fr grid-cols-3 gap-2 border-t border-rule-soft pt-4">
                 {[
                   ['Walked', (me?.walksJoined ?? 0) + (me?.walksHosted ?? 0)],
                   ['Hosted', me?.walksHosted ?? 0],

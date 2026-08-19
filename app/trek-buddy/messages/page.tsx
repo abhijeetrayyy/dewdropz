@@ -106,7 +106,15 @@ export default async function MessagesPage({
     <section className="trek-band bg-paper pb-12 pt-24 md:pt-28">
       <div className="trek-measure">
         <div
-          className={`grid min-h-[640px] overflow-hidden rounded-[var(--r-shell)] border border-rule bg-surface shadow-[var(--shadow-float)] lg:h-[calc(100vh-172px)] ${
+          // `grid-cols-[minmax(0,1fr)]` is not decoration. A grid column
+          // defaults to `auto`, whose automatic MINIMUM is the content's own
+          // width — so below `lg`, where there is one column, the thread list's
+          // widest unbreakable content forced the column to 710px inside a
+          // 342px shell and `overflow-hidden` quietly clipped a third of the
+          // screen off. The `lg` template already had `minmax(0,…)` on its
+          // second column for exactly this reason; the single-column case had
+          // nothing. `min-w-0` on both panes is the same fix one level down.
+          className={`grid min-h-[640px] grid-cols-[minmax(0,1fr)] overflow-hidden rounded-[var(--r-shell)] border border-rule bg-surface shadow-[var(--shadow-float)] lg:h-[calc(100vh-172px)] ${
             threads.length > 0 ? 'lg:grid-cols-[minmax(300px,26%)_minmax(0,1fr)]' : ''
           }`}
         >
@@ -115,7 +123,7 @@ export default async function MessagesPage({
               off, which is the only thing telling you which of the two panes
               you are acting in. */}
           <div
-            className={`min-h-0 flex-col border-rule bg-paper lg:flex lg:border-r ${
+            className={`min-h-0 min-w-0 flex-col border-rule bg-paper lg:flex lg:border-r ${
               onThread ? 'hidden' : 'flex'
             }`}
           >

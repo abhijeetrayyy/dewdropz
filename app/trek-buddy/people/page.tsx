@@ -244,7 +244,7 @@ export default async function PeoplePage({
               {rest.length > 0 && (
                 <div>
                   <ShelfHead title="Out there every week" count={rest.length} />
-                  <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {rest.map((p) => (
                       <li key={p.userId} className="flex">
                         <PersonCardTile

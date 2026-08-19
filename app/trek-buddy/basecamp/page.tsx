@@ -252,7 +252,11 @@ export default async function BasecampPage() {
               warning lamp on this board; the only number on this screen with a
               person on the other end of it is the first one, and it is the only
               one that lights. */}
-          <dl className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {/* `auto-rows-fr`: on a phone these sit two-up, and a label that wraps
+              to a second line ("waiting on you") made its tile 12px taller than
+              the one beside it. Four figures that are meant to be read as a set
+              have to sit in a set of identical boxes. */}
+          <dl className="mt-8 grid auto-rows-fr grid-cols-2 gap-3 md:grid-cols-4">
             {/* The div wrapper is not decoration: an <a> may not be a direct
                 child of a <dl>, and this is a definition list whose values
                 happen to be doors. */}

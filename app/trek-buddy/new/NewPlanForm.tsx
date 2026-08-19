@@ -388,7 +388,11 @@ export default function NewPlanForm({
                       <p className={label}>
                         {part === 'day' ? 'In daylight' : part === 'evening' ? 'After dark' : 'Overnight'}
                       </p>
-                      <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                      {/* `auto-rows-fr`: the kinds carry blurbs of different lengths, so
+                          without it the tiles came out at 100 and 116px and a grid of
+                          fifteen choices looked like a mistake. A chooser is a set of
+                          equals — the whole point is that you are comparing them. */}
+                      <div className="mt-2.5 grid auto-rows-fr gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                         {group.map((a) => (
                           <ActivityTile
                             key={a.key}

@@ -55,7 +55,12 @@ export default function SafetyNotes({
         {/* Still the compact variant — one line each, first sentence only — but
             the line now has an index and a rule holding it, so a form that
             already carries six labels does not read as seven paragraphs. */}
-        <ol className="mt-4 grid gap-2.5 sm:grid-cols-2">
+        {/* `auto-rows-fr` makes every row the height of the tallest, so all six
+            tiles match. Without it the three rows came out at 111, 89 and 68px
+            — the six things you are asked to do before meeting strangers
+            outdoors, rendered as a ragged stack, which reads as an afterthought
+            rather than as a checklist. */}
+        <ol className="mt-4 grid auto-rows-fr gap-2.5 sm:grid-cols-2">
           {SAFETY_NOTES.map((n, i) => (
             <li
               key={n.title}
@@ -89,7 +94,7 @@ export default function SafetyNotes({
         these are yours — and out in the hills, yours are the ones doing the work.
       </p>
 
-      <ol className="mt-8 grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="mt-8 grid auto-rows-fr gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
         {SAFETY_NOTES.map((n, i) => (
           <li key={n.title} className="border-t-2 border-forest pt-4">
             <span className="font-mono text-[13px] leading-none text-forest tabular-nums">

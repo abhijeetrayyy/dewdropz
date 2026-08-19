@@ -190,12 +190,17 @@ export default function PersonCardTile({
       <div className="rounded-[var(--r-input)] border border-rule-warm bg-paper-warm px-3.5 py-3">
         <p className="trek-label-xs text-mid">In their words</p>
 
+        {/* Three lines, reserved whether or not they are used. `line-clamp`
+            alone caps a long intro but does nothing for a short one, so a
+            person who wrote one sentence produced a card 21px shorter than the
+            person beside them — and a directory of people is precisely where
+            the cards must be identical, because the whole page is a comparison. */}
         {person.intro ? (
-          <p className="mt-2 line-clamp-3 font-body text-[13px] leading-relaxed text-text">
+          <p className="mt-2 line-clamp-3 min-h-[60px] font-body text-[13px] leading-relaxed text-text">
             {person.intro}
           </p>
         ) : (
-          <p className="mt-2 font-body text-[13px] leading-relaxed text-mid">
+          <p className="mt-2 min-h-[60px] font-body text-[13px] leading-relaxed text-mid">
             They have not written an intro yet.
           </p>
         )}

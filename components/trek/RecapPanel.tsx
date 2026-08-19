@@ -194,7 +194,7 @@ export default function RecapPanel({
 
         {recap.photo_urls.length > 0 && (
           <ul
-            className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4"
+            className="mt-5 grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-4"
             style={{ gridAutoRows: '180px' }}
           >
             {recap.photo_urls.map((u, i) => (
@@ -334,7 +334,7 @@ export default function RecapPanel({
         onChange={(e) => { const f = e.target.files?.[0]; if (f) addPhoto(f); e.target.value = '' }} />
 
       {photos.length > 0 && (
-        <ul className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+        <ul className="mt-3 grid auto-rows-fr grid-cols-3 gap-2.5 sm:grid-cols-4">
           {photos.map((u) => (
             <li key={u} className="relative aspect-square overflow-hidden rounded-[var(--r-input)]">
               <Image src={u} alt="" fill sizes="25vw" className="object-cover" />
