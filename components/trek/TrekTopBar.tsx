@@ -44,15 +44,17 @@ export default function TrekTopBar({
 
   const nav: Item[] = signedIn
     ? [
-        { key: 'board', label: 'Discover', href: '/trek-buddy' },
+        { key: 'home', label: 'Today', href: '/trek-buddy' },
+        { key: 'discover', label: 'Discover', href: '/trek-buddy/discover' },
         { key: 'people', label: 'People', href: '/trek-buddy/people' },
         { key: 'basecamp', label: 'Basecamp', href: '/trek-buddy/basecamp', badge: unreadNotifications },
         { key: 'messages', label: 'Messages', href: '/trek-buddy/messages', badge: unreadMessages },
       ]
     : [
-        { key: 'board', label: 'Discover', href: '/trek-buddy' },
+        // No 'Shop' here: the brand cell already carries "← Shop", and two
+        // controls to the same place three centimetres apart is clutter.
+        { key: 'home', label: 'What this is', href: '/trek-buddy' },
         { key: 'trails', label: 'Trails', href: '/treks' },
-        { key: 'shop', label: 'Shop', href: '/shop' },
       ]
 
   const isOn = (href: string) =>
