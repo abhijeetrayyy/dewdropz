@@ -63,7 +63,15 @@ const spaceMono = Space_Mono({
 // inside `.trek-scope`, which the homepage never renders. They now live in
 // `app/trek-fonts.ts` and are applied by the two surfaces that use them.
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dewdropz.shop'
+// `NEXT_PUBLIC_APP_URL`, which this project already has and already sets, and
+// NOT a second `NEXT_PUBLIC_SITE_URL` of our own. Seven call sites read it,
+// including `app/robots.ts` and `app/sitemap.ts` — the two files that have to
+// agree with `metadataBase` about what this site's origin is. Introducing a
+// parallel variable would mean somebody sets the deploy environment, the
+// sitemap comes out right, and the OG image and canonical quietly keep
+// pointing at the fallback. The trailing-slash strip matches how robots and
+// sitemap normalise it, so the three cannot disagree over a slash either.
+const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://dewdropz.shop').replace(/\/$/, '')
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 // What was here: a title and a description, and nothing else. No
