@@ -103,11 +103,11 @@ export default async function MessagesPage({
   const light = selected ? lightForTime(selected.start_time ?? '06:00') : null
 
   return (
-    <section className="trek-band bg-paper pb-20 pt-28 md:pt-32">
+    <section className="trek-band bg-paper pb-12 pt-24 md:pt-28">
       <div className="trek-measure">
         <div
-          className={`grid min-h-[640px] overflow-hidden rounded-[var(--r-shell)] border border-rule bg-surface shadow-[var(--shadow-float)] lg:h-[calc(100vh-268px)] ${
-            threads.length > 0 ? 'lg:grid-cols-[340px_minmax(0,1fr)]' : ''
+          className={`grid min-h-[640px] overflow-hidden rounded-[var(--r-shell)] border border-rule bg-surface shadow-[var(--shadow-float)] lg:h-[calc(100vh-172px)] ${
+            threads.length > 0 ? 'lg:grid-cols-[minmax(300px,26%)_minmax(0,1fr)]' : ''
           }`}
         >
           {/* ── The list ────────────────────────────────────────────────────

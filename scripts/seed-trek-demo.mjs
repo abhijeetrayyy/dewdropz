@@ -383,6 +383,45 @@ const HISTORY = [
 // These land on YOUR walk — the one the seed posts as you — because that queue
 // is the most consequential control in the product and an empty one shows
 // nothing.
+// Somebody asking to come on a walk a DEMO member hosts.
+//
+// The first version only put pending requests on YOUR walk, which meant the
+// host console and the "waiting on you" panel were empty for every other
+// account on the board — and those two are the screens where a host decides
+// about a stranger, which is the most consequential thing this product does.
+// You cannot judge that screen against nobody.
+// Nobody here is already on the walk they are asking for — the primary key is
+// (plan_id, user_id), so an asker who is already confirmed is a collision, not
+// a request. Meera hosts two of these, which is deliberate: she is the account
+// with the fullest board, and the host console is judged against hers.
+const ASKS = [
+  ['Benog Wildlife Sanctuary', 'rohan', 'I have binoculars and no idea what I am looking at. Is that alright?'],
+  ['Benog Wildlife Sanctuary', 'ananya', 'I usually run this stretch. Happy to go at whatever pace the group wants.'],
+  ['Flag Hill, before light', 'devika', 'I have done this one at dawn before. Happy to sweep at the back if that helps.'],
+  ['Flag Hill, before light', 'kabir', 'First time out with a group. I walk steadily and would rather be at the back than hold anyone up.'],
+  ['Nag Tibba', 'devika', 'Carrying my own food and a spare layer. Is the cab still splitting from ISBT?'],
+  ['George Everest', 'priya', 'Bringing a flask and a spare red torch if anybody forgets theirs.'],
+]
+
+// What a group actually says to each other between joining and going. Every
+// line is the kind of thing that gets said the night before — logistics, a
+// forecast, one nervous question — because a messaging screen with lorem in it
+// tells you nothing about whether the screen works.
+const CHAT = [
+  ['Nag Tibba', [
+    ['meera', 'Forecast holds — clear from 03:00, about 4°C at the top. Bring a layer more than you think.', true],
+    ['priya', 'Cab from ISBT gate 2, I will be there from 04:40. Room for three.'],
+    ['ananya', 'Taking that if there is space. Coming from Rajpur.'],
+    ['priya', 'Space for you.'],
+    ['meera', 'We leave at 05:10 whether or not everyone is there — sorry, but the light does not wait.'],
+  ]],
+  ['Benog Wildlife Sanctuary', [
+    ['meera', 'Slow morning, lots of standing still. Flask is a good idea.'],
+    ['kabir', 'Is it alright if I am rubbish at this? I can barely tell a myna from a crow.'],
+    ['meera', 'That is most of us on the first one. Come.'],
+  ]],
+]
+
 const YOUR_WALK = {
   activity: 'trekking', place: 'Mussoorie ridge, the long way round',
   meet: 'Library bus stand, Mussoorie', region: 'Uttarakhand',
@@ -577,7 +616,8 @@ async function seed() {
   await db.from('trek_plans').delete().eq('place', YOUR_WALK.place)
 
   console.log('\nPosting walks…')
-  const planIds = []
+  const planIds = {}
+  const hostOf = {}
   for (const w of WALKS) {
     const row = planRow(w, ids[w.host], nameOf[w.host])
     const { data, error } = await db.from('trek_plans').insert(row).select('id').single()
@@ -585,7 +625,8 @@ async function seed() {
       console.error(`  ✗ ${w.place}: ${error.message}`)
       continue
     }
-    planIds.push(data.id)
+    planIds[w.place] = data.id
+    hostOf[w.place] = ids[w.host]
     await db.from('trek_plan_details').insert({
       plan_id: data.id, meeting_point: w.point, logistics: w.logistics,
     })
@@ -637,6 +678,46 @@ async function seed() {
       console.log(`\n  ${YOUR_WALK.place} — posted as you, ${YOUR_WALK.pending.length} people waiting on a decision`)
     }
   }
+
+  // ── Who is asking, and what the group is saying ──────────────────────────
+  // Both go in with the service-role client rather than through the actions,
+  // for the same reason the rest of the seed does: there is no session here.
+  // The rows are shaped exactly as the app writes them.
+  console.log('\nPeople asking to come, and the groups talking…')
+  let asked = 0
+  for (const [slug, who, message] of ASKS) {
+    const planId = planIds[slug]
+    if (!planId || !ids[who]) continue
+    const { error } = await db.from('trek_plan_requests').insert({
+      plan_id: planId, user_id: ids[who], plan_host_id: hostOf[slug],
+      display_name: nameOf[who], status: 'requested', message,
+    })
+    // A duplicate here means that person is already on the walk, which is a
+    // fixture problem rather than a failure worth stopping for.
+    if (error && !error.message.includes('duplicate key')) {
+      console.error(`  ✗ ${who} → ${slug}: ${error.message}`)
+    } else if (!error) asked++
+  }
+
+  let said = 0
+  for (const [slug, lines] of CHAT) {
+    const planId = planIds[slug]
+    if (!planId) continue
+    // Spread backwards from now so the thread reads as a conversation with a
+    // last-message time, not as five things posted in the same second.
+    const base = Date.now() - lines.length * 47 * 60_000
+    for (const [who, body, announcement] of lines) {
+      if (!ids[who]) continue
+      const { error } = await db.from('trek_messages').insert({
+        plan_id: planId, user_id: ids[who], display_name: nameOf[who], body,
+        is_announcement: Boolean(announcement),
+        created_at: new Date(base + said * 47 * 60_000).toISOString(),
+      })
+      if (error) console.error(`  ✗ chat ${slug}: ${error.message}`)
+      else said++
+    }
+  }
+  console.log(`  ${asked} people waiting on a decision, ${said} messages across ${CHAT.length} walks`)
 
   // ── The record ────────────────────────────────────────────────────────────
   // Vouches are what every trust figure on the product is counted from, and a
