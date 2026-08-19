@@ -56,17 +56,44 @@ export default function TrekTopBar({
       ]
 
   const isOn = (href: string) =>
-    href === '/trek-buddy' ? pathname === '/trek-buddy' : pathname.startsWith(href)
+    // Both of these are prefixes of everything, so they only ever match exactly.
+    href === '/' || href === '/trek-buddy' ? pathname === href : pathname.startsWith(href)
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-paper/[0.08] bg-ink/[0.92] backdrop-blur-[14px]">
       <div className="grid h-full grid-cols-[auto_1fr] items-center gap-4 px-6 md:grid-cols-[1fr_auto_1fr] md:px-10">
-        <Link
-          href="/trek-buddy"
-          className="min-w-0 justify-self-start rounded-[var(--r-input)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sage"
-        >
-          <Lockup tone="onink" />
-        </Link>
+        {/* THE WAY BACK.
+            Trek Buddy moved into its own shell, which fixed the product
+            reintroducing itself on every page and created a new problem: once
+            you were inside it there was no route out. The storefront's nav
+            points here; nothing pointed home. Somebody who came to look at a
+            walk and then wanted a jacket had the browser's back button and
+            nothing else — and if they had arrived on a walk from a shared
+            link, not even that.
+
+            So the brand cell is two controls, not one: the lockup goes to the
+            board, and the shop sits beside it behind a hairline. Reading
+            "TrekBuddy by Dewdropz | Shop" also says what this thing IS — a
+            part of a shop, not a separate company — which is exactly what the
+            product's own copy claims and what the chrome was contradicting. */}
+        <div className="flex min-w-0 items-center gap-3 justify-self-start md:gap-4">
+          <Link
+            href="/trek-buddy"
+            className="min-w-0 rounded-[var(--r-input)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sage"
+          >
+            <Lockup tone="onink" />
+          </Link>
+
+          <span aria-hidden="true" className="hidden h-7 w-px shrink-0 bg-paper/15 sm:block" />
+
+          <Link
+            href="/"
+            className="hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 font-body text-[13px] font-medium text-paper/55 transition-colors hover:bg-paper/[0.06] hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage sm:inline-flex"
+          >
+            <span aria-hidden="true" className="text-[15px] leading-none">←</span>
+            Shop
+          </Link>
+        </div>
 
         <nav className="col-span-2 hidden items-center gap-8 justify-self-center md:col-span-1 md:flex">
           {nav.map((n) => {
@@ -136,7 +163,7 @@ export default function TrekTopBar({
           four-item nav wrapping to three lines under a logo was the single
           worst thing about this feature on a phone. */}
       <nav className="fixed inset-x-0 bottom-0 z-50 flex items-stretch border-t border-paper/[0.08] bg-ink/[0.94] backdrop-blur-[14px] md:hidden">
-        {nav.map((n) => {
+        {[...nav, { key: 'shop', label: 'Shop', href: '/' } as Item].map((n) => {
           const on = isOn(n.href)
           return (
             <Link
