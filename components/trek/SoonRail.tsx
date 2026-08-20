@@ -28,6 +28,17 @@ import { LiveDot, Tag } from './ui/Bits'
 export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
   if (plans.length === 0) return null
 
+  // ONE CARD IS NOT A RAIL. A rail's whole argument is that it continues past
+  // the edge — that is why the cards are a fixed 280px and why the row bleeds
+  // off the right. With a single walk in it, a 280px card sat alone against a
+  // band nearly a thousand pixels wide, floating over the hard seam where the
+  // ink gradient hands over to paper. It read as a rendering fault rather than
+  // as "one walk is leaving soon", which on a young board is the state this rail
+  // will be in most of the time. So a lone card takes the width instead: the
+  // same card, laid out as a strip, with nothing to scroll and nothing to
+  // suggest there is more.
+  const lone = plans.length === 1
+
   return (
     <section>
       <div className="flex items-center gap-3 pb-3.5 pt-5">
@@ -37,13 +48,13 @@ export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
         <span className="font-mono text-[13px] text-paper/60 tabular-nums">{plans.length}</span>
       </div>
 
-      <div className="-mr-6 md:-mr-10">
-        <ul className="trek-rail pb-4 pr-6 md:pr-10">
+      <div className={lone ? '' : '-mr-6 md:-mr-10'}>
+        <ul className={lone ? 'pb-4' : 'trek-rail pb-4 pr-6 md:pr-10'}>
           {plans.map((p) => {
             const light = lightForTime(p.start_time)
             const left = p.spots_left
             return (
-              <li key={p.id} className="flex w-[280px]">
+              <li key={p.id} className={lone ? 'flex w-full' : 'flex w-[280px]'}>
                 <Link
                   href={`/trek-buddy/${p.id}`}
                   className="trek-liftable group flex w-full flex-col overflow-hidden rounded-[var(--r-card)] bg-ink-raised shadow-[0_12px_32px_-16px_rgba(0,0,0,0.6)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
@@ -54,9 +65,9 @@ export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
                     place={p.place}
                     distanceKm={p.distance_km}
                     gainM={p.gain_m}
-                    sizes="280px"
+                    sizes={lone ? '(min-width: 768px) 900px, 92vw' : '280px'}
                     scrimFrom={20}
-                    className="h-[120px] w-full"
+                    className={lone ? 'h-[150px] w-full sm:h-[190px]' : 'h-[120px] w-full'}
                   >
                     <Countdown
                       iso={p.starts_at}

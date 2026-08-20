@@ -262,7 +262,7 @@ export default function ConsoleClient({
       </section>
 
       <section className="trek-band bg-paper pb-24 pt-9">
-        <div className="trek-measure grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="trek-measure grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
           <div className="min-w-0">
             {/* ── ROSTER ───────────────────────────────────────────────────
                 Nobody at all is one state, not three: a screen that answers a

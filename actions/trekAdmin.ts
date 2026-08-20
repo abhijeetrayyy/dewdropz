@@ -391,3 +391,50 @@ export async function setTrekMentor(userId: string, mentor: boolean, bio?: strin
   revalidatePath(`/trek-buddy/people/${userId}`)
   return { success: true as const }
 }
+
+/**
+ * Hosting requests, and the two-button decision on each.
+ *
+ * The grant path deliberately goes through `trek_decide_host_request` rather
+ * than `setTrekMember({ canHost: true })`, even though the second already
+ * exists and works. Closing the request and flipping the bit are one
+ * transaction there — a granted request whose member still cannot post, or a
+ * member granted with the request left open for somebody to grant twice, are
+ * both states worth designing out rather than remembering not to cause.
+ */
+export type HostRequestRow = {
+  id: string
+  user_id: string
+  display_name: string | null
+  home_base: string | null
+  note: string | null
+  walks: number
+  trust_rung: number
+  member_since: string
+  created_at: string
+}
+
+export async function getHostRequests(): Promise<HostRequestRow[]> {
+  const admin = await requireAdmin()
+  const { data, error } = await createAdminSupabaseClient()
+    .rpc('trek_host_request_queue', { p_actor: admin.id })
+  // Until 090 is applied the RPC does not exist; an empty queue is the honest
+  // rendering of "there is nothing to work" on a screen that has no other way
+  // to show an error.
+  if (error) return []
+  return (data ?? []) as HostRequestRow[]
+}
+
+export async function decideHostRequest(requestId: string, grant: boolean) {
+  const admin = await requireAdmin()
+  const { error } = await createAdminSupabaseClient().rpc('trek_decide_host_request', {
+    p_request: requestId,
+    p_grant: grant,
+    p_actor: admin.id,
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/admin/trek-buddy')
+  revalidatePath('/trek-buddy')
+  revalidatePath('/trek-buddy/discover')
+  return { success: true as const }
+}

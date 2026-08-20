@@ -2,9 +2,13 @@ import type { MetadataRoute } from 'next'
 import { getProductsForSitemap, getCollections } from '@/actions/products'
 import { JOURNAL } from '@/lib/constants'
 
+// '/trek-buddy' is the signed-out pitch and nothing else — the board, the
+// walks and the people all live under it and are disallowed in robots.ts. It
+// is listed here because a page worth indexing is a page worth announcing, and
+// because this product's own goal is that people find it and pass it on.
 const STATIC_ROUTES = [
   '', '/shop', '/collections', '/customize', '/about', '/sustainability',
-  '/journal', '/treks', '/contact', '/privacy',
+  '/journal', '/treks', '/trek-buddy', '/trek-buddy/safety', '/contact', '/privacy',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

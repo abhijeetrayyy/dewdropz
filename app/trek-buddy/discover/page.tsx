@@ -8,11 +8,12 @@ import BoardFilters from '@/components/trek/BoardFilters'
 import DayArc from '@/components/trek/ui/DayArc'
 import EmptyState from '@/components/trek/ui/EmptyState'
 import QuickStart from '@/components/trek/QuickStart'
+import HostAccess from '@/components/trek/HostAccess'
 import RecentRecaps from '@/components/trek/RecentRecaps'
 import WhatTheBoardDoes from '@/components/trek/WhatTheBoardDoes'
-import { Datum, Eyebrow, ShelfHead } from '@/components/trek/ui/Bits'
+import { Eyebrow, ShelfHead } from '@/components/trek/ui/Bits'
 import {
-  getLeavingSoon, getTrekBoard, getTrekMembership, type TrekPlanRow,
+  getLeavingSoon, getMyHostRequest, getTrekBoard, getTrekMembership, type TrekPlanRow,
 } from '@/actions/trekBuddy'
 import { getRecentRecaps } from '@/actions/trekRecap'
 import { bucketPlans } from '@/lib/trekBuckets'
@@ -21,6 +22,59 @@ import { ACTIVITIES, lightForTime } from '@/lib/trek'
 export const metadata: Metadata = {
   title: 'Discover — TrekBuddy',
   robots: { index: false, follow: false },
+}
+
+/** The search params this page reads, so the stat filters can rebuild the URL. */
+type BoardParams = Record<string, string | undefined>
+
+/**
+ * A headline count that is also the filter for it.
+ *
+ * Toggles one boolean parameter and carries every other one through unchanged,
+ * so pressing "senior friendly" while looking at Sunday keeps you on Sunday.
+ * It is a link rather than a button because the board's whole filter state
+ * lives in the URL and is meant to be sendable — the same reason the chips are
+ * links on the People page.
+ */
+function StatFilter({
+  k,
+  v,
+  param,
+  on,
+  sp,
+}: {
+  k: string
+  v: number
+  param: string
+  on: boolean
+  sp: BoardParams
+}) {
+  const q = new URLSearchParams()
+  for (const [key, val] of Object.entries(sp)) if (val && key !== param) q.set(key, String(val))
+  if (!on) q.set(param, '1')
+  const s = q.toString()
+
+  return (
+    <Link
+      href={s ? `/trek-buddy/discover?${s}` : '/trek-buddy/discover'}
+      aria-pressed={on}
+      className={`group rounded-[var(--r-input)] transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sage ${
+        on ? '' : 'opacity-90 hover:opacity-100'
+      }`}
+    >
+      <p className={`trek-figure ${on ? 'text-sage' : 'text-paper'}`}>{v}</p>
+      <p
+        className={`trek-datum-key inline-flex items-center gap-1.5 border-b pb-0.5 transition-colors ${
+          on
+            ? 'border-sage text-sage'
+            : 'border-paper/25 text-paper/60 group-hover:border-paper/60 group-hover:text-paper/85'
+        }`}
+      >
+        {k}
+        {on && <span aria-hidden="true">×</span>}
+      </p>
+    </Link>
+  )
 }
 
 // The board: everything that is on, and every way to cut it.
@@ -56,7 +110,7 @@ export default async function DiscoverPage({
   // A page whose only content is a button to another page is a wasted click.
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [plans, all, soon, recaps] = await Promise.all([
+  const [plans, all, soon, recaps, hostRequest] = await Promise.all([
     getTrekBoard({
       activity: sp.activity,
       when: sp.when as 'all' | 'week' | 'weekend',
@@ -70,6 +124,7 @@ export default async function DiscoverPage({
     getTrekBoard(),
     getLeavingSoon(),
     getRecentRecaps(4),
+    getMyHostRequest(),
   ])
 
   // The chips carry honest counts off the UNFILTERED board — a filter that
@@ -104,7 +159,14 @@ export default async function DiscoverPage({
   const featured: TrekPlanRow | undefined =
     candidates.find((p) => p.spots_left > 0 && p.cover_urls?.length > 0) ??
     candidates.find((p) => p.spots_left > 0)
-  const rest = featured ? shown.filter((p) => p.id !== featured.id) : shown
+  // From `candidates`, not from `shown`. `inRail` was built to keep the rail's
+  // walks out of the featured slot and then not used again, so anything leaving
+  // inside 48 hours was drawn twice on one screen — once in the rail and once
+  // in a bucket below it. Today already does this correctly (`fresh` is the
+  // board minus `soon`); the board, which is the screen people actually browse,
+  // did not, and a board that prints the same walk twice reads as a board with
+  // more on it than there is.
+  const rest = featured ? candidates.filter((p) => p.id !== featured.id) : candidates
   const buckets = bucketPlans(rest)
 
   const filtered =
@@ -160,10 +222,35 @@ export default async function DiscoverPage({
                 )}
               </p>
             </div>
-            <dl className="flex gap-8 pb-1">
-              <Datum k="with room" v={withRoom} tone="dark" />
-              <Datum k="women only" v={womenOnlyCount} tone="dark" />
-              <Datum k="senior friendly" v={seniorCount} tone="dark" />
+            {/* THE COUNTS ARE THE CONTROLS.
+                These three were static figures sitting directly above a
+                disclosure you had to open to act on any of them — the board
+                advertised that it has walks only women may join and walks paced
+                for somebody older, and then made you go looking for the switch.
+                Each one is now the filter it describes, and it shows whether it
+                is the cut you are currently looking at.
+
+                "With room" only appears when it is not the whole board. A
+                statistic that reads "10 walks are on the board" beside "10 with
+                room" is telling you nothing twice. */}
+            <dl className="flex flex-wrap gap-x-8 gap-y-4 pb-1">
+              {withRoom !== all.length && (
+                <StatFilter k="with room" v={withRoom} param="spots" on={sp.spots === '1'} sp={sp} />
+              )}
+              <StatFilter
+                k="women only"
+                v={womenOnlyCount}
+                param="womenOnly"
+                on={sp.womenOnly === '1'}
+                sp={sp}
+              />
+              <StatFilter
+                k="senior friendly"
+                v={seniorCount}
+                param="senior"
+                on={sp.senior === '1'}
+                sp={sp}
+              />
             </dl>
           </div>
 
@@ -174,7 +261,7 @@ export default async function DiscoverPage({
               name="q"
               defaultValue={sp.q ?? ''}
               placeholder="Search a place or a peak — Nag Tibba, Benog, Mussoorie…"
-              className="w-full rounded-[var(--r-input)] border border-paper/25 bg-paper/[0.06] px-4 py-3.5 font-body text-sm text-paper backdrop-blur-[8px] placeholder:text-paper/45 focus:border-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+              className="w-full rounded-[var(--r-input)] border border-paper/25 bg-paper/[0.06] px-4 py-3.5 font-body text-sm text-paper backdrop-blur-[8px] placeholder:text-paper/55 focus:border-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
             />
           </form>
 
@@ -227,10 +314,13 @@ export default async function DiscoverPage({
                   </>
                 )
               }
+              // Nothing for a non-host here any more. "Finish your profile"
+              // was a dead end dressed as a next step: completing a profile
+              // grants no hosting rights and never has. The honest offer is
+              // below, in HostAccess, and it is the one that actually moves
+              // somebody.
               action={
-                membership.canHost
-                  ? { label: 'Post a walk', href: '/trek-buddy/new' }
-                  : { label: 'Finish your profile', href: '/trek-buddy/profile' }
+                membership.canHost ? { label: 'Post a walk', href: '/trek-buddy/new' } : undefined
               }
               secondary={filtered ? { label: 'Clear the filters', href: '/trek-buddy/discover' } : undefined}
             />
@@ -241,7 +331,7 @@ export default async function DiscoverPage({
               {buckets.map((b) => (
                 <div key={b.key}>
                   <ShelfHead title={b.label} count={b.plans.length} />
-                  <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {b.plans.map((p) => (
                       <li key={p.id} className="flex">
                         <TrekPlanCard plan={p} />
@@ -272,6 +362,10 @@ export default async function DiscoverPage({
               fastest route from "I was going anyway" to a posted walk — the
               component existed and was mounted nowhere. */}
           {membership.canHost && shown.length === 0 && <QuickStart canHost />}
+
+          {/* And for everybody else, the thing that was missing entirely: a way
+              to become one of the people who can put something here. */}
+          {!membership.canHost && <HostAccess state={hostRequest} />}
         </div>
       </section>
 

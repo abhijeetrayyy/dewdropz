@@ -27,6 +27,15 @@ import type { TrekPlanRow } from '@/actions/trekBuddy'
  * needed. Boundaries are IST days, because a walk starting 06:00 Saturday is
  * on Saturday regardless of where the server is standing.
  */
+/**
+ * Below this many walks the board is one grid rather than four shelves.
+ *
+ * Twelve is three full rows of a three-column grid — the point at which a
+ * reader has to scan rather than glance, which is the first moment a heading
+ * saves them anything.
+ */
+export const BUCKET_THRESHOLD = 12
+
 export function bucketPlans(plans: TrekPlanRow[]) {
   const day = 86400000
   const istNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
@@ -51,6 +60,29 @@ export function bucketPlans(plans: TrekPlanRow[]) {
     { key: 'next',    label: 'Next week',            until: nextWeekEnd.getTime() },
     { key: 'later',   label: 'Further out',          until: Infinity },
   ]
+
+  // ONE SHELF UNTIL THERE IS ENOUGH TO SHELVE.
+  //
+  // Buckets earn their keep by answering "is there anything this weekend?"
+  // before you read a card. Below a certain size they stop answering anything
+  // and start costing: measured on a real board of ten walks, four headings
+  // each held one or two cards in a three-column grid, so every shelf was a
+  // card and two card-widths of nothing, and the page ran to 5,900px to show
+  // ten things. A heading over a single item is not an index, it is a caption —
+  // and four of them in a column read as a board with less on it than there is.
+  //
+  // So under the threshold the board is one grid, in date order, which is what
+  // the buckets were sorting into anyway. The whole mechanism comes back
+  // untouched the moment there is enough on the board for it to be a shortcut
+  // rather than a decoration.
+  if (plans.length < BUCKET_THRESHOLD) {
+    const sorted = [...plans].sort(
+      (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    )
+    return sorted.length > 0
+      ? [{ key: 'all', label: 'Soonest first', until: Infinity, plans: sorted }]
+      : []
+  }
 
   const buckets = windows.map((w) => ({ ...w, plans: [] as TrekPlanRow[] }))
   for (const p of plans) {

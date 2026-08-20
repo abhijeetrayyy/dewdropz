@@ -29,6 +29,22 @@ const KIND: Record<string, { label: string; tone: 'good' | 'bad' | 'plain' }> = 
   plan_cancelled:    { label: 'Called off',    tone: 'bad' },
   point_released:    { label: 'Meeting point', tone: 'good' },
   vouched:           { label: 'Vouched',       tone: 'good' },
+
+  // Hosting, from 090. There is a `?? { label: 'Update' }` fallback below, so a
+  // missing entry is not a crash — it is worse than that, it is every one of
+  // these arriving as an anonymous "Update" and teaching people that the inbox
+  // does not say anything.
+  host_granted:      { label: 'You can host',   tone: 'good' },
+  host_declined:     { label: 'Not this time',  tone: 'bad' },
+
+  // AND THE FOUR THAT WERE ALREADY MISSING. The database has accepted these
+  // since 070 and 079; this map never learned them, so a member moved off a
+  // waitlist or told the meeting point had changed got "Update" and no colour.
+  // Found while adding the two above, and left fixed rather than noted.
+  waitlisted:        { label: 'On the waitlist', tone: 'plain' },
+  waitlist_moved:    { label: 'A place opened',  tone: 'good' },
+  point_changed:     { label: 'Point moved',     tone: 'bad' },
+  announcement:      { label: 'From the host',   tone: 'plain' },
 }
 
 /** The dot, and the kicker, take the same colour — one decision, drawn twice. */

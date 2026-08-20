@@ -424,7 +424,7 @@ export async function getBoardPulse() {
   const admin = createAdminSupabaseClient()
   const now = new Date().toISOString()
 
-  const [plans, members] = await Promise.all([
+  const [plans, members, done] = await Promise.all([
     admin
       .from('trek_plans')
       .select('activity, starts_at')
@@ -435,6 +435,18 @@ export async function getBoardPulse() {
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .not('trek_display_name', 'is', null),
+    // Walks that have already finished. The signed-out page can name no walk
+    // and show no member, so this count is the only evidence it is allowed to
+    // offer that anybody actually turns up — and a count is a counted fact, not
+    // somebody's day put on a billboard without asking. Everything richer than
+    // this (the recap, the photographs, the party) needs its author's consent,
+    // which is what the share token in 091 is and what a front page is not.
+    admin
+      .from('trek_plans')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'open')
+      .is('hidden_at', null)
+      .lt('ends_at', now),
   ])
 
   const rows = (plans.data ?? []) as { activity: string; starts_at: string }[]
@@ -454,6 +466,8 @@ export async function getBoardPulse() {
     open: rows.length,
     weekend,
     members: members.count ?? 0,
+    /** Walks whose day has been and gone. Zero on a young board, and it says so. */
+    completed: done.count ?? 0,
     byActivity,
   }
 }
@@ -1211,4 +1225,107 @@ export async function blockMember(userId: string) {
   const user = await requireAuth()
   return callTrek('trek_block', { p_blocked: userId, p_actor: user.id },
     ['/trek-buddy', `/trek-buddy/people/${userId}`])
+}
+
+/** One confirmed walker, as much as anybody who has not joined may know. */
+export type PartyMember = {
+  /** First token of their display name. There is no surname and no id. */
+  firstName: string
+  /** 0 joined · 1 phone verified · 2 phone verified and vouched for twice. */
+  trustRung: number
+  /** Host or co-host. */
+  runsIt: boolean
+}
+
+/**
+ * Who is confirmed on a walk — for somebody deciding whether to ask.
+ *
+ * The full roster is the host's alone and stays that way: `getTrekPlan` hands
+ * over names, ids, messages and pending asks, and only to the host. This is a
+ * different question with a different answer. Migration 089 is the whole
+ * contract; read its header before touching either.
+ *
+ * NULL MEANS "COULD NOT ASK", [] MEANS "NOBODY IS CONFIRMED". The difference is
+ * load-bearing and an earlier draft of this got it wrong: collapsing both to []
+ * made the plan page tell every reader "Nobody is confirmed yet — you would be
+ * among the first" on a walk with four people on it, for as long as migration
+ * 089 was unapplied. A page that cannot answer must say nothing, not guess; the
+ * caller falls back to the sentence the page showed before this existed.
+ *
+ * So it fails SOFT but not SILENT-AND-WRONG: a missing RPC or a refused call
+ * never throws — a decorative party list is not worth a 500 on the one screen
+ * where somebody is deciding whether to get in a car — and never invents an
+ * empty party either.
+ */
+export async function getPlanParty(planId: string): Promise<PartyMember[] | null> {
+  const user = await getUser()
+  if (!user) return null
+
+  const { data, error } = await createAdminSupabaseClient()
+    .rpc('trek_plan_party', { p_plan: planId, p_actor: user.id })
+
+  if (error) return null
+
+  return (data ?? []).map((r: { first_name: string; trust_rung: number; runs_it: boolean }) => ({
+    firstName: r.first_name,
+    trustRung: Number(r.trust_rung ?? 0),
+    runsIt: Boolean(r.runs_it),
+  }))
+}
+
+/**
+ * Asking to host.
+ *
+ * Hosting is invite-only and stays that way (090). What did not exist until now
+ * was any way to put your hand up — so the board's supply problem and its
+ * silence about the gate were the same fact, and the one screen that mentioned
+ * the gate at all mentioned it in passing while another screen pointed people
+ * at their profile as though finishing it would help.
+ */
+export type HostRequestState = {
+  /** 'none' when they have never asked, or the last answer they got. */
+  status: 'none' | 'open' | 'granted' | 'declined'
+  askedAt: string | null
+}
+
+export async function getMyHostRequest(): Promise<HostRequestState> {
+  const user = await getUser()
+  if (!user) return { status: 'none', askedAt: null }
+
+  // Through the SESSION client, so RLS is the thing deciding this member may
+  // read this row rather than a WHERE clause I remembered to write.
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('trek_host_requests')
+    .select('status, created_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  // Until 090 is applied the table does not exist. Same rule as getPlanParty:
+  // a missing feature renders as absent, never as a wrong answer.
+  if (error || !data) return { status: 'none', askedAt: null }
+
+  return {
+    status: (data.status as HostRequestState['status']) ?? 'none',
+    askedAt: (data.created_at as string) ?? null,
+  }
+}
+
+export async function requestHostAccess(note?: string) {
+  const user = await requireAuth()
+  const result = await callTrek(
+    'trek_request_host',
+    { p_note: note?.trim() || null, p_actor: user.id },
+    ['/trek-buddy', '/trek-buddy/basecamp', '/trek-buddy/discover']
+  )
+
+  if ('success' in result) {
+    // Same as reports: until somebody is named to own the queue, Slack IS the
+    // queue. A request nobody sees is worse than no request button.
+    await sendSlackAlert(
+      `:tent: Trek Buddy — ${user.id} asked to host` + (note?.trim() ? `\n${note.trim()}` : '')
+    ).catch(() => {})
+  }
+  return result
 }

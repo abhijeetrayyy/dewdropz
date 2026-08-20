@@ -651,8 +651,22 @@
 
      And it is no longer monospace by default. Mono is for figures; a key set
      in mono is a typographic costume. */
+  /* 12px and 11px, up from 11 and 10.
+     These two are the smallest type in the product and they carry section
+     names, keys above figures, and states. The board's own pitch says it is
+     somewhere a person in their sixties can go; 10px uppercase tracked to
+     0.07em is not that, and it is the one place where the cost of being wrong
+     falls hardest on the reader the product is arguing for. A point on each is
+     small enough that no layout depends on it and large enough to matter at
+     arm's length.
+
+     Not a contrast change: measured properly, every label on the board already
+     clears 4.5:1 — `--ember` on `--amber-wash` is 5.21:1, not the 3.55:1 an
+     earlier probe reported by mishandling alpha. What was genuinely under AA
+     was `text-paper/40` and `/45` on ink (3.71:1 and 4.38:1); those are raised
+     to /55 at their thirteen call sites rather than here. */
   .trek-label {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -660,7 +674,7 @@
   }
 
   .trek-label-xs {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.07em;
     text-transform: uppercase;

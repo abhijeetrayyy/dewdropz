@@ -1,7 +1,6 @@
 import type { TrekPlanRow } from '@/actions/trekBuddy'
 import Countdown from './Countdown'
-import { lightForTime } from '@/lib/trek'
-import { formatPrice } from '@/lib/utils'
+import { costLabel, lightForTime } from '@/lib/trek'
 import SeatMeter, { QuorumMeter } from './ui/SeatMeter'
 import JourneyRail, { type JourneyStage } from './ui/JourneyRail'
 import { LiveDot, MoreLink, SectionLabel, Tag } from './ui/Bits'
@@ -76,16 +75,13 @@ export default function PlanRail({
   // rendering "06:00" for it would be inventing a departure the host never set.
   const headline = plan.start_time ? plan.start_time.slice(0, 5) : `${nights + 1} days`
 
-  const cost =
-    plan.cost_paise == null
-      ? 'Not stated'
-      : plan.cost_paise === 0
-        ? 'Nothing'
-        : `${formatPrice(plan.cost_paise)} each`
-  // Mono is for a figure. "Nothing" and "Not stated" are answers, not amounts,
-  // and setting them in a tabular face made the panel claim a precision it did
-  // not have.
-  const costIsFigure = plan.cost_paise != null && plan.cost_paise > 0
+  // Mono is for a figure. "Nothing to split" and "Cost not stated" are answers,
+  // not amounts, and setting them in a tabular face made the panel claim a
+  // precision it did not have. The wording itself is `costLabel`'s now — this
+  // panel was the only one of three surfaces telling the truth about a null,
+  // and three components each reading the same column their own way is how a
+  // walk came to be "Free" on the board and "Not stated" on its own page.
+  const cost = costLabel(plan.cost_paise)
 
   // The ladder, for this viewer, on this walk. Highest rung actually reached —
   // and the point being released outranks being confirmed because it is the
@@ -151,12 +147,12 @@ export default function PlanRail({
             <span className="trek-label text-paper/55">Cost share</span>
             <span
               className={
-                costIsFigure
+                cost.isFigure
                   ? 'font-mono text-sm text-paper tabular-nums'
-                  : 'font-body text-sm text-paper'
+                  : `font-body text-sm ${cost.stated ? 'text-paper' : 'text-paper/60'}`
               }
             >
-              {cost}
+              {cost.text}
             </span>
           </div>
           {/* Shown to the walker on purpose. A note a host keeps about you that
@@ -242,7 +238,7 @@ export default function PlanRail({
           different paragraphs on four different screens and drawn nowhere. */}
       <div className="rounded-[var(--r-panel)] border border-rule bg-surface p-5">
         <SectionLabel>Where you stand</SectionLabel>
-        <JourneyRail stage={stage} className="mt-4" />
+        <JourneyRail stage={stage} layout="stack" className="mt-4" />
       </div>
     </aside>
   )

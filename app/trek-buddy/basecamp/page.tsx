@@ -9,9 +9,10 @@ import { HourBar } from '@/components/trek/ui/HourPill'
 import EmptyState from '@/components/trek/ui/EmptyState'
 import { Datum, Eyebrow, MoreLink, SectionLabel, Tag } from '@/components/trek/ui/Bits'
 import {
-  getBasecamp, getMyTrekCard, getMyTreks, getNotifications, getPerson,
+  getBasecamp, getMyHostRequest, getMyTrekCard, getMyTreks, getNotifications, getPerson,
   getTrekMembership, getTrekPlan, getVouchable, type TrekPlanRow,
 } from '@/actions/trekBuddy'
+import HostAccess from '@/components/trek/HostAccess'
 import { getFollowingCount } from '@/actions/trekSocial'
 import { getStreak } from '@/actions/trekRecap'
 import { DAY_PART_LABEL, DIFFICULTY_LABEL, hourInk, lightForTime } from '@/lib/trek'
@@ -48,7 +49,7 @@ export default async function BasecampPage() {
   if (!membership.signedIn) redirect('/auth/login?redirect=/trek-buddy/basecamp')
   if (!membership.onboarded) redirect('/trek-buddy/setup')
 
-  const [mine, inbox, me, follows, followingCount, vouchable, streak] = await Promise.all([
+  const [mine, inbox, me, follows, followingCount, vouchable, streak, hostRequest] = await Promise.all([
     getMyTreks(),
     getNotifications(),
     getMyTrekCard(),
@@ -56,6 +57,7 @@ export default async function BasecampPage() {
     getFollowingCount(),
     getVouchable(),
     getStreak(membership.userId),
+    getMyHostRequest(),
   ])
 
   // ── Who is waiting on you ─────────────────────────────────────────────────
@@ -280,7 +282,7 @@ export default async function BasecampPage() {
 
       {/* ── Band two · the desk ──────────────────────────────────────────── */}
       <section className="trek-band bg-paper pb-24 pt-10">
-        <div className="trek-measure grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="trek-measure grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-9">
             <RequestQueue requests={requests} canHost={membership.canHost} />
 
@@ -297,6 +299,13 @@ export default async function BasecampPage() {
                 </h2>
                 <MoreLink href="/trek-buddy">On the board</MoreLink>
               </div>
+
+              {/* This screen was already the only one telling the truth about
+                  the gate — "Hosting is invite-only while this is new." It just
+                  had nothing to offer after it. Outside the empty/non-empty
+                  branch on purpose: somebody already going on other people's
+                  walks is exactly who should be offered the chance to post one. */}
+              {!membership.canHost && <HostAccess state={hostRequest} className="mb-4" />}
 
               {events.length === 0 ? (
                 <EmptyState
@@ -372,8 +381,15 @@ export default async function BasecampPage() {
                                   <Tag tone="outline">{DAY_PART_LABEL[plan.day_part]}</Tag>
                                 )}
                                 {plan.women_only && <Tag tone="clay">Women only</Tag>}
-                                {!plan.women_only && plan.senior_friendly && (
-                                  <Tag tone="sage">Senior ok</Tag>
+                                {/* No `!women_only` guard, and "friendly" not
+                                    "ok" — the same correction the board card
+                                    got, because the comment above promises
+                                    these are the same tags and that promise is
+                                    only kept if both move together. This row
+                                    wraps, so it never needed the guard for
+                                    space in the first place. */}
+                                {plan.senior_friendly && (
+                                  <Tag tone="sage">Senior friendly</Tag>
                                 )}
                               </span>
                             </span>

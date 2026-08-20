@@ -216,7 +216,7 @@ export default function PlanActions({
             <ol className="mt-2 space-y-1.5">
               {queued.map((r, i) => (
                 <li key={r.user_id} className="flex items-baseline gap-2.5">
-                  <span className="font-mono text-[11px] text-paper/45 tabular-nums">{i + 1}</span>
+                  <span className="font-mono text-[11px] text-paper/55 tabular-nums">{i + 1}</span>
                   <Person id={r.user_id} name={r.display_name} />
                 </li>
               ))}
@@ -253,7 +253,7 @@ export default function PlanActions({
                   maxLength={300}
                   autoFocus
                   placeholder="The forecast turned, or the road is shut — whatever it is, in your own words."
-                  className="mt-2.5 w-full rounded-[var(--r-input)] border border-paper/20 bg-paper/5 px-3 py-2.5 font-body text-sm text-paper placeholder:text-paper/35 focus:border-sage focus:outline-none"
+                  className="mt-2.5 w-full rounded-[var(--r-input)] border border-paper/20 bg-paper/5 px-3 py-2.5 font-body text-sm text-paper placeholder:text-paper/55 focus:border-sage focus:outline-none"
                 />
               </label>
               <div className="mt-3 flex flex-wrap items-center gap-4">
@@ -372,7 +372,7 @@ export default function PlanActions({
               rows={3}
               maxLength={300}
               placeholder="Anything the host should know — pace, experience, whether you're driving."
-              className="mt-2 w-full rounded-[var(--r-input)] border border-paper/20 bg-paper/5 px-3 py-2.5 font-body text-sm text-paper placeholder:text-paper/35 focus:border-sage focus:outline-none"
+              className="mt-2 w-full rounded-[var(--r-input)] border border-paper/20 bg-paper/5 px-3 py-2.5 font-body text-sm text-paper placeholder:text-paper/55 focus:border-sage focus:outline-none"
             />
           </label>
           <Problem error={error} />

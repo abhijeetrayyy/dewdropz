@@ -166,7 +166,7 @@ export default function TrustCard({
       {/* The ladder itself. A reached rung is held by a solid sage edge, one
           still ahead of you by a dashed warm one — the product's two ways of
           drawing "this is real" and "this is not yet". */}
-      <ol className="mt-6 grid gap-2.5 border-t border-rule-soft pt-5 sm:grid-cols-3">
+      <ol className="mt-6 grid grid-cols-1 gap-2.5 border-t border-rule-soft pt-5 sm:grid-cols-3">
         {RUNGS.map((r) => {
           const reached = trust.rung >= r.n
           return (

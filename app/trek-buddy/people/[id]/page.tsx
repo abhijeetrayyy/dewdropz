@@ -317,7 +317,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       {/* ── The body ─────────────────────────────────────────────────────── */}
       <section className="trek-band bg-paper pb-24 pt-12">
-        <div className="trek-measure grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
+        <div className="trek-measure grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
           <div className="flex min-w-0 flex-col gap-9">
             {isMe && (
               <p className="rounded-[var(--r-card)] border border-forest/25 bg-forest/[0.04] px-4 py-3 font-body text-sm text-text">

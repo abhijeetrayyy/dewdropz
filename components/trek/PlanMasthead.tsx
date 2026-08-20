@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { DIFFICULTY_LABEL, lightForTime } from '@/lib/trek'
-import { formatPrice } from '@/lib/utils'
+import { DIFFICULTY_LABEL, costLabel, lightForTime } from '@/lib/trek'
 import Avatar from './ui/Avatar'
 import Cover from './ui/Cover'
 import HourPill from './ui/HourPill'
@@ -81,12 +80,12 @@ export default function PlanMasthead({
   if (plan.gain_m != null) facts.push({ k: 'Climb', v: `${plan.gain_m.toLocaleString('en-IN')} m` })
   // "Shared", not "price". The board never takes money and this is a split of
   // fuel and permits — calling it a cost would make it a ticket.
-  if (plan.cost_paise != null) {
-    facts.push({
-      k: 'Cost share',
-      v: plan.cost_paise === 0 ? 'Nothing' : `${formatPrice(plan.cost_paise)} each`,
-    })
-  }
+  // Through `costLabel`, so this reads the column the same way the board
+  // card, the featured card and the rail do. `stated` is false only when the
+  // host said nothing, and a fact nobody supplied is left off the row rather
+  // than filled in with a guess.
+  const cost = costLabel(plan.cost_paise)
+  if (cost.stated) facts.push({ k: 'Cost share', v: cost.text })
   if (multiDay) {
     facts.push({ k: 'Days out', v: String(nights + 1) })
   } else if (plan.back_by) {

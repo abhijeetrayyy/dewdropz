@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { getGuidance, getPerson, getTrekMembership, getTrekPlan } from '@/actions/trekBuddy'
+import {
+  getGuidance, getPerson, getPlanParty, getTrekMembership, getTrekPlan,
+  type PartyMember,
+} from '@/actions/trekBuddy'
 import { getFollowState } from '@/actions/trekSocial'
 import { getMyTrust } from '@/actions/trekTrust'
 import { formatPrice } from '@/lib/utils'
@@ -12,16 +15,21 @@ import SafetyNotes from '@/components/trek/SafetyNotes'
 import PlanChat from '@/components/trek/PlanChat'
 import { getMessages } from '@/actions/trekChat'
 import RecapPanel from '@/components/trek/RecapPanel'
-import { getRecap } from '@/actions/trekRecap'
+import { getRecap, getRecapShareToken } from '@/actions/trekRecap'
+import ShareRecap from '@/components/trek/ShareRecap'
 import SafetyActions from '@/components/trek/SafetyActions'
+import TellSomeone from '@/components/trek/TellSomeone'
 import Guidance from '@/components/trek/Guidance'
 import Evidence from '@/components/trek/Evidence'
 import TrustCard from '@/components/trek/TrustCard'
 import FollowButton from '@/components/trek/FollowButton'
 import Avatar from '@/components/trek/ui/Avatar'
+import { TrustPips } from '@/components/trek/PersonCardTile'
 import SeatMeter from '@/components/trek/ui/SeatMeter'
 import { MoreLink, SectionLabel } from '@/components/trek/ui/Bits'
-import { DAY_PART_LABEL, DIFFICULTY_LABEL, dotColor, hourInk, lightForTime } from '@/lib/trek'
+import {
+  DAY_PART_LABEL, DIFFICULTY_LABEL, dotColor, effortGloss, hourInk, lightForTime,
+} from '@/lib/trek'
 
 export const metadata: Metadata = {
   title: 'A walk — DEWDROPZ',
@@ -145,6 +153,28 @@ function PersonChip({ id, name, tag }: { id: string; name: string; tag?: string 
   )
 }
 
+/**
+ * A member of the party, to somebody who is not on the walk yet.
+ *
+ * NOT A LINK, and it does not take an id because it is never given one — see
+ * migration 089. `Avatar` is seeded by the name here rather than by a user id,
+ * so nothing on this chip can be joined back to a person. The rung is drawn as
+ * pips, the same three-step scale the People page uses, because "vouched for
+ * twice" is the one thing about a stranger the board can actually vouch for.
+ */
+function PartyChip({ member }: { member: PartyMember }) {
+  return (
+    <span className="flex items-center gap-2 rounded-full border border-rule-soft bg-paper py-[5px] pl-[5px] pr-3.5">
+      <Avatar name={member.firstName} size={26} />
+      <span className="font-body text-[13px] text-text">{member.firstName}</span>
+      {member.runsIt && <span className="trek-label-xs text-forest">host</span>}
+      {!member.runsIt && member.trustRung > 0 && (
+        <TrustPips rung={member.trustRung} />
+      )}
+    </span>
+  )
+}
+
 export default async function TrekPlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const membership = await getTrekMembership()
@@ -153,6 +183,11 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
 
   const data = await getTrekPlan(id)
   if (!data) notFound()
+
+  // Who is confirmed, in the form somebody who has not joined may see it.
+  // Cheap, and the panel below decides whether it is the host's full roster or
+  // this that gets drawn.
+  const party = await getPlanParty(id)
 
   const { plan, isHost, myStatus, meetingPoint, logistics, roster, waitlistPosition, walkIsOver, myCostState } = data
 
@@ -172,9 +207,11 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
   // which on a board whose entire proposition is "a person decides who they
   // spend the day with" was the one thing a stranger most needed and could not
   // get without leaving the page.
-  const [messages, recap, notes, host, follow, trust] = await Promise.all([
+  const [messages, recap, recapShareToken, notes, host, follow, trust] = await Promise.all([
     getMessages(id),
     walkIsOver ? getRecap(id) : Promise.resolve(null),
+    // Only asked once the walk is over — there is nothing to share before then.
+    walkIsOver ? getRecapShareToken(id) : Promise.resolve(null),
     // What applies to THIS outing. Host notes are for the host; the women notes
     // ride along on a women-only walk because that is where they are load-bearing.
     getGuidance({
@@ -205,6 +242,8 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
         host.homeBase,
       ].filter(Boolean).join(' · ')
     : null
+
+  const effort = effortGloss(plan.distance_km, plan.gain_m)
 
   // ── The terms of the walk ──────────────────────────────────────────────
   //
@@ -238,6 +277,17 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
       v: DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty,
       note: 'Set by the host when they posted this. No walk on this board is allowed to leave it blank — but it is their judgement of the day, not a graded standard.',
     },
+    // Derived from the two figures already in the masthead, and only when the
+    // host stated them. "5 km · 160 m up" is the answer to a question a
+    // first-timer has not learned to ask yet; this is the same fact in the unit
+    // they actually plan a Saturday in.
+    ...(effort
+      ? [{
+          k: 'What that is',
+          v: effort.uphill ? `${effort.total} — ${effort.uphill}` : effort.total,
+          note: 'Worked out from the distance and the climb by Naismith\u2019s rule, which is an 1892 estimate for a reasonably fit party in good conditions and before any stops. Nobody typed this in, and nobody has walked it with a stopwatch. Heat, mud, a heavy pack or a group that stops for chai all make it longer.',
+        }]
+      : []),
     {
       k: 'Pace',
       v: host?.pace ? `${PACE_LABEL[host.pace] ?? host.pace}, by the host’s own account` : 'The host has not stated a pace',
@@ -291,7 +341,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
           between a page and a screen. One column below lg, because a 360px rail
           beside a 375px phone is not a rail. */}
       <section className="trek-band bg-paper pb-24 pt-12">
-        <div className="trek-measure grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
+        <div className="trek-measure grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
           <div className="flex min-w-0 flex-col gap-10">
             {/* Clay, never red. A walk that was called off is a disappointment,
                 not an error, and the reason the host gave is the only part of
@@ -326,6 +376,13 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                     canWrite={isHost && walkIsOver}
                     hostName={plan.host_name}
                   />
+
+                  {/* Anybody who was on the walk, not only whoever wrote it up.
+                      The gate is in the RPC (091); this decides whether to draw
+                      a control at all. */}
+                  {recap && (isHost || confirmed) && (
+                    <ShareRecap planId={plan.id} initialToken={recapShareToken} />
+                  )}
                 </div>
               </Card>
             )}
@@ -339,22 +396,48 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
               <div className="border-b border-rule-soft px-6 py-[18px]">
                 <SectionLabel>What this walk asks of you</SectionLabel>
               </div>
+              {/* THE VALUE IS THE SUMMARY, AND THAT IS THE WHOLE CHANGE.
+                  Every row used to print its value and then a two-line note
+                  explaining what the field MEANS on this board. Measured, the
+                  table came to about 200 words of which roughly a dozen were
+                  about this particular walk: "Easy" carried thirty words on
+                  what difficulty is, "Steady, by the host's own account"
+                  carried twenty-five telling you not to trust it. A first-timer
+                  read all of it and came away knowing "Easy, 5 km, 160 m".
+
+                  Every fact was chaperoned by a disclaimer about the fact, and
+                  the disclaimers were louder than the walk.
+
+                  So the seven values now scan in one glance and each definition
+                  is one tap under it — the same `<details>` pattern the landing
+                  page and the onboarding form already use. NOTHING IS DELETED:
+                  every note is still here in its original words, and the two
+                  rows that carry a real constraint keep their wash so somebody
+                  scanning still finds them without opening anything. */}
               <dl className="divide-y divide-rule-soft">
                 {terms.map((t) => (
                   <div
                     key={t.k}
-                    className={`grid gap-x-6 gap-y-1 px-6 py-4 sm:grid-cols-[150px_minmax(0,1fr)] ${
+                    className={`grid gap-x-6 gap-y-1 px-6 py-3.5 sm:grid-cols-[150px_minmax(0,1fr)] ${
                       t.wash ?? ''
                     }`}
                   >
-                    <dt className="trek-label text-mid sm:pt-1">{t.k}</dt>
+                    <dt className="trek-label text-mid sm:pt-2">{t.k}</dt>
                     <dd className="min-w-0">
-                      <p className="font-body text-[15px] font-medium leading-snug text-text">
-                        {t.v}
-                      </p>
-                      <p className="mt-1 font-body text-[13px] leading-relaxed text-mid">
-                        {t.note}
-                      </p>
+                      <details className="group">
+                        <summary className="flex cursor-pointer list-none items-start gap-3 font-body text-[15px] font-medium leading-snug text-text [&::-webkit-details-marker]:hidden">
+                          <span className="min-w-0 flex-1">{t.v}</span>
+                          <span
+                            aria-hidden="true"
+                            className="mt-0.5 shrink-0 text-[15px] leading-none text-mid transition-transform duration-200 group-open:rotate-45"
+                          >
+                            +
+                          </span>
+                        </summary>
+                        <p className="mt-1.5 font-body text-[13px] leading-relaxed text-mid">
+                          {t.note}
+                        </p>
+                      </details>
                     </dd>
                   </div>
                 ))}
@@ -478,6 +561,23 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
               </section>
             )}
 
+            {/* The one safety instruction the board repeats, as a tool.
+                Shown once you are actually going somewhere — the deal you
+                accepted at sign-up asks you to do this, the six take-care notes
+                open with it, and until now the product said it four times and
+                helped with it never. Not shown after the walk, when there is
+                nobody left to tell. */}
+            {confirmed && !walkIsOver && !cancelled && (
+              <TellSomeone
+                place={plan.place}
+                meetArea={plan.meet_area}
+                startsAt={plan.starts_at}
+                startTime={plan.start_time}
+                backBy={plan.back_by}
+                hostName={plan.host_name}
+              />
+            )}
+
             {/* ── 5 · Going ────────────────────────────────────────────────
                 A board about finding people to go with showed no people. The
                 roster itself is host-only — `getTrekPlan` does not even query
@@ -495,16 +595,30 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                 )}
               </div>
 
-              <ul className="mt-4 flex flex-wrap gap-2.5">
-                <li>
-                  <PersonChip id={plan.host_id} name={plan.host_name} tag="host" />
-                </li>
-                {goingRoster.map((r) => (
-                  <li key={r.user_id}>
-                    <PersonChip id={r.user_id} name={r.display_name} />
+              {/* THE HOST GETS NAMES AND FACES THAT LEAD SOMEWHERE. Everybody
+                  else gets the party as first names — see migration 089. */}
+              {isHost ? (
+                <ul className="mt-4 flex flex-wrap gap-2.5">
+                  <li>
+                    <PersonChip id={plan.host_id} name={plan.host_name} tag="host" />
                   </li>
-                ))}
-              </ul>
+                  {goingRoster.map((r) => (
+                    <li key={r.user_id}>
+                      <PersonChip id={r.user_id} name={r.display_name} />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                party && (
+                  <ul className="mt-4 flex flex-wrap gap-2.5">
+                    {party.map((m, i) => (
+                      <li key={`${m.firstName}-${i}`}>
+                        <PartyChip member={m} />
+                      </li>
+                    ))}
+                  </ul>
+                )
+              )}
 
               <SeatMeter
                 taken={plan.going_count}
@@ -513,11 +627,31 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                 className="mt-5"
               />
 
+              {/* WHY THIS SENTENCE CHANGED.
+                  It used to read "Who else is coming is shown to the host and
+                  nobody else", and that was the board's answer to the question
+                  its own landing page says people arrive with — whether a 4am
+                  shared cab with five strangers is a thing you can do. It asked
+                  you to commit first and find out afterwards, in the chat.
+
+                  What protects people is not withholding the party; it is
+                  withholding the way to CONTACT them. So the names are here and
+                  nothing about them is a link: no id crosses the wire, so there
+                  is no route from this card to a person's page. The board still
+                  is not a directory of people to approach. It has simply
+                  stopped being a decision you make blind. */}
               {!isHost && (
                 <p className="mt-3 font-body text-[13px] leading-relaxed text-mid">
-                  Who else is coming is shown to the host and nobody else — the board is not a
-                  directory of people to approach.
-                  {confirmed && ' You will meet the party by name in the group chat below.'}
+                  {/* `party === null` is "the board could not answer", not
+                      "nobody is going" — so it falls back to what this card
+                      said before there was a party list at all, rather than
+                      telling somebody a full walk is empty. */}
+                  {party === null
+                    ? 'Who else is coming is shown to the host and nobody else — the board is not a directory of people to approach.'
+                    : party.length > 0
+                      ? 'First names only, and none of them link anywhere — knowing who is going is not the same as being able to contact them. Surnames, messages and anyone still waiting on the host stay with the host.'
+                      : 'Nobody is confirmed yet. You would be among the first.'}
+                  {confirmed && ' You will meet the party in full in the group chat below.'}
                 </p>
               )}
 
@@ -634,7 +768,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
                           : ''}
                       . Meeting around {plan.meet_area}
                       {plan.start_time ? ` at ${hhmm(plan.start_time)}` : ''}. Organised through
-                      DEWDROPZ Trek Buddy by {plan.host_name}.
+                      DEWDROPZ TrekBuddy by {plan.host_name}.
                     </p>
                   </Disclosure>
                 )}

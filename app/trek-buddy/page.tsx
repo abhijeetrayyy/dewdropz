@@ -7,11 +7,51 @@ import {
   getTrekBoard, getTrekMemberCard, getTrekMembership, getTrekPlan, type TrekPlanRow,
 } from '@/actions/trekBuddy'
 
-export const metadata: Metadata = {
-  title: 'TrekBuddy — DEWDROPZ',
-  description: 'A members’ noticeboard for going outdoors together, around Dehradun. Members only.',
-  // Who is going where, and when, is not something to hand a crawler.
-  robots: { index: false, follow: false },
+/**
+ * TWO PAGES SHARE THIS ROUTE, AND THEY NEEDED DIFFERENT CRAWLER POLICY.
+ *
+ * The signed-in half is Today: your name, who is waiting on you, where you are
+ * going. None of that is a crawler's business, and the whole product is
+ * `index: false` for that reason.
+ *
+ * The signed-out half is the only argument this product ever makes for itself —
+ * and it was carrying the same `noindex`, because a route gets one static
+ * `metadata` export and the strictest requirement won. So the marketing page
+ * was invisible to search while containing, by construction, nothing private:
+ * `getBoardPulse()` returns four counts and TrekLanding renders those counts
+ * and prose. No walk is named, no member is shown, no photograph is of anybody
+ * here. A product whose stated goal is that people find it and tell each other
+ * about it had hidden its own front door.
+ *
+ * `generateMetadata` runs per request and can read the session, so the two
+ * halves can finally answer differently. A crawler is never signed in, so it
+ * gets the indexable half; a member gets `noindex` on their own dashboard.
+ * The route is already dynamic (it reads cookies to decide what to render), so
+ * this costs nothing it was not already paying.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const membership = await getTrekMembership()
+
+  if (membership.signedIn) {
+    return {
+      title: 'TrekBuddy — DEWDROPZ',
+      description: 'A members’ noticeboard for going outdoors together, around Dehradun.',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  return {
+    title: 'TrekBuddy — walk with somebody, around Dehradun',
+    description:
+      'A members’ noticeboard where DEWDROPZ members post the walk they are already going on and others ask to come. Free, hosted by members, around Dehradun.',
+    alternates: { canonical: '/trek-buddy' },
+    openGraph: {
+      title: 'TrekBuddy — walk with somebody, around Dehradun',
+      description:
+        'Nobody should have to choose between going alone and not going at all. A members’ noticeboard for the hills around Dehradun.',
+      type: 'website',
+    },
+  }
 }
 
 // The front door, and it is two different doors.
@@ -35,6 +75,7 @@ export default async function TrekBuddyPage() {
         openCount={pulse.open}
         weekendCount={pulse.weekend}
         peopleCount={pulse.members}
+        completedCount={pulse.completed}
         activityCounts={pulse.byActivity}
       />
     )

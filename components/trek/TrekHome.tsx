@@ -122,9 +122,22 @@ export default function TrekHome({
               </span>
             </div>
 
-            <ul className="grid gap-3 md:grid-cols-2">
+            {/* `grid-cols-1` IS LOAD-BEARING, AND IT IS NOT DECORATION.
+                Tailwind's grid-cols-N compiles to repeat(N, minmax(0, 1fr)) —
+                a track that is allowed to be narrower than its content. But a
+                grid with ONLY responsive columns has no base rule, so at phone
+                width the browser auto-places into an implicit track, and an
+                implicit track is sized to its content's MIN-CONTENT width.
+                `truncate` sets `white-space: nowrap`, so min-content is the
+                whole untruncated sentence — the class that exists to stop long
+                text overflowing was the thing sizing the column. Measured: the
+                card grids forced the document to 432px inside a 375px phone,
+                and every "too wide" element on the page was a symptom of that
+                one track. Stating the base column count fixes it at the
+                container, for every child, present and future. */}
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {requests.slice(0, 4).map((r) => (
-                <li key={`${r.planId}-${r.userId}`}>
+                <li key={`${r.planId}-${r.userId}`} className="min-w-0">
                   <Link
                     href={`/trek-buddy/${r.planId}/console`}
                     className="trek-row flex items-center gap-4 px-4 py-3.5 transition-colors hover:border-forest/40"
@@ -164,7 +177,7 @@ export default function TrekHome({
 
       {/* ── 2 · Yours ────────────────────────────────────────────────── */}
       <section className="trek-band bg-paper py-10">
-        <div className="trek-measure grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="trek-measure grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
             <ShelfHead
               title="Yours"
@@ -297,7 +310,7 @@ export default function TrekHome({
               <span aria-hidden="true" className="h-px flex-1 bg-rule-warm" />
               <span className="font-mono text-[13px] text-mid tabular-nums">{soon.length}</span>
             </div>
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {soon.slice(0, 3).map((p) => (
                 <li key={p.id} className="flex">
                   <TrekPlanCard plan={p} />
@@ -324,7 +337,7 @@ export default function TrekHome({
               secondary={{ label: 'See everything', href: '/trek-buddy/discover' }}
             />
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {fresh.slice(0, 3).map((p) => (
                 <li key={p.id} className="flex">
                   <TrekPlanCard plan={p} />

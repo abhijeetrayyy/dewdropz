@@ -8,7 +8,7 @@ import { Eyebrow } from '@/components/trek/ui/Bits'
 import SetupForm from './SetupForm'
 
 export const metadata: Metadata = {
-  title: 'Set up Trek Buddy — DEWDROPZ',
+  title: 'Set up TrekBuddy — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 
@@ -48,7 +48,7 @@ export default async function TrekSetupPage() {
   // turns the threshold into a stripe.
   return (
     <section className="trek-band min-h-[calc(100vh-64px)] bg-ink pb-24 pt-28 md:pt-32">
-      <div className="trek-measure grid gap-10 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start lg:gap-16">
+      <div className="trek-measure grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start lg:gap-16">
         <div className="lg:sticky lg:top-[88px]">
           <Eyebrow tone="ondark">Joining the board</Eyebrow>
           <figure className="m-0 mt-5">
@@ -66,7 +66,7 @@ export default async function TrekSetupPage() {
             </div>
             {/* The caption claims nothing about where this was taken — it is
                 stock, and this is a product that does not overstate things. */}
-            <figcaption className="mt-3.5 font-body text-[12.5px] leading-relaxed text-paper/45">
+            <figcaption className="mt-3.5 font-body text-[12.5px] leading-relaxed text-paper/55">
               A members&rsquo; noticeboard for outings around Dehradun. Three questions, asked once,
               and then you are inside.
             </figcaption>

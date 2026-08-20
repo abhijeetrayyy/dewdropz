@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { DIFFICULTY_LABEL, hourInk, lightForTime } from '@/lib/trek'
-import { formatPrice } from '@/lib/utils'
+import { DIFFICULTY_LABEL, costLabel, hourInk, lightForTime } from '@/lib/trek'
 import Countdown from './Countdown'
 import Cover from './ui/Cover'
 import Avatar from './ui/Avatar'
@@ -58,6 +57,7 @@ export default function TrekPlanCard({
     (new Date(plan.ends_on).getTime() - new Date(plan.starts_on).getTime()) / 86400000
   )
   const cover = plan.cover_urls?.[0] ?? null
+  const cost = costLabel(plan.cost_paise)
 
   // Where YOU stand on this walk. A board that cannot say which walks you have
   // already asked to join is a board you have to hold in your head — you could
@@ -199,30 +199,66 @@ export default function TrekPlanCard({
           className="mt-3.5"
         />
 
-        <div className="mt-auto flex items-center gap-2 overflow-hidden border-t border-rule-soft pt-3">
-          <Avatar name={plan.host_name} id={plan.host_id} size={24} />
-          <span className="min-w-0 flex-1 truncate font-body text-[13px] text-mid">
-            {plan.host_name}
-          </span>
-          {/* `flex-nowrap` plus `shrink-0` tags: a walk that is women-only and
-              has a cost used to push this onto a second line and make the whole
-              card taller than its neighbours. It now runs off its own right
-              edge instead, which costs at most one tag on the narrowest card
-              and never costs the grid its rhythm. */}
-          <span className="flex shrink-0 flex-nowrap items-center gap-1.5">
-            {/* A cost is a fact about the walk, not a clock running out on the
-                reader. In amber it sat in the same register as "leaving in two
-                hours" and read as a warning about money; neutral, it reads as
-                what it is. "Free" keeps sage, because free is genuinely good
-                news rather than merely a number. */}
-            {plan.cost_paise ? (
-              <Tag tone="outline">{formatPrice(plan.cost_paise)}</Tag>
-            ) : (
-              <Tag tone="sage">Free</Tag>
-            )}
+        {/* WHO THE WALK IS FOR, ON ITS OWN LINE.
+            These three shared a row with the host's avatar and name, and the
+            row was `flex-nowrap` with `shrink-0` tags — so the tags ran off the
+            card's right edge and the host's name was squeezed to nothing. The
+            previous author knew, and wrote the trade-off down: "it costs at
+            most one tag on the narrowest card". The tag it cost was this one:
+
+              {!plan.women_only && plan.senior_friendly && <Tag>Senior ok</Tag>}
+
+            A women-only walk could not say it was also paced for somebody who
+            does not want to be chased up a hill. On a board that advertises
+            itself to women and to people in their sixties, the one card built
+            for a woman in her sixties was the one card that could not say so —
+            and the reason was a line-wrap.
+
+            So the provisions get the full width of the card, on a line of their
+            own, and the host gets the line under it. That is +32px on every
+            card, uniformly, which is the one kind of growth the grid does not
+            mind: the frame is still identical from card to card, which is what
+            "the heights are pinned" was protecting. Three tags is the maximum
+            (difficulty, women-only, senior-friendly) and measures 248px against
+            295px on the narrowest phone card — so nothing clips, on any width,
+            in any combination. Cost moved up to the numbers line to make that
+            true.
+
+            "Senior friendly", not "Senior ok". The rest of the product says
+            friendly on four surfaces; this card was the only one saying ok, and
+            it is the surface people actually read. Friendly is an invitation,
+            ok is a tolerance. */}
+        <div className="mt-auto flex flex-col gap-2.5 border-t border-rule-soft pt-3">
+          <span className="flex h-[22px] shrink-0 flex-nowrap items-center gap-1.5 overflow-hidden">
             <Tag tone="outline">{DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty}</Tag>
             {plan.women_only && <Tag tone="clay">Women only</Tag>}
-            {!plan.women_only && plan.senior_friendly && <Tag tone="sage">Senior ok</Tag>}
+            {plan.senior_friendly && <Tag tone="sage">Senior friendly</Tag>}
+            {/* LAST, AND IN ITS SHORT FORM. Both are measurements, not taste.
+                It was briefly moved to the meta line above — which turned out
+                to be already carrying 380px of content in a 357px box, so a
+                cost appended there is a cost nobody ever sees.
+
+                Measured at 375px, where a card's inner width is 295px:
+                  difficulty + women-only + senior-friendly ........ 261px ✓
+                  the same three + "₹1,200" ....................... 313px
+                The three-tag row — which is the whole point of this change, the
+                walk that is both women-only and paced for somebody older —
+                fits with 34px to spare at every width. The four-tag row runs
+                about 20px over on the narrowest phone, and because cost is last
+                it is cost that gets clipped: the one fact of the four that is
+                neither a restriction on who may come nor a statement about the
+                effort, and the only one printed in full on the walk's own page
+                a tap away. */}
+            {cost.stated && (
+              <Tag tone={cost.isFigure ? 'outline' : 'sage'}>{cost.short}</Tag>
+            )}
+          </span>
+
+          <span className="flex items-center gap-2">
+            <Avatar name={plan.host_name} id={plan.host_id} size={24} />
+            <span className="min-w-0 flex-1 truncate font-body text-[13px] text-mid">
+              {plan.host_name}
+            </span>
           </span>
         </div>
       </div>

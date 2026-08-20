@@ -53,7 +53,7 @@ const STEP_LABELS = ['Who shows up', 'What you chase', 'The deal'] as const
 // accent that reads on an ink ground.
 const labelOnInk = 'trek-label text-paper/55'
 const fieldOnInk =
-  'mt-2 w-full rounded-[var(--r-input)] border border-paper/25 bg-paper/[0.06] px-4 py-3.5 font-body text-[15px] text-paper placeholder:text-paper/35 focus:border-sage focus:outline-none focus-visible:ring-2 focus-visible:ring-sage/40'
+  'mt-2 w-full rounded-[var(--r-input)] border border-paper/25 bg-paper/[0.06] px-4 py-3.5 font-body text-[15px] text-paper placeholder:text-paper/55 focus:border-sage focus:outline-none focus-visible:ring-2 focus-visible:ring-sage/40'
 /**
  * The one act on each step.
  *
@@ -150,7 +150,7 @@ export default function SetupForm({
                   ? 'font-medium text-paper'
                   : i < step
                     ? 'text-sage hover:text-paper'
-                    : 'text-paper/40 hover:text-paper/70'
+                    : 'text-paper/55 hover:text-paper/70'
               }`}
             >
               <span className="font-mono text-xs tabular-nums">{i + 1}</span>
@@ -201,7 +201,7 @@ export default function SetupForm({
                 className={`${fieldOnInk} font-mono tabular-nums`}
               />
               <span className="mt-2 block font-body text-xs leading-relaxed text-paper/55">
-                Trek Buddy is for adults. We do not show this to anyone.
+                TrekBuddy is for adults. We do not show this to anyone.
               </span>
             </label>
 
@@ -243,7 +243,7 @@ export default function SetupForm({
               This tunes your board — and tells hosts what kind of company you are.
             </p>
 
-            <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {kinds.filter((k) => !k.isOpenEnded).map((k) => {
                 const on = activities.includes(k.key)
                 const light = lightForTime(k.defaultStart)
@@ -338,6 +338,18 @@ export default function SetupForm({
                 </span>
               </summary>
               <SafetyNotes variant="compact" className="mt-3.5" />
+              {/* The rest of it, for somebody about to agree to all four and
+                  wanting to know exactly what the board does and does not do
+                  before they do. It opens in a new tab so a half-filled form
+                  is not lost to a back button. */}
+              <a
+                href="/trek-buddy/safety"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3.5 inline-block border-b border-paper/30 pb-1 font-body text-[13px] text-paper/75 transition-colors hover:border-paper hover:text-paper"
+              >
+                What the board enforces, and where it stops →
+              </a>
             </details>
 
             <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-[var(--r-card)] border border-paper/25 bg-paper/[0.06] p-4">

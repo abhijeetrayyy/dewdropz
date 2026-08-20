@@ -8,6 +8,8 @@
 //
 // If the two ever drift, the database wins and the form shows its message.
 
+import { formatPrice } from '@/lib/utils'
+
 export type TrekActivity =
   | 'trekking' | 'bird_watching' | 'cycling' | 'running' | 'stargazing' | 'camping'
 
@@ -88,6 +90,100 @@ export const DIFFICULTY_LABEL: Record<string, string> = {
 /** How the whole party gets described in one word on a card. */
 export const DAY_PART_LABEL: Record<DayPart, string> = {
   day: 'Daylight', evening: 'After dark', overnight: 'Overnight',
+}
+
+/**
+ * What a walk costs, said the same way everywhere.
+ *
+ * `cost_paise` has three states and the board had three components each
+ * inventing its own reading of them. A walk whose host never touched the field
+ * rendered as "Free" on the board card, "No cost" on the featured card, and
+ * "Not stated" on the walk's own page — because both cards tested the value for
+ * truthiness, which folds `null` (the host said nothing) into `0` (the host
+ * said there is nothing to split).
+ *
+ * The board's whole claim is that nothing on it can be typed in and every
+ * figure was counted. Printing "Free" under somebody's name because they left a
+ * field alone is the platform typing it in for them, on the one subject where
+ * this shop has decided it will not be a party — and it is the reading a
+ * stranger is most likely to act on and least able to check.
+ *
+ * `stated` is what a surface uses to decide whether to draw anything at all.
+ * On the compact card, silence is more honest than a tag — which is also why
+ * `text` reads as the VALUE half of a labelled pair rather than a standalone
+ * phrase: the only surfaces that print the unstated case are the rail and the
+ * fact rows, and all of them sit under a "Cost share" key. "Cost share · Cost
+ * not stated" stutters; "Cost share · Not stated" is the sentence.
+ */
+export function costLabel(paise: number | null | undefined): {
+  text: string
+  /**
+   * The same fact for a tag on a card, where the whole row gets about 295px on
+   * the narrowest phone and has to hold the difficulty and both provisions
+   * first. Measured: "₹350 each" leaves a four-tag row 20px over budget and
+   * "₹350" brings it 7px under.
+   */
+  short: string
+  /** True only when the host actually answered — and `0` is an answer. */
+  stated: boolean
+  /** True only for a real amount, so a figure gets the tabular face and a sentence does not. */
+  isFigure: boolean
+} {
+  if (paise == null) return { text: 'Not stated', short: '', stated: false, isFigure: false }
+  if (paise === 0) return { text: 'Nothing to split', short: 'No cost', stated: true, isFigure: false }
+  return { text: `${formatPrice(paise)} each`, short: formatPrice(paise), stated: true, isFigure: true }
+}
+
+/**
+ * What the distance and the climb actually feel like, in time.
+ *
+ * A first-timer reads "5 km · 160 m up" and learns nothing they can plan a
+ * Saturday around. The plan page states both numbers and then never says the
+ * one thing the numbers are for — whether this is a morning or a day, and how
+ * much of it is uphill.
+ *
+ * NAISMITH'S RULE, and named as such wherever this is shown. One hour per 5km
+ * on the flat, plus one hour per 600m of ascent. It is from 1892, it is what
+ * mountain rescue and guidebooks across Britain and the Himalaya still start
+ * from, and it is an ESTIMATE for a reasonably fit party in good conditions
+ * before any stops. It does not know about heat, monsoon mud, a heavy pack or
+ * a group that stops for chai — which is why every string here says "about"
+ * and why the note beside it says whose rule it is.
+ *
+ * DERIVED, NEVER TYPED. It is computed from two figures the host already
+ * stated and cannot be edited independently of them, which is the same rule
+ * every other number on this board follows. Returns null when either figure is
+ * missing: a walk that has not said how far it goes gets no guess.
+ */
+export function effortGloss(
+  distanceKm: number | null | undefined,
+  gainM: number | null | undefined
+): { total: string; uphill: string | null } | null {
+  if (distanceKm == null || distanceKm <= 0) return null
+
+  const flatHours = distanceKm / 5
+  const climbHours = gainM != null && gainM > 0 ? gainM / 600 : 0
+  const totalMin = Math.round((flatHours + climbHours) * 60)
+  if (totalMin < 15) return null
+
+  const say = (mins: number) => {
+    const h = Math.floor(mins / 60)
+    // Rounded to the nearest five minutes. A walking estimate reported to the
+    // minute is claiming a precision Naismith never had.
+    const m = Math.round((mins % 60) / 5) * 5
+    if (h === 0) return `${m} minutes`
+    if (m === 0) return h === 1 ? 'an hour' : `${h} hours`
+    if (m === 60) return `${h + 1} hours`
+    return `${h} ${h === 1 ? 'hour' : 'hours'} ${m} minutes`
+  }
+
+  return {
+    total: `about ${say(totalMin)} of walking`,
+    uphill:
+      climbHours > 0
+        ? `roughly ${say(Math.round(climbHours * 60))} of that is uphill`
+        : null,
+  }
 }
 
 /**

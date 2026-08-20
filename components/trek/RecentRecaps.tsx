@@ -47,7 +47,7 @@ export default function RecentRecaps({ recaps }: { recaps: RecapCard[] }) {
           home.
         </p>
 
-        <ul className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-7 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {recaps.map((r) => {
             // RecapCard carries the departure moment but not the clock time, so
             // the hour is read back out of it in the board's own timezone — a

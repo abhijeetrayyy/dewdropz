@@ -28,6 +28,9 @@ export default function DayArc({
 }) {
   const total = HOUR_BANDS.reduce((n, b) => n + (counts[b.key] ?? 0), 0)
   const dark = ground === 'dark'
+  // The busiest hour sets the scale, so the bars compare hours to each other
+  // rather than to a capacity the board does not have.
+  const busiest = HOUR_BANDS.reduce((m, b) => Math.max(m, counts[b.key] ?? 0), 0)
 
   return (
     <div className={className}>
@@ -46,26 +49,37 @@ export default function DayArc({
               href={hrefFor(on ? null : b.key)}
               aria-pressed={on}
               title={`${b.label} — ${n} walk${n === 1 ? '' : 's'}`}
-              className={`group relative flex min-w-0 flex-1 flex-col gap-2 rounded-[var(--r-input)] px-2.5 py-2.5 transition-all duration-200 ${
+              className={`group relative flex min-w-0 flex-1 flex-col gap-2 rounded-[var(--r-input)] px-1.5 py-2.5 transition-all duration-200 sm:px-2.5 ${
                 dark ? 'hover:bg-paper/[0.06]' : 'hover:bg-paper-warm'
               } ${on ? (dark ? 'bg-paper/[0.09]' : 'bg-paper-warm') : ''} ${
                 empty ? 'opacity-45' : ''
               }`}
             >
-              {/* The band itself. Full weight when it has walks in it, a
-                  hairline when it does not — so an empty hour reads as a time
-                  of day with nothing on, rather than as a missing control. */}
+              {/* The band itself, and IT NOW MEASURES SOMETHING.
+                  Every band drew a full-width bar, so a band holding six walks
+                  and a band holding one were graphically identical and the only
+                  thing carrying the magnitude was the figure underneath. That
+                  is a chart with the chart removed. The slot stays a fixed
+                  fifth — these are tap targets and a legend, and they should
+                  not jump about as the board changes — and the FILL inside it
+                  runs to the band's share of the busiest hour. A band with one
+                  walk keeps a visible stub so it never reads as empty. */}
               <span
                 aria-hidden="true"
-                className="block w-full rounded-full transition-all duration-300"
-                style={{
-                  height: empty ? 3 : 6,
-                  background: dotColor(b, dark ? 'dark' : 'light'),
-                  boxShadow: on
-                    ? `0 0 0 2px ${dark ? 'var(--ink)' : 'var(--paper)'}, 0 0 0 3px ${dotColor(b, dark ? 'dark' : 'light')}`
-                    : undefined,
-                }}
-              />
+                className={`block w-full overflow-hidden rounded-full transition-all duration-300 ${
+                  dark ? 'bg-paper/[0.10]' : 'bg-rule'
+                }`}
+                style={{ height: empty ? 3 : 6 }}
+              >
+                <span
+                  className="block h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: busiest === 0 ? '100%' : `${Math.max(14, (n / busiest) * 100)}%`,
+                    background: dotColor(b, dark ? 'dark' : 'light'),
+                    opacity: empty ? 0 : 1,
+                  }}
+                />
+              </span>
               <span className="min-w-0">
                 <span
                   className={`block font-mono text-[15px] leading-none tabular-nums ${
@@ -74,9 +88,16 @@ export default function DayArc({
                 >
                   {n}
                 </span>
+                {/* WRAPS, does not truncate. At 375px a fifth of the row is
+                    75px and every one of these labels is wider than that, so
+                    the whole index read "BEFO… FIRS… FULL … LAST… AFTE…" — five
+                    controls, none of them nameable, on the one element that
+                    explains the board's colour system. The bands are flex items
+                    in a stretch row, so a label taking two lines lifts all five
+                    together and the row stays even. */}
                 <span
-                  className={`trek-label-xs mt-1.5 block truncate ${
-                    dark ? 'text-paper/55' : 'text-mid'
+                  className={`trek-label-xs mt-1.5 block ${
+                    dark ? 'text-paper/60' : 'text-mid'
                   }`}
                 >
                   {b.label}

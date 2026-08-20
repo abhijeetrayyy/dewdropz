@@ -9,8 +9,7 @@ import Cover from '@/components/trek/ui/Cover'
 import HourPill from '@/components/trek/ui/HourPill'
 import { FactRow, Tag } from '@/components/trek/ui/Bits'
 import { Lockup } from '@/components/trek/ui/Mark'
-import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, lightForTime, type TrekActivity } from '@/lib/trek'
-import { formatPrice } from '@/lib/utils'
+import { ACTIVITY_BY_KEY, DIFFICULTY_LABEL, costLabel, lightForTime, type TrekActivity } from '@/lib/trek'
 import { DAY_ARC } from '@/lib/constants'
 
 // noindex, and not as a formality. This page exists because a host chose to
@@ -22,7 +21,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 }
 
-// The invite card: the one TrackBuddy page a stranger can open.
+// The invite card: the one TrekBuddy page a stranger can open.
 //
 // It shows enough to decide — where, when, how hard, how many places, what it
 // costs — and stops exactly where the board stops. The meeting point is not
@@ -80,12 +79,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   ]
   if (card.distance_km != null) facts.push({ k: 'Distance', v: `${card.distance_km} km` })
   if (card.gain_m != null) facts.push({ k: 'Climb', v: `${card.gain_m.toLocaleString('en-IN')} m` })
-  if (card.cost_paise != null) {
-    facts.push({
-      k: 'Cost share',
-      v: card.cost_paise === 0 ? 'Nothing' : `${formatPrice(card.cost_paise)} each`,
-    })
-  }
+  // Through `costLabel`, so this reads the column the same way the board
+  // card, the featured card and the rail do. `stated` is false only when the
+  // host said nothing, and a fact nobody supplied is left off the row rather
+  // than filled in with a guess.
+  const cost = costLabel(card.cost_paise)
+  if (cost.stated) facts.push({ k: 'Cost share', v: cost.text })
 
   return (
     <main className={`${trekFontVars} trek-scope flex min-h-screen flex-col bg-paper`}>
@@ -172,7 +171,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
                   href="/trek-buddy"
                   className="trek-pill trek-pill-lg trek-pill-actinv w-full justify-center font-body focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
                 >
-                  Ask to join on TrackBuddy
+                  Ask to join on TrekBuddy
                 </Link>
 
                 {/* The same sentence the board makes to everybody, said here to

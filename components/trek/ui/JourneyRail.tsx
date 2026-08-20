@@ -30,18 +30,36 @@ export default function JourneyRail({
   stage,
   ground = 'light',
   showNotes = false,
+  layout = 'row',
   className = '',
 }: {
   stage: JourneyStage
   ground?: 'light' | 'dark'
   showNotes?: boolean
+  /**
+   * `row` lays the five nodes left to right and needs real width for the
+   * labels. `stack` runs them down the page, one per line.
+   *
+   * WHY THE STACK EXISTS. In the plan page's sidebar this rail gets about
+   * 190px, which is 38px per node — and "Confirmed" is 69px at 10px type and
+   * 76px at 11px. The labels overflowed their columns with `overflow: visible`
+   * and painted over each other: the second and third nodes rendered as the
+   * single word "CONFIRMEDINT". No type size fits five of these words into
+   * 190px, so the narrow case does not try. It is the same five nodes in the
+   * same order, turned ninety degrees, which is also easier to read.
+   */
+  layout?: 'row' | 'stack'
   className?: string
 }) {
   const at = ORDER.indexOf(stage)
   const dark = ground === 'dark'
+  const stacked = layout === 'stack'
 
   return (
-    <ol className={`flex ${className}`} aria-label="Where this walk has got to">
+    <ol
+      className={`flex ${stacked ? 'flex-col' : ''} ${className}`}
+      aria-label="Where this walk has got to"
+    >
       {STAGES.map((s, i) => {
         const idx = ORDER.indexOf(s.key)
         const done = at >= idx
@@ -52,8 +70,15 @@ export default function JourneyRail({
         const fill = done ? dotColor(band, dark ? 'dark' : 'light') : 'transparent'
 
         return (
-          <li key={s.key} className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="flex items-center">
+          <li
+            key={s.key}
+            className={
+              stacked
+                ? 'flex min-w-0 items-start gap-3'
+                : 'flex min-w-0 flex-1 flex-col gap-2'
+            }
+          >
+            <div className={stacked ? 'flex flex-col items-center self-stretch' : 'flex items-center'}>
               <span
                 aria-hidden="true"
                 className="grid h-2.5 w-2.5 shrink-0 place-items-center rounded-full transition-colors duration-300"
@@ -73,7 +98,9 @@ export default function JourneyRail({
               {i < STAGES.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className="h-px flex-1 transition-colors duration-300"
+                  className={`flex-1 transition-colors duration-300 ${
+                    stacked ? 'my-1 w-px min-h-[14px]' : 'h-px'
+                  }`}
                   style={{
                     background: at > idx
                       ? fill
@@ -84,7 +111,7 @@ export default function JourneyRail({
                 />
               )}
             </div>
-            <div className="min-w-0 pr-2">
+            <div className={`min-w-0 ${stacked ? 'pb-3' : 'pr-2'}`}>
               <span
                 className={`trek-label-xs block leading-none ${
                   done

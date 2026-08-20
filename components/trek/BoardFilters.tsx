@@ -162,7 +162,13 @@ export default function BoardFilters({
         ))}
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* WRAPS RATHER THAN SCROLLS, and that is the point of this row.
+          `overflow-x-auto` was fine while this held three time chips, and wrong
+          the moment the two provision toggles moved up into it: at 375px the
+          time chips alone fill the row, so anything after them starts
+          off-screen behind a scrollbar this board deliberately hides. A
+          promoted control you have to discover by swiping is not promoted. */}
+      <div className="flex flex-wrap items-center gap-2">
         {[
           ['all', 'Any time'],
           ['week', 'Next 7 days'],
@@ -178,6 +184,43 @@ export default function BoardFilters({
             {label}
           </button>
         ))}
+
+        {/* Hidden on phones. The row wraps there, and a vertical rule that
+            lands first on a wrapped line is a tick mark floating in the margin
+            — it separates nothing. The wrap itself does the separating. */}
+        <span
+          aria-hidden="true"
+          className={`mx-1 hidden h-5 w-px sm:block ${dark ? 'bg-paper/20' : 'bg-rule'}`}
+        />
+
+        {/* UP FROM BEHIND THE DISCLOSURE.
+            These two were the last row inside "More filters", under a "Only
+            show" key — three taps and a swipe from a board that prints their
+            counts as headline statistics directly above. This product's case
+            for itself is that it is somewhere a woman and somewhere a
+            sixty-year-old can actually go; the controls that find those walks
+            were the most buried on the screen. They are the first cut, not a
+            refinement, so they sit with the time chips.
+
+            "Has spaces", "How hard" and "Speaks" stay folded away. Those are
+            genuine refinements — you reach for them once you are already
+            looking at a board you can use. */}
+        <button
+          type="button"
+          onClick={() => toggle('senior', seniorFriendly)}
+          aria-pressed={seniorFriendly}
+          className={chip(seniorFriendly, dark)}
+        >
+          Senior friendly
+        </button>
+        <button
+          type="button"
+          onClick={() => toggle('womenOnly', womenOnly)}
+          aria-pressed={womenOnly}
+          className={chip(womenOnly, dark)}
+        >
+          Women only
+        </button>
 
         {/* The rest are refinements rather than the first cut, so they fold
             away. The count keeps a filtered board from looking like an empty
@@ -229,19 +272,15 @@ export default function BoardFilters({
             ))}
           </div>
 
-          {/* These three were an unlabelled row, which made the two that matter
-              most — a walk only women may join, and a walk a host has said is
-              paced for somebody older — look like two more categories. They get
-              the same key as every other group, and the key says what pressing
-              one does to the board. */}
+          {/* Senior-friendly and women-only used to live here too. They are in
+              the always-visible row above now — the counts for both are printed
+              as headline statistics on this page, and a statistic you cannot
+              act on without opening a disclosure is an advertisement rather
+              than a control. "Has spaces" stays: it is a refinement. */}
           <div className="flex flex-wrap items-center gap-2">
             <span className={groupKey(dark)}>Only show</span>
             <button type="button" onClick={() => toggle('spots', hasSpots)} aria-pressed={hasSpots}
               className={chip(hasSpots, dark)}>Has spaces</button>
-            <button type="button" onClick={() => toggle('senior', seniorFriendly)} aria-pressed={seniorFriendly}
-              className={chip(seniorFriendly, dark)}>Senior friendly</button>
-            <button type="button" onClick={() => toggle('womenOnly', womenOnly)} aria-pressed={womenOnly}
-              className={chip(womenOnly, dark)}>Women only</button>
             {refined > 0 && (
               <button type="button"
                 onClick={() => {

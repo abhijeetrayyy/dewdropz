@@ -231,7 +231,7 @@ export default async function PeoplePage({
                     Appointed by DEWDROPZ, not self-claimed. They know these hills and are happy to
                     be asked — start here if you are working out where to begin.
                   </p>
-                  <ul className="grid gap-4 sm:grid-cols-2">
+                  <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {mentors.map((p) => (
                       <li key={p.userId} className="flex">
                         <MentorTile person={p} />
@@ -244,7 +244,7 @@ export default async function PeoplePage({
               {rest.length > 0 && (
                 <div>
                   <ShelfHead title="Out there every week" count={rest.length} />
-                  <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <ul className="grid grid-cols-1 auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {rest.map((p) => (
                       <li key={p.userId} className="flex">
                         <PersonCardTile

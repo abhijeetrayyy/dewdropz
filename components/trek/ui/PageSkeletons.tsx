@@ -73,7 +73,7 @@ export function TodayLoading() {
     <>
       <InkHead />
       <section className="trek-band bg-paper py-10">
-        <div className="trek-measure grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="trek-measure grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-2.5">
             {Array.from({ length: 3 }).map((_, i) => <RowSkeleton key={i} />)}
           </div>
@@ -103,7 +103,7 @@ export function DashboardLoading() {
     <>
       <InkHead tall />
       <section className="trek-band bg-paper py-10">
-        <div className="trek-measure grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="trek-measure grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => <RowSkeleton key={i} />)}
           </div>
@@ -123,7 +123,7 @@ export function DetailLoading() {
     <>
       <div className="relative min-h-[380px] animate-pulse bg-ink" />
       <section className="trek-band bg-paper py-10">
-        <div className="trek-measure grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="trek-measure grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <Line key={i} h={150} className="rounded-[var(--r-card)]" />
@@ -165,7 +165,7 @@ export function FormLoading() {
     <>
       <InkHead />
       <section className="trek-band bg-paper py-10">
-        <div className="trek-measure grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="trek-measure grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i}>

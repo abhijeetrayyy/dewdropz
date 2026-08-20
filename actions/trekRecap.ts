@@ -1,7 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
+import {
+  createServerSupabaseClient, createAdminSupabaseClient, createPublicSupabaseClient,
+} from '@/lib/supabase'
 import { getUser } from '@/actions/auth'
 
 /**
@@ -95,4 +97,83 @@ export async function getStreak(userId: string): Promise<number> {
   const { data } = await createAdminSupabaseClient()
     .rpc('trek_streak_weeks', { p_user: userId })
   return (data as number | null) ?? 0
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * Sharing a recap
+ *
+ * The one object this board makes that could not have been posted by somebody
+ * who never left the house, and until 091 it rendered only behind a sign-in
+ * wall. See that migration's header for what a stranger holding the link may
+ * and may not see.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export type RecapShareResult = { ok: true; token: string } | { ok: false; error: string }
+
+/** Anybody who was confirmed on the walk, not only the host — it was their day too. */
+export async function mintRecapShareToken(planId: string): Promise<RecapShareResult> {
+  const user = await getUser()
+  if (!user) return { ok: false, error: 'Sign in first.' }
+
+  const { data, error } = await createAdminSupabaseClient()
+    .rpc('trek_recap_share_token', { p_plan: planId, p_actor: user.id })
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(`/trek-buddy/${planId}`)
+  return { ok: true, token: data as string }
+}
+
+export async function revokeRecapShare(planId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await getUser()
+  if (!user) return { ok: false, error: 'Sign in first.' }
+
+  const { error } = await createAdminSupabaseClient()
+    .rpc('trek_revoke_recap_share', { p_plan: planId, p_actor: user.id })
+
+  if (error) return { ok: false, error: error.message }
+  revalidatePath(`/trek-buddy/${planId}`)
+  return { ok: true }
+}
+
+/** Whether this walk's recap is currently shared, for the panel's toggle. */
+export async function getRecapShareToken(planId: string): Promise<string | null> {
+  const user = await getUser()
+  if (!user) return null
+  const { data, error } = await createAdminSupabaseClient()
+    .from('trek_recaps').select('share_token').eq('plan_id', planId).maybeSingle()
+  if (error) return null
+  return (data?.share_token as string) ?? null
+}
+
+export type RecapCardPublic = {
+  place: string
+  activity: string
+  host_name: string
+  starts_at: string
+  start_time: string | null
+  difficulty: string
+  distance_km: number | null
+  gain_m: number | null
+  went: number
+  body: string
+  photo_urls: string[]
+  written_at: string
+  /** First names, host first. No ids, by construction — see 091. */
+  party: string[]
+}
+
+/**
+ * Read with the ANON key, deliberately, exactly as the invite card is.
+ *
+ * The page is for people without an account, and reading it as a stranger
+ * would is the only way to be sure a stranger sees no more than intended: the
+ * meeting point cannot arrive by accident if the query has no more power than
+ * the visitor.
+ */
+export async function getSharedRecap(token: string): Promise<RecapCardPublic | null> {
+  const { data, error } = await createPublicSupabaseClient()
+    .rpc('trek_recap_card', { p_token: token })
+  if (error) return null
+  const row = (data ?? [])[0]
+  return (row as RecapCardPublic) ?? null
 }

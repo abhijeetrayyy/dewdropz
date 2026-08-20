@@ -244,7 +244,7 @@ export default function ProfileForm({
     <>
       {/* ── Band one · you, as they meet you ─────────────────────────────── */}
       <section className="trek-band bg-ink pb-11 pt-28 md:pt-32">
-        <div className="trek-measure grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
+        <div className="trek-measure grid grid-cols-1 items-end gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
           <div className="min-w-0">
             <Eyebrow tone="ondark">Your profile</Eyebrow>
             {/* The headline was Newsreader at 300 with "you." set in amber and
@@ -268,7 +268,7 @@ export default function ProfileForm({
           <div className="min-w-0">
             <div className="flex items-baseline justify-between gap-3">
               <SectionLabel tone="ondark">How a stranger meets you</SectionLabel>
-              <span className="font-body text-[12px] text-paper/45">Updates as you type</span>
+              <span className="font-body text-[12px] text-paper/55">Updates as you type</span>
             </div>
 
             <div className="mt-3 rounded-[var(--r-panel)] border border-paper/12 bg-paper/[0.04] p-5">
@@ -304,7 +304,7 @@ export default function ProfileForm({
                   &ldquo;{f.intro}&rdquo;
                 </p>
               ) : (
-                <p className="mt-4 rounded-[var(--r-input)] border border-dashed border-paper/25 px-3 py-2 font-body text-xs text-paper/45">
+                <p className="mt-4 rounded-[var(--r-input)] border border-dashed border-paper/25 px-3 py-2 font-body text-xs text-paper/55">
                   Nothing written yet — they read this line first.
                 </p>
               )}
@@ -317,7 +317,7 @@ export default function ProfileForm({
                     </li>
                   ))}
                   {f.activities.length > 5 && (
-                    <li className="self-center font-mono text-[10px] text-paper/45 tabular-nums">
+                    <li className="self-center font-mono text-[10px] text-paper/55 tabular-nums">
                       +{f.activities.length - 5}
                     </li>
                   )}
@@ -336,7 +336,7 @@ export default function ProfileForm({
 
       {/* ── Band two · the counted half, the fields, and the rail ─────────── */}
       <section className="trek-band bg-paper pb-24 pt-11">
-        <div className="trek-measure grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
+        <div className="trek-measure grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
           <div className="min-w-0 space-y-11">
             {counted}
 
@@ -431,7 +431,7 @@ export default function ProfileForm({
 
                 <fieldset className="min-w-0">
                   <legend className={label}>Your pace</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     {PACES.map(([k, t, d]) => (
                       <button key={k} type="button" onClick={() => set({ pace: f.pace === k ? '' : k })}
                         aria-pressed={f.pace === k} className={tile(f.pace === k)}>
@@ -481,7 +481,7 @@ export default function ProfileForm({
 
                 <fieldset className="min-w-0">
                   <legend className={label}>How much you have done</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {EXPERIENCE.map(([k, t, d]) => (
                       <button key={k} type="button"
                         onClick={() => set({ experience: f.experience === k ? '' : k })}
@@ -493,7 +493,7 @@ export default function ProfileForm({
                   </div>
                 </fieldset>
 
-                <div className="grid gap-6 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <label className="block">
                     <span className={label}>Years going out</span>
                     <input type="number" min={0} max={60} value={f.yearsOut ?? ''}

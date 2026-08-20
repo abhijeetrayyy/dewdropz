@@ -7,7 +7,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import {
   AlertTriangle, ShieldBan, Filter, BookOpen, Users, Mountain, FlaskConical,
-  Check, Trash2, Plus, EyeOff, Ban, X,
+  Check, Trash2, Plus, EyeOff, Ban, X, Tent,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,9 @@ import {
   getTrekReports, resolveTrekReport, getWordRules, saveWordRule, deleteWordRule,
   testModeration, getActivityKindsAdmin, saveActivityKind, getGuidanceAdmin,
   saveGuidance, deleteGuidance, getTrekMembers, setTrekMember, setTrekMentor,
+  getHostRequests, decideHostRequest,
   type TrekReportRow, type WordRule, type ActivityKind, type GuidanceNote, type TrekMemberRow,
+  type HostRequestRow,
 } from '@/actions/trekAdmin'
 
 const TABS = [
@@ -28,6 +30,9 @@ const TABS = [
   { key: 'kinds', label: 'Kinds of outing', icon: Mountain },
   { key: 'guidance', label: 'Guidance', icon: BookOpen },
   { key: 'members', label: 'Members', icon: Users },
+  // Hosting is invite-only and the owner grants it one person at a time. Until
+  // now there was no list of who had asked, because there was no way to ask.
+  { key: 'hosting', label: 'Hosting requests', icon: Tent },
 ] as const
 type Tab = (typeof TABS)[number]['key']
 
@@ -42,6 +47,7 @@ export default function TrekAdminClient() {
   const [tab, setTab] = useState<Tab>('queue')
   const [pending, start] = useTransition()
 
+  const [hostRequests, setHostRequests] = useState<HostRequestRow[]>([])
   const [reports, setReports] = useState<TrekReportRow[]>([])
   const [showResolved, setShowResolved] = useState(false)
   const [rules, setRules] = useState<WordRule[]>([])
@@ -57,6 +63,7 @@ export default function TrekAdminClient() {
       if (tab === 'kinds') setKinds(await getActivityKindsAdmin())
       if (tab === 'guidance') setGuidance(await getGuidanceAdmin())
       if (tab === 'members') setMembers(await getTrekMembers(memberQ))
+      if (tab === 'hosting') setHostRequests(await getHostRequests())
     } catch {
       toast.error('Could not load that')
     }
@@ -74,7 +81,7 @@ export default function TrekAdminClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Trek Buddy</h1>
+        <h1 className="text-2xl font-bold tracking-tight">TrekBuddy</h1>
         <p className="mt-1 text-sm text-gray-500">
           What people may post, what the scan caught, and who is on the board.
         </p>
@@ -136,6 +143,16 @@ export default function TrekAdminClient() {
           onDelete={(id) => run(() => deleteGuidance(id), 'Deleted')}
         />
       )}
+      {tab === 'hosting' && (
+        <HostingRequests
+          rows={hostRequests}
+          pending={pending}
+          onDecide={(id, grant) =>
+            run(() => decideHostRequest(id, grant), grant ? 'Hosting granted' : 'Request declined')
+          }
+        />
+      )}
+
       {tab === 'members' && (
         <Members
           members={members}
@@ -711,6 +728,77 @@ function Members({
           ))}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+/**
+ * Who has asked to host, and the record that comes with them.
+ *
+ * The decision this screen supports is "should this person be allowed to invite
+ * strangers to a real place at a real hour", so the row leads with the things
+ * that bear on it and that the board counted itself: how many walks they have
+ * actually been confirmed on, what rung they stand on, how long they have been
+ * here. The note they wrote is shown in full and last — it is the only part of
+ * the row they controlled.
+ */
+function HostingRequests({
+  rows,
+  pending,
+  onDecide,
+}: {
+  rows: HostRequestRow[]
+  pending: boolean
+  onDecide: (id: string, grant: boolean) => void
+}) {
+  if (rows.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-sm text-muted-foreground">
+          Nobody is waiting to host. Hosting stays invite-only either way — this queue is
+          who put their hand up, not a backlog you have to clear.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((r) => (
+        <Card key={r.id}>
+          <CardContent className="flex flex-wrap items-start justify-between gap-4 py-4">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{r.display_name ?? 'Unnamed member'}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {r.home_base ?? 'No home base'} · {r.walks} walk{r.walks === 1 ? '' : 's'} confirmed
+                {' · rung '}{r.trust_rung}
+                {' · member since '}{new Date(r.member_since).getFullYear()}
+                {' · asked '}{fmt(r.created_at)}
+              </p>
+              {r.note && (
+                <p className="mt-2.5 whitespace-pre-wrap rounded-md bg-muted px-3 py-2 text-sm">
+                  {r.note}
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" disabled={pending} onClick={() => onDecide(r.id, true)}>
+                <Check className="mr-1.5 h-4 w-4" />
+                Grant hosting
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => onDecide(r.id, false)}
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Decline
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }

@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { TrekMoment } from '@/actions/trekBuddy'
 import { createTrekPlan, type TrekKind } from '@/actions/trekBuddy'
-import { DIFFICULTY_LABEL, dotColor, hourInk, lightForTime } from '@/lib/trek'
-import { formatPrice } from '@/lib/utils'
+import { DIFFICULTY_LABEL, costLabel, dotColor, hourInk, lightForTime } from '@/lib/trek'
 import SafetyNotes from '@/components/trek/SafetyNotes'
 import CoverPicker from '@/components/trek/CoverPicker'
 import DepthFields from '@/components/trek/DepthFields'
@@ -329,7 +328,7 @@ export default function NewPlanForm({
   })
 
   return (
-    <form onSubmit={submit} className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="min-w-0">
         {/* Where you are in the sequence. Numbered because posting a walk IS an
             order — you cannot say where you are meeting before you know what
@@ -392,7 +391,7 @@ export default function NewPlanForm({
                           without it the tiles came out at 100 and 116px and a grid of
                           fifteen choices looked like a mistake. A chooser is a set of
                           equals — the whole point is that you are comparing them. */}
-                      <div className="mt-2.5 grid auto-rows-fr gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-2.5 grid grid-cols-1 auto-rows-fr gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                         {group.map((a) => (
                           <ActivityTile
                             key={a.key}
@@ -516,7 +515,7 @@ export default function NewPlanForm({
                 </div>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <label className="block">
                   <span className={label}>Setting off</span>
                   <input type="date" value={f.startsOn} min={tomorrowIst()}
@@ -565,7 +564,7 @@ export default function NewPlanForm({
               </div>
 
               {f.timed ? (
-                <div className="grid gap-6 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   {/* The hour back. It reads as a scheduling detail and it is
                       not one: it is the hour somebody at home has been told to
                       expect, and the one a walker checks against the light left
@@ -1124,6 +1123,7 @@ function PreviewCard({
   const km = distanceKm.trim() === '' ? null : Number(distanceKm)
   const up = gainM.trim() === '' ? null : Number(gainM)
   const paise = costRupees.trim() === '' ? null : Math.round(Number(costRupees) * 100)
+  const previewCost = costLabel(paise)
 
   // A date input can be cleared, and `new Date('T06:00+05:30').toISOString()`
   // throws — which took the whole composer down mid-edit. Everything derived
@@ -1200,16 +1200,25 @@ function PreviewCard({
 
         <SeatMeter taken={1} capacity={capacity} light={light} captionClassName="text-mid" />
 
-        <div className="mt-auto flex items-center gap-2 border-t border-rule-soft pt-3">
-          <Avatar name={hostName} id={hostId} size={24} />
-          <span className="min-w-0 truncate font-body text-[13px] text-mid">{hostName}</span>
-          <span className="ml-auto flex shrink-0 items-center gap-1.5">
-            {/* Neutral, matching the real card: a price is a fact, and amber is
-                reserved for a clock actually running. */}
-            {paise ? <Tag tone="outline">{formatPrice(paise)}</Tag> : <Tag tone="sage">Free</Tag>}
+        {/* The same two rows as the real card, in the same order, for the same
+            reason — this preview only does its job if it is what the board will
+            actually draw. A host ticking "senior friendly" on a women-only walk
+            needs to see the tag appear here, because seeing it is what tells
+            them the board will say it. Cost sits on the numbers line above,
+            where the real card puts it. */}
+        <div className="mt-auto flex flex-col gap-2.5 border-t border-rule-soft pt-3">
+          <span className="flex h-[22px] shrink-0 flex-nowrap items-center gap-1.5 overflow-hidden">
             <Tag tone="outline">{DIFFICULTY_LABEL[difficulty] ?? difficulty}</Tag>
             {womenOnly && <Tag tone="clay">Women only</Tag>}
-            {!womenOnly && seniorFriendly && <Tag tone="sage">Senior ok</Tag>}
+            {seniorFriendly && <Tag tone="sage">Senior friendly</Tag>}
+            {previewCost.stated && (
+              <Tag tone={previewCost.isFigure ? 'outline' : 'sage'}>{previewCost.short}</Tag>
+            )}
+          </span>
+
+          <span className="flex items-center gap-2">
+            <Avatar name={hostName} id={hostId} size={24} />
+            <span className="min-w-0 flex-1 truncate font-body text-[13px] text-mid">{hostName}</span>
           </span>
         </div>
       </div>

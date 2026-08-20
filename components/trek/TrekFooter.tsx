@@ -32,6 +32,11 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
   {
     heading: 'DEWDROPZ',
     links: [
+      // First in this group on purpose. The landing page's account of what is
+      // enforced and where it stops moved to its own page; a member who joined
+      // before that, or who skimmed it, should be able to find it from any
+      // screen rather than only from a page they see once.
+      { label: 'What is enforced', href: '/trek-buddy/safety' },
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
       { label: 'Privacy', href: '/privacy' },
@@ -49,7 +54,7 @@ export default function TrekFooter({
   return (
     <footer className="trek-band bg-ink pb-10 pt-16">
       <div className="trek-measure">
-        <div className="grid gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
           <div>
             <Lockup tone="onink" />
 

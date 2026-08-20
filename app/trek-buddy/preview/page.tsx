@@ -91,13 +91,28 @@ export default async function TrekPreviewPage() {
         </div>
       </section>
 
+      {/* THE ONE-WALK RAIL, which is the state a young board is in most of the
+          time and the one that used to look broken: a 280px card alone against
+          a band three times its width, floating over the seam where the ink
+          gradient hands over to paper. A lone card takes the full width now,
+          and this is where that can be looked at without waiting for the real
+          board to have exactly one walk leaving. */}
+      <section
+        className="trek-band"
+        style={{ background: 'linear-gradient(180deg, var(--ink) 0%, var(--ink) 62%, var(--paper) 62%)' }}
+      >
+        <div className="trek-measure">
+          <SoonRail plans={plans.slice(0, 1)} />
+        </div>
+      </section>
+
       <section className="trek-band bg-paper pb-20 pt-10">
         <div className="trek-measure flex flex-col gap-14">
           <FeaturedPlan plan={featured} />
 
           <div>
             <ShelfHead title="The board" count={rest.length} />
-            <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((p) => (
                 <li key={p.id} className="flex">
                   <TrekPlanCard plan={p} />
@@ -109,7 +124,7 @@ export default async function TrekPreviewPage() {
           {/* ── The parts, on their own ─────────────────────────────────── */}
           <div>
             <ShelfHead title="The parts" />
-            <div className="grid auto-rows-fr gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 auto-rows-fr gap-4 md:grid-cols-2">
               <div className="trek-card p-6">
                 <SectionLabel>Seats, and quorum</SectionLabel>
                 <div className="mt-5 space-y-6">
@@ -169,9 +184,14 @@ export default async function TrekPreviewPage() {
                 <div className="mt-6">
                   <JourneyRail stage="released" showNotes />
                 </div>
+                {/* The real set. "Free" used to sit here and no longer exists
+                    anywhere in the product: a cost of zero is "Nothing to
+                    split", and a cost the host never stated draws no tag at
+                    all. A gallery showing a tag the board cannot produce is
+                    the same drift this page exists to catch. */}
                 <div className="mt-7 flex flex-wrap gap-2">
-                  <Tag tone="outline">₹350</Tag>
-                  <Tag tone="sage">Free</Tag>
+                  <Tag tone="outline">₹350 each</Tag>
+                  <Tag tone="sage">Nothing to split</Tag>
                   <Tag tone="clay">Women only</Tag>
                   <Tag tone="outline">Moderate</Tag>
                 </div>
@@ -190,7 +210,7 @@ export default async function TrekPreviewPage() {
           {/* ── People ───────────────────────────────────────────────── */}
           <div>
             <ShelfHead title="People" count={PREVIEW_PEOPLE.length} />
-            <ul className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {PREVIEW_PEOPLE.map((p, i) => (
                 <li key={p.id} className="flex">
                   <PersonCardTile
@@ -233,7 +253,7 @@ export default async function TrekPreviewPage() {
 
           <div>
             <ShelfHead title="When there is nothing, and when it is still coming" />
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <EmptyState
                 title="Nothing matches that yet."
                 body="The board is small and honest about it. Widen the hour, or post the one you were going on anyway."

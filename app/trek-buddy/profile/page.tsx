@@ -8,7 +8,7 @@ import { getMyTrust } from '@/actions/trekTrust'
 import { getStreak } from '@/actions/trekRecap'
 
 export const metadata: Metadata = {
-  title: 'Your Trek Buddy profile — DEWDROPZ',
+  title: 'Your TrekBuddy profile — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 

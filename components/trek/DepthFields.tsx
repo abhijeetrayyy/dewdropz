@@ -98,7 +98,7 @@ export default function DepthFields({
           will use them to work out whether they can keep up. Only fill them in if you know them —
           a blank says &ldquo;ask me&rdquo;, and a guess says something a stranger will pack for.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
             <span className={label}>Distance (km)</span>
             <input

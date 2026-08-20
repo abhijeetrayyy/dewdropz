@@ -60,7 +60,7 @@ export default function SafetyNotes({
             — the six things you are asked to do before meeting strangers
             outdoors, rendered as a ragged stack, which reads as an afterthought
             rather than as a checklist. */}
-        <ol className="mt-4 grid auto-rows-fr gap-2.5 sm:grid-cols-2">
+        <ol className="mt-4 grid grid-cols-1 auto-rows-fr gap-2.5 sm:grid-cols-2">
           {SAFETY_NOTES.map((n, i) => (
             <li
               key={n.title}
@@ -94,7 +94,7 @@ export default function SafetyNotes({
         these are yours — and out in the hills, yours are the ones doing the work.
       </p>
 
-      <ol className="mt-8 grid auto-rows-fr gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+      <ol className="mt-8 grid grid-cols-1 auto-rows-fr gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
         {SAFETY_NOTES.map((n, i) => (
           <li key={n.title} className="border-t-2 border-forest pt-4">
             <span className="font-mono text-[13px] leading-none text-forest tabular-nums">

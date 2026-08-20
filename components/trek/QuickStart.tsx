@@ -37,7 +37,7 @@ export default function QuickStart({ canHost }: { canHost: boolean }) {
         action={<MoreLink href="/trek-buddy/new">Start from blank</MoreLink>}
       />
 
-      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {ACTIVITIES.map((a) => {
           const light = lightForTime(a.defaultStart)
           return (

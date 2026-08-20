@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import type { TrekPlanRow } from '@/actions/trekBuddy'
-import { formatPrice } from '@/lib/utils'
-import { DIFFICULTY_LABEL, lightForTime } from '@/lib/trek'
+import { DIFFICULTY_LABEL, costLabel, lightForTime } from '@/lib/trek'
 import Cover from './ui/Cover'
 import Avatar from './ui/Avatar'
 import SeatMeter from './ui/SeatMeter'
@@ -41,6 +40,7 @@ function dateLine(iso: string) {
 // stated rather than implied.
 export default function FeaturedPlan({ plan }: { plan: TrekPlanRow }) {
   const light = lightForTime(plan.start_time)
+  const cost = costLabel(plan.cost_paise)
 
   return (
     <Link
@@ -108,9 +108,11 @@ export default function FeaturedPlan({ plan }: { plan: TrekPlanRow }) {
             <span className="font-body text-[13px] text-paper/80">{plan.host_name}</span>
           </span>
           <Tag tone="ondark">{DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty}</Tag>
-          <Tag tone="ondark">
-            {plan.cost_paise ? `${formatPrice(plan.cost_paise)} share` : 'No cost'}
-          </Tag>
+          {/* Same rule as the board card: a cost the host never stated is not
+              "No cost". This tested the value for truthiness, so an untouched
+              field and a deliberate zero both came out as an affirmative claim
+              about money — on the one card the board gives full width to. */}
+          {cost.stated && <Tag tone="ondark">{cost.text}</Tag>}
           {plan.women_only && <Tag tone="clay">Women only</Tag>}
           {plan.senior_friendly && <Tag tone="sage">Senior friendly</Tag>}
         </div>
