@@ -450,3 +450,41 @@ states · W-19 accessibility labels · W-20 toast placement, studio handles, cat
   what the screen renders. Never eyeball a rupee figure.
 - Release config: `ENV.apiUrl` must not match `/(localhost|127\.0\.0\.1|10\.0\.2\.2)/`
   when `__DEV__` is false.
+
+## 5. The Android pass
+
+Everything above was audited and verified on the iOS Simulator. Android was read
+statically only, which the plan said and which was the weakest claim in it. Run on
+a Pixel 8 emulator, API 35 / Android 15:
+
+**Confirmed working, for the first time on the platform it was written for.**
+
+- `forEmulator()` in `mobile/lib/env.ts` — the rewrite this whole P0 turned on.
+  Glide loaded `http://10.0.2.2:3010/custom/tshirt/tshirt-front.jpg`. Before the
+  rewrite that URL was `localhost`, which on an emulator is the emulator, so the
+  studio would have opened with no garment in it.
+- Server-driven totals (W-01). The cart rendered ₹899 + ₹120 delivery + ₹44.95
+  GST = ₹1,063.95, and `/api/mobile/quote` returns
+  `{subtotal: 89900, effectiveShipping: 12000, taxAmount: 4495, totalAmount: 106395}`
+  — equal to the paise. The ₹120 is the shipping *zone* rate, which is the figure
+  the original audit got wrong by reading `store_settings.flat_shipping_rate`.
+- GST banding: 5% on ₹899, correct for HSN 6109 under ₹1,000.01.
+- Free-shipping progress: "₹1,101 to free shipping" = 200000 − 89900.
+- Studio: blanks list, editor, print-area overlay, text layer, `Add to Cart`
+  disabled until a layer exists, custom mockup thumbnail in the cart.
+
+**Two defects Android exposed that iOS had been hiding.** Both fixed in `8d42da3`.
+
+| | What | Why only Android |
+|---|---|---|
+| A-01 | The clock and battery were white on the cream checkout gate | Android keeps the status bar style globally and across navigations; iOS resets it per presentation. The signed-out branch returns before the `<StatusCap />` further down the file, so it inherited `light` from the cart's ink hero. |
+| A-02 | The privacy policy was unreachable when signed out | Not platform-specific in principle — it was found by walking the signed-out app on a fresh install, which the iOS pass never did. Settings renders a signed-out state *with* the link; both routes into Settings sat in the signed-in branch. |
+
+A-02 is the more serious of the two: both stores require the policy to be
+reachable by someone who has not made an account, and that is precisely the
+person the app was hiding it from.
+
+**Still unverified, unchanged by this pass.** Razorpay (W-07) — no credentials
+exist, so none of the six money-touching branches in §3 P1 have run. The RN half
+of the multipart upload (W-15) still needs one real image pick; the emulator has
+an empty photo library.
