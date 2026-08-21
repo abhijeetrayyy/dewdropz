@@ -1,4 +1,3 @@
-import * as FileSystem from "expo-file-system";
 import { supabase } from "../supabase";
 import { ENV } from "../env";
 import type { DesignLayer } from "./types";
@@ -11,20 +10,39 @@ async function authHeader(): Promise<Record<string, string>> {
 // A picked photo lives at a local file:// URI that only this device can read,
 // so it has to be uploaded before it can be part of a design — the server
 // renders the print file and needs to fetch the artwork by URL.
+//
+// SENT AS BYTES, NOT AS BASE64 IN JSON.
+//
+// This used to read the entire file into a base64 STRING and post it inside a
+// JSON body. base64 inflates by about a third, so the 10MB image the endpoint
+// accepts became a ~13.3MB request — and the whole thing existed at once in the
+// JS heap before it was even sent, which on a cheap Android is where the app
+// dies rather than where the upload fails. It would also have hit most hosts'
+// request-body cap in production while passing on a laptop.
+//
+// `FormData` with a file URI is React Native's own upload path: the bytes are
+// streamed from disk by the native networking layer and never become a
+// JavaScript string.
 export async function uploadPickedImage(localUri: string): Promise<string> {
-  const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: "base64" });
-
   const lower = localUri.toLowerCase();
   const contentType = lower.endsWith(".png")
     ? "image/png"
     : lower.endsWith(".webp")
     ? "image/webp"
     : "image/jpeg";
+  const name = `upload.${contentType.split("/")[1]}`;
+
+  const form = new FormData();
+  // RN's FormData takes this shape for a file; the cast is the standard one —
+  // the DOM lib types `append` for Blob/string only.
+  form.append("file", { uri: localUri, name, type: contentType } as unknown as Blob);
 
   const res = await fetch(`${ENV.apiUrl}/api/mobile/uploads`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
-    body: JSON.stringify({ data: base64, contentType }),
+    // Content-Type is deliberately NOT set: it has to carry the multipart
+    // boundary, and fetch generates that only when it is left alone.
+    headers: { ...(await authHeader()) },
+    body: form,
   });
 
   const data = await res.json().catch(() => null);

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { router } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Icon } from "@/components/ui/Icon";

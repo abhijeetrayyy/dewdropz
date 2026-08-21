@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, router } from "expo-router";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/utils";

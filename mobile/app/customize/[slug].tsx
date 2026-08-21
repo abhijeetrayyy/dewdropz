@@ -1,7 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import Animated, { FadeIn, useSharedValue, withTiming } from "react-native-reanimated";
@@ -19,6 +17,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { StatusCap } from "@/components/ui/StatusCap";
 import { StudioToolbar } from "@/components/customize/StudioToolbar";
 import { saveDesign, uploadPickedImage } from "@/lib/customize/save";
+import { effectiveDpi, qualityNote, qualityOf } from "@/lib/customize/printQuality";
 import {
   DesignLayer, DesignState, EMPTY_DESIGN, SideKey, defaultInkFor, newId,
 } from "@/lib/customize/types";
@@ -67,6 +66,11 @@ export default function CustomizeScreen() {
 
   const [activeSide, setActiveSide] = useState<SideKey>("front");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Source pixel dimensions per image layer, kept beside the design rather than
+  // inside it: the layer shape is the contract with the server renderer, and
+  // this is only needed while somebody is still editing. Without it the studio
+  // cannot say whether what they picked will print — see lib/customize/printQuality.
+  const [srcDims, setSrcDims] = useState<Record<string, { width: number; height: number }>>({});
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -94,6 +98,27 @@ export default function CustomizeScreen() {
   const effectiveSide: SideKey = sides.includes(activeSide) ? activeSide : (sides[0] ?? "front");
   const layers = design[effectiveSide];
   const selected = layers.find((l) => l.id === selectedId) ?? null;
+
+  // Print quality for whatever is selected, recomputed on every resize because
+  // resizing is what fixes it.
+  const zoneNow = color?.[effectiveSide];
+  const selectedDpi =
+    selected?.kind === "image" && zoneNow
+      ? effectiveDpi(selected, zoneNow, srcDims[selected.id])
+      : null;
+  const selectedQuality = qualityOf(selectedDpi);
+  const selectedNote = qualityNote(selectedDpi);
+
+  // Anything on either side that would print badly. Checked across the WHOLE
+  // design at save time, not just the side being looked at — a poor image on
+  // the back is exactly the one somebody forgets about.
+  const poorLayers = (["front", "back"] as SideKey[]).flatMap((side) => {
+    const zone = color?.[side];
+    if (!zone) return [];
+    return design[side]
+      .filter((l): l is Extract<DesignLayer, { kind: "image" }> => l.kind === "image")
+      .filter((l) => qualityOf(effectiveDpi(l, zone, srcDims[l.id])) === "poor");
+  });
 
   const aspect = useMockupAspect(color?.[effectiveSide]?.mockupImage);
 
@@ -196,6 +221,7 @@ export default function CustomizeScreen() {
         scale: 1,
         rotation: 0,
       };
+      setSrcDims((prev) => ({ ...prev, [layer.id]: { width: srcW, height: srcH } }));
       patchSide(effectiveSide, (l) => [...l, layer]);
       setSelectedId(layer.id);
       focus(layer.x + w / 2, layer.y + h / 2);
@@ -250,8 +276,44 @@ export default function CustomizeScreen() {
       return;
     }
     haptics.tap();
-    commit({ ...design, [other]: layers.map((l) => ({ ...l, id: newId() })) });
+    const copies = layers.map((l) => ({ ...l, id: newId() }));
+    // Same artwork on the other side — carry the source dimensions across so
+    // the copy can still be judged for print quality.
+    setSrcDims((prev) => {
+      const next = { ...prev };
+      layers.forEach((l, i) => {
+        const d = prev[l.id];
+        if (d) next[copies[i].id] = d;
+      });
+      return next;
+    });
+    commit({ ...design, [other]: copies });
     toast.success(`Copied to ${other}`);
+  }
+
+  /** Anything on either side that would be lost by leaving. */
+  const hasWork = design.front.length > 0 || design.back.length > 0;
+
+  // LEAVING WITH WORK ON THE GARMENT.
+  //
+  // The back arrow discarded a design silently. There is no draft anywhere —
+  // the studio holds it in memory and only `saveDesign` persists it — so a
+  // mistaken tap on a shirt somebody spent ten minutes on lost all of it, with
+  // no undo once the screen unmounted.
+  function leaveStudio() {
+    if (!hasWork) {
+      router.back();
+      return;
+    }
+    haptics.warning();
+    Alert.alert(
+      "Leave without adding it?",
+      "This design is not saved anywhere yet. Adding it to your pack keeps it — leaving now discards it.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        { text: "Discard", style: "destructive", onPress: () => router.back() },
+      ],
+    );
   }
 
   async function handleSave() {
@@ -263,6 +325,27 @@ export default function CustomizeScreen() {
     if (!color.available) {
       toast.error(`${color.name} isn't available yet — pick another colour.`);
       return;
+    }
+
+    // A LAST CHANCE, NOT A BLOCK.
+    //
+    // Somebody may genuinely want a soft, grainy print — that is a taste, and
+    // the shop is not the arbiter of it. What is not acceptable is finding out
+    // after the parcel arrives. So a design carrying artwork below the
+    // printable floor asks once, names the problem, and lets them proceed.
+    if (poorLayers.length > 0) {
+      const proceed = await new Promise<boolean>((resolve) => {
+        haptics.warning();
+        Alert.alert(
+          poorLayers.length === 1 ? "This image will print blurry" : "Some images will print blurry",
+          `${poorLayers.length === 1 ? "One image is" : `${poorLayers.length} images are`} too low-resolution for the size ${poorLayers.length === 1 ? "it is" : "they are"} printed at. Making ${poorLayers.length === 1 ? "it" : "them"} smaller, or picking a larger file, will sharpen the print.\n\nWe will print exactly what you approve.`,
+          [
+            { text: "Let me fix it", style: "cancel", onPress: () => resolve(false) },
+            { text: "Print it anyway", style: "destructive", onPress: () => resolve(true) },
+          ],
+        );
+      });
+      if (!proceed) return;
     }
 
     setSaving(true);
@@ -362,7 +445,7 @@ export default function CustomizeScreen() {
             name="arrow_back"
             tone="glass"
             accessibilityLabel="Back"
-            onPress={() => router.back()}
+            onPress={leaveStudio}
           />
           <View style={{ flex: 1 }}>
             <Text style={s.panelKicker}>THE STUDIO</Text>
@@ -554,11 +637,18 @@ export default function CustomizeScreen() {
                   if (!selected) return;
                   haptics.tap();
                   const clone = { ...selected, id: newId(), x: selected.x + 12, y: selected.y + 12 };
+                  // The copy is the same artwork, so it inherits the same source
+                  // dimensions — without this a duplicated image silently loses
+                  // its quality reading and reports nothing.
+                  const dims = srcDims[selected.id];
+                  if (dims) setSrcDims((prev) => ({ ...prev, [clone.id]: dims }));
                   patchSide(effectiveSide, (l) => [...l, clone]);
                   setSelectedId(clone.id);
                 }}
                 onReorder={reorder}
                 onCopyToOtherSide={copyToOtherSide}
+                qualityNote={selectedNote}
+                qualityTone={selectedQuality}
               />
             )}
           </ScrollView>

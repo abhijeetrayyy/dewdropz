@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useWindowDimensions, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { shareLink } from "@/lib/support";
+import { useWindowDimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton } from "@/components/ui/IconButton";
@@ -123,7 +124,10 @@ export default function JournalArticleScreen() {
             activeOpacity={0.7}
             onPress={() => {
               haptics.tap();
-              Share.share({ message: `${article.title} — DEWDROPZ Journal` });
+              // A title with no address: nobody who received this could open
+              // what it was about. `shareLink` builds the real URL, the same
+              // way the product and collection shares do.
+              shareLink(article.title, `/journal/${article.id}`);
             }}
           >
             <Icon name="ios_share" size={18} color={C.ink} />
@@ -168,7 +172,7 @@ export default function JournalArticleScreen() {
           <IconButton
             name="ios_share"
             tone={tone}
-            onPress={() => Share.share({ message: `${article.title} — DEWDROPZ Journal` })}
+            onPress={() => shareLink(article.title, `/journal/${article.id}`)}
           />
         )}
       />

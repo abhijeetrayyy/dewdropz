@@ -176,8 +176,14 @@ export default function AccountScreen() {
             <Eyebrow>Your things</Eyebrow>
             <Rule weight="soft" style={{ marginTop: 9 }} />
             <NavRow icon="receipt_long" label="Orders" value={String(orders.length)} onPress={() => router.push("/orders")} />
+            {/* The address book. It had no entry point anywhere in the app —
+                addresses could only be created as a side effect of checking
+                out, and never seen, defaulted or removed. */}
+            <NavRow icon="location_on" label="Addresses" onPress={() => router.push("/addresses")} />
             <NavRow icon="favorite" label="Saved" value={String(wishlistCount)} onPress={() => router.push("/saved")} />
             <NavRow icon="draw" label="The studio" onPress={() => router.push("/(tabs)/design")} />
+            {/* What you have already made — unreachable until now. */}
+            <NavRow icon="palette" label="Your designs" onPress={() => router.push("/designs")} />
             <NavRow icon="notifications" label="Notifications" onPress={() => router.push("/notifications")} last />
           </View>
 

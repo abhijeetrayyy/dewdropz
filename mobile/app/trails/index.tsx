@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useWindowDimensions, Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";

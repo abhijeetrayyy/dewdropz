@@ -21,7 +21,7 @@ import { PullQuote } from "@/components/editorial/PullQuote";
 import { SpecTable } from "@/components/editorial/SpecTable";
 import { Body, Display1, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
 import { formatPrice } from "@/lib/utils";
-import { FREE_SHIPPING_THRESHOLD_PAISE, FLAT_SHIPPING_RATE_PAISE } from "@/lib/constants";
+import { FREE_SHIPPING_THRESHOLD_PAISE } from "@/lib/constants";
 import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { useProductQuery, useProductRatingQuery, useProductsQuery, useRecentlyViewedQuery } from "@/lib/queries";
@@ -205,8 +205,16 @@ export default function ProductScreen() {
               <Mono color={C.danger}>OUT OF STOCK</Mono>
             )}
           </View>
+          {/* "INCL. ALL TAXES" WAS NOT TRUE, and it was on the money path.
+              `lib/checkoutPricing.ts` computes
+              `subtotal + shipping + tax - discounts`, so GST is ADDED to this
+              figure rather than contained in it — a ₹1,899 hoodie carries
+              ₹227.88 of 12% GST on top. The label said the opposite of what
+              the shop charges, on the first screen where somebody reads a
+              price, and it is the same class of thing as the checkout total
+              that used to omit GST entirely. */}
           <Mono color={C.textFaint} style={{ marginTop: 6 }}>
-            INCL. ALL TAXES
+            PLUS GST · SHOWN IN YOUR CART
           </Mono>
 
           {/* ── Delivery & returns, stated up front ─────────────────────────
@@ -222,9 +230,16 @@ export default function ProductScreen() {
             <View style={s.assuranceRow}>
               <Icon name="local_shipping" size={16} color={C.forestDeep} />
               <Body color={C.textMid} style={{ flex: 1 }}>
+                {/* No delivery FIGURE here any more. It was printed from a
+                    hardcoded ₹150 that was wrong — the live zone rate is ₹120 —
+                    and a product page is exactly where a wrong shipping number
+                    does the most damage, because it is the first one a shopper
+                    reads. What survives is the threshold, which is a published
+                    promise the server also honours; the amount itself is
+                    quoted by the server in the cart. */}
                 {fp >= FREE_SHIPPING_THRESHOLD_PAISE
                   ? "Free delivery on this item."
-                  : `${formatPrice(FLAT_SHIPPING_RATE_PAISE)} delivery — free over ${formatPrice(FREE_SHIPPING_THRESHOLD_PAISE)}.`}
+                  : `Free delivery over ${formatPrice(FREE_SHIPPING_THRESHOLD_PAISE)} — delivery and GST are shown in your cart.`}
               </Body>
             </View>
             <View style={s.assuranceRow}>
@@ -410,7 +425,12 @@ export default function ProductScreen() {
               name="ios_share"
               tone={tone}
               accessibilityLabel={`Share ${p!.name}`}
-              onPress={() => shareLink(p!.name, `/product/${p!.slug}`)}
+              // `/products/`, PLURAL. The app's own route is `/product/[slug]`
+              // and that path was being handed to `webUrl` verbatim — but the
+              // storefront's route is `app/products/[slug]`, so every product
+              // anyone shared from this app was a 404 for whoever received it.
+              // The most-shared object in the shop, and the link was dead.
+              onPress={() => shareLink(p!.name, `/products/${p!.slug}`)}
             />
           </>
         )}

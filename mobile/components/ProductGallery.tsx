@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View , useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
@@ -207,7 +207,13 @@ export function ProductGallery({ images, discountPct, isNew }: Props) {
           <Text style={[s.lbCounter, { top: insets.top + 18 }]}>
             {String(page + 1).padStart(2, "0")} / {String(list.length).padStart(2, "0")}
           </Text>
-          <TouchableOpacity style={[s.closeBtn, { top: insets.top + 10 }]} onPress={() => setLightboxOpen(false)} hitSlop={16}>
+          <TouchableOpacity
+            style={[s.closeBtn, { top: insets.top + 10 }]}
+            onPress={() => setLightboxOpen(false)}
+            hitSlop={16}
+            accessibilityRole="button"
+            accessibilityLabel="Close the photo"
+          >
             <Icon name="close" size={22} color={C.paper} />
           </TouchableOpacity>
           <Animated.ScrollView

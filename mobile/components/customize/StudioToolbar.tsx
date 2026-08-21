@@ -34,6 +34,8 @@ export function StudioToolbar({
   onDuplicate,
   onReorder,
   onCopyToOtherSide,
+  qualityNote,
+  qualityTone,
 }: {
   mode: "add" | "edit";
   selected: DesignLayer | null;
@@ -51,6 +53,9 @@ export function StudioToolbar({
   onDuplicate: () => void;
   onReorder: (dir: "up" | "down") => void;
   onCopyToOtherSide: () => void;
+  /** Print-quality sentence for the selected image, or null. */
+  qualityNote?: string | null;
+  qualityTone?: "good" | "soft" | "poor" | null;
 }) {
   const text = selected?.kind === "text" ? selected : null;
 
@@ -66,10 +71,22 @@ export function StudioToolbar({
           <Icon name="add_photo_alternate" size={16} color={C.forest} />
           <Text style={s.addT}>{uploading ? "Adding…" : "Image"}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[s.iconBtn, !canUndo && s.disabled]} onPress={onUndo} disabled={!canUndo}>
+        <TouchableOpacity
+          style={[s.iconBtn, !canUndo && s.disabled]}
+          onPress={onUndo}
+          disabled={!canUndo}
+          accessibilityRole="button"
+          accessibilityLabel="Undo"
+        >
           <Icon name="undo" size={16} color={canUndo ? C.ink : C.textMuted} />
         </TouchableOpacity>
-        <TouchableOpacity style={[s.iconBtn, !canRedo && s.disabled]} onPress={onRedo} disabled={!canRedo}>
+        <TouchableOpacity
+          style={[s.iconBtn, !canRedo && s.disabled]}
+          onPress={onRedo}
+          disabled={!canRedo}
+          accessibilityRole="button"
+          accessibilityLabel="Redo"
+        >
           <Icon name="redo" size={16} color={canRedo ? C.ink : C.textMuted} />
         </TouchableOpacity>
       </View>
@@ -119,12 +136,18 @@ export function StudioToolbar({
                 <TouchableOpacity
                   onPress={() => onPatch({ bold: !text.bold })}
                   style={[s.chip, text.bold && s.chipOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: text.bold }}
+                  accessibilityLabel="Bold"
                 >
                   <Icon name="format_bold" size={14} color={text.bold ? C.paper : C.ink} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onPatch({ italic: !text.italic })}
                   style={[s.chip, text.italic && s.chipOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: text.italic }}
+                  accessibilityLabel="Italic"
                 >
                   <Icon name="format_italic" size={14} color={text.italic ? C.paper : C.ink} />
                 </TouchableOpacity>
@@ -162,7 +185,31 @@ export function StudioToolbar({
               </View>
             </>
           ) : (
-            <Text style={s.hint}>Drag to move. Use the green corner to resize, the clay one to rotate. Pinch the garment to zoom.</Text>
+            <>
+              <Text style={s.hint}>Drag to move. Use the green corner to resize, the clay one to rotate. Pinch the garment to zoom.</Text>
+              {/* HOW IT WILL ACTUALLY PRINT.
+                  The studio read the picked photo's pixel dimensions to fit it
+                  into the zone and then discarded them, so a 400px screenshot
+                  stretched across a 12-inch front previewed perfectly and
+                  printed at about 33 DPI with nothing said. It updates as the
+                  image is resized, because resizing is the fix. */}
+              {qualityNote ? (
+                <View
+                  style={[
+                    s.quality,
+                    qualityTone === "poor" && s.qualityPoor,
+                    qualityTone === "soft" && s.qualitySoft,
+                  ]}
+                >
+                  <Icon
+                    name={qualityTone === "good" ? "check_circle" : "error"}
+                    size={14}
+                    color={qualityTone === "good" ? C.forest : qualityTone === "poor" ? C.clayDeep : C.ink}
+                  />
+                  <Text style={s.qualityT}>{qualityNote}</Text>
+                </View>
+              ) : null}
+            </>
           )}
 
           <View style={s.actionRow}>
@@ -191,6 +238,19 @@ export function StudioToolbar({
 
 const s = StyleSheet.create({
   root: { paddingHorizontal: 20, paddingTop: 14, gap: 10 },
+  quality: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    backgroundColor: C.forest12,
+  },
+  qualitySoft: { backgroundColor: C.sand },
+  qualityPoor: { backgroundColor: C.clay12 },
+  qualityT: { flex: 1, fontFamily: F.body, fontSize: 12, lineHeight: 17, color: C.ink },
   addRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   addBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,

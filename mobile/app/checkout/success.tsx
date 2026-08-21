@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withSpring } from "react-native-reanimated";
 import { useOrderQuery } from "@/lib/queries";
+import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/Button";
@@ -12,7 +13,7 @@ import { Rule } from "@/components/editorial/Rule";
 import { SpecTable } from "@/components/editorial/SpecTable";
 import { Body, Display1, Eyebrow, Mono } from "@/components/ui/Type";
 import { haptics } from "@/lib/haptics";
-import { C, F, M, S } from "@/lib/theme";
+import { C, F, M, R, S } from "@/lib/theme";
 
 // Order confirmation. `gestureEnabled` is off for this route (app/_layout.tsx)
 // so the only ways out are the explicit actions below — a swipe-back here
@@ -23,8 +24,23 @@ import { C, F, M, S } from "@/lib/theme";
 // set in mono like a real docket reference rather than as body copy.
 export default function OrderPlacedScreen() {
   const insets = useSafeAreaInsets();
-  const { orderId } = useLocalSearchParams<{ orderId: string }>();
+  const { orderId, skipped } = useLocalSearchParams<{ orderId: string; skipped?: string }>();
+  // Lines the server could not put on the order — see the note in checkout.
+  const skippedItems = (skipped ?? "").split(",").map((v) => v.trim()).filter(Boolean);
   const { data: order } = useOrderQuery(orderId);
+
+  // The cart is cleared HERE, not only by the path that got here.
+  //
+  // COD clears it before navigating, because the order is placed the moment the
+  // button returns. The online path cannot: at the point the browser sheet
+  // opens, no money has moved and the cart is the only thing standing between
+  // an abandoned payment and starting over. So it is cleared on arrival at the
+  // one screen that means the order is real — idempotent, so the COD path
+  // clearing it twice costs nothing.
+  const clearCart = useCartStore((st) => st.clearCart);
+  useEffect(() => {
+    if (orderId) clearCart();
+  }, [orderId, clearCart]);
 
   const stamp = useSharedValue(0);
   useEffect(() => {
@@ -58,6 +74,23 @@ export default function OrderPlacedScreen() {
           <Eyebrow color={C.forest} style={{ marginTop: S.xl }}>
             Order confirmed
           </Eyebrow>
+
+          {/* SAID PLAINLY, ON THE SCREEN THAT SAYS EVERYTHING WENT WELL.
+              A line that sold out between the cart and this button is left off
+              the order by the server. It used to be left off silently too, with
+              the cart cleared behind it — the customer's only way of finding
+              out was the parcel arriving short. Naming it here is the whole
+              point; the order itself was still placed. */}
+          {skippedItems.length > 0 ? (
+            <View style={s.skipped}>
+              <Icon name="error" size={16} color={C.danger} />
+              <Body color={C.textMid} style={{ flex: 1 }}>
+                {skippedItems.length === 1
+                  ? "One item sold out before we could add it, so it is not on this order and you have not been charged for it."
+                  : `${skippedItems.length} items sold out before we could add them, so they are not on this order and you have not been charged for them.`}
+              </Body>
+            </View>
+          ) : null}
           <Rule weight="strong" style={{ marginTop: 9 }} />
           <Display1 style={{ marginTop: S.md }}>That&apos;s packed.</Display1>
           <Body color={C.textMid} style={{ marginTop: 10 }}>
@@ -108,6 +141,15 @@ export default function OrderPlacedScreen() {
 }
 
 const s = StyleSheet.create({
+  skipped: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+    backgroundColor: C.danger12,
+    borderRadius: R.panel,
+    padding: 14,
+    marginTop: S.md,
+  },
   root: { flex: 1, backgroundColor: C.paper },
   top: { alignItems: "flex-end", paddingHorizontal: S.gutter },
   body: { flex: 1, justifyContent: "center", paddingHorizontal: S.gutter, paddingBottom: 40 },

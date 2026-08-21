@@ -35,24 +35,57 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminSupabaseClient()
 
-  const { data: address, error: addressError } = await admin
-    .from('addresses')
-    .insert({
-      user_id: user.id,
-      type: 'shipping',
-      full_name: input.fullName,
-      phone: input.phone,
-      address_line1: input.addressLine1,
-      address_line2: input.addressLine2 ?? null,
-      city: input.city,
-      state: input.state,
-      postal_code: input.postalCode,
-      country: 'India',
-    })
-    .select('id')
-    .single()
+  // REUSE THE ADDRESS THE SHOPPER PICKED. DO NOT WRITE A NEW ONE.
+  //
+  // This inserted unconditionally, on every single checkout, even when the app
+  // had just filled the form FROM a saved address. So the address book grew by
+  // one identical row per order and the picker turned into a list of duplicates
+  // of the same house — with no way to delete any of them, because the app has
+  // no address management at all.
+  //
+  // Ownership is re-checked here rather than trusted: this runs on the admin
+  // client, where RLS is not enforced, so an id from the request is only
+  // honoured if it belongs to the token-verified user.
+  let addressId: string | null = null
 
-  if (addressError || !address) {
+  if (input.addressId) {
+    const { data: owned } = await admin
+      .from('addresses')
+      .select('id')
+      .eq('id', input.addressId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    addressId = owned?.id ?? null
+  }
+
+  // A new address, or a saved id that did not check out — write one row.
+  if (!addressId) {
+    const { data: address, error: addressError } = await admin
+      .from('addresses')
+      .insert({
+        user_id: user.id,
+        type: 'shipping',
+        full_name: input.fullName,
+        phone: input.phone,
+        address_line1: input.addressLine1,
+        address_line2: input.addressLine2 ?? null,
+        city: input.city,
+        state: input.state,
+        postal_code: input.postalCode,
+        country: 'India',
+      })
+      .select('id')
+      .single()
+
+    if (addressError || !address) {
+      return NextResponse.json({ error: 'Could not save address' }, { status: 500 })
+    }
+    addressId = address.id
+  }
+
+  // Unreachable — the branch above either sets it or returns — but createOrder
+  // takes a string, and a cast here would be the kind of lie this file avoids.
+  if (!addressId) {
     return NextResponse.json({ error: 'Could not save address' }, { status: 500 })
   }
 
@@ -73,7 +106,12 @@ export async function POST(request: NextRequest) {
     userId: user.id,
     email: user.email,
     phone: input.phone,
-    shipping_address_id: address.id,
+    shipping_address_id: addressId,
+    // Re-validated inside createOrder against the same validateCoupon the
+    // quote used. A code that expired in the minutes between seeing the
+    // discount and pressing the button fails the order rather than billing a
+    // total nobody agreed to.
+    coupon_code: input.couponCode,
     notes: input.notes,
     payment_method: 'cod',
     client: admin,

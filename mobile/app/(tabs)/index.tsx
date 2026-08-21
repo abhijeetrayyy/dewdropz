@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Extrapolation,

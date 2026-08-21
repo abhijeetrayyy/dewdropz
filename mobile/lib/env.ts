@@ -39,14 +39,42 @@ function forEmulator(url: string): string {
   return url.replace(/\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/, "//10.0.2.2");
 }
 
+/** Loopback and the Android emulator's alias for the host machine. */
+const LOOPBACK = /\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(?=[:/]|$)/;
+
+/**
+ * The API base, with one rule a release build cannot break.
+ *
+ * `app.json` ships `extra.apiUrl = "http://localhost:3010"`, which is right for
+ * development and catastrophic anywhere else: checkout, design save, image
+ * upload AND every garment mockup (resolveAssetUrl builds them from this) all
+ * resolve against it. A TestFlight or Play build would show a studio with no
+ * garment in it and fail every write, and it would fail quietly — the app has
+ * no image error state.
+ *
+ * It would also fail even if something were listening, because cleartext HTTP
+ * is enabled only in the DEBUG Android manifests and iOS ATS is
+ * `NSAllowsArbitraryLoads: false`.
+ *
+ * The fix is not "remember to edit app.json before release". Outside __DEV__ a
+ * loopback base is refused and the public site is used instead — the API routes
+ * are served by the same Next app as the storefront, so `siteUrl` is the right
+ * origin for both. A real LAN IP or a deployed URL still passes through, so
+ * device development is unaffected.
+ */
+const siteUrl = ((extra.siteUrl as string | undefined) ?? "https://dewdropz.shop").replace(/\/$/, "");
+const configuredApiUrl = (extra.apiUrl as string | undefined) ?? defaultApiUrl;
+const apiUrl =
+  !__DEV__ && LOOPBACK.test(configuredApiUrl) ? siteUrl : forEmulator(configuredApiUrl);
+
 export const ENV = {
   supabaseUrl: extra.supabaseUrl as string,
   supabaseAnonKey: extra.supabaseAnonKey as string,
-  apiUrl: forEmulator((extra.apiUrl as string | undefined) ?? defaultApiUrl),
+  apiUrl,
   // The PUBLIC storefront, which is a different thing from `apiUrl` — that one
   // points at a dev machine's loopback in development. Anything a customer
   // could end up holding (a shared product link, a link in an email) has to be
   // built from this instead, or it ships `http://localhost:3010/...` to them.
-  siteUrl: ((extra.siteUrl as string | undefined) ?? "https://dewdropz.shop").replace(/\/$/, ""),
+  siteUrl,
   appName: "DEWDROPZ",
 };

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -12,7 +12,7 @@ import { Body, Eyebrow, Mono, Title } from "@/components/ui/Type";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationPreferencesQuery, useUpdateNotificationPreferencesMutation } from "@/lib/queries";
 import { haptics } from "@/lib/haptics";
-import { contactSupport } from "@/lib/support";
+import { contactSupport, openWebPage } from "@/lib/support";
 import { SITE } from "@/lib/editorial";
 import { C, F, M, S } from "@/lib/theme";
 
@@ -25,7 +25,8 @@ import { C, F, M, S } from "@/lib/theme";
 // flipping them didn't persist anywhere, so they silently reset every time
 // the app reopened. They now read from and write to profiles.notification_preferences.
 export default function SettingsScreen() {
-  const { user } = useAuthStore();
+  const { user, deleteAccount } = useAuthStore();
+  const [deleting, setDeleting] = useState(false);
   const { data: prefs, isLoading } = useNotificationPreferencesQuery(user?.id);
   const updatePrefs = useUpdateNotificationPreferencesMutation(user?.id);
 
@@ -34,25 +35,51 @@ export default function SettingsScreen() {
     updatePrefs.mutate({ ...prefs, [key]: value });
   }
 
-  // Deleting an account is irreversible and there is no self-serve endpoint for
-  // it yet, so this raises a request rather than pretending to do the deletion.
-  // It previously called signOut() under a "Delete account" label — the user
-  // was told their data was gone when nothing had been deleted at all.
+  // DELETION HAPPENS, RATHER THAN BEING REQUESTED.
+  //
+  // This used to open an email asking somebody to do it by hand "within 30
+  // days". Apple 5.1.1(v) requires an app that creates accounts to delete them
+  // FROM the app and names a support address as the thing that does not count —
+  // it is a documented rejection. It was also a promise the app could not keep:
+  // pressing it deleted nothing.
+  //
+  // Two taps, on purpose. The first Alert is the warning; the second is the
+  // commitment. This is the only irreversible action in the app.
   function requestDeletion() {
     haptics.warning();
     Alert.alert(
       "Delete your account?",
-      "This removes your order history, saved gear and addresses for good. We'll open an email so you can confirm the request — deletion is handled within 30 days.",
+      "This permanently removes your saved gear, addresses and designs. Orders you have already placed are kept as records of the sale — we are required to keep them — but they will no longer be linked to an account you can sign into.",
       [
         { text: "Keep my account", style: "cancel" },
+        { text: "Continue", style: "destructive", onPress: confirmDeletion },
+      ],
+    );
+  }
+
+  function confirmDeletion() {
+    Alert.alert(
+      "This cannot be undone",
+      `The account for ${user?.email ?? "this address"} will be deleted straight away.`,
+      [
+        { text: "Cancel", style: "cancel" },
         {
-          text: "Request deletion",
+          text: "Delete my account",
           style: "destructive",
-          onPress: () =>
-            contactSupport(
-              "Account deletion request",
-              `Please delete the DewDropz account for ${user?.email ?? "(this email address)"}.\n\nI understand this permanently removes my order history, saved gear and saved addresses.`,
-            ),
+          onPress: async () => {
+            setDeleting(true);
+            const r = await deleteAccount();
+            setDeleting(false);
+            if (r.error) {
+              haptics.error();
+              Alert.alert("Could not delete your account", r.error);
+              return;
+            }
+            haptics.success();
+            // The session is already cleared by the store; leaving the settings
+            // screen of an account that no longer exists is the last step.
+            router.replace("/(tabs)");
+          },
         },
       ],
     );
@@ -77,6 +104,21 @@ export default function SettingsScreen() {
               ctaLabel="Sign in"
               ctaHref="/auth/login"
             />
+
+            {/* THE PRIVACY POLICY BELONGS ON THIS SIDE OF THE GATE TOO.
+                A first draft put it only in the signed-in branch, which is
+                exactly backwards: the moment somebody most wants to read how an
+                app treats their data is BEFORE they hand any of it over. This
+                screen returns early for a signed-out visitor, so the link has
+                to be repeated here rather than living once further down. */}
+            <Group eyebrow="Legal">
+              <LinkRow
+                icon="shield"
+                label="Privacy policy"
+                onPress={() => openWebPage("/privacy")}
+                last
+              />
+            </Group>
           </View>
         </ScrollView>
       </View>
@@ -90,7 +132,7 @@ export default function SettingsScreen() {
         <ScreenHeader eyebrow="Preferences" title="Settings" />
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <Group eyebrow="Notifications">
+          <Group eyebrow="Email & inbox">
             {isLoading || !prefs ? (
               <View style={{ gap: S.md, paddingVertical: S.md }}>
                 <Skeleton height={40} />
@@ -99,24 +141,39 @@ export default function SettingsScreen() {
               </View>
             ) : (
               <>
+                {/* THESE CONTROL EMAIL AND THE IN-APP INBOX, AND NOW SAY SO.
+                    The app has no push capability at all — `expo-notifications`
+                    is not a dependency and no device token is ever registered —
+                    but three rows labelled "Order updates · Packed, shipped,
+                    delivered" on a phone read as a promise of a notification
+                    that can never arrive. The preferences themselves are real:
+                    the web reads the same `notification_preferences` when it
+                    decides whether to send an email, and the inbox on this
+                    device is fed from `trek_notifications`.
+
+                    So the fix is to describe what they actually do rather than
+                    to imply a channel that does not exist. Push is a project —
+                    APNs and FCM credentials, a token table, a sender — not a
+                    label change, and shipping the label without the channel was
+                    the dishonest half. */}
                 <ToggleRow
                   icon="local_shipping"
                   label="Order updates"
-                  sub="Packed, shipped, delivered"
+                  sub="Emailed to you · packed, shipped, delivered"
                   value={prefs.order_updates}
                   onChange={(v) => setPref("order_updates", v)}
                 />
                 <ToggleRow
                   icon="local_offer"
                   label="Promotions & offers"
-                  sub="Sales, coupons, new drops"
+                  sub="Emailed to you · sales, coupons, new drops"
                   value={prefs.promotions}
                   onChange={(v) => setPref("promotions", v)}
                 />
                 <ToggleRow
                   icon="inventory_2"
                   label="Back in stock"
-                  sub="When something you saved returns"
+                  sub="Emailed to you · when something you saved returns"
                   value={prefs.back_in_stock}
                   onChange={(v) => setPref("back_in_stock", v)}
                   last
@@ -136,15 +193,47 @@ export default function SettingsScreen() {
             <LinkRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} last />
           </Group>
 
+          {/* LEGAL, AND IT WAS NOT HERE AT ALL.
+              The app had no privacy policy link anywhere — not in Settings, not
+              on the account tab, not at signup. Both stores require one to be
+              reachable, and Apple expects it from inside an app that holds an
+              account. `/privacy` has existed on the storefront the whole time;
+              nothing pointed at it.
+
+              Opened in an in-app browser rather than kicked out to Safari:
+              somebody reading a privacy policy is deciding whether to trust the
+              app they are currently standing in.
+
+              There is deliberately no "Terms of service" row. The storefront has
+              no such page, and a row that opens a 404 is worse than an absent
+              one — when `/terms` exists, add it here. */}
+          <Group eyebrow="Legal">
+            <LinkRow
+              icon="shield"
+              label="Privacy policy"
+              onPress={() => openWebPage("/privacy")}
+              last
+            />
+          </Group>
+
           <Group eyebrow="Account">
             <LinkRow
               icon="mail"
               label="Contact us"
               onPress={() => contactSupport("Hello from the DewDropz app")}
             />
-            <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={requestDeletion}>
+            <TouchableOpacity
+              style={s.row}
+              activeOpacity={0.7}
+              disabled={deleting}
+              onPress={requestDeletion}
+              accessibilityRole="button"
+              accessibilityLabel="Delete your account"
+            >
               <Icon name="delete" size={20} color={C.danger} />
-              <Text style={[s.rowLabel, { color: C.danger }]}>Delete account</Text>
+              <Text style={[s.rowLabel, { color: C.danger }]}>
+                {deleting ? "Deleting…" : "Delete account"}
+              </Text>
             </TouchableOpacity>
             <Rule weight="soft" />
           </Group>

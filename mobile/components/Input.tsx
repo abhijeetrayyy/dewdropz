@@ -69,7 +69,13 @@ export function Input({
           selectionColor={C.forest}
         />
         {secureTextEntry ? (
-          <TouchableOpacity onPress={() => setReveal((r) => !r)} hitSlop={12} style={s.reveal}>
+          <TouchableOpacity
+            onPress={() => setReveal((r) => !r)}
+            hitSlop={12}
+            style={s.reveal}
+            accessibilityRole="button"
+            accessibilityLabel={reveal ? "Hide password" : "Show password"}
+          >
             <Icon name={reveal ? "visibility_off" : "visibility"} size={19} color={C.textMuted} />
           </TouchableOpacity>
         ) : null}

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useWindowDimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { Topography } from "@/components/editorial/Topography";
 import { Rule } from "@/components/editorial/Rule";
 import { Icon } from "@/components/ui/Icon";

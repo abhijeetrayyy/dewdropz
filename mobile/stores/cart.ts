@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type CartItem = {
+export type CartItem = {
   productId: string;
   slug: string;
   name: string;

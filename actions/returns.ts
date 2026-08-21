@@ -7,6 +7,7 @@ import { auditLog } from '@/lib/audit'
 import { refundOrder } from '@/actions/orders'
 import { RETURN_WINDOW_DAYS } from '@/lib/constants'
 import { sendSlackAlert } from '@/lib/slack'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Returns / RMA.
 //
@@ -32,6 +33,30 @@ function rmaNumber() {
 export async function getReturnEligibility(orderId: string) {
   const user = await requireAuth()
   const supabase = await createServerSupabaseClient()
+  return returnEligibilityFor(orderId, user.id, supabase)
+}
+
+/**
+ * The eligibility rules themselves, with the caller's identity passed in.
+ *
+ * Split out of `getReturnEligibility` so the mobile API route can reach the
+ * SAME rules. That route authenticates with a bearer token and has no cookie
+ * session, so `createServerSupabaseClient()` finds nothing for it — reusing the
+ * action as-is would have told every mobile customer "Order not found", and
+ * reimplementing the window, the delivered-check and the already-claimed
+ * arithmetic in a second place is how two return policies come to exist.
+ *
+ * `client` must be scoped to, or filtered for, this user: the ownership check
+ * below is `eq('user_id', userId)`, which is a real filter on the admin client
+ * and a redundant one under RLS.
+ */
+export async function returnEligibilityFor(
+  orderId: string,
+  userId: string,
+  client: SupabaseClient
+) {
+  const user = { id: userId }
+  const supabase = client
 
   const { data: order } = await supabase
     .from('orders')
@@ -87,11 +112,26 @@ export async function requestReturn(input: {
   items: { orderItemId: string; quantity: number }[]
 }) {
   const user = await requireAuth()
+  return createReturnFor(input, user.id, createAdminSupabaseClient())
+}
+
+/** `requestReturn`'s body, with the caller passed in. See returnEligibilityFor. */
+export async function createReturnFor(
+  input: {
+    orderId: string
+    reason: string
+    note?: string
+    items: { orderItemId: string; quantity: number }[]
+  },
+  userId: string,
+  client: SupabaseClient
+) {
+  const user = { id: userId }
 
   // Re-checked server-side rather than trusted from the form: the eligibility
   // call above also runs in the browser, and a closed window is exactly the
   // thing someone would try to post around.
-  const eligibility = await getReturnEligibility(input.orderId)
+  const eligibility = await returnEligibilityFor(input.orderId, userId, client)
   if (!eligibility.eligible) return { error: eligibility.reason ?? 'This order cannot be returned.' }
 
   const wanted = input.items.filter((i) => i.quantity > 0)

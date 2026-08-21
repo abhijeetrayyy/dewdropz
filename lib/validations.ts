@@ -74,6 +74,12 @@ export const checkoutSchema = z.object({
 // which app/api/mobile/checkout/route.ts turns into an address row + a
 // synced DB cart before calling the same createOrder() the web app uses.
 export const mobileCheckoutSchema = z.object({
+  // A saved address the shopper picked. When present the server uses that row
+  // instead of writing a new one — see the note in the checkout route.
+  addressId: z.string().uuid().optional(),
+  // Validated again by createOrder through the same validateCoupon the quote
+  // used, so a code that expired between quoting and paying is caught.
+  couponCode: z.string().max(60).optional(),
   fullName: z.string().min(1).max(200),
   phone: z.string().regex(/^\+?[\d\s-]{10,}$/),
   addressLine1: z.string().min(1).max(300),
@@ -192,7 +198,30 @@ export type CartItemInput = z.infer<typeof cartItemSchema>
 export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>
 export type CouponInput = z.infer<typeof couponSchema>
 export type CheckoutInput = z.infer<typeof checkoutSchema>
+// What the mobile app asks for when it needs a price.
+//
+// The same `items` shape checkout already sends, because the quote and the
+// order must be priced from identical input — a quote that describes a
+// different cart than the one being ordered is the drift this endpoint exists
+// to remove. Destination is optional: a cart screen has no address yet, and
+// shipping and tax both depend on one, so the response marks them unknown
+// rather than the app inventing a number.
+export const mobileQuoteSchema = z.object({
+  items: z.array(z.object({
+    slug: z.string().min(1),
+    size: z.string().optional(),
+    quantity: z.number().int().min(1).max(99),
+    productId: z.string().uuid().optional(),
+    variantId: z.string().uuid().nullish(),
+    customDesignId: z.string().uuid().optional(),
+  })).min(1),
+  state: z.string().max(120).optional(),
+  postalCode: z.string().regex(/^\d{6}$/).optional(),
+  couponCode: z.string().max(60).optional(),
+})
+
 export type MobileCheckoutInput = z.infer<typeof mobileCheckoutSchema>
+export type MobileQuoteInput = z.infer<typeof mobileQuoteSchema>
 export type MobileDesignInput = z.infer<typeof mobileDesignSchema>
 export type MobileUploadInput = z.infer<typeof mobileUploadSchema>
 export type ReviewInput = z.infer<typeof reviewSchema>

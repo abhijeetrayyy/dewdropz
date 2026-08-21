@@ -1,5 +1,5 @@
 import { StyleSheet, View, ViewStyle } from "react-native";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { Mono } from "@/components/ui/Type";
 import { C, R, S } from "@/lib/theme";
 

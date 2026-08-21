@@ -14,9 +14,12 @@ import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
 import { SpecTable } from "@/components/editorial/SpecTable";
 import { Body, Display2, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
-import { useAddressesQuery, useCheckoutMutation } from "@/lib/queries";
-import { FREE_SHIPPING_THRESHOLD_PAISE, FLAT_SHIPPING_RATE_PAISE } from "@/lib/constants";
+import {
+  fetchQuote, useAddressesQuery, useCheckoutMutation, useQuoteQuery, useRazorpayOrderMutation,
+} from "@/lib/queries";
 import { haptics } from "@/lib/haptics";
+import { ENV } from "@/lib/env";
+import * as WebBrowser from "expo-web-browser";
 import { C, F, M, R, S, SHADOW_BAR } from "@/lib/theme";
 
 const PINCODE_RE = /^[1-9][0-9]{5}$/;
@@ -39,6 +42,7 @@ export default function CheckoutScreen() {
   const { user } = useAuthStore();
   const { data: addresses = [] } = useAddressesQuery(user?.id);
   const checkout = useCheckoutMutation();
+  const razorpay = useRazorpayOrderMutation();
 
   const [step, setStep] = useState(0);
   const [err, setErr] = useState("");
@@ -51,10 +55,66 @@ export default function CheckoutScreen() {
   const [stateField, setStateField] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  // Only a code the SERVER accepted goes into the quote. See fetchQuote's note:
+  // putting the raw input straight in means one typo blanks the order total.
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponErr, setCouponErr] = useState("");
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [method, setMethod] = useState<"cod" | "online">("cod");
 
+  // THE TOTAL IS THE SERVER'S, NOT THIS SCREEN'S.
+  //
+  // This used to be `subtotal + FLAT_SHIPPING_RATE`, from two constants that
+  // claimed to mirror the shop's settings and did not. GST is additive and was
+  // absent altogether; delivery was ₹150 against a real zone rate of ₹120. On a
+  // hoodie the screen said ₹2,049 and the courier asked for ₹2,246.88 — because
+  // this is cash on delivery, the gap was collected at somebody's door.
+  //
+  // `lib/checkoutPricing.ts` on the web exists precisely to stop this: one
+  // function prices the quote the customer approves AND the order that bills
+  // them. /api/mobile/quote is that function, reachable from here.
   const tot = st();
-  const ship = tot >= FREE_SHIPPING_THRESHOLD_PAISE ? 0 : FLAT_SHIPPING_RATE_PAISE;
-  const grand = tot + ship;
+  const quoteLines = items.map((i) => ({
+    slug: i.slug,
+    size: i.size,
+    quantity: i.quantity,
+    productId: i.productId,
+    variantId: i.variantId ?? null,
+    customDesignId: i.customDesignId,
+  }));
+  // Re-quoted once a destination exists, because both shipping and the GST
+  // place of supply depend on it.
+  const quote = useQuoteQuery(quoteLines, {
+    state: stateField.trim() || undefined,
+    postalCode: postalCode.trim() || undefined,
+    couponCode: appliedCoupon ?? undefined,
+  });
+  const q = quote.data;
+  const ship = q?.effectiveShipping ?? null;
+  const grand = q?.totalAmount ?? null;
+
+  // Whether the form still holds exactly what the selected saved address held.
+  // `fillFromAddress` copies the row into the fields, so any later edit means
+  // this is a new address wearing an old id — and sending the id then would
+  // silently ship to the ORIGINAL row's contents.
+  const selected = addresses.find((a) => a.id === selectedAddressId);
+  const matchesSelected =
+    !!selected &&
+    selected.full_name === fullName.trim() &&
+    selected.phone === phone.trim() &&
+    selected.address_line1 === addressLine1.trim() &&
+    (selected.address_line2 ?? "") === addressLine2.trim() &&
+    selected.city === city.trim() &&
+    selected.state === stateField.trim() &&
+    selected.postal_code === postalCode.trim();
+
+  // A rupee figure the server has not returned yet is rendered as an em dash,
+  // never as a guess. "—" is honest; a stale or invented number on a cash-on-
+  // delivery order is what this whole change is undoing.
+  const money = (v: number | null | undefined) => (v == null ? "—" : formatPrice(v));
+  const shipLabel = ship == null ? "—" : ship === 0 ? "FREE" : formatPrice(ship);
+  const shipIsFree = ship === 0;
 
   if (!user) {
     return (
@@ -93,6 +153,38 @@ export default function CheckoutScreen() {
     setFieldErrs({});
   }
 
+  // Tried on its own before it is allowed to affect the total.
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponErr("");
+    setCheckingCoupon(true);
+    try {
+      await fetchQuote(quoteLines, {
+        state: stateField.trim() || undefined,
+        postalCode: postalCode.trim() || undefined,
+        couponCode: code,
+      });
+      setAppliedCoupon(code);
+      setCouponInput("");
+      haptics.success();
+    } catch (e: unknown) {
+      // validateCoupon's messages are written for a customer — "Coupon has
+      // expired", "Minimum order amount is ₹1,500" — so they are shown as-is
+      // rather than flattened into "invalid code".
+      setCouponErr(e instanceof Error ? e.message : "That code could not be applied.");
+      haptics.warning();
+    } finally {
+      setCheckingCoupon(false);
+    }
+  }
+
+  function removeCoupon() {
+    haptics.tap();
+    setAppliedCoupon(null);
+    setCouponErr("");
+  }
+
   function clearFieldErr(key: string) {
     setFieldErrs((prev) => {
       if (!(key in prev)) return prev;
@@ -123,10 +215,62 @@ export default function CheckoutScreen() {
     setStep(1);
   }
 
+  /** The shared payload — both paths order exactly the same cart. */
+  function orderPayload() {
+    return {
+      ...(selectedAddressId && matchesSelected ? { addressId: selectedAddressId } : {}),
+      ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2.trim() || undefined,
+      city: city.trim(),
+      state: stateField.trim(),
+      postalCode: postalCode.trim(),
+      items: items.map((i) => ({
+        slug: i.slug,
+        size: i.size,
+        quantity: i.quantity,
+        productId: i.productId,
+        variantId: i.variantId ?? null,
+        customDesignId: i.customDesignId,
+      })),
+    };
+  }
+
+  /**
+   * Pay online.
+   *
+   * ⚠ UNVERIFIED — there are no Razorpay credentials in this repository, so
+   * this path has never completed. The cart is deliberately NOT cleared here:
+   * the order exists and is unpaid, and clearing it before money moved would
+   * leave somebody with neither a cart nor a paid order if they abandon the
+   * sheet. The success deep link is what clears it.
+   */
+  async function payOnline() {
+    setErr("");
+    try {
+      const data = await razorpay.mutateAsync(orderPayload());
+      const url = `${ENV.siteUrl}/pay/${data.orderId}`;
+      // A browser sheet rather than a native SDK — see the route's header.
+      // Dismissing it returns here with the order still pending and payable.
+      await WebBrowser.openAuthSessionAsync(url, "dewdropz://checkout");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Could not start the payment.");
+      haptics.error();
+    }
+  }
+
   async function place() {
+    if (method === "online") return payOnline();
     setErr("");
     try {
       const data = await checkout.mutateAsync({
+        // Only when the fields still match the row that was picked. Editing a
+        // field after selecting a saved address means the shopper wants a
+        // different address, and the server should write that one.
+        ...(selectedAddressId && matchesSelected ? { addressId: selectedAddressId } : {}),
+        ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
         fullName: fullName.trim(),
         phone: phone.trim(),
         addressLine1: addressLine1.trim(),
@@ -144,8 +288,22 @@ export default function CheckoutScreen() {
         })),
       });
       haptics.success();
+
+      // WHAT THE SERVER COULD NOT PUT ON THE ORDER.
+      //
+      // `syncLocalCartToDbCart` skips a line that went out of stock or was
+      // deactivated between adding it and pressing this button, and returns the
+      // slugs. That was being discarded here while the cart was cleared and a
+      // success screen was shown — so a customer could order three things,
+      // receive two, and never learn which one was missing.
+      //
+      // The order was still placed, so this is a notice rather than an error,
+      // and it travels to the success screen where there is room to name them.
+      const skipped = data.skippedItems ?? [];
       clearCart();
-      router.replace(`/checkout/success?orderId=${data.orderId}`);
+      const q = new URLSearchParams({ orderId: data.orderId });
+      if (skipped.length) q.set("skipped", skipped.join(","));
+      router.replace(`/checkout/success?${q.toString()}`);
     } catch (e: any) {
       setErr(e?.message ?? "Couldn't place the order. Check your connection and try again.");
       haptics.error();
@@ -270,7 +428,7 @@ export default function CheckoutScreen() {
                     Ships within 2 working days from Dehradun
                   </Body>
                 </View>
-                <Numeric color={ship === 0 ? C.forest : C.ink}>{ship === 0 ? "FREE" : formatPrice(ship)}</Numeric>
+                <Numeric color={shipIsFree ? C.forest : C.ink}>{shipLabel}</Numeric>
               </View>
               <Rule weight="soft" />
               <View style={[s.optRow, { opacity: 0.45 }]}>
@@ -293,9 +451,20 @@ export default function CheckoutScreen() {
               <Eyebrow>Payment method</Eyebrow>
               <Rule weight="soft" style={{ marginTop: 9 }} />
 
-              <View style={s.optRow}>
-                <View style={[s.radio, s.radioOn]}>
-                  <View style={s.radioDot} />
+              {/* TWO REAL CHOICES, replacing one live option and two rows at
+                  45% opacity marked "coming soon". UPI and card are the same
+                  gateway hop, so they are one choice here rather than two
+                  greyed-out ones — the method inside is picked in Razorpay's
+                  own sheet, which is where a customer expects to pick it. */}
+              <TouchableOpacity
+                style={s.optRow}
+                activeOpacity={0.7}
+                onPress={() => { haptics.select(); setMethod("cod"); }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: method === "cod" }}
+              >
+                <View style={[s.radio, method === "cod" && s.radioOn]}>
+                  {method === "cod" ? <View style={s.radioDot} /> : null}
                 </View>
                 <Icon name="payments" size={22} color={C.ink} />
                 <View style={{ flex: 1 }}>
@@ -304,30 +473,75 @@ export default function CheckoutScreen() {
                     Pay the courier when it arrives
                   </Body>
                 </View>
-              </View>
+              </TouchableOpacity>
               <Rule weight="soft" />
-              <View style={[s.optRow, { opacity: 0.45 }]}>
-                <View style={s.radio} />
-                <Icon name="account_balance" size={22} color={C.textMuted} />
+              <TouchableOpacity
+                style={s.optRow}
+                activeOpacity={0.7}
+                onPress={() => { haptics.select(); setMethod("online"); }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: method === "online" }}
+              >
+                <View style={[s.radio, method === "online" && s.radioOn]}>
+                  {method === "online" ? <View style={s.radioDot} /> : null}
+                </View>
+                <Icon name="account_balance" size={22} color={C.ink} />
                 <View style={{ flex: 1 }}>
-                  <Title>UPI</Title>
+                  <Title>UPI or card</Title>
                   <Body color={C.textMid} style={{ marginTop: 2 }}>
-                    GPay, PhonePe, Paytm — coming soon
+                    GPay, PhonePe, Paytm, or any card
                   </Body>
                 </View>
-              </View>
+              </TouchableOpacity>
               <Rule weight="soft" />
-              <View style={[s.optRow, { opacity: 0.45 }]}>
-                <View style={s.radio} />
-                <Icon name="credit_card" size={22} color={C.textMuted} />
-                <View style={{ flex: 1 }}>
-                  <Title>Card</Title>
-                  <Body color={C.textMid} style={{ marginTop: 2 }}>
-                    Coming soon
-                  </Body>
+            </View>
+
+            {/* ── Coupon ──────────────────────────────────────────────────
+                The app had no way to enter one at all, while the shop ran
+                them: `coupons`, `coupon_usages` and an admin screen all exist,
+                and the web checkout has had a field since launch. A customer
+                given a code by the shop simply could not use it on a phone. */}
+            <View style={{ marginTop: S.block }}>
+              <Eyebrow>Have a code?</Eyebrow>
+              <Rule weight="soft" style={{ marginTop: 9, marginBottom: S.md }} />
+
+              {appliedCoupon ? (
+                <View style={s.couponOn}>
+                  <Icon name="check_circle" size={17} color={C.forest} />
+                  <View style={{ flex: 1 }}>
+                    <Title>{appliedCoupon}</Title>
+                    <Body color={C.textMid} style={{ marginTop: 2 }}>
+                      {q && q.discountAmount > 0
+                        ? `${formatPrice(q.discountAmount)} off this order`
+                        : "Applied"}
+                    </Body>
+                  </View>
+                  <TouchableOpacity onPress={removeCoupon} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove code ${appliedCoupon}`}>
+                    <Body color={C.textMid}>Remove</Body>
+                  </TouchableOpacity>
                 </View>
-              </View>
-              <Rule weight="soft" />
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: S.sm }}>
+                  <View style={{ flex: 1 }}>
+                    <Input
+                      label="Discount code"
+                      value={couponInput}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      maxLength={60}
+                      onChangeText={(v) => { setCouponInput(v); setCouponErr(""); }}
+                      err={couponErr}
+                    />
+                  </View>
+                  <Button
+                    title={checkingCoupon ? "…" : "Apply"}
+                    variant="dark"
+                    disabled={!couponInput.trim() || checkingCoupon}
+                    onPress={applyCoupon}
+                    style={{ marginTop: 26 }}
+                  />
+                </View>
+              )}
             </View>
 
             {/* ── Order summary ───────────────────────────────────────────── */}
@@ -340,8 +554,19 @@ export default function CheckoutScreen() {
                     key: `${i.name}${i.size ? ` · ${i.size}` : ""} ×${i.quantity}`,
                     value: formatPrice(i.price * i.quantity),
                   })),
-                  { key: "Delivery", value: ship === 0 ? "Free" : formatPrice(ship) },
-                  { key: "Total", value: formatPrice(grand), emphasis: true },
+                  // Everything below the line comes from the server's pricing,
+                  // including the GST that this screen never used to show.
+                  ...(q && q.discountAmount > 0
+                    ? [{ key: "Discount", value: `−${formatPrice(q.discountAmount)}` }]
+                    : []),
+                  { key: "Delivery", value: shipIsFree ? "Free" : shipLabel },
+                  ...(q && q.taxEnabled && q.taxAmount > 0
+                    ? [{
+                        key: q.taxIsIgst ? "IGST" : "GST",
+                        value: money(q.taxAmount),
+                      }]
+                    : []),
+                  { key: "Total", value: money(grand), emphasis: true },
                 ]}
               />
               <Rule weight="soft" />
@@ -383,21 +608,46 @@ export default function CheckoutScreen() {
           </View>
           <View style={s.barLine}>
             <Body color={C.textMid}>Delivery</Body>
-            <Numeric color={ship === 0 ? C.forest : C.textMid}>
-              {ship === 0 ? "FREE" : formatPrice(ship)}
-            </Numeric>
+            <Numeric color={shipIsFree ? C.forest : C.textMid}>{shipLabel}</Numeric>
           </View>
+          {q && q.taxEnabled && q.taxAmount > 0 ? (
+            <View style={s.barLine}>
+              <Body color={C.textMid}>{q.taxIsIgst ? "IGST" : "GST"}</Body>
+              <Numeric color={C.textMid}>{money(q.taxAmount)}</Numeric>
+            </View>
+          ) : null}
           <View style={[s.barLine, s.barLineTotal]}>
             <Text style={s.barTotalL}>Total</Text>
-            <Text style={s.barTotalV}>{formatPrice(grand)}</Text>
+            <Text style={s.barTotalV}>{money(grand)}</Text>
           </View>
         </View>
 
         {step === 0 ? (
           <Button title="Continue to payment" iconRight="arrow_forward" onPress={continueToPayment} style={{ width: "100%" }} />
         ) : (
-          <Button title="Place order" loading={checkout.isPending} onPress={place} style={{ width: "100%" }} />
+          // Never committable against an unknown total. If the quote has not
+          // arrived — or failed — the button waits rather than letting somebody
+          // agree to a number this screen made up.
+          <Button
+            title={
+              quote.isError
+                ? "Price unavailable"
+                : method === "online"
+                  ? "Pay now"
+                  : "Place order"
+            }
+            loading={checkout.isPending || razorpay.isPending || (quote.isPending && !q)}
+            disabled={!q || quote.isError || razorpay.isPending}
+            onPress={place}
+            style={{ width: "100%" }}
+          />
         )}
+
+        {quote.isError ? (
+          <Body color={C.danger} style={{ marginTop: 8, textAlign: "center" }}>
+            We could not price this order just now. Check your connection and pull to retry.
+          </Body>
+        ) : null}
 
         <View style={s.barTrust}>
           <Icon name="lock" size={12} color={C.textMuted} />
@@ -410,6 +660,14 @@ export default function CheckoutScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
+  couponOn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: S.md,
+    backgroundColor: C.forest12,
+    borderRadius: R.panel,
+    padding: 14,
+  },
   panel: {
     backgroundColor: C.ink,
     borderBottomLeftRadius: R.sheet,

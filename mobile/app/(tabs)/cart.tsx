@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { router } from "expo-router";
 // The Reanimated implementation. The legacy `Swipeable` exported from the
 // package root is marked `@deprecated use Reanimated version of Swipeable
@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeOutLeft, LinearTransition } from "react-native-reanimated";
-import { useCartStore } from "@/stores/cart";
+import { useCartStore, type CartItem } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
 import { formatPrice } from "@/lib/utils";
 import { ProductCard } from "@/components/ProductCard";
@@ -19,9 +19,9 @@ import { Topography } from "@/components/editorial/Topography";
 import { SectionHead } from "@/components/editorial/SectionHead";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Body, Display1, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
-import { useProductsBySlugsQuery, useProductsQuery } from "@/lib/queries";
+import { useProductsBySlugsQuery, useProductsQuery, useQuoteQuery } from "@/lib/queries";
 import { getCartRecommendations } from "@/lib/data";
-import { FREE_SHIPPING_THRESHOLD_PAISE, FLAT_SHIPPING_RATE_PAISE } from "@/lib/constants";
+import { FREE_SHIPPING_THRESHOLD_PAISE } from "@/lib/constants";
 import { haptics } from "@/lib/haptics";
 import { toast } from "@/components/ui/Toast";
 import { C, F, M, R, S, SHADOW_BAR } from "@/lib/theme";
@@ -51,9 +51,44 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
   const cartSlugs = items.map((i: any) => i.slug);
   const recs = getCartRecommendations(allProducts as any, cartSlugs, 6);
 
+  // Delivery and GST come from the server, not from a constant here — see the
+  // note in app/checkout/index.tsx. This screen has no address yet, so the
+  // quote is priced without a destination and the figures it shows are the
+  // shop's defaults; checkout re-quotes once a pincode exists.
+  const quote = useQuoteQuery(
+    (items as CartItem[]).map((i) => ({
+      slug: i.slug,
+      size: i.size,
+      quantity: i.quantity,
+      productId: i.productId,
+      variantId: i.variantId ?? null,
+      customDesignId: i.customDesignId,
+    })),
+  );
+  const q = quote.data;
+  const ship = q?.effectiveShipping ?? null;
+  const grand = q?.totalAmount ?? null;
+  const money = (v: number | null | undefined) => (v == null ? "—" : formatPrice(v));
+
+  // WHAT THE SERVER COULD NOT PRICE.
+  //
+  // The cart is a local zustand store that persists across launches, so a line
+  // can sit in it for a week while the product is deactivated or sells out.
+  // Nothing re-checked it: the screen showed a stale price, and the first
+  // anyone heard was the order arriving short, because the checkout endpoint
+  // silently skipped those lines. The quote resolves every line against the
+  // database anyway, so it can say which ones no longer exist — here, before
+  // somebody presses Checkout rather than after.
+  const unavailable = q?.unavailable ?? [];
+  const unavailableNames = (items as CartItem[])
+    .filter((i) => unavailable.includes(i.slug))
+    .map((i) => i.name);
+
+  // The free-shipping meter still uses the threshold constant: it is a
+  // marketing progress bar against a published number, not a charge, and the
+  // server agrees with it (store_settings.free_shipping_threshold = ₹2,000).
   const remaining = FREE_SHIPPING_THRESHOLD_PAISE - tot;
-  const qualifies = remaining <= 0;
-  const ship = qualifies ? 0 : FLAT_SHIPPING_RATE_PAISE;
+  const qualifies = ship === 0 || remaining <= 0;
   const pct = Math.max(0, Math.min(100, (tot / FREE_SHIPPING_THRESHOLD_PAISE) * 100));
 
   return (
@@ -108,6 +143,8 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
                       removeItem(it.productId, it.size, it.customDesignId);
                       toast.show("Removed from pack");
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${it.name} from your pack`}
                   >
                     <Icon name="delete" size={20} color={C.white} />
                   </TouchableOpacity>
@@ -222,19 +259,38 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
         </View>
 
         <View style={s.totals}>
+          {unavailableNames.length > 0 ? (
+            <View style={s.gone}>
+              <Icon name="error" size={16} color={C.danger} />
+              <Body color={C.danger} style={{ flex: 1 }}>
+                {unavailableNames.length === 1
+                  ? `${unavailableNames[0]} is no longer available and is not in this total. Remove it to check out.`
+                  : `${unavailableNames.length} pieces are no longer available and are not in this total. Remove them to check out.`}
+              </Body>
+            </View>
+          ) : null}
           <View style={s.totalRow}>
             <Body color={C.textMid}>Subtotal</Body>
             <Numeric>{formatPrice(tot)}</Numeric>
           </View>
           <View style={s.totalRow}>
             <Body color={C.textMid}>Delivery</Body>
-            <Numeric color={qualifies ? C.forest : C.ink}>{qualifies ? "FREE" : formatPrice(ship)}</Numeric>
+            <Numeric color={qualifies ? C.forest : C.ink}>
+              {ship == null ? "—" : ship === 0 ? "FREE" : formatPrice(ship)}
+            </Numeric>
           </View>
+          {q && q.taxEnabled && q.taxAmount > 0 ? (
+            <View style={s.totalRow}>
+              <Body color={C.textMid}>{q.taxIsIgst ? "IGST" : "GST"}</Body>
+              <Numeric>{money(q.taxAmount)}</Numeric>
+            </View>
+          ) : null}
         </View>
 
         <TouchableOpacity
-          style={s.checkout}
+          style={[s.checkout, (unavailableNames.length > 0 || grand == null) && s.checkoutOff]}
           activeOpacity={0.92}
+          disabled={unavailableNames.length > 0 || grand == null}
           onPress={() => {
             haptics.tap();
             router.push("/checkout");
@@ -242,7 +298,7 @@ function Pack({ items, cnt, tot, removeItem, updateQuantity }: any) {
         >
           <Text style={s.checkoutT}>Checkout</Text>
           <View style={s.checkoutRule} />
-          <Text style={s.checkoutV}>{formatPrice(tot + ship)}</Text>
+          <Text style={s.checkoutV}>{money(grand)}</Text>
           <Icon name="arrow_forward" size={19} color={C.white} />
         </TouchableOpacity>
       </View>
@@ -309,6 +365,16 @@ function EmptyPack() {
 }
 
 const s = StyleSheet.create({
+  gone: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+    backgroundColor: C.danger12,
+    borderRadius: R.panel,
+    padding: 12,
+    marginBottom: S.md,
+  },
+  checkoutOff: { opacity: 0.45 },
   root: { flex: 1, backgroundColor: C.paper },
   header: { paddingHorizontal: S.gutter, paddingBottom: S.md },
   headerRow: { flexDirection: "row", alignItems: "flex-end", gap: S.md },

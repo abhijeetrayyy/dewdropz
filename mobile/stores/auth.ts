@@ -17,6 +17,8 @@ type AuthStore = {
   ) => Promise<{ error?: string }>;
   /** Sends the password-reset email. The app had no recovery path at all. */
   resetPassword: (email: string) => Promise<{ error?: string }>;
+  /** Irreversible. Deletes the account server-side, then clears the session. */
+  deleteAccount: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 };
 
@@ -75,6 +77,39 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       redirectTo: `${ENV.siteUrl}/auth/reset-password`,
     });
     if (error) return { error: error.message };
+    return {};
+  },
+
+  /**
+   * Delete this account for real, then sign out.
+   *
+   * The app used to raise a support email under a "Delete account" label — the
+   * customer was told their data was gone when nothing had been deleted, and
+   * Apple 5.1.1(v) requires deletion to actually happen in the app. The server
+   * verifies the session token and deletes only that token's own user; see
+   * app/api/mobile/account/route.ts for what survives (orders do, by schema).
+   */
+  deleteAccount: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return { error: "Your session expired. Please sign in again." };
+
+    try {
+      const res = await fetch(`${ENV.apiUrl}/api/mobile/account`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        return { error: typeof data?.error === "string" ? data.error : "Could not delete your account." };
+      }
+    } catch {
+      return { error: "Could not reach us just now. Check your connection and try again." };
+    }
+
+    // The account is gone; the local session is now a token for a user that
+    // does not exist. Clearing it is not optional cleanup.
+    await supabase.auth.signOut();
+    set({ user: null, session: null });
     return {};
   },
 

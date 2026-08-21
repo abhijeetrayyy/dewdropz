@@ -142,9 +142,16 @@ export default function RootLayout() {
                 <Stack.Screen name="sustainability" options={{ headerShown: false }} />
                 <Stack.Screen name="checkout/index" options={{ headerShown: false, presentation: "modal" }} />
                 <Stack.Screen name="checkout/success" options={{ headerShown: false, gestureEnabled: false }} />
+                <Stack.Screen name="checkout/cancelled" options={{ headerShown: false }} />
                 <Stack.Screen name="orders/index" options={{ headerShown: false }} />
-                <Stack.Screen name="orders/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="orders/[id]/index" options={{ headerShown: false }} />
+                <Stack.Screen name="orders/[id]/return" options={{ headerShown: false }} />
                 <Stack.Screen name="saved" options={{ headerShown: false }} />
+                {/* Every screen in this app draws its own header. A route that
+                    is not declared here inherits the native one and appears
+                    with two stacked headers. */}
+                <Stack.Screen name="addresses" options={{ headerShown: false }} />
+                <Stack.Screen name="designs" options={{ headerShown: false }} />
                 <Stack.Screen name="search" options={{ headerShown: false, presentation: "modal" }} />
                 <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />

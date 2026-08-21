@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Image } from "expo-image";
+// Both: `Image.loadAsync` is a static on expo-image and has no component
+// equivalent, while the rendered mockup wants the wrapper's failure state —
+// a garment that does not load is the whole screen on this one.
+import { Image as ExpoImage } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -58,7 +62,7 @@ export function useMockupAspect(mockupImage: string | undefined | null) {
   useEffect(() => {
     if (!uri) return;
     let cancelled = false;
-    Image.loadAsync(uri)
+    ExpoImage.loadAsync(uri)
       .then((ref) => {
         if (cancelled || !ref?.width || !ref?.height) return;
         setAspect(ref.height / ref.width);

@@ -65,8 +65,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {/* Bottom-anchored: a toast confirming "added to pack" belongs near the
           thumb and the action that caused it, not up by the status bar where
-          v4 put it (and where it collided with every screen's header). */}
-      <View pointerEvents="none" style={[s.stack, { bottom: insets.bottom + 92 }]}>
+          v4 put it (and where it collided with every screen's header).
+
+          BUT NOT ON TOP OF THE BUTTON. At `insets.bottom + 92` it landed
+          exactly over the pinned Checkout CTA on the cart and the Place order
+          CTA at checkout — screenshotted, the toast covered the button
+          completely. Those bars are ~150pt tall with their breakdown rows, so
+          the stack clears them instead of sitting in them. On screens with no
+          pinned bar this is simply a little higher up, which costs nothing;
+          the alternative is a confirmation that hides the thing it is
+          confirming you can now press. */}
+      <View pointerEvents="none" style={[s.stack, { bottom: insets.bottom + 168 }]}>
         {items.map((t) => (
           <Animated.View key={t.id} entering={FadeInUp.duration(380)} exiting={FadeOutDown.duration(180)} style={s.toast}>
             {t.variant === "success" ? (

@@ -634,3 +634,77 @@ async function resolveRail(rail: HomeShowcaseRail): Promise<ResolvedRail | null>
 
   return { id: rail.id, title: rail.title, kind: rail.kind, products };
 }
+
+/**
+ * Address management, straight through RLS.
+ *
+ * `002_rls_policies.sql` grants `FOR ALL USING (auth.uid() = user_id)` on
+ * addresses, so the signed-in client can do this itself — no endpoint needed,
+ * and the policy is the check rather than a `where` clause somebody has to
+ * remember to write.
+ */
+export async function deleteAddress(id: string) {
+  const { error } = await supabase.from("addresses").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Exactly one default, enforced by doing both writes.
+ *
+ * There is no partial unique index on `is_default`, so "set this one" has to
+ * also mean "clear the others" — otherwise the picker ends up with two rows
+ * both claiming to be the default and the order between them is whatever
+ * `created_at` happens to say.
+ */
+export async function setDefaultAddress(userId: string, id: string) {
+  const { error: clearError } = await supabase
+    .from("addresses")
+    .update({ is_default: false })
+    .eq("user_id", userId)
+    .eq("type", "shipping");
+  if (clearError) throw clearError;
+
+  const { error } = await supabase.from("addresses").update({ is_default: true }).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Designs this member has made.
+ *
+ * The studio could create a design and attach it to a cart line, and after that
+ * the design was unreachable: no screen listed them, so a shirt somebody spent
+ * ten minutes on could not be found again, reused, or reordered. The web has
+ * had /account/designs since launch.
+ *
+ * Read through the session client so `045_custom_design_privacy.sql` decides —
+ * "Owner, or anyone who owns an order the design is attached to. Never
+ * world-readable." A guest design (user_id NULL) is deliberately NOT visible
+ * here: 045 removed the `OR user_id IS NULL` read, so a design made before
+ * signing in belongs to nobody and cannot be claimed. Worth knowing, and worth
+ * saying on the screen rather than silently showing a shorter list.
+ */
+export type SavedDesign = {
+  id: string;
+  product_id: string;
+  variant_id: string | null;
+  color_name: string | null;
+  front_preview_url: string | null;
+  back_preview_url: string | null;
+  front_print_dpi: number | null;
+  back_print_dpi: number | null;
+  created_at: string;
+  product?: { slug: string; name: string; price: number } | null;
+};
+
+export async function getMyDesigns(userId: string): Promise<SavedDesign[]> {
+  const { data, error } = await supabase
+    .from("custom_designs")
+    .select(
+      "id,product_id,variant_id,color_name,front_preview_url,back_preview_url,front_print_dpi,back_print_dpi,created_at,product:products(slug,name,price)"
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as SavedDesign[];
+}

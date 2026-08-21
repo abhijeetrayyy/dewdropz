@@ -1,9 +1,9 @@
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { Image } from "expo-image";
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Img as Image } from "@/components/ui/Img";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatPrice, pickVariant } from "@/lib/utils";
-import { useOrderQuery } from "@/lib/queries";
+import { useCancelOrderMutation, useOrderQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { useCartStore } from "@/stores/cart";
 import { toast } from "@/components/ui/Toast";
@@ -50,6 +50,40 @@ export default function OrderDetailScreen() {
   // Cancelled and refunded orders used to fall through to "Packed." — the one
   // headline the screen exists to get right, stating the opposite of the truth.
   const closed = o?.status === "cancelled" || o?.status === "refunded";
+
+  // What the server will actually accept. `cancelOrderInternal` refuses a
+  // shipped or delivered order, so offering the button for one would be a
+  // button that always fails — the same class of thing as the old "Track" that
+  // pushed to the shop.
+  const cancellable = !!o && !closed && o.status !== "shipped" && o.status !== "delivered";
+  const cancelOrder = useCancelOrderMutation(id);
+
+  function confirmCancel() {
+    haptics.warning();
+    Alert.alert(
+      "Cancel this order?",
+      "We will stop it before it is packed and put the stock back. If it has already been paid for, the refund goes back the way it came.",
+      [
+        { text: "Keep it", style: "cancel" },
+        {
+          text: "Cancel order",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const r = await cancelOrder.mutateAsync(undefined);
+              haptics.success();
+              toast.show(r.refundIssued ? "Order cancelled — refund on its way" : "Order cancelled");
+            } catch (e: unknown) {
+              haptics.error();
+              // cancelOrderInternal's refusals are written for a person
+              // ("Order is already cancelled"), so they are shown as they are.
+              Alert.alert("Could not cancel", e instanceof Error ? e.message : "Try again in a moment.");
+            }
+          },
+        },
+      ],
+    );
+  }
   const headline = closed
     ? o?.status === "refunded"
       ? "Refunded."
@@ -236,6 +270,13 @@ export default function OrderDetailScreen() {
           left to offer. */}
       {o ? (
         <View style={[s.bar, { paddingBottom: insets.bottom + 14 }]}>
+          {/* THE TWO THINGS A CUSTOMER ACTUALLY NEEDS AFTER ORDERING, neither
+              of which the app could do: stop one that has not shipped, and send
+              back one that has arrived. Both existed on the web from launch.
+
+              They are mutually exclusive by definition — an order is either
+              still stoppable or already delivered — so only one is ever drawn
+              beside "Get help". */}
           <Button
             title="Get help"
             variant="quiet"
@@ -243,6 +284,24 @@ export default function OrderDetailScreen() {
             onPress={() => contactSupport(helpSubject)}
             style={{ flex: 1 }}
           />
+          {cancellable ? (
+            <Button
+              title={cancelOrder.isPending ? "Cancelling…" : "Cancel order"}
+              variant="quiet"
+              icon="close"
+              disabled={cancelOrder.isPending}
+              onPress={confirmCancel}
+              style={{ flex: 1 }}
+            />
+          ) : delivered ? (
+            <Button
+              title="Return"
+              variant="quiet"
+              icon="restart_alt"
+              onPress={() => router.push(`/orders/${id}/return`)}
+              style={{ flex: 1 }}
+            />
+          ) : null}
           {delivered ? (
             <Button title="Buy again" variant="dark" icon="refresh" onPress={buyAgain} style={{ flex: 1 }} />
           ) : null}

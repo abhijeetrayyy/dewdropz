@@ -1,6 +1,7 @@
 import { Alert, Linking, Share } from "react-native";
 import { SITE } from "./editorial";
 import { ENV } from "./env";
+import * as WebBrowser from "expo-web-browser";
 
 // Outbound actions — mail and the OS share sheet. Both used to be scattered
 // as dead `onPress={() => {}}` handlers on buttons that looked live; they are
@@ -43,5 +44,24 @@ export async function shareLink(title: string, path: string) {
     await Share.share({ title, message: `${title} — ${url}`, url });
   } catch {
     // dismissed or unavailable — nothing to report
+  }
+}
+
+/**
+ * Open a page of the storefront inside the app.
+ *
+ * `expo-web-browser` rather than `Linking.openURL`: an in-app SFSafariViewController
+ * / Custom Tab keeps the person in the app, which matters most for the one
+ * thing this is used for — a privacy policy somebody is reading because they
+ * are deciding whether to trust the app they are currently inside.
+ */
+export async function openWebPage(path: string) {
+  try {
+    await WebBrowser.openBrowserAsync(webUrl(path), {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+    });
+  } catch {
+    // A browser that refuses to open is not worth an alert; the address is
+    // reachable from the site itself.
   }
 }

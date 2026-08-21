@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { GestureRef } from "react-native-gesture-handler/lib/typescript/handlers/gestures/gesture";
 import Animated, {
@@ -230,8 +230,17 @@ function DesignLayerViewInner({
       {selected && editable ? (
         <>
           <Animated.View pointerEvents="none" style={[s.outline, outline]} />
+          {/* ROTATE ON THE OPPOSITE CORNER FROM RESIZE.
+              Both handles used to sit on the right edge — top-right and
+              bottom-right — which is fine on a photograph and wrong on a line
+              of type. A text layer is only as tall as its line, so two 38pt
+              touch slots stacked on a ~25pt box overlapped each other AND
+              covered the last characters of the word being edited: "Your text"
+              rendered as "Your tex" with two circles on top of it.
+              Diagonally opposite, they are separated by the box's WIDTH, which
+              for text is the one dimension that is never small. */}
           <GestureDetector gesture={rotate}>
-            <Animated.View style={[s.handleSlot, s.topRight, counter]}>
+            <Animated.View style={[s.handleSlot, s.topLeft, counter]}>
               <View style={[s.handle, s.handleRotate]} />
             </Animated.View>
           </GestureDetector>
@@ -272,7 +281,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  topRight: { top: -(HANDLE + 16) / 2, right: -(HANDLE + 16) / 2 },
+  topLeft: { top: -(HANDLE + 16) / 2, left: -(HANDLE + 16) / 2 },
   bottomRight: { bottom: -(HANDLE + 16) / 2, right: -(HANDLE + 16) / 2 },
   handle: {
     width: 14,

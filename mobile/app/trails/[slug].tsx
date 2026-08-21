@@ -1,6 +1,6 @@
 import { useWindowDimensions, ScrollView, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

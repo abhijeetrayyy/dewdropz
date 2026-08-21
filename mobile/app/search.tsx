@@ -3,7 +3,7 @@ import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, Vi
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useCollectionsQuery, useProductsQuery } from "@/lib/queries";
 import { getRecentSearches, pushRecentSearch, clearRecentSearches } from "@/lib/recentSearches";

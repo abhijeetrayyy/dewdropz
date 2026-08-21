@@ -20,19 +20,48 @@ const SIGNATURES: { mime: string; ext: string; test: (b: Buffer) => boolean }[] 
 
 const MAX_BYTES = 10 * 1024 * 1024
 
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null)
-  const parsed = mobileUploadSchema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+// MULTIPART FIRST, BASE64 AS A FALLBACK.
+//
+// The app used to read the whole picked photo with
+// `FileSystem.readAsStringAsync(uri, { encoding: 'base64' })` and post it inside
+// a JSON body. Three problems, in increasing order of seriousness:
+//
+//   · base64 inflates by about a third, so the 10MB image this endpoint
+//     accepts arrived as a ~13.3MB request body;
+//   · that whole string existed at once in the phone's JS heap AND again in the
+//     request, which on a low-end Android is a real out-of-memory;
+//   · `next.config.ts` sets `serverActions.bodySizeLimit: '12mb'`, which does
+//     NOT apply to route handlers, and most hosts cap a request body far lower
+//     — so a large photo would have failed in production while passing locally.
+//
+// A multipart body streams the bytes as bytes. The base64 branch is kept so an
+// older build of the app keeps working rather than silently losing uploads.
+async function readUpload(request: NextRequest): Promise<Buffer | { error: string }> {
+  const contentType = request.headers.get('content-type') ?? ''
+
+  if (contentType.includes('multipart/form-data')) {
+    const form = await request.formData().catch(() => null)
+    const file = form?.get('file')
+    if (!(file instanceof Blob)) return { error: 'No image was attached.' }
+    return Buffer.from(await file.arrayBuffer())
   }
 
-  let buf: Buffer
+  const body = await request.json().catch(() => null)
+  const parsed = mobileUploadSchema.safeParse(body)
+  if (!parsed.success) return { error: 'Could not read that image.' }
   try {
-    buf = Buffer.from(parsed.data.data.replace(/^data:[^;]+;base64,/, ''), 'base64')
+    return Buffer.from(parsed.data.data.replace(/^data:[^;]+;base64,/, ''), 'base64')
   } catch {
-    return NextResponse.json({ error: 'Could not read that image.' }, { status: 400 })
+    return { error: 'Could not read that image.' }
   }
+}
+
+export async function POST(request: NextRequest) {
+  const read = await readUpload(request)
+  if (!Buffer.isBuffer(read)) {
+    return NextResponse.json({ error: read.error }, { status: 400 })
+  }
+  const buf = read
 
   if (buf.byteLength === 0 || buf.byteLength > MAX_BYTES) {
     return NextResponse.json({ error: 'Please pick an image under 10MB.' }, { status: 400 })

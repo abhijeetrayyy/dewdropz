@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Image } from "expo-image";
+import { Img as Image } from "@/components/ui/Img";
 import { Link, router } from "expo-router";
 import { C, F, R, S } from "@/lib/theme";
 import { formatPrice, pickVariant } from "@/lib/utils";
@@ -143,6 +143,9 @@ export function ProductCard({
               }}
               style={s.heart}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityState={{ selected: saved }}
+              accessibilityLabel={saved ? `Remove ${name} from saved` : `Save ${name}`}
             >
               <Icon name="favorite" size={16} color={saved ? C.clay : C.ink} filled={saved} />
             </TouchableOpacity>
