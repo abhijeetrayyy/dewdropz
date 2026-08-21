@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useCartStore } from "@/stores/cart";
@@ -119,6 +120,12 @@ export default function CheckoutScreen() {
   if (!user) {
     return (
       <View style={[s.root, { paddingTop: insets.top + 10 }]}>
+        {/* This branch returns before the <StatusCap /> further down, so it
+            declares its own bar style or it inherits one. On Android the style
+            is global and persists across navigations: arriving from the cart's
+            ink hero left the clock and battery light on this cream screen,
+            where they were invisible. Cream screen, dark glyphs. */}
+        <StatusBar style="dark" />
         <View style={s.header}>
           <IconButton name="close" onPress={() => router.back()} />
         </View>

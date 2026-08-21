@@ -68,6 +68,18 @@ export default function AccountScreen() {
               <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
               <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} last />
             </View>
+
+            {/* The only route to Settings — and therefore to the privacy policy
+                — used to sit in the signed-in branch below. Settings itself
+                already renders a signed-out state with that link in it, so the
+                policy was reachable in code and unreachable in the app: both
+                stores require it of someone who has not made an account, which
+                is exactly the person deciding whether to. */}
+            <View style={{ marginTop: S.section }}>
+              <Eyebrow>Privacy &amp; app</Eyebrow>
+              <Rule weight="ink" style={{ marginTop: 9 }} />
+              <NavRow icon="settings" label="Settings" onPress={() => router.push("/settings")} last />
+            </View>
           </View>
         </ScrollView>
       </View>
