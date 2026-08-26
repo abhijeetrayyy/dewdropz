@@ -176,13 +176,39 @@ const RANGE_DARK = 0.85
 //
 // One linear `scale: 1.24` across the whole hero meant act 1 only ever showed
 // the first tenth of it. Cutting it in two gives act 1 a move with a beginning
-// and an end: the range pushes from 1 to RANGE_ZOOM_ACT1 and SETTLES there
-// exactly as the brand frame hands over — eased out, so it arrives rather than
-// stopping — and then resumes a slow linear creep to RANGE_ZOOM_END underneath
-// the three acts that follow. Same total travel, but the half a visitor is
+// and an end: the range pushes from 1 to RANGE_ZOOM_ACT1 and settles there
+// exactly as the brand frame hands over — eased, so it arrives rather than
+// stopping dead (see the seam note below) — and then resumes a slow linear
+// creep to RANGE_ZOOM_END underneath the three acts that follow. Same total
+// travel, but the half a visitor is
 // looking at while they read the headline is now the half that reads.
 const RANGE_ZOOM_ACT1 = 1.16
 const RANGE_ZOOM_END = 1.30
+
+// ── AND THE SEAM BETWEEN THEM ──────────────────────────────────────────────
+//
+// The same hitch TerrainScene's `pathLerp` was rewritten to remove, in the CSS
+// layer this time. `power1.out` has a derivative of zero at its end, so the
+// zoom decelerated to a dead stop exactly at act 1's handover — and the second
+// half is linear, so it departed at a constant, non-zero rate from its very
+// first frame. The range halted and then re-started, in one frame, at the seam,
+// in both scroll directions.
+//
+// Fixed the way the camera was: a cubic Hermite that still leaves the summit
+// from rest (act 1's push-off is the whole point of splitting the zoom) but
+// ARRIVES travelling at exactly the speed the second half departs at.
+//
+// `rangeZoomEase` builds that curve from the constants rather than baking in a
+// number, so moving an act boundary or a zoom target cannot silently reopen
+// the seam. `m` is the arrival velocity in the eased 0..1 space; the h11 term
+// of a Hermite carries it, and h10 is dropped because the departure tangent is
+// zero. Clamped because a tangent above 3 would make the curve non-monotonic —
+// the range would zoom backwards near the seam, which is worse than the hitch.
+function rangeZoomEase(act1End: number, tailEnd: number) {
+  const tailRate = (RANGE_ZOOM_END - RANGE_ZOOM_ACT1) / (tailEnd - act1End)
+  const m = clampRange((tailRate * act1End) / (RANGE_ZOOM_ACT1 - 1), 0, 2)
+  return (t: number) => (3 - m) * t * t - (2 - m) * t * t * t
+}
 
 
 // "Mobile" here means how the page is *consumed*, not just how wide it is: on a
@@ -613,7 +639,7 @@ export default function SummitHero({
       tl.fromTo(
         rangeRef.current,
         { scale: 1 },
-        { scale: RANGE_ZOOM_ACT1, duration: a1Out[1], ease: 'power1.out' },
+        { scale: RANGE_ZOOM_ACT1, duration: a1Out[1], ease: rangeZoomEase(a1Out[1], RANGE_OUT[1]) },
         0
       )
         .to(

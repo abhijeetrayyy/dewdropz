@@ -397,15 +397,6 @@ function useLampTexture() {
   }, [])
 }
 
-/**
- * The bonfire's flame, as a texture.
- *
- * Deliberately NOT the lamp's radial gradient. A circle reads as a light; a
- * flame needs a shape — narrow and hot at the top, wide and dim at the base —
- * and at the ~20px this burns at on screen, silhouette is the only thing
- * carrying it. Drawn as a stack of horizontal bands whose width tapers with
- * height, which costs one canvas at mount and nothing per frame.
- */
 /** Where the fire stands relative to its hut, in the hut's own units. */
 const FIRE_OFFSET = { x: 1.15, z: 0.55 }
 
@@ -422,10 +413,67 @@ function worldFireBase(sh: (typeof SHELTERS)[number]) {
   return worldY(sh.x + FIRE_OFFSET.x * sh.scale, sh.z + FIRE_OFFSET.z * sh.scale) - worldY(sh.x, sh.z)
 }
 
+/**
+ * The colour of a flame at height `t` — 0 at the fuel, 1 at the frayed tip.
+ *
+ * White-hot where the wood is, through yellow and amber, to the deep orange a
+ * flame goes as it lets go. Sampling one ramp for the core of each row and a
+ * point further up it for that row's edges is what gives the flame heat ACROSS
+ * as well as UP: the middle of the fire is always hotter than its own edge, and
+ * a flame drawn without that reads as coloured paper.
+ */
+const FIRE_RAMP: readonly [number, number, number, number][] = [
+  [0.0, 255, 246, 214],
+  [0.18, 255, 216, 128],
+  [0.45, 255, 160, 56],
+  [0.75, 236, 108, 26],
+  [1.0, 194, 62, 14],
+]
+
+function fireRamp(t: number): [number, number, number] {
+  const p = Math.min(1, Math.max(0, t))
+  for (let i = 1; i < FIRE_RAMP.length; i++) {
+    const [hi, hr, hg, hb] = FIRE_RAMP[i]
+    if (p > hi && i < FIRE_RAMP.length - 1) continue
+    const [lo, lr, lg, lb] = FIRE_RAMP[i - 1]
+    const k = (p - lo) / (hi - lo || 1)
+    return [
+      Math.round(lr + (hr - lr) * k),
+      Math.round(lg + (hg - lg) * k),
+      Math.round(lb + (hb - lb) * k),
+    ]
+  }
+  return [255, 246, 214]
+}
+
+/**
+ * The bonfire's flame, as a texture.
+ *
+ * Deliberately NOT the lamp's radial gradient. A circle reads as a light; a
+ * flame needs a shape — wide and hot where it meets the fuel, tapering and
+ * cooling as it goes — and at the ~24px this burns at on screen, silhouette is
+ * the only thing carrying it. One canvas at mount, nothing per frame.
+ *
+ * ── WHAT WAS WRONG WITH THE LAST ONE ───────────────────────────────────────
+ *
+ * Two things, and together they turned the fire into a white spike:
+ *
+ * 1. EVERY ROW WAS A KNIFE EDGE. The horizontal gradient ran transparent →
+ *    core → transparent with the core on a single stop at 0.5, so each row was
+ *    bright at exactly its centre pixel and faint everywhere else. Stacked up,
+ *    that is not a flame — it is a vertical line with wings, which is why it
+ *    read as a beam of light standing on the hillside. The core is a plateau
+ *    now (0.24 → 0.76), so the flame has a body.
+ *
+ * 2. IT WAS SYMMETRICAL AND POINTED. A straight taper to an exact apex is a
+ *    traffic cone. This one carries a slight belly, a gentle lean baked into
+ *    the centre line, and an alpha that frays out over the top third instead
+ *    of arriving at a needle.
+ */
 function useFlameTexture() {
   return useMemo(() => {
-    const w = 64
-    const h = 96
+    const w = 96
+    const h = 160
     const c = document.createElement('canvas')
     c.width = w
     c.height = h
@@ -434,29 +482,366 @@ function useFlameTexture() {
     for (let y = 0; y < h; y++) {
       // 0 at the base, 1 at the tip.
       const t = 1 - y / h
-      // Widest at the base, tapering to a point.
-      //
-      // The first cut used sin(t^0.62 · π), which is a teardrop — and a
-      // teardrop is pinched at BOTH ends, so the flame narrowed to nothing
-      // exactly where it meets the logs and read as a lick of light hovering
-      // above the fire rather than coming out of it. A flame is not a
-      // teardrop; it is a cone that frays.
-      const width = Math.pow(1 - t, 0.55) * (w * 0.46)
-      if (width <= 0) continue
-      // Hot white-yellow in the core, amber at the edge, out at the tip.
-      const heat = Math.pow(1 - t, 0.8)
-      const g = ctx.createLinearGradient(w / 2 - width, 0, w / 2 + width, 0)
-      const core = `rgba(255,${Math.round(214 + 34 * heat)},${Math.round(120 + 90 * heat)},${0.85 * (0.35 + 0.65 * heat)})`
-      g.addColorStop(0, 'rgba(226,116,32,0)')
-      g.addColorStop(0.5, core)
-      g.addColorStop(1, 'rgba(226,116,32,0)')
+      // Wide and round where it meets the logs, through a slight belly, frayed
+      // rather than pointed at the top.
+      const half = Math.pow(1 - t, 0.5) * (0.72 + 0.28 * Math.sin(t * Math.PI)) * (w * 0.5)
+      if (half <= 0.35) continue
+      // Flames are not symmetrical. A gentle lean, baked in, is the cheapest
+      // thing there is that stops this reading as a cone.
+      const cx = w / 2 + Math.sin(t * Math.PI * 1.35) * w * 0.05
+
+      // Full where the fire is doing its work, tucked under at the very base so
+      // the logs read as holding the flame rather than being behind it, and
+      // gone by the tip.
+      const a = Math.min(1, 0.55 + t * 3) * Math.pow(1 - t, 1.05)
+      const [cr, cg, cb] = fireRamp(t * 0.62)
+      const [er, eg, eb] = fireRamp(Math.min(1, t * 1.2 + 0.16))
+
+      const g = ctx.createLinearGradient(cx - half, 0, cx + half, 0)
+      g.addColorStop(0, `rgba(${er},${eg},${eb},0)`)
+      g.addColorStop(0.24, `rgba(${er},${eg},${eb},${(a * 0.5).toFixed(3)})`)
+      g.addColorStop(0.5, `rgba(${cr},${cg},${cb},${a.toFixed(3)})`)
+      g.addColorStop(0.76, `rgba(${er},${eg},${eb},${(a * 0.5).toFixed(3)})`)
+      g.addColorStop(1, `rgba(${er},${eg},${eb},0)`)
       ctx.fillStyle = g
-      ctx.fillRect(w / 2 - width, y, width * 2, 1)
+      ctx.fillRect(cx - half, y, half * 2, 1)
     }
 
-    const tex = new THREE.CanvasTexture(c)
-    return tex
+    return new THREE.CanvasTexture(c)
   }, [])
+}
+
+/**
+ * The light the fire lays on its own clearing.
+ *
+ * This used to borrow the lamp's texture, which has a white-hot core — squashed
+ * flat on the ground that came out as a bright bar under the flame, so it was
+ * dimmed until it disappeared instead. A pool of firelight has no core: it is
+ * brightest under the fire and simply runs out. No white here at any stop.
+ */
+function useFirePoolTexture() {
+  return useMemo(() => {
+    const size = 128
+    const c = document.createElement('canvas')
+    c.width = c.height = size
+    const ctx = c.getContext('2d')!
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+    g.addColorStop(0, 'rgba(255,178,88,0.72)')
+    g.addColorStop(0.26, 'rgba(252,132,44,0.38)')
+    g.addColorStop(0.58, 'rgba(206,88,26,0.11)')
+    g.addColorStop(1, 'rgba(184,70,20,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, size, size)
+    return new THREE.CanvasTexture(c)
+  }, [])
+}
+
+/** One ember: a hot point with a soft edge. Tinted per-particle by the geometry. */
+function useEmberTexture() {
+  return useMemo(() => {
+    const size = 32
+    const c = document.createElement('canvas')
+    c.width = c.height = size
+    const ctx = c.getContext('2d')!
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+    g.addColorStop(0, 'rgba(255,255,255,1)')
+    g.addColorStop(0.34, 'rgba(255,206,132,0.72)')
+    g.addColorStop(1, 'rgba(255,170,90,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, size, size)
+    return new THREE.CanvasTexture(c)
+  }, [])
+}
+
+/**
+ * The fire's own dimensions, in its hut's units — one place to tune it.
+ *
+ * The two numbers that decide whether this reads as a campfire at all:
+ *
+ *   flameHeight  about 0.7 of the hut it stands beside. Taller than the hut and
+ *                it stops being a campfire and starts being a bonfire in front
+ *                of a shed; much shorter and the fuel out-masses the fire.
+ *   poolWidth    a first pass ran this at 2.4 — three world units, wider than
+ *                the hut is tall. Additive light spread that thin over dark
+ *                ground does not read as a lit clearing, it reads as a grey
+ *                haze lying across the hillside with a building in it. Kept
+ *                tight and a little brighter instead: light has to have an
+ *                edge somewhere or it is just fog.
+ */
+const FIRE = {
+  logRadius: 0.2,
+  logHeight: 0.13,
+  flameWidth: 0.52,
+  flameHeight: 0.72,
+  /** The inner flame, as a fraction of the outer one. Wider in proportion than
+   *  it is tall: at this size a core narrower than about 0.6 stops being a
+   *  hotter flame inside the first and becomes a bright vertical line in it. */
+  coreWidth: 0.6,
+  coreHeight: 0.48,
+  poolWidth: 1.45,
+  poolHeight: 0.4,
+  emberCount: 18,
+  emberRise: 1.5,
+  emberSpread: 0.26,
+  emberSize: 0.085,
+} as const
+
+/**
+ * How lit the camp is at scrub progress `p`: 1 while the brand frame holds,
+ * 0 once it has handed over. Shared by the huts and the fire so the range
+ * cannot go half-empty.
+ */
+function dawnLevel(p: number, from: number, to: number) {
+  return 1 - Math.min(1, Math.max(0, (p - from) / Math.max(0.0001, to - from)))
+}
+
+interface Embers {
+  /** Four per ember: rise speed, birth phase, bearing out of the fire, reach. */
+  seeds: Float32Array
+  positions: Float32Array
+  colors: Float32Array
+}
+
+/**
+ * The ember buffers, built once per fire and then rewritten in place each
+ * frame. A fixed LCG seeds them, like the stars, so the camp looks the same on
+ * every mount.
+ *
+ * Held in a ref and touched only from effects and the frame loop — never during
+ * render. This project's react-hooks rules reject both halves of the obvious
+ * shape here: a useMemo result may not be mutated afterwards, and a ref may not
+ * be read while rendering. So the geometry is declared empty in the JSX and
+ * these attributes are hung on it on mount, which keeps every mutable thing out
+ * of the render pass. An empty BufferGeometry draws nothing rather than
+ * throwing, so the frame between mount and that effect is simply a frame with
+ * no embers in it.
+ */
+function createEmbers(): Embers {
+  const n = FIRE.emberCount
+  const seeds = new Float32Array(n * 4)
+  let seed = 8675309
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647
+    return seed / 2147483647
+  }
+  for (let i = 0; i < n; i++) {
+    seeds[i * 4] = 0.22 + rand() * 0.3
+    seeds[i * 4 + 1] = rand()
+    seeds[i * 4 + 2] = rand() * Math.PI * 2
+    seeds[i * 4 + 3] = 0.25 + rand() * 0.75
+  }
+  return { seeds, positions: new Float32Array(n * 3), colors: new Float32Array(n * 3) }
+}
+
+/**
+ * The camp's fire.
+ *
+ * Five pieces, and the reason each is there:
+ *
+ *   the logs   a squat dark cone — the fuel, and the thing that stops the
+ *              flame reading as a floating spark
+ *   the pool   the light it throws, a wide flat bloom lying on the clearing
+ *   the body   the flame's shape and most of its colour, guttering slowly
+ *   the core   a smaller, hotter flame inside the first, on its own faster
+ *              clock — one billboard alone always looks like a decal, two on
+ *              different clocks look like combustion
+ *   the embers eighteen points rising, cooling and going out
+ *
+ * All of it `fog={false}` for the same reason the hut windows are: a fire you
+ * cannot see through fog is not doing its job, and the weather switch is
+ * allowed to obscure the mountain but not to put the camp out.
+ *
+ * ── THE FLAME USED TO HOVER ────────────────────────────────────────────────
+ *
+ * Worth recording, because it is the kind of bug that hides in plain sight.
+ * The fire group is already positioned at `worldFireBase(sh)` — the height of
+ * the ground under the fire, relative to the ground under the hut. The frame
+ * loop then set the flame sprite's LOCAL y to `worldFireBase(sh) + half its
+ * height`, applying that same ground offset a second time inside the group
+ * that had already applied it. So the flame stood off the logs by the fall of
+ * the slope across the clearing, which is a good fraction of its own height,
+ * and the fuel sat under it looking like a separate object.
+ *
+ * Everything in here is local to the fire's own ground now, and the group is
+ * the only thing that knows where that ground is.
+ */
+function Campfire({
+  scale: S,
+  phase,
+  progressRef,
+  reduceMotion,
+  dawnFrom,
+  dawnTo,
+}: {
+  scale: number
+  phase: number
+  progressRef: RefObject<number>
+  reduceMotion: boolean
+  dawnFrom: number
+  dawnTo: number
+}) {
+  const flameTex = useFlameTexture()
+  const poolTex = useFirePoolTexture()
+  const emberTex = useEmberTexture()
+
+  const bodyRef = useRef<THREE.Sprite>(null)
+  const coreRef = useRef<THREE.Sprite>(null)
+  const poolRef = useRef<THREE.Sprite>(null)
+
+  const emberRef = useRef<THREE.Points>(null)
+  const emberData = useRef<Embers | null>(null)
+
+  useEffect(() => {
+    const points = emberRef.current
+    if (!points) return
+    const data = (emberData.current ??= createEmbers())
+    points.geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3))
+    points.geometry.setAttribute('color', new THREE.BufferAttribute(data.colors, 3))
+  }, [])
+
+  useFrame(({ clock }) => {
+    const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
+    const dawn = dawnLevel(p, dawnFrom, dawnTo)
+    const t = clock.elapsedTime
+
+    // Three detuned sines, an octave apart. A real flame changes HEIGHT more
+    // than it changes brightness, so the scale carries most of this.
+    const body =
+      0.86 +
+      Math.sin(t * 5.7 + phase) * 0.1 +
+      Math.sin(t * 11.3 + phase * 3) * 0.07 +
+      Math.sin(t * 19.1 + phase * 5) * 0.04
+
+    if (bodyRef.current) {
+      const fl = bodyRef.current
+      const mat = fl.material as THREE.SpriteMaterial
+      mat.opacity = dawn * body
+      const height = FIRE.flameHeight * S * (0.8 + body * 0.3)
+      fl.scale.set(FIRE.flameWidth * S * (0.92 + body * 0.12), height, 1)
+      // Sprites are centred, so standing one on the ground means lifting it by
+      // half its own height — and then dropping it back INTO the fuel, so it
+      // comes out of the logs rather than balancing on them.
+      fl.position.y = height / 2 + FIRE.logHeight * S * 0.35
+    }
+
+    // The core runs faster and out of phase with the body it sits inside.
+    const core = 0.82 + Math.sin(t * 8.9 + phase * 2) * 0.12 + Math.sin(t * 17.3 + phase * 4) * 0.06
+    if (coreRef.current) {
+      const co = coreRef.current
+      const mat = co.material as THREE.SpriteMaterial
+      mat.opacity = dawn * core * 0.9
+      const height = FIRE.flameHeight * FIRE.coreHeight * S * (0.8 + core * 0.34)
+      co.scale.set(FIRE.flameWidth * FIRE.coreWidth * S * (0.9 + core * 0.16), height, 1)
+      co.position.y = height / 2 + FIRE.logHeight * S * 0.25
+    }
+
+    // Light on the ground does not gutter as fast as the flame throwing it, so
+    // the pool runs on a slower clock than either flame. Following the body
+    // exactly is what makes a fire look like a blinking bulb.
+    if (poolRef.current) {
+      const pl = poolRef.current
+      const mat = pl.material as THREE.SpriteMaterial
+      const glow = 0.82 + Math.sin(t * 3.9 + phase) * 0.12 + Math.sin(t * 7.1 + phase * 2) * 0.06
+      mat.opacity = dawn * glow * 0.62
+      const k = 0.94 + glow * 0.12
+      pl.scale.set(FIRE.poolWidth * S * k, FIRE.poolHeight * S * k, 1)
+    }
+
+    const points = emberRef.current
+    const data = emberData.current
+    if (!points || !data) return
+    const { positions, colors, seeds } = data
+    const from = FIRE.logHeight * S * 0.8
+    for (let i = 0; i < FIRE.emberCount; i++) {
+      const speed = seeds[i * 4]
+      const birth = seeds[i * 4 + 1]
+      const angle = seeds[i * 4 + 2]
+      const reach = seeds[i * 4 + 3]
+      // One ember's whole life, 0 at the fuel and 1 where it goes out.
+      const life = (t * speed + birth) % 1
+      const drift = FIRE.emberSpread * S * reach * life
+      positions[i * 3] = Math.cos(angle) * drift + Math.sin(life * 9 + birth * 21) * drift * 0.55
+      positions[i * 3 + 1] = from + life * FIRE.emberRise * S
+      positions[i * 3 + 2] = Math.sin(angle) * drift
+      // Additive blending, so fading to black IS fading out — no per-particle
+      // alpha needed. Cooling from yellow toward red on the way up is what a
+      // rising ember actually does.
+      const b = Math.max(
+        0,
+        dawn * Math.pow(1 - life, 1.6) * (0.55 + 0.45 * Math.sin(t * 22 + birth * 37))
+      )
+      colors[i * 3] = b
+      colors[i * 3 + 1] = b * (0.52 - life * 0.34)
+      colors[i * 3 + 2] = b * (0.16 - life * 0.13)
+    }
+    points.geometry.attributes.position.needsUpdate = true
+    points.geometry.attributes.color.needsUpdate = true
+  })
+
+  return (
+    <>
+      <mesh position={[0, FIRE.logHeight * S * 0.5, 0]}>
+        <coneGeometry args={[FIRE.logRadius * S, FIRE.logHeight * S, 6]} />
+        {/* Charred wood with an ember in it. The last pass ran emissive
+            #C2500F at 0.5 over a light base and came out salmon pink — a
+            plastic wedge beside the fire rather than the fuel under it. */}
+        <meshStandardMaterial color="#1E150E" emissive="#5A1D04" emissiveIntensity={0.28} roughness={1} />
+      </mesh>
+
+      {/* Squashed on Y and seated so its lower edge runs into the hillside, so
+          it reads as light lying ON the clearing rather than as a second,
+          rounder flame behind the first. renderOrder keeps the three additive
+          billboards stacked pool → body → core however the camera moves; they
+          share a position, so distance sorting alone cannot decide it. */}
+      <sprite ref={poolRef} position={[0, FIRE.logHeight * S * 0.9, 0]} renderOrder={1}>
+        <spriteMaterial
+          map={poolTex}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          fog={false}
+        />
+      </sprite>
+
+      <sprite ref={bodyRef} renderOrder={2}>
+        <spriteMaterial
+          map={flameTex}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          fog={false}
+        />
+      </sprite>
+
+      <sprite ref={coreRef} renderOrder={3}>
+        <spriteMaterial
+          map={flameTex}
+          color="#FFE9B0"
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          fog={false}
+        />
+      </sprite>
+
+      {/* Never culled: the embers move every frame, so the bounding sphere
+          would have to be recomputed with them — and the fire is a couple of
+          world units across and on screen the whole time it burns. */}
+      <points ref={emberRef} frustumCulled={false} renderOrder={4}>
+        <bufferGeometry />
+        <pointsMaterial
+          map={emberTex}
+          size={FIRE.emberSize * S}
+          sizeAttenuation
+          vertexColors
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          fog={false}
+        />
+      </points>
+    </>
+  )
 }
 
 function Shelters({
@@ -473,11 +858,8 @@ function Shelters({
   dawnTo: number
 }) {
   const lamp = useLampTexture()
-  const flame = useFlameTexture()
   const glowRefs = useRef<(THREE.Sprite | null)[]>([])
   const windowRefs = useRef<(THREE.MeshBasicMaterial | null)[]>([])
-  const flameRefs = useRef<(THREE.Sprite | null)[]>([])
-  const fireGlowRefs = useRef<(THREE.Sprite | null)[]>([])
 
   useFrame(({ clock }) => {
     const p = reduceMotion ? 0.1 : (progressRef.current ?? 0)
@@ -489,7 +871,7 @@ function Shelters({
     // have put the camp out before most of the brand story had been read. The
     // window is passed in from the act-1 exit, so the range is inhabited for
     // exactly as long as the brand frame holds, and empty the moment it goes.
-    const dawn = 1 - Math.min(1, Math.max(0, (p - dawnFrom) / Math.max(0.0001, dawnTo - dawnFrom)))
+    const dawn = dawnLevel(p, dawnFrom, dawnTo)
     const t = clock.elapsedTime
     SHELTERS.forEach((sh, i) => {
       // Two detuned sines read as a flame guttering; a single sine reads as a
@@ -503,36 +885,6 @@ function Shelters({
         mat.opacity = dawn * flicker * 0.75
         const s = sh.scale * (0.95 + flicker * 0.12)
         sprite.scale.set(s, s, s)
-      }
-
-      // The fire runs faster and rougher than the window it sits beside — a
-      // third sine an octave up, and the vertical scale moves with it, because
-      // a real flame changes height more than it changes brightness.
-      const fl = flameRefs.current[i]
-      if (fl) {
-        const lick =
-          0.86 +
-          Math.sin(t * 5.7 + sh.phase) * 0.1 +
-          Math.sin(t * 11.3 + sh.phase * 3) * 0.07 +
-          Math.sin(t * 19.1 + sh.phase * 5) * 0.04
-        const mat = fl.material as THREE.SpriteMaterial
-        mat.opacity = dawn * lick
-        const S = sh.scale
-        fl.scale.set(0.5 * S * (0.92 + lick * 0.12), 0.78 * S * (0.82 + lick * 0.26), 1)
-        // Sprites are centred, so growing one has to lift it by half the growth
-        // or the flame sinks into the ground as it flares.
-        fl.position.y = worldFireBase(sh) + fl.scale.y / 2
-      }
-      const fg = fireGlowRefs.current[i]
-      if (fg) {
-        const mat = fg.material as THREE.SpriteMaterial
-        const lick = 0.8 + Math.sin(t * 5.7 + sh.phase) * 0.14 + Math.sin(t * 13.9 + sh.phase * 2) * 0.06
-        mat.opacity = dawn * lick * 0.5
-        // 1.5 → 0.95 of the hut's own scale. At 1.5 this came out ~61px
-        // across against a 36px hut: not light on a clearing, a haze with a
-        // building in it, and it washed the flame out from underneath.
-        const s = sh.scale * (0.95 + lick * 0.3)
-        fg.scale.set(s, s * 0.62, s)
       }
     })
   })
@@ -589,61 +941,20 @@ function Shelters({
             </sprite>
 
             {/* ── The bonfire ──────────────────────────────────────────────
-                Three pieces and no more, because this burns at roughly twenty
-                pixels tall and anything finer is wasted geometry:
-
-                  the logs   a squat dark cone — the fuel, and the thing that
-                             stops the flame reading as a floating spark
-                  the flame  one additive billboard carrying the flame texture,
-                             licking in height as much as in brightness
-                  the ground the light it throws, a wide flat bloom under it
-
-                All of it `fog={false}` for the same reason the window is: a
-                fire you cannot see through fog is not doing its job, and the
-                weather switch is allowed to obscure the mountain but not to
-                put the camp out. */}
+                The camp's fire, and act 1's subject. Everything it is made of
+                lives in `Campfire`; the group here only says where the ground
+                under it is, which is NOT the ground under the hut — this slope
+                drops about 0.4 of a unit across the clearing. */}
             {sh.fire && (
               <group position={[FIRE_OFFSET.x * S, worldFireBase(sh), FIRE_OFFSET.z * S]}>
-                <mesh position={[0, 0.07 * S, 0]}>
-                  <coneGeometry args={[0.26 * S, 0.2 * S, 6]} />
-                  {/* Lit from inside by the fire it is holding up, which is
-                      what stops it reading as a dark lump under a bright
-                      sprite. */}
-                  <meshStandardMaterial color="#3A2A1C" emissive="#C2500F" emissiveIntensity={0.5} roughness={1} />
-                </mesh>
-
-                <sprite
-                  ref={(el) => {
-                    flameRefs.current[i] = el
-                  }}
-                  position={[0, 0.4 * S, 0]}
-                >
-                  <spriteMaterial
-                    map={flame}
-                    transparent
-                    depthWrite={false}
-                    blending={THREE.AdditiveBlending}
-                    fog={false}
-                  />
-                </sprite>
-
-                {/* Sits just above the ground and is squashed on Y, so it reads
-                    as light lying ON the clearing rather than as a second,
-                    rounder flame behind the first. */}
-                <sprite
-                  ref={(el) => {
-                    fireGlowRefs.current[i] = el
-                  }}
-                  position={[0, 0.1 * S, 0]}
-                >
-                  <spriteMaterial
-                    map={lamp}
-                    transparent
-                    depthWrite={false}
-                    blending={THREE.AdditiveBlending}
-                    fog={false}
-                  />
-                </sprite>
+                <Campfire
+                  scale={S}
+                  phase={sh.phase}
+                  progressRef={progressRef}
+                  reduceMotion={reduceMotion}
+                  dawnFrom={dawnFrom}
+                  dawnTo={dawnTo}
+                />
               </group>
             )}
           </group>
@@ -1087,6 +1398,37 @@ export default function TerrainScene({
 }) {
   return (
     <Canvas
+      // ── MEASURE THE LAYOUT BOX, NOT THE PAINTED ONE ──────────────────────
+      //
+      // This is the reason the range lurched partway through act 1 and again
+      // on the way back up.
+      //
+      // SummitHero scales this canvas's ancestor — `RANGE_ZOOM_ACT1` and then
+      // `RANGE_ZOOM_END`, a CSS `scale` from 1 to 1.30 across the pin. R3F
+      // sizes its renderer from react-use-measure, which by default reads
+      // `getBoundingClientRect()` — and a bounding rect INCLUDES every
+      // transform on the way up the tree. So the scaled canvas measured itself
+      // as 1.15x its own layout box and resized to that, and the CSS scale then
+      // multiplied on top: the visitor saw a 1.15 zoom snap to 1.32 in one
+      // frame, with the camera's aspect ratio re-derived under it, which is the
+      // sideways shift that came with the jump.
+      //
+      // It fired on a 50ms debounce off react-use-measure's own scroll
+      // listener, so it landed at whatever moment the scroll stream paused —
+      // mid-act-1 — and again as the scale unwound back to 1 at the top.
+      //
+      // `offsetSize` switches width/height to `offsetWidth`/`offsetHeight`,
+      // which are layout values and immune to transforms: the canvas now stays
+      // at its real 100vw x 100svh however far the range is zoomed, and the
+      // scale is purely the visual push it was written to be.
+      //
+      // `scroll: false` retires the listener that was doing the sampling. Every
+      // scroll event on the page re-measured this element behind a debounce,
+      // and with the size no longer moving all that survives is left/top —
+      // which R3F only reads for pointer maths under a non-default
+      // `eventPrefix`. We use the default ('offset'), so those are unread, and
+      // the ResizeObserver still catches every real size change.
+      resize={{ offsetSize: true, scroll: false }}
       // Off-screen, nothing renders at all. The hero is pinned for 260% of
       // scroll and then done with; before this the scene kept drawing the full
       // camp at ~77 draw calls the whole time a visitor read the rest of the
