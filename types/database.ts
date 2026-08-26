@@ -665,6 +665,68 @@ export interface HomeConfig {
   // defaults — the previous hardcoded figures were invented.
   stats: HomeStat[]
   showcase: HomeShowcaseRail[]
+  /** The Trails section's cards. Optional because settings rows written before
+   *  migration 092 do not have the key; `app/page.tsx` falls back to
+   *  DEFAULT_HOME_TRAILS, which is the four routes that used to be hardcoded. */
+  trails?: HomeTrail[]
+}
+
+/**
+ * One piece of pre-set DEWDROPZ artwork offered in the customisation studio.
+ *
+ * The brief's "pre-set design ready library of DEWDROPZ", which the studio has
+ * never had — until now it offered exactly one way in, "upload your own", which
+ * silently excluded every customer who is not a designer.
+ *
+ * See migration 092 for the table and `actions/designLibrary.ts` for the reads
+ * and writes. `collection` is free text, NOT a foreign key into `collections`:
+ * those are ranges of physical garments, and a design collection is a different
+ * thing that happens to share the word.
+ */
+export interface LibraryDesign {
+  id: string
+  name: string
+  slug: string
+  image_url: string
+  collection: string
+  sort: number
+  active: boolean
+  created_at: string
+}
+
+/**
+ * One card in the homepage's Trails section.
+ *
+ * The brief: "Keep options so that DEWDROPZ team can add more treks etc in this
+ * section with the current layout — Easy-Moderate, Season, days and writeup."
+ * That is exactly these fields, and nothing beyond them: this shape is what the
+ * card renders, so a route added in /admin/homepage cannot arrive missing
+ * something the layout needs.
+ *
+ * Deliberately NOT a reference into lib/constants' TRAILS. The point of the
+ * request is that a route can be added without a deploy, so a card carries its
+ * own copy of everything it draws.
+ */
+export interface HomeTrail {
+  /** Used as the React key and, when a matching route exists in the /treks
+   *  guide, to deep-link the card at it. A slug with no guide entry still
+   *  renders — the card just links to the guide index. */
+  slug: string
+  name: string
+  /** Free text, e.g. "3,800m". Shown as the corner badge on the photograph. */
+  altitude: string
+  /** "Easy", "Moderate", "Easy–Moderate", "Hard" — free text on purpose, the
+   *  brief names grades the old fixed union did not have. */
+  difficulty: string
+  /** e.g. "4–6 days". */
+  duration: string
+  /** Three-letter month names, matching MONTHS in the section. Anything else
+   *  simply never lights a cell rather than breaking the strip. */
+  bestMonths: string[]
+  /** The writeup under the month strip. One or two sentences. */
+  season: string
+  /** Absolute URL. Must be on an allowed remote host — see next.config.ts. */
+  image: string
 }
 
 export interface HomeStat {

@@ -31,7 +31,7 @@ import {
   Settings,
   ExternalLink,
   ChevronDown,
-  Undo2, Mountain,} from 'lucide-react'
+  Undo2, Mountain, Palette,} from 'lucide-react'
 
 const navGroups = [
   {
@@ -49,6 +49,7 @@ const navGroups = [
       { href: '/admin/categories', label: 'Categories', icon: FolderTree },
       { href: '/admin/tags', label: 'Tags', icon: Hash },
       { href: '/admin/attributes', label: 'Attributes', icon: Shapes },
+      { href: '/admin/designs', label: 'Design Library', icon: Palette },
       { href: '/admin/homepage', label: 'Homepage', icon: LayoutTemplate },
     ],
   },

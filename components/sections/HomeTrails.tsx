@@ -2,6 +2,7 @@ import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLUR_DATA_URL, TRAILS } from '@/lib/constants'
+import type { HomeTrail } from '@/types/database'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -22,16 +23,27 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 // to. The month strip carries over from /treks because season is the single
 // most consequential decision on any of these routes, and twelve cells say it
 // faster than a paragraph.
-export default function HomeTrails({ stop }: { stop: TrailStop }) {
-  // Four, chosen for range rather than order: the beginner's snow summit, the
-  // valley walk, the monsoon bloom, and the high pass.
-  const featured = ['kedarkantha', 'har-ki-dun', 'valley-of-flowers', 'kuari-pass']
-    .map((slug) => TRAILS.find((t) => t.slug === slug))
-    .filter((t): t is (typeof TRAILS)[number] => Boolean(t))
+export default function HomeTrails({ trails, stop }: { trails: HomeTrail[]; stop: TrailStop }) {
+  // WHICH ROUTES, AND WHO DECIDES.
+  //
+  // It used to be four slugs written here and looked up in lib/constants —
+  // "chosen for range rather than order: the beginner's snow summit, the valley
+  // walk, the monsoon bloom, and the high pass." A good editorial call that
+  // only a deploy could change. The brief asks for the DEWDROPZ team to be able
+  // to add routes to this section themselves, so the list now arrives as data
+  // from store_settings.home_config.trails (edited at /admin/homepage) and
+  // those same four are its seeded default.
+  const featured = trails
 
   if (featured.length === 0) return null
   // The first trail's photograph doubles as the section's full-bleed plate.
   const lead = featured[0]
+  // A card deep-links into the guide when the guide actually has that route,
+  // and falls back to the index when it does not — an admin can add a route
+  // here that /treks has never heard of, and a link to a 404 is worse than a
+  // link to the list it would have been on.
+  const guideHref = (slug: string) =>
+    TRAILS.some((t) => t.slug === slug) ? `/treks#${slug}` : '/treks'
 
   return (
     <section className="on-dark relative overflow-hidden bg-forest-deep">
@@ -71,12 +83,16 @@ export default function HomeTrails({ stop }: { stop: TrailStop }) {
                 thesis and should look like it. Capped at 60px: at the old 74px
                 the line broke to four ragged lines and the last word hung alone. */}
             <h2 className="mt-4 font-display text-[clamp(34px,4.8vw,60px)] font-light leading-[1.02] text-paper">
-              We don&apos;t just sell the kit.
-              <span className="mt-1 block italic text-dawn-soft">We&apos;ll tell you where to go.</span>
+              The journey starts before the trail.
+              <span className="mt-1 block italic text-dawn-soft">Here&apos;s where to begin.</span>
             </h2>
+            {/* No longer "Eight Uttarakhand routes". The list is admin-editable
+                now, so a hardcoded count would go wrong the first time somebody
+                added a fifth card — the exact failure this section was changed
+                to prevent. */}
             <p className="mt-6 max-w-xl font-body text-sm leading-relaxed text-paper/80 md:text-[15px]">
-              Eight Uttarakhand routes, written the way we&apos;d tell a friend before their first one —
-              how high, how hard, what you pass, and the months that actually make it worth walking.
+              Curated trails, seasonal insights, and practical notes to help you discover your
+              next adventure — before you take the first step.
             </p>
           </div>
 
@@ -96,7 +112,7 @@ export default function HomeTrails({ stop }: { stop: TrailStop }) {
           {featured.map((trail, i) => (
             <li key={trail.slug} className="w-[74vw] flex-shrink-0 snap-start sm:w-[46vw] lg:w-auto">
               <Link
-                href="/treks"
+                href={guideHref(trail.slug)}
                 className="group flex h-full flex-col rounded-sm border border-paper/15 bg-ink/45 p-4 backdrop-blur-md transition-colors duration-300 hover:border-dawn/50 hover:bg-ink/60"
               >
                 <div className="relative aspect-[5/4] overflow-hidden rounded-[2px] bg-forest-deep">
@@ -128,7 +144,7 @@ export default function HomeTrails({ stop }: { stop: TrailStop }) {
                   <div className="font-mono text-[8.5px] uppercase tracking-[0.16em] text-paper/40">When to go</div>
                   <ul className="mt-1.5 flex gap-[3px]" aria-label={`Best months: ${trail.bestMonths.join(', ')}`}>
                     {MONTHS.map((m) => {
-                      const good = (trail.bestMonths as readonly string[]).includes(m)
+                      const good = trail.bestMonths.includes(m)
                       return (
                         <li
                           key={m}

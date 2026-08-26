@@ -7,6 +7,43 @@ import type { Category, ProductWithCollection } from '@/types/database'
 // The packer's entry point. The hero serves the dreamer; this serves the person
 // with a trek booked in three weeks and a checklist — straight lines into the
 // catalogue by what they need, before any more storytelling.
+
+/**
+ * Which tiles this section shows.
+ *
+ * Exported because `app/page.tsx` has to know the answer BEFORE rendering: the
+ * section sits inside a `data-trail-*` wrapper that puts a chapter on the trail
+ * HUD, so a page that guesses differently from the section advertises a stop
+ * that is not on the page. One function, both callers.
+ *
+ * THE STOCK RULE, AND WHEN IT DOES NOT APPLY
+ *
+ * A tile with nothing behind it is a dead end — tap "Bottles", land on an empty
+ * shop. So the default ("show every active category") is still filtered down to
+ * categories that actually have products in them.
+ *
+ * But `featuredSlugs` is not a default: it is somebody in /admin/settings
+ * naming exactly which tiles this section carries. The 23 August brief does
+ * precisely that — "In this section keep Caps, Coffee Mugs, Bottles, Tumblers
+ * (4 Items)" — for a range that is still being photographed and listed. An
+ * explicit editorial pick is honoured as given, and the tiles say "Coming soon"
+ * rather than a piece count, which the tile has always known how to render.
+ */
+export function pickEssentials(
+  categories: Category[],
+  products: ProductWithCollection[],
+  featuredSlugs: string[] = []
+): Category[] {
+  if (featuredSlugs.length) {
+    return featuredSlugs
+      .map((s) => categories.find((c) => c.slug === s))
+      .filter((c): c is Category => Boolean(c))
+  }
+  return categories.filter((tile) =>
+    products.some((p) => p.categories?.some((pc) => pc.category_id === tile.id))
+  )
+}
+
 export default function ShopByCategory({
   categories,
   products,
@@ -15,26 +52,15 @@ export default function ShopByCategory({
 }: {
   categories: Category[]
   products: ProductWithCollection[]
-  /** Admin's pick, in their order. Empty = every active top-level category,
-   *  which is what this section did before the setting existed. */
+  /** Admin's pick, in their order. Empty = every active category that has
+   *  stock, which is what this section did before the setting existed. See
+   *  `pickEssentials` for why a non-empty pick skips the stock filter. */
   featuredSlugs?: string[]
   /** The day-arc stop. Was the literal "13:00 · Pack Check" under a wrapper
    *  that said 06:40 — the largest of the four drifts at 6h20. */
   stop: TrailStop
 }) {
-  const shown = featuredSlugs.length
-    ? featuredSlugs.map((s) => categories.find((c) => c.slug === s)).filter((c): c is Category => Boolean(c))
-    : categories
-
-  // A category tile with nothing behind it is a dead end: the shopper taps
-  // "Bottles & Extras" and lands on an empty shop. `product_categories` is
-  // currently empty, so every tile on this page was one — 757px of scroll
-  // promoting four doors that all opened onto nothing. Tiles now have to be
-  // stocked to appear, and with none stocked the section stands down entirely
-  // rather than holding its shape with hollow promises.
-  const stocked = shown.filter((tile) =>
-    products.some((p) => p.categories?.some((pc) => pc.category_id === tile.id))
-  )
+  const stocked = pickEssentials(categories, products, featuredSlugs)
 
   if (stocked.length === 0) return null
 
@@ -46,10 +72,10 @@ export default function ShopByCategory({
           <div>
             <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
             <h2 className="font-display text-[clamp(34px,5vw,54px)] text-text mt-2">
-              What are you packing for?
+              Choose Your Essentials
             </h2>
             <p className="mt-3 font-display italic text-base text-mid max-w-md">
-              &ldquo;Lay everything out. If you can&apos;t say why it&apos;s in the pack, it stays behind.&rdquo;
+              Trail Companions — From the cap on your head to the bottle in your pack.
             </p>
           </div>
           <Link
@@ -94,7 +120,11 @@ export default function ShopByCategory({
                     </p>
                   )}
                   <span className="mt-3 inline-block font-body text-[10px] tracking-[0.12em] uppercase text-paper/80 border-b border-sage/50 pb-0.5 transition-colors duration-300 group-hover:text-paper group-hover:border-sage">
-                    Shop {tile.name.split(' ')[0]} →
+                    {/* The whole name, not `name.split(' ')[0]`. With the four
+                        essentials in place that first word was doing real
+                        damage: "Coffee Mugs" advertised itself as "Shop
+                        Coffee", which is a thing this shop does not sell. */}
+                    Shop {tile.name} →
                   </span>
                 </div>
               </Link>

@@ -14,7 +14,6 @@ import type { Collection, Product } from '@/types/database'
 // @react-three/fiber at module scope, so pulling one pure helper out of it put
 // the whole engine in the initial document. See lib/season.ts.
 import { resolveSeason, type Season } from '@/lib/season'
-import { formatPrice } from '@/lib/utils'
 import type { DragState } from './TerrainScene'
 
 const TerrainScene = dynamic(() => import('./TerrainScene'), { ssr: false })
@@ -47,68 +46,143 @@ const TerrainScene = dynamic(() => import('./TerrainScene'), { ssr: false })
 // (near plane), and that difference in rate is what makes it read as depth
 // rather than as a photo being zoomed.
 //
-//   ESTABLISHING  the range, the promise, and the first blank already standing
-//                 in frame. Nothing to scroll for; the shop is already legible.
-//   THE PASS      the camera flies down the line of blanks. Each grows, holds
-//                 at full size with its name and price, then passes the lens and
-//                 reveals the next one that was always behind it.
-//   THE PRINT     the last blank holds and its print boundary draws onto the
-//                 chest — the customisation beat, at the structural centre of
-//                 the move rather than as a bullet point beside it.
-//   THE MAP       the camera keeps pushing until it is inside that print, and
-//                 the print resolves into a contour map. Treks, coming soon.
-//                 The loop closes: mountain → blank → print → mountain.
+//   THE RANGE     the mountain, the promise, one line, one door. Nothing to
+//                 scroll for; the shop is already legible.
+//   THE RANGES    the collections, one plate each, arriving one at a time out
+//                 of the same space. What there IS, before what you can do to
+//                 it — this act was added because the film used to go straight
+//                 from the brand to a design tool, handing somebody an editor
+//                 before showing them anything to edit.
+//   THE PRINT     a blank on a lit seamless, its print boundary drawing onto
+//                 the chest — the customisation beat, at the structural centre
+//                 of the move rather than as a bullet point beside it.
+//   THE COMPANY   the camera reaches a ridge with two people on it. Trek Buddy,
+//                 and the invitation. The loop closes: mountain → range →
+//                 print → mountain.
 //
 /** How many blanks act 1 shows. */
 const MAX_BLANKS = 3
+/** How many collection plates act 2 racks up. Three is the catalogue today. */
+const MAX_RANGES = 3
 
-// Three acts, and the frames where each hands over to the next.
-// One day, three acts. The through-line is light: act 1 is dawn on the range,
-// act 2 is the working day in the studio, act 3 is night — planning tomorrow's
-// company. The background makes that arc literal (night falls during the
-// studio's exit), so the acts read as hours of the same day rather than as
-// three slides.
-const ACT1_OUT = [0.16, 0.28] as const
-const ACT2_IN = [0.22, 0.34] as const
-// Act 2 is not a screenshot of an editor — it is an edit session, scrubbed:
-// guides flash on, the mark draws, the words type, the layer lights as each
-// element lands, the selection snaps on last, the zoom readout ticks up.
-const GUIDES_ON = [0.35, 0.38] as const
-const MARK_DRAW = [0.37, 0.47] as const
-const TYPE_ON = [0.49, 0.59] as const
-const SELECT_ON = [0.6, 0.635] as const
-const ZOOM_TICK = [0.35, 0.6] as const
-const ACT2_OUT = [0.67, 0.77] as const
-// Act 3's footage decodes only while it is on screen.
-const VIDEO_LIVE = 0.66
-const ACT3_IN = [0.73, 0.83] as const
-// ACT 3 is one moment, not a lesson.
+// FOUR acts, and the frames where each hands over to the next.
+//
+// One day, four acts. The through-line is light: act 1 is dawn on the range,
+// act 2 is the collections in that first light, act 3 is the working day in the
+// studio, act 4 is night — planning tomorrow's company. The background makes
+// that arc literal (night falls during the studio's exit), so the acts read as
+// hours of the same day rather than as four slides.
+//
+// ── WHY THE WHOLE BUDGET WAS RE-CUT ─────────────────────────────────────────
+//
+// The collections act is new and it goes SECOND, which is the one position that
+// cannot be added to without moving everything: the studio and Trek Buddy each
+// slide a whole act later. So rather than squeezing a fourth act into three
+// acts' worth of scroll, the pin grew from +=180% to +=250% — the same distance
+// per act as before, near enough — and every marker below was re-derived from
+// scratch against the new normalised 0..1.
+//
+// The shape of each handover is unchanged and deliberate: the incoming act's IN
+// starts BEFORE the outgoing act's OUT finishes, so the two cross-dissolve
+// through each other rather than cutting. Those overlaps are the ~0.05 you can
+// see between each pair below, and they are the reason this reads as one camera
+// move instead of four.
+//
+// ── ACT 1 IS NOW TWICE AS LONG ──────────────────────────────────────────────
+//
+// It used to hold to 0.11 and be gone by 0.20 — half a screen of scroll for the
+// frame that introduces the brand, and the shortest of the four. Worse, the
+// range's zoom ran as ONE linear scale across the whole hero, so the part of it
+// act 1 actually contained was 1.00 → 1.09: a move too small to read as a move.
+// The brand frame looked static and then left.
+//
+// It now holds to 0.23 and hands over at 0.32 — near enough a full screen — and
+// the zoom is cut in two so that the act-1 half COMPLETES at exactly the moment
+// act 1 does (see RANGE_ZOOM_ACT1 below). The mountain arrives, settles, and
+// only then does the story move on.
+const ACT1_OUT = [0.23, 0.32] as const
+
+// ── ACT 2 — the collections ────────────────────────────────────────────────
+// The catalogue's top level, in the film, before the tool that customises it.
+// The order matters and is the reason this act was asked for: a visitor met
+// the brand (act 1) and was then handed a design editor (the old act 2) without
+// ever being shown what there was to design ON. Ranges first, then the bench.
+const ACT2_IN = [0.28, 0.37] as const
+/** The three plates land one at a time rather than as a row appearing. */
+const RANGES_IN = [0.37, 0.47] as const
+const ACT2_OUT = [0.47, 0.55] as const
+
+// ── ACT 3 — the studio ─────────────────────────────────────────────────────
+// Not a screenshot of an editor — an edit session, scrubbed: guides flash on,
+// the mark draws, the words type, the layer lights as each element lands, the
+// selection snaps on last, the zoom readout ticks up.
+const ACT3_IN = [0.51, 0.60] as const
+const GUIDES_ON = [0.605, 0.63] as const
+const MARK_DRAW = [0.625, 0.695] as const
+const TYPE_ON = [0.705, 0.76] as const
+const SELECT_ON = [0.765, 0.79] as const
+const ZOOM_TICK = [0.605, 0.765] as const
+const ACT3_OUT = [0.79, 0.86] as const
+
+// ── ACT 4 — Trek Buddy ─────────────────────────────────────────────────────
+// Act 4's footage decodes only while it is on screen.
+const VIDEO_LIVE = 0.78
+const ACT4_IN = [0.835, 0.905] as const
+// ACT 4 is one moment, not a lesson.
 //
 // It has been three other things: a day-arc of four columns, then a scrubbed
 // walkthrough of the product's loop, then that walkthrough with a progress
 // spine. Each was more informative than the last and each was wrong for the
 // same reason — a hero act is a few seconds of scroll, and this one was
 // carrying a headline, a lede, four numbered steps, two buttons and a card of
-// 13px detail. It also wore act two's exact layout, left copy against a right
-// panel, so the film had two identical frames in it.
+// 13px detail. It also wore the studio's exact layout, left copy against a
+// right panel, so the film had two identical frames in it.
 //
 // The explaining now happens further down the page, where TrekBuddyBand has
 // the room to do it properly. So this returns to the hero's own stated rule:
-// one thing at a time. Centred, like act one, so the film reads
-// brand → tool → invitation with the offset editor between two centred frames.
-const ACT3_COPY = [0.84, 0.93] as const
+// one thing at a time. Centred, like act one — and with the collections act
+// now sitting second, the film alternates rather than repeating a composition:
+//   centred type → a rack of plates → an offset workbench → centred type.
+const ACT4_COPY = [0.91, 0.97] as const
 
-const CHAPTER_1TO2 = 0.25
-const CHAPTER_2TO3 = 0.75
+/**
+ * Which act holds the frame, as published on `<body data-hero-act>`.
+ *
+ * NavBar reads that attribute and lights the matching door, so these strings
+ * are an interface, not a local enum — '' means act 1, which owns no nav link.
+ */
+export type HeroAct = '' | 'collections' | 'studio' | 'trek'
+
+const CHAPTER_1TO2 = 0.30
+const CHAPTER_2TO3 = 0.53
+const CHAPTER_3TO4 = 0.85
 // The range does not leave between acts. It dims to a held level and stays
-// there as the room act 2 is standing in — cutting to black and zooming a panel
-// at the camera was the "sudden change": two moves at once, and a void between
-// them. It only goes fully dark once act 3's footage is ready to replace it.
-const RANGE_DIM = [0.12, 0.32] as const
-/** What the range holds at behind the studio — present, not competing. */
+// there as the room acts 2 and 3 are standing in — cutting to black and zooming
+// a panel at the camera was the "sudden change": two moves at once, and a void
+// between them. It only goes fully dark once act 4's footage is ready to
+// replace it, which is now two acts later than it used to be: the collections
+// plates want the ridge behind them as much as the workbench does.
+// Tracks act 1's exit rather than leading it. At [0.09, 0.24] against the old
+// cut this was roughly act 1's own window; against the longer act 1 it would
+// have started dimming the mountain a fifth of the way into the brand story,
+// with the headline still at full opacity on top of a range going dark.
+const RANGE_DIM = [0.21, 0.36] as const
+/** What the range holds at behind the plates and the bench — present, not competing. */
 const RANGE_HELD = 0.26
-const RANGE_OUT = [0.62, 0.74] as const
-const RANGE_DARK = 0.76
+const RANGE_OUT = [0.72, 0.83] as const
+const RANGE_DARK = 0.85
+
+// ── THE ZOOM, IN TWO HALVES ────────────────────────────────────────────────
+//
+// One linear `scale: 1.24` across the whole hero meant act 1 only ever showed
+// the first tenth of it. Cutting it in two gives act 1 a move with a beginning
+// and an end: the range pushes from 1 to RANGE_ZOOM_ACT1 and SETTLES there
+// exactly as the brand frame hands over — eased out, so it arrives rather than
+// stopping — and then resumes a slow linear creep to RANGE_ZOOM_END underneath
+// the three acts that follow. Same total travel, but the half a visitor is
+// looking at while they read the headline is now the half that reads.
+const RANGE_ZOOM_ACT1 = 1.16
+const RANGE_ZOOM_END = 1.30
 
 
 // "Mobile" here means how the page is *consumed*, not just how wide it is: on a
@@ -124,21 +198,6 @@ function clampRange(value: number, min: number, max: number) {
 
 const SEASONS = ['clear', 'fog', 'rain', 'snow'] as const
 
-/**
- * What each condition does to the range, said as a thing you would notice
- * rather than as a measurement.
- *
- * Not "visibility 200 m". This sits under a real coordinate on a real hero,
- * and a fabricated reading beside a true one reads as a live weather report
- * for Dehradun, which it is not — it is a switch on a 3D scene.
- */
-const SEASON_NOTE: Record<(typeof SEASONS)[number], string> = {
-  clear: 'The whole range in view.',
-  fog:   'The ridge comes and goes.',
-  rain:  'Everything darker, and louder.',
-  snow:  'Quiet, and the light goes flat.',
-}
-
 // The weather, as a control the scene itself previews.
 //
 // The last pass drew four little windows, one per condition, each with its own
@@ -149,9 +208,14 @@ const SEASON_NOTE: Record<(typeof SEASONS)[number], string> = {
 // looking at.
 //
 // So the previews are gone and the type does the work instead. Bigger, plainly
-// set, with the live condition marked and named — and the line underneath says
-// what the range looks like in it, which is the only thing a thumbnail was
-// ever going to tell you.
+// set, with the live condition marked and named.
+//
+// There used to be a line under the four names describing what the range looks
+// like in the live condition — "The whole range in view." and three siblings.
+// The 23 August mark-up strikes it, and it was the weakest thing in the frame
+// anyway: it described, in a caption, the picture filling the screen behind it.
+// The switch stays exactly as it was; clear / fog / rain / snow still drive the
+// scene, which is the part the brief asks us to keep.
 function WeatherRail({
   season,
   onPick,
@@ -195,18 +259,18 @@ function WeatherRail({
           )
         })}
       </div>
-
-      <p className="mt-3.5 max-w-[11rem] font-body text-[12px] leading-relaxed text-paper/55">
-        {SEASON_NOTE[season as (typeof SEASONS)[number]] ?? ''}
-      </p>
     </div>
   )
 }
 
 export default function SummitHero({
   products = [],
+  collections = [],
 }: {
   products?: Product[]
+  /** The catalogue's top level, and act 2's entire content. Was declared here
+   *  and never destructured — the homepage has always passed it and the hero
+   *  has always thrown it away. */
   collections?: Collection[]
 }) {
   const sectionRef = useRef<HTMLElement>(null)
@@ -219,6 +283,7 @@ export default function SummitHero({
   const rangeRef = useRef<HTMLDivElement>(null)
   const copyRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
+  const rangesRef = useRef<HTMLDivElement>(null)
   const studioRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   // Flipped twice in a whole scroll, not per frame: once the range has faded out
@@ -226,9 +291,9 @@ export default function SummitHero({
   const [rangeLive, setRangeLive] = useState(true)
   const [videoLive, setVideoLive] = useState(false)
   /** Which act holds the frame. Already published to document.body for the
-   *  nav; mirrored into state because the two hidden acts need `inert`
+   *  nav; mirrored into state because the three hidden acts need `inert`
    *  toggled in the render tree, and a body dataset attribute cannot do that. */
-  const [heroAct, setHeroAct] = useState<'' | 'studio' | 'trek'>('')
+  const [heroAct, setHeroAct] = useState<HeroAct>('')
   const [reduceMotion, setReduceMotion] = useState(false)
   const [ambientMobile, setAmbientMobile] = useState(false)
   const [segments, setSegments] = useState(90)
@@ -264,13 +329,36 @@ export default function SummitHero({
     [products]
   )
 
-  // The blank on the bench in act 2 — the cheapest, because it is the one most
+  // The blank on the bench in act 3 — the cheapest, because it is the one most
   // people will actually print on.
   const studioBlank = garments.length ? garments[garments.length - 1] : null
 
-  const fromPrice = garments.length
-    ? formatPrice(Math.min(...garments.map((g) => g.price)))
-    : null
+  // ── ACT 2's content ────────────────────────────────────────────────────────
+  //
+  // Whatever collections actually exist, in their admin-set sort order, with
+  // their real taglines. Nothing here is a hardcoded list of three: a renamed
+  // or retired collection can never leave a ghost on the front door, and a
+  // catalogue with none simply skips the act (see `hasRanges` below) rather
+  // than holding a quarter of the hero open on an empty rack.
+  //
+  // Capped at MAX_RANGES because this is a film frame, not a grid — four plates
+  // at this size stop being a rack and start being a page.
+  const ranges = useMemo(
+    () => collections.filter((c) => c.image_url).slice(0, MAX_RANGES),
+    [collections]
+  )
+  const hasRanges = ranges.length > 0
+
+  /** The chapter rail's labels, numbered to match what is actually on screen. */
+  const chapterLabels = useMemo(
+    () =>
+      (hasRanges
+        ? ['The range', 'The ranges', 'The studio', 'Trek Buddy']
+        : ['The range', 'The studio', 'Trek Buddy']
+      ).map((label, i) => `${String(i + 1).padStart(2, '0')} · ${label}`),
+    [hasRanges]
+  )
+
 
   // Pinning re-parents this section into a pin-spacer, and R3F takes its one
   // measurement during that churn — the canvas latches its unsized 300x150
@@ -282,6 +370,20 @@ export default function SummitHero({
   // a single frame (the scene is dynamically imported and arrives later), so it
   // watches for the canvas and re-measures until the canvas has a real size.
   // Self-terminating and bounded: in practice it fires once or twice.
+  //
+  // BOUNDED, AND ONLY WHILE NOBODY IS SCROLLING. This nudge works by side
+  // effect: a synthetic `resize` does not change any layout, so R3F's own
+  // ResizeObserver ignores it — what actually re-measures the canvas is
+  // ScrollTrigger reacting to the event and re-laying out the pin spacer. That
+  // makes every tick of this interval a potential ScrollTrigger refresh, and it
+  // used to fire up to twenty of them across the first 2.4 seconds. A refresh
+  // that lands while somebody is already scrolling through the hero moves the
+  // ground under them, which is exactly the unasked-for movement being removed.
+  //
+  // So: eight tries instead of twenty, and only while the visitor is still at
+  // the top of the page. Once they have scrolled, the pin has engaged and the
+  // canvas has been measured anyway — the nudge has nothing left to fix and
+  // everything to disturb.
   useEffect(() => {
     if (!mounted || reduceMotion || ambientMobile) return
     let tries = 0
@@ -291,8 +393,12 @@ export default function SummitHero({
         window.clearInterval(id)
         return
       }
+      if (window.scrollY > 4) {
+        window.clearInterval(id)
+        return
+      }
       if (canvas) window.dispatchEvent(new Event('resize'))
-      if (++tries > 20) window.clearInterval(id)
+      if (++tries > 8) window.clearInterval(id)
     }, 120)
     return () => window.clearInterval(id)
   }, [mounted, reduceMotion, ambientMobile])
@@ -395,13 +501,19 @@ export default function SummitHero({
         scrollTrigger: {
           trigger: section,
           start: 'top top',
-          // 4.4 viewport-heights of pinned scroll, cut to 1.8 on the
-          // council's recommendation. `+=440%` resolves against viewport
-          // height, so it was 4.4 screens pinned and ~5.4 to clear before the
-          // page moved at all — with no clickable product anywhere inside it.
-          // TerrainScene.tsx:794 still describes this as "260%", which it has
-          // not been for some time.
-          end: '+=180%',
+          // 4.4 viewport-heights of pinned scroll, cut to 1.8 on the council's
+          // recommendation, then 2.5 for the fourth act, and now 3.0 to buy
+          // act 1 the length it was asked for. Every act is at least as long
+          // as it was at 2.5 and act 1 is nearly twice as long:
+          //
+          //   act 1  0.50 → 0.96 screens        act 3  1.00 → 1.05
+          //   act 2  0.72 → 0.81               act 4  0.45 → 0.50
+          //
+          // The objection that retired 4.4 — a long pin with nothing clickable
+          // inside it — no longer applies: three of the four acts now carry
+          // real links, and act 2 alone carries four.
+          // `+=300%` resolves against viewport height.
+          end: '+=300%',
           pin: true,
           scrub: true,
           // No anticipatePin. It guards against a flicker when a fast native
@@ -412,7 +524,35 @@ export default function SummitHero({
           // pin toggles on and off across it, re-parenting the section between
           // the pin-spacer and normal flow: the jump you feel arriving back at
           // scroll zero.
-          invalidateOnRefresh: true,
+          // NO `invalidateOnRefresh`. It was here, and on a scrubbed timeline
+          // it is a trap.
+          //
+          // `invalidate()` throws away every recorded start value so they get
+          // re-read from the DOM. On a timeline that is scrubbed rather than
+          // played, "the DOM" at refresh time is whatever the CURRENT scroll
+          // position has already animated things to — so every tween that has
+          // finished re-records its start as its own end value and becomes a
+          // no-op, and every tween mid-flight re-records a start it never had.
+          //
+          // Two of those land squarely on the range:
+          //
+          //   .to(range, { opacity: RANGE_HELD }, …)   refresh at progress 0.5
+          //     re-records start 0.26, so scrolling back to act 1 leaves the
+          //     mountain dimmed instead of returning it to full.
+          //   .to(range, { scale: RANGE_ZOOM_END }, …) re-records start 1.205,
+          //     which then disagrees with the fromTo before it about where the
+          //     scale is at the handover — and the range snaps across the gap.
+          //
+          // A refresh fires on every window resize AND on every route change
+          // (LenisProvider does one so it can restore Back/Forward scroll), so
+          // this went off precisely when somebody came back to the page and
+          // scrolled up — the reported symptom.
+          //
+          // Nothing in this timeline needs it: every value here is an opacity,
+          // a scale, a pixel offset or an SVG user-unit length, none of which
+          // are derived from viewport size. ScrollTrigger recalculates its own
+          // start/end on refresh regardless of this flag, so `+=300%` still
+          // re-resolves against the new viewport height.
           onUpdate: (self) => {
             progressRef.current = self.progress
             const live = self.progress < RANGE_DARK
@@ -420,42 +560,122 @@ export default function SummitHero({
             const vid = self.progress > VIDEO_LIVE
             setVideoLive((was) => (was === vid ? was : vid))
             // Which act is holding the frame, published on <body> so the nav
-            // can light the door that matches it. Act two already did this for
-            // the studio; act three now does it for Trek Buddy, so the header
-            // answers the hero instead of sitting inert through it.
-            const inStudio = self.progress >= ACT2_IN[0] && self.progress < ACT2_OUT[1]
-            const inTrek = self.progress >= ACT3_IN[0]
-            const flag = inStudio ? 'studio' : inTrek ? 'trek' : ''
+            // can light the door that matches it — Collections, Customize and
+            // Trek Buddy each own one, so the header answers the hero the whole
+            // way through instead of sitting inert.
+            //
+            // Tested in reverse order (latest act first) because the windows
+            // deliberately overlap at the cross-dissolves: during 0.45–0.49
+            // both the collections and the studio are partly on screen, and the
+            // act that is ARRIVING is the one the nav should be pointing at.
+            const p = self.progress
+            const flag: HeroAct =
+              p >= ACT4_IN[0] ? 'trek'
+              : p >= ACT3_IN[0] ? 'studio'
+              : hasRanges && p >= ACT2_IN[0] && p < ACT3_IN[0] ? 'collections'
+              : ''
             if (document.body.dataset.heroAct !== flag) document.body.dataset.heroAct = flag
-            setHeroAct((was) => (was === flag ? was : (flag as '' | 'studio' | 'trek')))
+            setHeroAct((was) => (was === flag ? was : flag))
           },
         },
       })
 
+      // ── When act 2 is not there ─────────────────────────────────────────
+      // A catalogue with no collections renders no act 2, and act 1 leaving on
+      // schedule would then open a quarter of the hero onto nothing: the brand
+      // gone at 0.20 and the workbench not arriving until 0.45. So act 1 holds
+      // through the empty window instead and hands straight to the studio, and
+      // the range holds its full brightness for exactly as long as act 1 does.
+      // Nothing changes for a normal catalogue — both fall through to the
+      // constants above.
+      const a1Out = hasRanges ? ACT1_OUT : ([ACT3_IN[0] - 0.09, ACT3_IN[0]] as const)
+      const dim = hasRanges ? RANGE_DIM : ([ACT3_IN[0] - 0.12, ACT3_IN[0] + 0.04] as const)
+
       // ACT 1 → out. A lift and a fade, with no scale: act 1 flying at the
       // camera while act 2 flew in from behind it was two zooms crossing, which
       // is what made the handover feel like a jump cut.
-      tl.to(copyRef.current, { opacity: 0, y: -34, duration: ACT1_OUT[1] - ACT1_OUT[0], ease: 'power2.inOut' }, ACT1_OUT[0])
+      tl.to(copyRef.current, { opacity: 0, y: -34, duration: a1Out[1] - a1Out[0], ease: 'power2.inOut' }, a1Out[0])
       // Once it is invisible it must also stop catching clicks. This layer is a
       // full-screen z-20 sheet, so at opacity 0 it still sat over the studio and
       // swallowed every press — which is exactly why "Open the studio" did
       // nothing. Scrubbing back up restores it.
-      tl.set(copyRef.current, { pointerEvents: 'none' }, ACT1_OUT[1])
+      tl.set(copyRef.current, { pointerEvents: 'none' }, a1Out[1])
 
-      // The range keeps creeping the whole way — one slow continuous move under
-      // everything, so the two acts feel like one shot rather than two slides.
-      tl.to(rangeRef.current, { scale: 1.24, duration: RANGE_OUT[1] }, 0)
-        .to(rangeRef.current, { opacity: RANGE_HELD, duration: RANGE_DIM[1] - RANGE_DIM[0] }, RANGE_DIM[0])
+      // Hoisted above act 2, which needs `qa` for its plates. These were declared
+      // in the middle of the studio's block back when the studio was the only
+      // act that queried the DOM.
+      const q = <T extends Element>(sel: string) => section.querySelector<T>(sel)
+      const qa = (sel: string) => section.querySelectorAll<HTMLElement>(sel)
+
+      // THE ZOOM. Act 1's half arrives and settles on act 1's own exit; the
+      // rest creeps on underneath the acts that follow, so the whole hero is
+      // still one continuous move rather than four slides.
+      tl.fromTo(
+        rangeRef.current,
+        { scale: 1 },
+        { scale: RANGE_ZOOM_ACT1, duration: a1Out[1], ease: 'power1.out' },
+        0
+      )
+        .to(
+          rangeRef.current,
+          { scale: RANGE_ZOOM_END, duration: RANGE_OUT[1] - a1Out[1] },
+          a1Out[1]
+        )
+        .to(rangeRef.current, { opacity: RANGE_HELD, duration: dim[1] - dim[0] }, dim[0])
         .to(rangeRef.current, { opacity: 0, duration: RANGE_OUT[1] - RANGE_OUT[0] }, RANGE_OUT[0])
 
-      // ACT 2 → in. The editor comes forward, then its parts settle in order:
+      // ── ACT 2 → in. The collections. ────────────────────────────────────
+      // The masthead settles first and the plates come after it, because the
+      // frame has to say what you are looking at before it hands you three
+      // things to choose between.
+      //
+      // Guarded on `hasRanges`: with no collections in the catalogue this act
+      // is not rendered at all, and building a timeline against nulls would
+      // leave a quarter of the hero as an empty hold.
+      if (hasRanges) {
+        tl.fromTo(
+          rangesRef.current,
+          { opacity: 0, scale: 0.97, y: 20 },
+          { opacity: 1, scale: 1, y: 0, duration: ACT2_IN[1] - ACT2_IN[0], ease: 'power2.out' },
+          ACT2_IN[0]
+        )
+
+        // The plates arrive one at a time out of the same space — the hero's
+        // founding rule is NOTHING ARRIVES from an edge, so they rise and
+        // resolve where they already were rather than sliding in from the
+        // right. The stagger is what makes three pictures read as a rack being
+        // laid out rather than a row switching on.
+        const plates = qa('[data-range-plate]')
+        if (plates.length) {
+          const span = RANGES_IN[1] - RANGES_IN[0]
+          const per = span / (plates.length + 1)
+          plates.forEach((el, i) => {
+            tl.fromTo(
+              el,
+              { opacity: 0, y: 34, scale: 0.94 },
+              { opacity: 1, y: 0, scale: 1, duration: per * 1.9, ease: 'power3.out' },
+              RANGES_IN[0] + i * per
+            )
+          })
+        }
+
+        // ACT 2 → out, past the lens, the same exit the studio takes — so the
+        // two middle acts leave the same way and the film keeps one grammar.
+        tl.to(
+          rangesRef.current,
+          { opacity: 0, scale: 1.14, duration: ACT2_OUT[1] - ACT2_OUT[0], ease: 'power2.in' },
+          ACT2_OUT[0]
+        )
+      }
+
+      // ACT 3 → in. The editor comes forward, then its parts settle in order:
       // board first, then the rails either side of it.
       // Barely any scale — it settles into place rather than rushing the lens.
       tl.fromTo(
         studioRef.current,
         { opacity: 0, scale: 0.965, y: 18 },
-        { opacity: 1, scale: 1, y: 0, duration: ACT2_IN[1] - ACT2_IN[0], ease: 'power2.out' },
-        ACT2_IN[0]
+        { opacity: 1, scale: 1, y: 0, duration: ACT3_IN[1] - ACT3_IN[0], ease: 'power2.out' },
+        ACT3_IN[0]
       )
       const panels = studioRef.current?.querySelectorAll('[data-studio-panel]')
       if (panels?.length) {
@@ -463,7 +683,7 @@ export default function SummitHero({
           panels,
           { opacity: 0, scale: 0.94 },
           { opacity: 1, scale: 1, duration: 0.06, stagger: 0.035, ease: 'power2.out' },
-          ACT2_IN[0] + 0.03
+          ACT3_IN[0] + 0.03
         )
       }
       // ── The edit session ───────────────────────────────────────────────
@@ -471,8 +691,6 @@ export default function SummitHero({
       // guides first (the tool wakes up), then the mark draws, then the words
       // type, then the selection snaps on — because that is the order a person
       // works in, and the layer panel lights to confirm each step.
-      const q = <T extends Element>(sel: string) => section.querySelector<T>(sel)
-      const qa = (sel: string) => section.querySelectorAll<HTMLElement>(sel)
 
       const guides = qa('[data-snap-guide]')
       if (guides.length) {
@@ -540,42 +758,53 @@ export default function SummitHero({
           .to(layerRows[0], { opacity: 1, duration: 0.02 }, TYPE_ON[1])
       }
 
-      // ACT 2 → out, past the lens like everything else — while night falls
-      // behind it, so act 3 opens after dark.
+      // ACT 3 → out, past the lens like everything else — while night falls
+      // behind it, so act 4 opens after dark.
       tl.to(
         studioRef.current,
-        { opacity: 0, scale: 1.18, duration: ACT2_OUT[1] - ACT2_OUT[0], ease: 'power2.in' },
-        ACT2_OUT[0]
+        { opacity: 0, scale: 1.18, duration: ACT3_OUT[1] - ACT3_OUT[0], ease: 'power2.in' },
+        ACT3_OUT[0]
       )
 
-      // ACT 3 → in, dim — the day-arc lights it, not the entrance.
+      // ACT 4 → in, dim — the day-arc lights it, not the entrance.
       tl.fromTo(
         mapRef.current,
         { opacity: 0, scale: 0.86 },
-        { opacity: 1, scale: 1, duration: ACT3_IN[1] - ACT3_IN[0], ease: 'power2.out' },
-        ACT3_IN[0]
+        { opacity: 1, scale: 1, duration: ACT4_IN[1] - ACT4_IN[0], ease: 'power2.out' },
+        ACT4_IN[0]
       )
       // The invitation arrives in order — eyebrow, headline, line, door —
       // the same unhurried stagger act one opens with, so the hero closes the
       // way it began.
-      const act3 = qa('[data-act3]')
-      if (act3.length) {
-        const span = ACT3_COPY[1] - ACT3_COPY[0]
-        const per = span / (act3.length + 1)
-        act3.forEach((el, i) => {
+      const act4 = qa('[data-act4]')
+      if (act4.length) {
+        const span = ACT4_COPY[1] - ACT4_COPY[0]
+        const per = span / (act4.length + 1)
+        act4.forEach((el, i) => {
           tl.fromTo(el, { opacity: 0, y: 22 },
             { opacity: 1, y: 0, duration: per * 1.8, ease: 'power3.out' },
-            ACT3_COPY[0] + i * per)
+            ACT4_COPY[0] + i * per)
         })
       }
 
-      // The chapter rail — the quiet cue that this hero is chaptered.
+      // ── The chapter rail ───────────────────────────────────────────────
+      // The quiet cue that this hero is chaptered, and where you are in it.
+      //
+      // It used to hardcode `=== 3` and drive three labels by hand. With a
+      // fourth chapter — and an act 2 that stands down when there are no
+      // collections — that would have been two more hand-written crossfades
+      // and a silent no-op the day the catalogue emptied. It is a loop now:
+      // whatever labels the rail actually rendered are crossfaded at the
+      // boundaries the rail itself published, so the two cannot disagree.
       const chapters = qa('[data-chapter]')
-      if (chapters.length === 3) {
-        tl.to(chapters[0], { opacity: 0, duration: 0.04 }, CHAPTER_1TO2)
-          .to(chapters[1], { opacity: 1, duration: 0.04 }, CHAPTER_1TO2)
-          .to(chapters[1], { opacity: 0, duration: 0.04 }, CHAPTER_2TO3)
-          .to(chapters[2], { opacity: 1, duration: 0.04 }, CHAPTER_2TO3)
+      const cuts = hasRanges
+        ? [CHAPTER_1TO2, CHAPTER_2TO3, CHAPTER_3TO4]
+        : [CHAPTER_2TO3, CHAPTER_3TO4]
+      if (chapters.length === cuts.length + 1) {
+        cuts.forEach((at, i) => {
+          tl.to(chapters[i], { opacity: 0, duration: 0.04 }, at)
+            .to(chapters[i + 1], { opacity: 1, duration: 0.04 }, at)
+        })
       }
 
       return tl
@@ -590,7 +819,14 @@ export default function SummitHero({
       tl.revert()
       tl.kill()
     }
-  }, [reduceMotion, ambientMobile, garments])
+    // `ranges` as well as `garments`: the timeline queries act 2's plates out
+    // of the DOM and staggers them, so it has to be rebuilt when that list
+    // changes — otherwise a collection arriving would render a plate the
+    // timeline never learned about, which stays at opacity 0 forever.
+    // `hasRanges` is derived from `ranges` and so can never be stale on its
+    // own; it is listed because the effect reads it and a dependency array
+    // that quietly omits what it reads is the one that goes wrong later.
+  }, [reduceMotion, ambientMobile, garments, ranges, hasRanges])
 
   // Click-and-drag free look, mouse only — touch is never hijacked from scrolling.
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -667,6 +903,11 @@ export default function SummitHero({
               season={season}
               weather={weather}
               dragRef={dragRef}
+              // The camp burns for the whole of act 1 and goes out as act 1
+              // does — one window, declared once, rather than a 0.4 buried in
+              // the scene that had to be remembered every time act 1 moved.
+              dawnFrom={ACT1_OUT[0]}
+              dawnTo={ACT1_OUT[1]}
               onReady={() => setSceneReady(true)}
             />
           </div>
@@ -713,23 +954,36 @@ export default function SummitHero({
         <div className="flex w-full items-start">
           <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center lg:-mt-2">
             <div className="flex flex-col items-center">
-              <p data-hero-reveal data-summit-reveal className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage/85">
-                Printed in Dehradun · 30.3165° N
-              </p>
+              {/* THE LINE, per the client mark-up of 23 August.
+                  "GO WHERE" is gone and the coordinate eyebrow above it with
+                  it — what is left is the two words on their own, which is
+                  what the attached sample shows and is the reason it works:
+                  a hero with one thing in it.
 
-              <h1 className="mt-5 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper">
-                <span data-hero-reveal data-summit-reveal className="block">Go where</span>
-                <span data-hero-reveal data-summit-reveal className="block italic text-sage">you feel alive.</span>
+                  FEEL is roman in white, ALIVE. is italic in green, and both
+                  are set in `font-display`. The brief asks for Canela and, if
+                  we do not have it, "the font you have used for DEWDROPZ at
+                  the top left" — that wordmark is `font-display` (Fraunces),
+                  so this is literally the requested fallback rather than a
+                  new licence and a fourth webfont in the payload.
+
+                  It also grows: at one line instead of two there is room, and
+                  the ceiling goes 80px → 132px so the frame reads like the
+                  sample rather than like a subheading with air around it. */}
+              <h1 className="font-display text-[clamp(52px,10vw,132px)] font-light uppercase leading-[0.9] tracking-[-0.03em] text-paper">
+                <span data-hero-reveal data-summit-reveal className="inline">Feel </span>
+                <span data-hero-reveal data-summit-reveal className="inline italic text-sage">Alive.</span>
               </h1>
 
               {/* Repositioned per the client brief: the shop is not an expedition
                   outfitter. The line that stood here talked about heavyweight
                   blanks and printing, which reads as a supplier describing its
                   process; the brief asks for apparel and everyday essentials that
-                  happen to be mountain-inspired. */}
+                  happen to be mountain-inspired. The second sentence — "Apparel
+                  and drinkware, printed one at a time with your design on it" —
+                  was struck out in the 23 August mark-up. */}
               <p data-hero-reveal data-summit-reveal className="mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
                 Inspired by mountains. Made for everyday journeys.
-                Apparel and drinkware, printed one at a time with your design on it.
               </p>
 
               {/* ── The two doors, and which one is louder ──────────────────
@@ -751,7 +1005,11 @@ export default function SummitHero({
                   href="/shop"
                   className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-paper px-8 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
                 >
-                  {fromPrice ? `Shop the drop — from ${fromPrice}` : 'Shop the drop'}
+                  {/* The price is off the button per the 23 August mark-up:
+                      "Remove only the amount i.e. From 899 and keep only SHOP
+                      THE DROP". It was also the one number on the front page
+                      that had to keep agreeing with the catalogue. */}
+                  Shop the drop
                 </Link>
                 <Link
                   href="/customize"
@@ -808,7 +1066,140 @@ export default function SummitHero({
 
       </div>
 
-      {/* ── ACT 2 — the studio ────────────────────────────────────────────────
+      {/* ── ACT 2 — the collections ───────────────────────────────────────────
+          The catalogue's top level, as a rack of three plates.
+
+          WHY THIS ACT EXISTS AND WHY IT IS SECOND
+
+          The film ran brand → design tool → invitation. That handed a stranger
+          an editor eleven seconds after arriving, before showing them a single
+          thing there was to put a design ON — the hero sold the mechanism
+          before the merchandise. The ranges belong between the two: this is
+          what we make, and the act right after it is what you can do to it.
+
+          WHY IT LOOKS LIKE THIS AND NOT LIKE THE ROW FURTHER DOWN THE PAGE
+
+          CollectionsRow, five hundred pixels below, is an index — a grid you
+          scan. This is a frame in a film: three tall plates, the type small and
+          out of the way, one door. If they looked alike the page would be
+          telling you the same thing twice with different furniture. It is also
+          the only act composed as a row, which is what keeps the four frames
+          from repeating a composition:
+            centred type → a rack → an offset workbench → centred type.
+
+          Everything here is real catalogue data in the admin's sort order, so a
+          renamed or retired collection can never leave a ghost on the front
+          door — and with none at all the act is not rendered, the chapter rail
+          drops its label, and the timeline hands act 1 straight to the studio. */}
+      {!staticHero && hasRanges && (
+        <div
+          ref={rangesRef}
+          /* Same contract as the two acts below: invisible is not enough, an
+             act that is not holding the frame has to leave the tab order and
+             stop catching clicks, or its three links sit over whatever is on
+             screen swallowing presses. */
+          inert={heroAct !== 'collections'}
+          className="pointer-events-none absolute inset-0 z-[14] flex items-center justify-center px-6 opacity-0 md:px-10"
+        >
+          {/* A pool of light behind the rack, so the plates sit on something
+              rather than hanging in the dark — the same device the workbench
+              act uses, and translucent for the same reason: the ridge has to
+              stay readable behind them or the two acts stop being one space. */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse 78% 60% at 50% 48%, rgba(233,238,228,0.09), transparent 70%), linear-gradient(180deg, rgba(10,17,13,0.82) 0%, rgba(7,12,9,0.90) 100%)',
+            }}
+          />
+
+          {/* max-w-6xl, not 5xl — measured, not guessed: at 5xl the plates came
+              out 328px wide and the rack sat 296px from the top of a 900px
+              frame with 188px under it, three cards adrift in a film. At 6xl
+              they are ~370 wide and ~493 tall and the frame is composed. */}
+          <div className="relative w-full max-w-6xl">
+            {/* The masthead. Small on purpose — the plates are the content and
+                a hero act gets one loud thing, which act 1 already spent. */}
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sage" />
+                  <span className="font-mono text-[13px] uppercase tracking-[0.28em] text-sage">
+                    The collections
+                  </span>
+                </div>
+                {/* NOT "Three collections. One philosophy." — that is
+                    CollectionsRow's headline, on this same page. A film that
+                    lands the same line twice reads as a page that lost its
+                    place, which is why the Trek Buddy band does not reuse
+                    "Never go alone." either. */}
+                <h2 className="mt-3.5 font-display text-[clamp(24px,2.9vw,42px)] font-light leading-[1.04] text-paper">
+                  Every range, a different <span className="italic text-sage">reason to go.</span>
+                </h2>
+              </div>
+              <Link
+                href="/collections"
+                className="pointer-events-auto inline-flex items-center gap-2 border-b border-paper/35 pb-1 font-body text-[11px] uppercase tracking-[0.14em] text-paper/80 transition-colors duration-300 hover:border-paper hover:text-paper"
+              >
+                See all collections <span aria-hidden="true">↗</span>
+              </Link>
+            </div>
+
+            {/* The rack. Three across from `sm` — below that the frame is too
+                narrow for three plates to be anything but three slivers, so
+                they stack; the scrubbed hero is desktop-only anyway, and this
+                is the layout that survives a narrow laptop window. */}
+            <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-5">
+              {ranges.map((c) => (
+                <li key={c.id} data-range-plate className="opacity-0">
+                  <Link
+                    href={`/collections/${c.slug}`}
+                    className="group pointer-events-auto block overflow-hidden rounded-sm border border-paper/15 bg-ink/45 backdrop-blur-sm transition-colors duration-300 hover:border-sage/60"
+                  >
+                    <div className="relative aspect-[3/4] max-h-[56vh] overflow-hidden bg-forest-deep">
+                      {c.image_url && (
+                        <Image
+                          src={c.image_url}
+                          alt=""
+                          fill
+                          sizes="(min-width: 1024px) 320px, 45vw"
+                          placeholder="blur"
+                          blurDataURL={BLUR_DATA_URL}
+                          className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
+                        />
+                      )}
+                      {/* The plate carries its own ground for the type. The
+                          act's backdrop is translucent, so without this the
+                          name would be sitting on whatever the photograph
+                          happens to be doing in that corner. */}
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-gradient-to-t from-ink/92 via-ink/25 to-transparent"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
+                        <h3 className="font-display text-lg leading-tight text-paper md:text-xl">
+                          {c.name}
+                        </h3>
+                        {c.tagline && (
+                          <p className="mt-1 font-body text-[11.5px] italic leading-relaxed text-paper/60">
+                            {c.tagline}
+                          </p>
+                        )}
+                        <span className="mt-3 inline-block border-b border-sage/50 pb-0.5 font-body text-[10px] uppercase tracking-[0.14em] text-paper/80 transition-colors duration-300 group-hover:border-sage group-hover:text-paper">
+                          Look inside →
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* ── ACT 3 — the studio ────────────────────────────────────────────────
           A real editor shows the garment, so this one does: the blank IS the
           canvas, lit on its own seamless, with the print boundary on its chest
           and the tools racked either side. The previous pass floated an abstract
@@ -852,17 +1243,47 @@ export default function SummitHero({
               <div>
                 <div className="flex items-center gap-2.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-sage" />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">The studio</span>
+                  {/* "Right now THE STUDIO feels a bit underpowered relative to
+                      the headline. Please increase it by about 20–30%."
+                      10px → 13px is +30%, and the marker grows with it so the
+                      pair still reads as one unit rather than a dot with a
+                      label that outgrew it. */}
+                  <span className="font-mono text-[13px] uppercase tracking-[0.28em] text-sage">The studio</span>
                 </div>
                 <h2 className="mt-3.5 font-display text-[clamp(24px,2.7vw,40px)] font-light leading-[1.04] text-paper">
                   A studio, not an <span className="italic text-sage">upload box.</span>
                 </h2>
               </div>
               <div className="flex max-w-[19rem] flex-col items-start gap-4">
-                <p className="font-body text-[12px] leading-relaxed text-paper/50">
-                  Type, artwork, layers, front and back — set to the millimetre and
-                  previewed on the garment before anything is printed.
-                </p>
+                {/* Replaced per the mark-up. The old line described the tool's
+                    features — type, artwork, layers, millimetres. The brief
+                    asks for the two doors instead, because the thing a visitor
+                    actually has to decide here is whether they are bringing
+                    artwork or borrowing ours, and the old copy never said the
+                    library existed at all. */}
+                <div>
+                  <p className="font-body text-[12.5px] leading-relaxed text-paper/65">
+                    Build every detail before it goes to print.
+                  </p>
+                  <dl className="mt-4 space-y-3">
+                    <div>
+                      <dt className="font-body text-[10.5px] uppercase tracking-[0.14em] text-sage">
+                        Browse the DEWDROPZ library
+                      </dt>
+                      <dd className="mt-1 font-body text-[12px] leading-relaxed text-paper/50">
+                        Choose from our DEWDROPZ design collections.
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="font-body text-[10.5px] uppercase tracking-[0.14em] text-sage">
+                        Create your own
+                      </dt>
+                      <dd className="mt-1 font-body text-[12px] leading-relaxed text-paper/50">
+                        Start with a blank canvas or upload your own artwork.
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
                 {/* The act showed the tool and gave no way to reach it. This is
                     that way in, and it is `pointer-events-auto` because the layer
                     above it is inert by default. */}
@@ -972,11 +1393,11 @@ export default function SummitHero({
         </div>
       )}
 
-      {/* ── ACT 3 — Trek Buddy ────────────────────────────────────────────────
+      {/* ── ACT 4 — Trek Buddy ────────────────────────────────────────────────
           One moment, centred, at the same scale act one opens on. The film
-          therefore reads brand → tool → invitation, with the offset editor
-          sitting between two centred frames rather than three variations of
-          the same composition.
+          therefore reads brand → ranges → tool → invitation: two centred type
+          frames at either end, with the rack and the offset editor between
+          them, rather than four variations of the same composition.
 
           Everything that explained the product has moved to TrekBuddyBand
           further down the page, which has the room for it. What is left here
@@ -1032,7 +1453,7 @@ export default function SummitHero({
                 by name. If somebody scrolls the hero and cannot afterwards
                 tell you what the thing is called, the act has failed however
                 good the picture is. */}
-            <div data-act3 className="opacity-0">
+            <div data-act4 className="opacity-0">
               <p className="font-mono text-[clamp(15px,2.1vw,26px)] uppercase leading-none tracking-[0.42em] text-sage">
                 {/* The trailing letter-space is padding, not a gap: wide
                     tracking pushes the last glyph off-centre otherwise. */}
@@ -1046,21 +1467,30 @@ export default function SummitHero({
             {/* Act one's scale, not a subheading's. The two centred frames of
                 the film should carry the same typographic weight. */}
             <h2
-              data-act3
+              data-act4
               className="mt-6 font-display text-[clamp(38px,5.6vw,80px)] font-light uppercase leading-[0.88] tracking-[-0.035em] text-paper opacity-0"
             >
-              Never go <span className="italic lowercase text-sage">alone.</span>
+              Never go{' '}
+              {/* "make `alone` about 10–15% smaller than it is now. Right now it
+                  slightly overpowers NEVER GO." It is italic lowercase at the
+                  same font-size as the caps beside it, and an italic lowercase
+                  word with ascenders and descenders occupies more optical space
+                  than caps do at the same size — which is exactly the effect
+                  the client is describing. 0.87em is a 13% cut, mid-range, and
+                  it scales with the clamp rather than fighting it. */}
+              <span className="text-[0.87em] italic lowercase text-sage">alone.</span>
             </h2>
 
             <p
-              data-act3
-              className="mt-7 max-w-md font-body text-sm leading-relaxed text-paper/75 opacity-0 md:text-base"
+              data-act4
+              className="mt-7 max-w-xl font-body text-sm leading-relaxed text-paper/75 opacity-0 md:text-base"
             >
-              Post the hour you are leaving. Whoever else is going that day finds you, and you
-              decide who comes.
+              Planning a trek, camping trip, stargazing session, heritage walk, or outdoor
+              adventure? Share your plan, discover others interested in joining, and choose
+              who joins the journey.
             </p>
 
-            <div data-act3 className="pointer-events-auto mt-9 opacity-0">
+            <div data-act4 className="pointer-events-auto mt-9 opacity-0">
               <Link
                 href="/trek-buddy"
                 className="inline-flex items-center gap-2 rounded-full bg-paper px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage"
@@ -1072,11 +1502,16 @@ export default function SummitHero({
         </div>
       )}
 
-      {/* The chapter rail — three stacked labels crossfading at the act cuts.
-          The quiet cue that this hero is chaptered, and where you are in it. */}
+      {/* The chapter rail — stacked labels crossfading at the act cuts. The
+          quiet cue that this hero is chaptered, and where you are in it.
+
+          Built from `chapterLabels`, which drops "The ranges" and renumbers
+          when there are no collections to show. The timeline crossfades
+          whatever this rendered rather than assuming three, so the rail and the
+          acts cannot end up disagreeing about how many chapters there are. */}
       {!staticHero && (
         <div className="pointer-events-none absolute bottom-8 left-6 z-30 grid md:left-10">
-          {['01 · The range', '02 · The studio', '03 · Trek Buddy'].map((c, i) => (
+          {chapterLabels.map((c, i) => (
             <span
               key={c}
               data-chapter

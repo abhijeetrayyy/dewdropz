@@ -50,3 +50,12 @@ next-env.d.ts
 
 # Supabase CLI scratch (written by `npx supabase`, never part of the schema)
 supabase/.temp/
+
+# The Expo/React Native companion app. 20GB of node_modules and native build
+# artefacts (11G node_modules, 6.7G ios, 2.1G android) — it needs its own
+# repository with its own ignore rules, not a corner of this one.
+/trekbuddy-game/
+
+# Scratch notes from the 26-Aug platform audit. The deliverable is
+# PLATFORM-AUDIT.md at the root; these are the workings behind it.
+/.audit/

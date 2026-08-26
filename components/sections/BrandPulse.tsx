@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
-import { BLUR_DATA_URL, STATS_BG_IMAGE, FOUNDER_QUOTE } from '@/lib/constants'
+import { BLUR_DATA_URL, STATS_BG_IMAGE } from '@/lib/constants'
 import type { HomeStat } from '@/types/database'
 
 // The single brand statement of the page. This absorbs what BrandStatement,
@@ -78,19 +78,27 @@ export default function BrandPulse({
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className="mt-4 font-display font-light text-[clamp(30px,4.6vw,52px)] text-paper leading-tight"
         >
-          For people who go outside <br className="hidden sm:block" />
-          <span className="italic text-sage">to feel something.</span>
+          For those still searching. <br className="hidden sm:block" />
+          <span className="italic text-sage">More than a destination.</span>
         </motion.h2>
+        {/* Replaced wholesale per the 23 August mark-up. The line that stood
+            here was a supplier's origin story — three guides, monsoon, tested
+            above five thousand metres — for a shop that does not actually make
+            technical gear. This is the brand's own paragraph, and it is set in
+            `font-display` rather than `font-body`: at this length, centred and
+            alone under a serif headline, the grotesque read as a caption. */}
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.8, delay: 0.15, ease: 'easeOut' }}
-          className="mt-6 font-body text-sm md:text-base text-paper/70 leading-relaxed max-w-xl mx-auto"
+          className="mx-auto mt-8 max-w-2xl font-display text-[15px] leading-[1.85] text-paper/75 md:text-[17px]"
         >
-          Founded in Dehradun by three trekking guides tired of gear that didn&apos;t survive
-          the monsoon. Every piece is refined on the ridges we guide on and tested above
-          five thousand metres — none of it happened in a lab.
+          We didn&apos;t start with a product. We started with a feeling — the quiet after
+          heartbreak, the hope that follows a difficult season, the solitude of an empty
+          trail, and the wonder of standing beneath a sky larger than yourself. Somewhere
+          between mountains, campfires, long walks, and unfamiliar paths, we rediscover who
+          we are. DEWDROPZ is an invitation to spend more time in those places.
         </motion.p>
       </div>
 
@@ -115,16 +123,16 @@ export default function BrandPulse({
       </div>
       )}
 
+      {/* The founder's pull-quote and their name and title are both struck out
+          in the mark-up — "Remove the We didn't set out to build a brand
+          with…" and "Remove — Founder and Name". What is left below the rule
+          is the one thing the mock-up keeps: the way through to the story.
+          FOUNDER_QUOTE still lives in lib/constants and still renders on
+          /about, where a named quote belongs. */}
       <div className="relative max-w-2xl mx-auto text-center mt-16 border-t border-paper/10 pt-10">
-        <p className="font-display italic text-base md:text-lg text-paper/75 leading-relaxed">
-          &ldquo;{FOUNDER_QUOTE.quote}&rdquo;
-        </p>
-        <div className="mt-4 font-body text-[10px] tracking-[0.18em] uppercase text-paper/50">
-          {FOUNDER_QUOTE.name} — {FOUNDER_QUOTE.role}
-        </div>
         <Link
           href="/about"
-          className="mt-6 inline-block font-body text-xs tracking-[0.12em] uppercase text-sage hover:text-paper transition-colors duration-300 border-b border-sage/40 pb-0.5"
+          className="inline-block font-body text-xs tracking-[0.12em] uppercase text-sage hover:text-paper transition-colors duration-300 border-b border-sage/40 pb-0.5"
         >
           Read Our Story →
         </Link>

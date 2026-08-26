@@ -15,12 +15,23 @@ export default async function CustomizeProductPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ variant?: string; color?: string }>
+  // `start` is which of the two doors the visitor came through — the brief's
+  // "select from our pre-set design ready library" versus "upload their own
+  // design". Only 'library' does anything; anything else lands on the blank
+  // canvas, which is what the studio has always opened on.
+  searchParams: Promise<{ variant?: string; color?: string; start?: string }>
 }) {
   const { slug } = await params
-  const { variant, color } = await searchParams
+  const { variant, color, start } = await searchParams
   const product = await getProductBySlug(slug)
   if (!product || !product.is_customizable) notFound()
 
-  return <CustomizerStudio product={product} initialVariantId={variant} initialColorName={color} />
+  return (
+    <CustomizerStudio
+      product={product}
+      initialVariantId={variant}
+      initialColorName={color}
+      openLibrary={start === 'library'}
+    />
+  )
 }

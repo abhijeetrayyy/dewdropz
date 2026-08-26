@@ -1,3 +1,5 @@
+import type { HomeTrail } from '@/types/database'
+
 /**
  * What to assume a product weighs when nothing is recorded, in grams.
  *
@@ -401,3 +403,32 @@ export const SUSTAINABILITY_COMMITMENTS = [
  *  functions — and because the copy that promises it (product page, FAQ) reads
  *  from constants too, so the promise and the enforcement cannot drift. */
 export const RETURN_WINDOW_DAYS = 7
+
+/**
+ * WHAT THE HOMEPAGE'S TRAILS SECTION SHOWS, BEFORE ANYBODY EDITS IT.
+ *
+ * The brief asks for "options so that DEWDROPZ team can add more treks etc in
+ * this section with the current layout — Easy-Moderate, Season, days and
+ * writeup". That means the section can no longer read `TRAILS` directly: that
+ * array is a code constant, so adding a route meant a deploy.
+ *
+ * It now reads `store_settings.home_config.trails`, edited at /admin/homepage.
+ * This is the fallback for a settings row written before migration 092 added
+ * the key — the same four routes, in the same order, that used to be picked by
+ * slug inside the component. `TRAILS` itself is untouched and still owns the
+ * full guide at /treks, which carries the long-form fields (why, sights,
+ * access) this card layout has never shown.
+ */
+export const DEFAULT_HOME_TRAILS: HomeTrail[] = ['kedarkantha', 'har-ki-dun', 'valley-of-flowers', 'kuari-pass']
+  .map((slug) => TRAILS.find((t) => t.slug === slug))
+  .filter((t): t is (typeof TRAILS)[number] => Boolean(t))
+  .map((t) => ({
+    slug: t.slug,
+    name: t.name,
+    altitude: t.altitude,
+    difficulty: t.difficulty,
+    duration: t.duration,
+    bestMonths: [...t.bestMonths],
+    season: t.season,
+    image: t.image,
+  }))

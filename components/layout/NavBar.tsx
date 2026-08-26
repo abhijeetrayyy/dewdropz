@@ -247,11 +247,18 @@ export default function NavBar() {
           // <body> at the act boundaries and the arbitrary variants below read
           // it, so the cue costs no state, no context and no re-render up here.
           //
-          // Act two has always done this for the studio. Act three now does it
+          // Act two has always done this for the studio. Act four now does it
           // for Trek Buddy, which is the act that most needed it: it introduces
           // a product by name, and the header was sitting inert while it did.
+          //
+          // Three of the hero's four acts own a door up here now — the new
+          // collections act is the second — so the header answers the film the
+          // whole way through instead of lighting up twice and going quiet.
+          // These strings are SummitHero's `HeroAct`; they are an interface
+          // between the two files, not a local enum.
           const actDoor =
-            link.href === '/customize' ? 'studio'
+            link.href === '/collections' ? 'collections'
+            : link.href === '/customize' ? 'studio'
             : link.href === '/trek-buddy' ? 'trek'
             : null
           const spotlit = actDoor !== null && actDoor === heroAct

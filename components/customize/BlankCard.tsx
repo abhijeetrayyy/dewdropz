@@ -9,13 +9,22 @@ import type { ProductWithCollection } from '@/types/database'
 // (garment photography needs a lit surface; the brand chrome around it is
 // dark) — so clicking through from here into the actual studio doesn't feel
 // like landing on a different, unrelated tool.
-export default function BlankCard({ product }: { product: ProductWithCollection }) {
+export default function BlankCard({
+  product,
+  start,
+}: {
+  product: ProductWithCollection
+  /** Carried through from /customize?start=… so the studio knows to open the
+   *  DEWDROPZ library rather than a blank canvas. Undefined is the blank
+   *  canvas, which is what this card has always led to. */
+  start?: 'library'
+}) {
   const colors = product.customization_config?.colors ?? []
   const availableCount = colors.filter((c) => c.available).length
 
   return (
     <Link
-      href={`/products/${product.slug}/customize`}
+      href={`/products/${product.slug}/customize${start ? `?start=${start}` : ''}`}
       className="group block overflow-hidden rounded-md bg-[#131A15] ring-1 ring-paper/10 transition-all duration-300 hover:ring-sage/50"
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-[#D9D9D7]">

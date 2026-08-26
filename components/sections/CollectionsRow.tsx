@@ -12,6 +12,21 @@ import type { Collection } from '@/types/database'
 // `featuredSlugs` is admin-editable (store_settings.home_config) — empty
 // means "show every active collection", so this behaves exactly as it always
 // did until someone actually picks a subset from /admin/settings.
+/**
+ * Which collections lead the homepage, in the admin's order.
+ *
+ * Exported because the hero's second act shows the same three plates a few
+ * hundred pixels above this row. Two copies of "empty means show all" is how
+ * the front door ends up advertising one set of ranges in the film and a
+ * different set in the index directly under it.
+ */
+export function pickCollections(collections: Collection[], featuredSlugs: string[] = []): Collection[] {
+  if (featuredSlugs.length === 0) return collections
+  return featuredSlugs
+    .map((slug) => collections.find((c) => c.slug === slug))
+    .filter((c): c is Collection => Boolean(c))
+}
+
 export default function CollectionsRow({
   collections,
   featuredSlugs = [],
@@ -25,10 +40,7 @@ export default function CollectionsRow({
    *  once on a wide screen. */
   stop: TrailStop
 }) {
-  const shown =
-    featuredSlugs.length > 0
-      ? (featuredSlugs.map((slug) => collections.find((c) => c.slug === slug)).filter(Boolean) as Collection[])
-      : collections
+  const shown = pickCollections(collections, featuredSlugs)
 
   if (shown.length === 0) return null
 

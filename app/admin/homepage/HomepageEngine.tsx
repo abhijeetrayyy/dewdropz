@@ -15,7 +15,13 @@ import { getProducts, getCollections } from '@/actions/products'
 import { getCategories } from '@/actions/categories'
 import type {
   HomeConfig, ProductWithCollection, Collection, Category, HomeStat, HomeShowcaseRail, HomeShowcaseKind,
+  HomeTrail,
 } from '@/types/database'
+
+// Exactly the labels components/sections/HomeTrails.tsx draws its month strip
+// from. A month typed any other way simply never lights a cell, so the two
+// lists have to be the same twelve strings.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const RAIL_KINDS: { value: HomeShowcaseKind; label: string; hint: string }[] = [
   { value: 'recent', label: 'Just added', hint: 'Newest active products first.' },
@@ -43,7 +49,12 @@ export function HomepageEngine() {
           getStoreSettings(),
           getProducts(),
           getCollections(),
-          getCategories({ parentId: null }),
+          // Every category, NOT { parentId: null }. That returned only the two
+          // departments — Apparel and Drinkware — so the tiles the homepage
+          // actually shows (Caps, Coffee Mugs, Bottles, Tumblers, all of them
+          // leaves) could not be ticked here at all. The same mistake the
+          // homepage itself used to make against this list.
+          getCategories(),
         ])
         setConfig(settings.home_config)
         setProducts(productList)
@@ -147,6 +158,66 @@ export function HomepageEngine() {
     const showcase = [...config.showcase]
     ;[showcase[index], showcase[target]] = [showcase[target], showcase[index]]
     setConfig({ ...config, showcase })
+  }
+
+  // ── The Trails section ───────────────────────────────────────────────────
+  // "Keep options so that DEWDROPZ team can add more treks etc in this section
+  // with the current layout — Easy-Moderate, Season, days and writeup." These
+  // four cards used to be a hardcoded list of slugs inside the component.
+  const trails = config?.trails ?? []
+
+  function updateTrail(index: number, patch: Partial<HomeTrail>) {
+    if (!config) return
+    setConfig({ ...config, trails: trails.map((t, i) => (i === index ? { ...t, ...patch } : t)) })
+  }
+
+  function addTrail() {
+    if (!config) return
+    setConfig({
+      ...config,
+      trails: [
+        ...trails,
+        {
+          // Unique enough to be a React key and a URL fragment. If it matches a
+          // route in the /treks guide the card deep-links at it; if not, the
+          // card links to the guide index instead of a 404.
+          slug: `trail-${Date.now()}`,
+          name: '',
+          altitude: '',
+          difficulty: 'Moderate',
+          duration: '',
+          bestMonths: [],
+          season: '',
+          image: '',
+        },
+      ],
+    })
+  }
+
+  function removeTrail(index: number) {
+    if (!config) return
+    setConfig({ ...config, trails: trails.filter((_, i) => i !== index) })
+  }
+
+  function moveTrail(index: number, dir: -1 | 1) {
+    if (!config) return
+    const target = index + dir
+    if (target < 0 || target >= trails.length) return
+    const next = [...trails]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    setConfig({ ...config, trails: next })
+  }
+
+  function toggleTrailMonth(index: number, month: string, on: boolean) {
+    if (!config) return
+    const current = trails[index]?.bestMonths ?? []
+    // Kept in calendar order however they are clicked — the storefront draws a
+    // twelve-cell strip from this and reads the array for its screen-reader
+    // label, so "Oct, Jan, Feb" would be announced in that order.
+    const next = on
+      ? MONTHS.filter((m) => m === month || current.includes(m))
+      : current.filter((m) => m !== month)
+    updateTrail(index, { bestMonths: next })
   }
 
   function updateStation(index: number, patch: Partial<HomeConfig['climb']['stations'][number]>) {
@@ -391,10 +462,11 @@ export function HomepageEngine() {
       {/* Featured categories */}
       <Card className="shadow-sm border-gray-200">
         <CardHeader>
-          <CardTitle className="text-lg">Featured categories</CardTitle>
+          <CardTitle className="text-lg">Choose Your Essentials tiles</CardTitle>
           <CardDescription>
-            Which tiles fill the &quot;What are you packing for?&quot; row. Leave all unchecked to show every active
-            top-level category.
+            Which tiles fill the &quot;Choose Your Essentials&quot; row, in the order you tick them.
+            Leave all unchecked and the row falls back to every category that has products in it —
+            tick some and those are shown as given, reading &quot;Coming soon&quot; until they are stocked.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -417,6 +489,130 @@ export function HomepageEngine() {
             Each tile&apos;s picture is the category&apos;s own image, set in{' '}
             <a href="/admin/categories" className="underline">Categories</a>.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Trails */}
+      <Card className="shadow-sm border-gray-200">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg">Trails section</CardTitle>
+              <CardDescription>
+                The golden-hour row under &quot;The journey starts before the trail&quot;. Add as many
+                routes as you like — the row scrolls sideways on a phone and lays out four across on a
+                laptop. The first route&apos;s photograph is also the section&apos;s full-width backdrop.
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={addTrail} className="flex-shrink-0">
+              <Plus className="w-4 h-4 mr-1" /> Add route
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {trails.length === 0 && (
+            <p className="text-sm text-gray-400">
+              No routes — the Trails section hides itself entirely rather than showing an empty row.
+            </p>
+          )}
+          {trails.map((trail, i) => (
+            <div key={trail.slug} className="space-y-3 rounded-md border border-gray-200 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                  {String(i + 1).padStart(2, '0')}
+                  {i === 0 && ' — also the section backdrop'}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => moveTrail(i, -1)} disabled={i === 0} aria-label="Move up">
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => moveTrail(i, 1)} disabled={i === trails.length - 1} aria-label="Move down">
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => removeTrail(i)} aria-label="Remove route">
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Name</Label>
+                  <Input value={trail.name} onChange={(e) => updateTrail(i, { name: e.target.value })} placeholder="Kedarkantha" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Altitude</Label>
+                  <Input value={trail.altitude} onChange={(e) => updateTrail(i, { altitude: e.target.value })} placeholder="3,800m" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Difficulty</Label>
+                  <Input value={trail.difficulty} onChange={(e) => updateTrail(i, { difficulty: e.target.value })} placeholder="Easy–Moderate" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Days</Label>
+                  <Input value={trail.duration} onChange={(e) => updateTrail(i, { duration: e.target.value })} placeholder="4–6 days" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">When to go</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {MONTHS.map((m) => {
+                    const on = trail.bestMonths.includes(m)
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => toggleTrailMonth(i, m, !on)}
+                        aria-pressed={on}
+                        className={`rounded px-2.5 py-1 text-xs transition-colors ${
+                          on ? 'bg-black text-white' : 'border border-gray-200 text-gray-500 hover:border-gray-400'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Writeup</Label>
+                <Textarea
+                  value={trail.season}
+                  onChange={(e) => updateTrail(i, { season: e.target.value })}
+                  rows={2}
+                  placeholder="A winter trail first and foremost — deep snow from late December through March."
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Photograph URL</Label>
+                <Input
+                  value={trail.image}
+                  onChange={(e) => updateTrail(i, { image: e.target.value })}
+                  placeholder="https://images.unsplash.com/photo-…"
+                />
+                <p className="text-xs text-gray-400">
+                  Must be on a host allowed in <code>next.config.ts</code> — currently Unsplash and this
+                  store&apos;s own Supabase storage. Anything else will not render.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Guide slug</Label>
+                <Input
+                  value={trail.slug}
+                  onChange={(e) => updateTrail(i, { slug: e.target.value })}
+                  placeholder="kedarkantha"
+                />
+                <p className="text-xs text-gray-400">
+                  Match a route in the /treks guide and the card links straight to it; anything else
+                  links to the guide&apos;s front page.
+                </p>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

@@ -28,10 +28,15 @@ export default function CustomizerStudio({
   product,
   initialVariantId,
   initialColorName,
+  openLibrary = false,
 }: {
   product: ProductWithCollection
   initialVariantId?: string
   initialColorName?: string
+  /** Arrived through the "Browse the library" door (`?start=library`) rather
+   *  than "Create your own". Passed straight through to the Toolbar, which
+   *  owns the panel. */
+  openLibrary?: boolean
 }) {
   const router = useRouter()
   const { addItem } = useCart()
@@ -400,6 +405,7 @@ export default function CustomizerStudio({
           twoSided={twoSided}
           garmentHex={color?.hex}
           onCopyToOtherSide={copyActiveDesignToOtherSide}
+          openLibraryOnMount={openLibrary}
           setupPanel={setupContent}
         />
       </div>

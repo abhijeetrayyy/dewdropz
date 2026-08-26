@@ -6,10 +6,11 @@ import { Textbox, FabricImage } from 'fabric'
 import {
   Type, ImagePlus, Trash2, Copy, Undo2, Redo2, Bold, Italic,
   FlipHorizontal2, Layers as LayersIcon, ChevronDown, ArrowUp, ArrowDown, Loader2,
-  Plus, SlidersHorizontal, Shirt,
+  Plus, SlidersHorizontal, Shirt, LibraryBig,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { uploadCustomerImage } from '@/actions/media'
+import DesignLibraryPicker from './DesignLibraryPicker'
 import { useCanvasHistory } from '@/hooks/useCanvasHistory'
 import type { CustomizationZone } from '@/types/database'
 
@@ -45,6 +46,7 @@ export default function Toolbar({
   twoSided,
   garmentHex,
   onCopyToOtherSide,
+  openLibraryOnMount = false,
   setupPanel,
 }: {
   canvas: Canvas | null
@@ -59,6 +61,12 @@ export default function Toolbar({
   twoSided: boolean
   garmentHex?: string
   onCopyToOtherSide: () => void
+  /** Open the DEWDROPZ library the moment the studio mounts. Set when the
+   *  visitor arrived through the "Browse the library" door rather than the
+   *  "Create your own" one — see /customize and the homepage's Custom Studio
+   *  section. Without it those two doors lead to the identical screen, which
+   *  makes the choice the brief asks us to offer a fiction. */
+  openLibraryOnMount?: boolean
   // Colour / size / print-spec markup, owned by CustomizerStudio. On desktop
   // it lives in the left rail; on a phone there is no room for a permanent
   // rail, so it becomes the "Blank" tab of this one shared sheet. Passing it
@@ -69,6 +77,7 @@ export default function Toolbar({
   const [selected, setSelected] = useState<FabricObject | null>(null)
   const [layers, setLayers] = useState<FabricObject[]>([])
   const [uploading, setUploading] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(openLibraryOnMount)
   const [mobileTab, setMobileTab] = useState<MobileTab>('none')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { undo, redo, canUndo, canRedo } = useCanvasHistory(canvas)
@@ -144,6 +153,44 @@ export default function Toolbar({
     canvas.renderAll()
   }, [canvas, zone, garmentHex])
 
+  /**
+   * Put an image on the garment.
+   *
+   * Shared by both doors — the customer's own upload and the DEWDROPZ library —
+   * because past the point where a URL exists there is genuinely nothing
+   * different about them. Splitting them would have been two copies of the
+   * scale-to-fit-the-print-zone arithmetic, and the second copy is the one that
+   * would have drifted.
+   */
+  const placeImage = useCallback(
+    async (url: string) => {
+      if (!canvas || !zone) return
+      const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
+      // Same origin rule as addText: left/top are the centre point in
+      // Fabric v6, so this is just the middle of the print area.
+      const maxDim = Math.min(zone.widthPx, zone.heightPx) * 0.7
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      img.scale(scale)
+      img.set({ left: zone.widthPx / 2, top: zone.heightPx / 2 })
+      canvas.add(img)
+      canvas.setActiveObject(img)
+      canvas.renderAll()
+    },
+    [canvas, zone]
+  )
+
+  const pickFromLibrary = useCallback(
+    async (url: string, name: string) => {
+      setLibraryOpen(false)
+      try {
+        await placeImage(url)
+      } catch {
+        toast.error(`Could not open “${name}”. Try another design.`)
+      }
+    },
+    [placeImage]
+  )
+
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
@@ -152,23 +199,14 @@ export default function Toolbar({
       setUploading(true)
       try {
         const url = await uploadCustomerImage(file)
-        const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
-        // Same origin rule as addText: left/top are the centre point in
-        // Fabric v6, so this is just the middle of the print area.
-        const maxDim = Math.min(zone.widthPx, zone.heightPx) * 0.7
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
-        img.scale(scale)
-        img.set({ left: zone.widthPx / 2, top: zone.heightPx / 2 })
-        canvas.add(img)
-        canvas.setActiveObject(img)
-        canvas.renderAll()
+        await placeImage(url)
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Could not upload that image')
       } finally {
         setUploading(false)
       }
     },
-    [canvas, zone]
+    [canvas, zone, placeImage]
   )
 
   const deleteSelected = useCallback(() => {
@@ -228,14 +266,22 @@ export default function Toolbar({
   // ── Shared pieces, rendered into both the desktop rail and the mobile sheet ──
 
   const addActions = (
-    <div className="flex gap-2">
-      <ToolButton onClick={addText} className="flex-1">
-        <Type className="h-3.5 w-3.5" /> Text
+    <div className="space-y-2">
+      {/* The library goes first and goes full width. It is the door most people
+          need — the studio's other two buttons both assume you have already
+          decided what to make — and it is the one the brief adds. */}
+      <ToolButton onClick={() => setLibraryOpen(true)} className="w-full">
+        <LibraryBig className="h-3.5 w-3.5" /> DEWDROPZ library
       </ToolButton>
-      <ToolButton onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex-1">
-        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-        {uploading ? 'Uploading…' : 'Image'}
-      </ToolButton>
+      <div className="flex gap-2">
+        <ToolButton onClick={addText} className="flex-1">
+          <Type className="h-3.5 w-3.5" /> Text
+        </ToolButton>
+        <ToolButton onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex-1">
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+          {uploading ? 'Uploading…' : 'Upload'}
+        </ToolButton>
+      </div>
     </div>
   )
 
@@ -399,6 +445,12 @@ export default function Toolbar({
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={handleFileChange}
+      />
+
+      <DesignLibraryPicker
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        onPick={pickFromLibrary}
       />
 
       {/* ── Desktop rail ───────────────────────────────────────────────── */}

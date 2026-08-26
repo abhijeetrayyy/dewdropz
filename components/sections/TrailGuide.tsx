@@ -22,7 +22,11 @@ export default function TrailGuide() {
         {TRAILS.map((trail, i) => (
           <article
             key={trail.slug}
-            className="grid grid-cols-1 gap-7 border-t border-forest/15 pt-10 md:grid-cols-[0.85fr_1fr] md:gap-10 lg:gap-14"
+            // The homepage's Trails cards link here by slug, so each route
+            // needs a target to land on. `scroll-mt` clears the fixed nav —
+            // without it the heading you jumped to sits underneath it.
+            id={trail.slug}
+            className="grid scroll-mt-28 grid-cols-1 gap-7 border-t border-forest/15 pt-10 md:grid-cols-[0.85fr_1fr] md:gap-10 lg:gap-14"
           >
             {/* Plate */}
             <div className="relative">

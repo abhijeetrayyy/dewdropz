@@ -9,8 +9,8 @@ import SummitHero from '@/components/sections/SummitHero'
 import TrustBand from '@/components/sections/TrustBand'
 import SeasonKit from '@/components/sections/SeasonKit'
 import TheClimb from '@/components/sections/TheClimb'
-import CollectionsRow from '@/components/sections/CollectionsRow'
-import ShopByCategory from '@/components/sections/ShopByCategory'
+import CollectionsRow, { pickCollections } from '@/components/sections/CollectionsRow'
+import ShopByCategory, { pickEssentials } from '@/components/sections/ShopByCategory'
 import ShowcaseRails from '@/components/sections/ShowcaseRails'
 import DesignYourOwn from '@/components/sections/DesignYourOwn'
 import HomeTrails from '@/components/sections/HomeTrails'
@@ -26,6 +26,7 @@ import { getShowcaseRails } from '@/actions/showcase'
 // The day arc, declared once. Sections receive their stop instead of printing
 // their own — four of them used to contradict the wrapper directly above them.
 import { TRAIL_STOPS } from '@/lib/trail'
+import { DEFAULT_HOME_TRAILS } from '@/lib/constants'
 
 // The homepage sells from the same catalogue, so it takes the same window.
 export const revalidate = 60
@@ -53,40 +54,72 @@ export default async function Home() {
     getShowcaseRails(),
   ])
   const { season_kit, climb, featured_collection_slugs, featured_category_slugs, stats } = settings.home_config
+  // `trails` is new and older rows will not have it, so the section falls back
+  // to the eight routes that used to be hardcoded in lib/constants.ts.
+  const trails = settings.home_config.trails ?? DEFAULT_HOME_TRAILS
 
-  // Whether the pack-check section has anything real to send people to. A tile
-  // that lands on an empty shop is worse than no tile.
-  const stockedCategories = categories.filter((c) =>
-    products.some((p) => p.categories?.some((pc) => pc.category_id === c.id))
-  )
-  const hasStockedCategory = stockedCategories.length > 0
+  // Whether "Choose Your Essentials" has anything to show. Resolved with the
+  // very same function the section uses, because the wrapper around it
+  // announces a stop on the trail HUD — if the two disagree the HUD advertises
+  // a chapter that is not on the page.
+  const essentials = pickEssentials(categories, products, featured_category_slugs)
+  // The admin's pick of collections, resolved once for the two places that
+  // show it — the hero's second act and the row further down.
+  const featuredCollections = pickCollections(collections, featured_collection_slugs)
 
   return (
     <>
       <NavBar />
       <TrailSpine />
       <main id="main">
-        <SummitHero products={products} collections={collections} />
+        {/* The hero's second act racks up the same collections this page's
+            "Three collections. One philosophy." row lists below it, resolved
+            once here so the film and the index cannot advertise different
+            ranges. */}
+        <SummitHero products={products} collections={featuredCollections} />
 
-        {/* ORDER PER THE CLIENT DOCUMENT, "Homepage Structure":
-              Hero → Shop by Collection → Shop by Category
-            Both of those sat fifth and sixth, behind the trust strip, the
-            season kit and the climb — so the two things the brief puts
-            immediately under the hero were roughly two thousand pixels down.
-            The trail HUD reads its chapters from these data-trail-* wrappers
-            in DOM order, so the hours were re-cut to keep ascending down the
-            page rather than jumping back to dawn halfway. */}
+        {/* ORDER PER THE CLIENT DOCUMENT OF 23 AUGUST, "On scroll down":
+              1 Hero · 2 Three Collection Philosophy · 3 Choose Your Essentials
+              4 The Custom Studio · 5 Trek Buddy · 6 Trails
+            That list is exhaustive about the first six things a visitor passes,
+            so the trust strip, the season kit and the climb — which used to sit
+            third, fourth and fifth, right through the middle of it — now follow
+            Trails instead. The trail HUD reads its chapters from these
+            data-trail-* wrappers in DOM order, so the hours were re-cut in
+            lib/trail.ts to keep ascending down the page. */}
+
+        {/* 2 — Three Collection Philosophy. */}
         <div data-trail-time={TRAIL_STOPS.collections.time} data-trail-alt={TRAIL_STOPS.collections.alt} data-trail-label={TRAIL_STOPS.collections.label}>
           <CollectionsRow collections={collections} featuredSlugs={featured_collection_slugs} stop={TRAIL_STOPS.collections} />
         </div>
-        {/* ShopByCategory suppresses itself when no category has stock, and a
-            section that stands down has to take its trail chapter with it or
-            the HUD announces a stop that is not there. */}
-        {hasStockedCategory && (
+
+        {/* 3 — Choose Your Essentials. Stands down when there is nothing to
+            show, and a section that stands down has to take its trail chapter
+            with it or the HUD announces a stop that is not there. */}
+        {essentials.length > 0 && (
           <div data-trail-time={TRAIL_STOPS.categories.time} data-trail-alt={TRAIL_STOPS.categories.alt} data-trail-label={TRAIL_STOPS.categories.label}>
             <ShopByCategory categories={categories} products={products} featuredSlugs={featured_category_slugs} stop={TRAIL_STOPS.categories} />
           </div>
         )}
+
+        {/* 4 — The Custom Studio. */}
+        <div data-trail-time={TRAIL_STOPS.workbench.time} data-trail-alt={TRAIL_STOPS.workbench.alt} data-trail-label={TRAIL_STOPS.workbench.label}>
+          <DesignYourOwn products={products} stop={TRAIL_STOPS.workbench} />
+        </div>
+
+        {/* 5 — Trek Buddy. The hero's third act carries it as a picture; this
+            carries it as a thing you can understand and join. */}
+        <div data-trail-time={TRAIL_STOPS.trekBuddy.time} data-trail-alt={TRAIL_STOPS.trekBuddy.alt} data-trail-label={TRAIL_STOPS.trekBuddy.label}>
+          <TrekBuddyBand />
+        </div>
+
+        {/* 6 — Trails. */}
+        <div data-trail-time={TRAIL_STOPS.trails.time} data-trail-alt={TRAIL_STOPS.trails.alt} data-trail-label={TRAIL_STOPS.trails.label}>
+          <HomeTrails trails={trails} stop={TRAIL_STOPS.trails} />
+        </div>
+
+        {/* ── Everything the brief does not sequence, in the order it already
+               ran in, now below the six it does. ─────────────────────────── */}
         <div data-trail-time={TRAIL_STOPS.trust.time} data-trail-alt={TRAIL_STOPS.trust.alt} data-trail-label={TRAIL_STOPS.trust.label}>
           <TrustBand />
         </div>
@@ -103,19 +136,6 @@ export default async function Home() {
             720px of scroll. It earns its place back when there is a catalogue
             big enough for "just added" to mean something. */}
         {false && <ShowcaseRails rails={rails} />}
-        <div data-trail-time={TRAIL_STOPS.workbench.time} data-trail-alt={TRAIL_STOPS.workbench.alt} data-trail-label={TRAIL_STOPS.workbench.label}>
-          <DesignYourOwn products={products} stop={TRAIL_STOPS.workbench} />
-        </div>
-        <div data-trail-time={TRAIL_STOPS.trails.time} data-trail-alt={TRAIL_STOPS.trails.alt} data-trail-label={TRAIL_STOPS.trails.label}>
-          <HomeTrails stop={TRAIL_STOPS.trails} />
-        </div>
-        {/* Trek Buddy had no place on the homepage at all — only the hero's
-            third act, which a visitor sees for a few hundred pixels of scroll
-            and cannot read properly. Placed at last light because that is when
-            you work out who you are going with tomorrow. */}
-        <div data-trail-time={TRAIL_STOPS.trekBuddy.time} data-trail-alt={TRAIL_STOPS.trekBuddy.alt} data-trail-label={TRAIL_STOPS.trekBuddy.label}>
-          <TrekBuddyBand />
-        </div>
         {/* Community renders null until real approved reviews exist. The trail
             wrapper has to disappear with it — TrailSpine builds its chapter HUD
             from these data-trail-* attributes, so leaving it in advertised a

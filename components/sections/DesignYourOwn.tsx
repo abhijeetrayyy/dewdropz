@@ -42,22 +42,55 @@ export default function DesignYourOwn({
       <div className="relative mx-auto max-w-7xl">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest">{stopEyebrow(stop)}</div>
+            {/* "CUSTOM STUDIO (Make the Font a bit bigger)". The words come
+                from the stop's label — renamed from "The workbench" in
+                lib/trail.ts so the trail HUD and this eyebrow cannot drift
+                apart — and the size goes 10px → 13px, the same +30% the hero's
+                own THE STUDIO eyebrow was given. */}
+            <div className="font-mono text-[13px] uppercase tracking-[0.2em] text-forest">{stopEyebrow(stop)}</div>
             <h2 className="mt-3 font-display text-[clamp(32px,5vw,54px)] leading-[1.03] text-text">
               Go on — make it yours.
             </h2>
             <p className="mt-5 max-w-xl font-body text-sm leading-relaxed text-mid md:text-[15px]">
-              Three heavyweight blanks in an oversized unisex fit. Choose a colour and size right here, then throw
-              your artwork on the front, the back, or both. You&apos;ll see exactly how it prints{' '}
-              <span className="text-text">before you order a thing.</span>
+              Build every detail before it goes to print.
             </p>
+
+            {/* THE TWO DOORS.
+                Per the brief, the section has to say that there are two ways
+                in — our library, or your own artwork — and it never did. The
+                page sold "upload your design" exclusively, which quietly told
+                everybody without a design that this part of the shop was not
+                for them. Each is a real link: the library goes to the studio
+                with its design picker already open. */}
+            <dl className="mt-7 grid gap-5 sm:grid-cols-2">
+              <div>
+                <dt className="font-body text-[11px] uppercase tracking-[0.14em] text-forest">
+                  <Link href="/customize?start=library" className="border-b border-forest/30 pb-0.5 transition-colors duration-300 hover:border-forest">
+                    Browse the library
+                  </Link>
+                </dt>
+                <dd className="mt-2 font-body text-[13px] leading-relaxed text-mid">
+                  Choose from our DEWDROPZ design collections.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-body text-[11px] uppercase tracking-[0.14em] text-forest">
+                  <Link href="/customize?start=blank" className="border-b border-forest/30 pb-0.5 transition-colors duration-300 hover:border-forest">
+                    Create your own
+                  </Link>
+                </dt>
+                <dd className="mt-2 font-body text-[13px] leading-relaxed text-mid">
+                  Start with a blank canvas or upload your own artwork.
+                </dd>
+              </div>
+            </dl>
           </div>
           <Link
             href="/customize"
             className="group flex-shrink-0 font-body text-[11px] uppercase tracking-[0.14em] text-forest transition-colors duration-300 hover:text-forest-mid"
           >
-            See every blank{' '}
-            <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
+            Open the studio{' '}
+            <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">↗</span>
           </Link>
         </div>
 

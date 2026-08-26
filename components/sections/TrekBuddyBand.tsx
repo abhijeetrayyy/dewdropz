@@ -107,13 +107,27 @@ export default async function TrekBuddyBand() {
             </p>
 
             <h2 className="mt-5 max-w-xl font-display text-[clamp(30px,4.4vw,52px)] font-light leading-[1.02] text-paper">
+              {/* NOT "Never go alone." — that is the hero's third act, a few
+                  thousand pixels up the same page, and a page that lands the
+                  same headline twice reads as a page that lost its place. */}
               The hills are better with <span className="italic text-sage">someone else.</span>
             </h2>
 
-            <p className="mt-5 max-w-lg font-body text-base leading-relaxed text-paper/75">
-              A board for finding people to walk with — not a social network. Somebody posts where
-              they are going and when they are leaving, and whoever else is free that day asks to
-              come along.
+            {/* THE CORE CONCEPT, in the brief's own words — and a wider
+                product than the line that used to sit here. Not "a board for
+                finding people to walk with" but a place where four different
+                kinds of people put an outdoor experience up and find whoever
+                wants to come. Ten kinds of outing, not one.
+
+                Deliberately NOT the brief's "Planning a trek, camping trip,
+                stargazing session…" paragraph: that is the hero's third act
+                and this is the same page. Saying it twice would make the
+                second one read as a page that lost its place — the same
+                reason the headline above is not "Never go alone." either. */}
+            <p className="mt-5 max-w-xl font-body text-base leading-relaxed text-paper/75">
+              Individuals, hosts, adventure companies and communities create outdoor
+              experiences here — and connect with the people who want to be on them.
+              Share your plan, and you choose who joins the journey.
             </p>
 
             {/* The three rules, as a ruled list. This is the part that decides
@@ -181,12 +195,18 @@ export default async function TrekBuddyBand() {
             {kinds.length > 0 && (
               <div className="mt-6">
                 <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-paper/60">
-                  {kinds.length} kinds of outing
+                  {kinds.filter((k: TrekKind) => !k.isOpenEnded).length} kinds of outing
                 </p>
+                {/* Every kind the board is taking, not the first nine of them.
+                    The brief names ten and migration 092 makes the board carry
+                    exactly those ten, so a `.slice(0, 9)` here would have
+                    dropped one of the ten off the end of the list — and the
+                    count above it was already reporting `kinds.length`, which
+                    includes the open-ended "Something else" the list itself
+                    filters out. Two numbers, one of them wrong. */}
                 <ul className="mt-3 flex flex-wrap gap-1.5">
                   {kinds
                     .filter((k: TrekKind) => !k.isOpenEnded)
-                    .slice(0, 9)
                     .map((k: TrekKind) => (
                       <li
                         key={k.key}
