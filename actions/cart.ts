@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { releaseStaleOrdersForUser } from '@/lib/orders-internal'
 import { cartItemSchema, updateCartItemSchema } from '@/lib/validations'
 import type { CartWithItems } from '@/types/database'
@@ -271,7 +271,21 @@ export async function getCartTotal(userId?: string | null, sessionId?: string | 
 }
 
 export async function validateCoupon(code: string, subtotal: number, userId?: string, client?: SupabaseClient) {
-  const supabase = client ?? await createServerSupabaseClient()
+  // SERVICE ROLE, not the session client.
+  //
+  // This read used to go through the caller's own session, which meant it
+  // depended on a `Public read active coupons` RLS policy — and that policy did
+  // exactly what it says: it let anyone holding the anon key (which ships in the
+  // browser bundle) enumerate every live code with its value, its minimum spend
+  // and its remaining usage. A discount code is something you give to somebody;
+  // a code anyone can read off the wire is a sitewide sale nobody decided to run.
+  //
+  // Migration 093 drops that policy, so this has to stop relying on it. Reading
+  // as service_role is not a widening of trust: this function is a server action,
+  // it looks up ONE code the customer typed, and it returns a yes/no and an
+  // amount — never a list. The caller-supplied `client` is still honoured for the
+  // mobile checkout route, which already passes an admin client of its own.
+  const supabase = client ?? createAdminSupabaseClient()
 
   const { data: coupon, error } = await supabase
     .from('coupons')
