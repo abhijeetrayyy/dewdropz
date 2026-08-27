@@ -1,10 +1,15 @@
-import { Suspense } from 'react'
-import { AuthForm } from '@/components/auth/AuthForm'
+import NavBar from '@/components/layout/NavBar'
+import FooterSection from '@/components/layout/FooterSection'
+import ResetForm from '@/components/auth/ResetForm'
+
+export const metadata = { title: 'Reset your password' }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>}>
-      <AuthForm mode="reset" />
-    </Suspense>
+    <>
+      <NavBar />
+      <ResetForm />
+      <FooterSection />
+    </>
   )
 }

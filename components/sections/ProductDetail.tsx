@@ -12,6 +12,7 @@ import { useMagneticHover } from '@/hooks/useMagneticHover'
 import { useHasMounted } from '@/hooks/useHasMounted'
 import ProductCard from '@/components/ProductCard'
 import RecentlyViewed from '@/components/sections/RecentlyViewed'
+import CollectionCrossSell from '@/components/sections/CollectionCrossSell'
 import ProductDeliveryCheck from '@/components/ProductDeliveryCheck'
 import Accordion from '@/components/Accordion'
 import SizeGuideModal from '@/components/SizeGuideModal'
@@ -207,39 +208,22 @@ export default function ProductDetail({
 
   return (
     <>
-      {collections.length > 0 && (
-        <div className="pt-20 md:pt-24 bg-paper border-b border-rule">
-          <div className="max-w-7xl mx-auto px-6 md:px-10 py-5 grid grid-cols-3 gap-4 md:gap-10">
-            {collections.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/collections/${c.slug}`}
-                className="group flex items-center gap-3 min-w-0"
-              >
-                <div className="relative h-11 w-11 md:h-12 md:w-12 rounded-sm overflow-hidden flex-shrink-0">
-                  {c.image_url && (
-                    <Image
-                      src={c.image_url}
-                      alt={c.name}
-                      fill
-                      sizes="48px"
-                      className="object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-body text-xs text-text group-hover:text-forest transition-colors duration-300 truncate">
-                    {c.name}
-                  </div>
-                  <div className="hidden sm:block font-body text-[10px] text-mid truncate">{c.tagline}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* A strip of every OTHER collection used to render here — three 44px
+          thumbnails with names and taglines, above the breadcrumb, above the
+          product. Two things were wrong with it. It is cross-navigation placed
+          before the thing the visitor actually asked to see, so the garment
+          started roughly 120px lower on every product page for no gain. And it
+          was already redundant: NavBar's Collections menu lists the same three,
+          with the same taglines and larger art, from every page on the site,
+          and the breadcrumb directly below named the collection this product
+          belongs to anyway.
 
-      <section className="bg-paper px-6 md:px-10 pt-10 md:pt-14 pb-24">
+          The cross-sell is not lost, it is moved: the "Explore other trails"
+          band now runs near the foot of this page, which is where a cross-sell
+          belongs — after the product has been seen, not instead of it. That
+          band is CollectionCrossSell, which already existed and was already
+          styled but had only ever been rendered on the collection pages. */}
+      <section className="bg-paper px-6 md:px-10 pt-28 md:pt-32 pb-24">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 font-body text-xs text-mid">
             <Link href="/collections" className="hover:text-forest transition-colors">
@@ -688,7 +672,19 @@ export default function ProductDetail({
         <section className="bg-paper px-6 md:px-10 pb-24">
           <div className="max-w-7xl mx-auto">
             <div className="mb-10 font-body text-xs tracking-[0.18em] text-forest uppercase">You Might Also Like</div>
-            <div ref={relatedGridRef} className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 lg:grid-cols-3">
+            {/* Three columns against a single related piece left two thirds of
+                the row empty and the lone card stranded — the same "grid wider
+                than its contents" problem the shop had. */}
+            <div
+              ref={relatedGridRef}
+              className={`grid gap-x-4 gap-y-8 sm:gap-x-8 sm:gap-y-12 ${
+                related.length === 1
+                  ? 'grid-cols-1 sm:max-w-sm'
+                  : related.length === 2
+                    ? 'grid-cols-2'
+                    : 'grid-cols-2 lg:grid-cols-3'
+              }`}
+            >
               {related.map((p) => (
                 <ProductCard key={p.slug} product={p} />
               ))}
@@ -696,6 +692,11 @@ export default function ProductDetail({
           </div>
         </section>
       )}
+
+      {/* Every other collection, full-bleed on the dusk ground. It also gives
+          this page its one tonal break: everything above is a single sheet of
+          paper from the navbar to here. */}
+      <CollectionCrossSell others={collections.filter((c) => c.slug !== collection?.slug)} />
 
       <RecentlyViewed
         excludeSlug={product.slug}

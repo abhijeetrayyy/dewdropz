@@ -161,8 +161,8 @@ export default function ShopContent({
     }`
 
   return (
-    <main className="min-h-screen bg-paper pb-24 pt-32">
-      <div className="mx-auto max-w-7xl px-6 md:px-10">
+    <main className="min-h-screen bg-paper pt-32">
+      <div className="mx-auto max-w-7xl px-6 pb-24 md:px-10">
         {/* Masthead. Short, because a shop is for scanning — the facts under it
             are read from the catalogue so they cannot drift as stock lands. */}
         <div className="border-b border-rule pb-8">
@@ -207,7 +207,19 @@ export default function ShopContent({
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {/* Columns follow how many collections there actually are, capped
+                at four. Hardcoded `lg:grid-cols-4` against a catalogue of three
+                left a dead fourth cell on every desktop view, and squeezed the
+                three that exist into a third of the width they had earned. */}
+            <div
+              className={`grid gap-3 ${
+                stockedCollections.length <= 2
+                  ? 'grid-cols-2'
+                  : stockedCollections.length === 3
+                    ? 'grid-cols-2 md:grid-cols-3'
+                    : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+              }`}
+            >
               {stockedCollections.map((c) => {
                 const on = collection === c.slug
                 return (
@@ -216,7 +228,7 @@ export default function ShopContent({
                     type="button"
                     onClick={() => setCollection(on ? 'all' : c.slug)}
                     aria-pressed={on}
-                    className={`group relative aspect-[16/9] overflow-hidden rounded-sm border text-left transition-colors duration-300 ${
+                    className={`group relative aspect-[4/5] overflow-hidden rounded-[var(--r-card)] border text-left transition-colors duration-300 ${
                       on ? 'border-forest' : 'border-transparent hover:border-rule'
                     }`}
                   >
@@ -234,9 +246,9 @@ export default function ShopContent({
                       <span className="absolute inset-0" style={{ background: c.gradient ?? '#2A3B31' }} />
                     )}
                     <span className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent" />
-                    <span className="absolute inset-x-0 bottom-0 p-3">
-                      <span className="block font-display text-sm text-paper">{c.name}</span>
-                      <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.14em] text-paper/60">
+                    <span className="absolute inset-x-0 bottom-0 p-4">
+                      <span className="block font-display text-lg leading-tight text-paper">{c.name}</span>
+                      <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.14em] text-paper/60">
                         {countFor((p) => p.collection?.slug === c.slug)} pieces
                       </span>
                     </span>
@@ -251,7 +263,17 @@ export default function ShopContent({
             stay in reach — and identical on every breakpoint, so a phone is not
             sent to a modal to do what a desktop does inline. */}
         <div className="sticky top-14 z-30 -mx-6 mt-12 border-y border-rule bg-paper/95 px-6 py-3 backdrop-blur-sm md:-mx-10 md:px-10">
-          <div className="flex items-center gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* The chips scroll; the sort control does NOT.
+              It used to: everything below lived in one `overflow-x-auto` row
+              with the sort group pushed to its far end by `ml-auto`. On a phone
+              that put "3 results" and the sort dropdown roughly 300px past the
+              right edge, reachable only by dragging the chip strip sideways
+              first — so on the device most people shop on, sorting was
+              effectively hidden. They are siblings now: the chip rail takes the
+              free space and scrolls inside it (`min-w-0` so it is allowed to
+              shrink below its content), and sort keeps a fixed seat on screen. */}
+          <div className="flex items-center gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {stockedCategories.length > 0 && (
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setCategory('all')} className={chip(category === 'all')}>
@@ -300,15 +322,15 @@ export default function ShopContent({
               </div>
             )}
 
-            <div className="ml-auto flex flex-shrink-0 items-center gap-3 pl-4">
+            </div>
+
+            <div className="flex flex-shrink-0 items-center gap-3 border-l border-rule pl-4">
               <span className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.16em] text-mid">
                 {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
               </span>
-              <label className="sr-only" htmlFor="shop-sort">
-                Sort products
-              </label>
               <select
                 id="shop-sort"
+                aria-label="Sort products"
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
                 className="cursor-pointer rounded-full border border-rule bg-paper px-3 py-2 font-body text-[11px] uppercase tracking-[0.1em] text-text transition-colors hover:border-forest focus:border-forest focus:outline-none"
@@ -348,8 +370,23 @@ export default function ShopContent({
           )}
         </div>
 
+        {/* The column count is capped by how many pieces are actually being
+            shown. A fixed `xl:grid-cols-4` against today's catalogue of three
+            drew three small cards and a hole where the fourth should be, on the
+            widest screens — which is most of why this page read as empty. Four
+            columns are still there the moment there are enough pieces to fill
+            them, so this does not trade the future catalogue away for today's;
+            it just stops advertising the gap. */}
         {filtered.length > 0 ? (
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 lg:grid-cols-3 xl:grid-cols-4">
+          <div
+            className={`mt-10 grid gap-x-4 gap-y-10 sm:gap-x-6 ${
+              filtered.length <= 2
+                ? 'grid-cols-2'
+                : filtered.length === 3
+                  ? 'grid-cols-2 lg:grid-cols-3'
+                  : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            }`}
+          >
             {filtered.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}
@@ -367,28 +404,40 @@ export default function ShopContent({
           </div>
         )}
 
-        {/* The shop's own argument, at the end of the scroll where a grid would
-            otherwise just stop. */}
-        {products.some((p) => p.is_customizable) && (
-          <div className="mt-20 flex flex-col gap-6 border-t border-rule pt-10 sm:flex-row sm:items-end sm:justify-between">
+      </div>
+
+      {/* The shop's own argument, at the end of the scroll where a grid would
+          otherwise just stop.
+          
+          Full-bleed and on the dark ground, which is the point: everything
+          above it — masthead, collections, filter bar, grid — sits on one
+          continuous sheet of `paper`, so the page ran top to bottom as a single
+          cream slab and the closing pitch read as one more row of it. The
+          homepage already alternates paper against forest to mark where one
+          idea ends and the next begins; the shop just never did. This is the
+          same device, used once, at the one place the page changes subject:
+          from what we made to what you can make. */}
+      {products.some((p) => p.is_customizable) && (
+        <section className="bg-forest-deep">
+          <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-16 md:px-10 md:py-20 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-forest">Made yours</p>
-              <p className="mt-3 max-w-md font-display text-[clamp(22px,2.4vw,32px)] leading-tight text-text">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-dawn">Made yours</p>
+              <p className="mt-4 max-w-md font-display text-[clamp(26px,3vw,40px)] font-light leading-tight text-paper">
                 Bring your own artwork, or set it in type.
               </p>
-              <p className="mt-3 max-w-md font-body text-sm text-mid">
+              <p className="mt-4 max-w-md font-body text-sm leading-relaxed text-paper/60">
                 Front, back, or both — previewed on the piece before anything is printed.
               </p>
             </div>
             <Link
               href="/customize"
-              className="inline-flex flex-shrink-0 items-center gap-2 self-start rounded-full bg-forest px-7 py-3.5 font-body text-[11px] uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-forest-mid sm:self-auto"
+              className="inline-flex min-h-[46px] flex-shrink-0 items-center gap-2 self-start rounded-full bg-paper px-8 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage sm:self-auto"
             >
               Open the studio ↗
             </Link>
           </div>
-        )}
-      </div>
+        </section>
+      )}
     </main>
   )
 }

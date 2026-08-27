@@ -15,13 +15,13 @@ function InfoRow({ label, value, href }: { label: string; value: string; href?: 
       onMouseMove={magneticMove}
       onMouseLeave={magneticLeave}
       style={{ x: magneticX, y: magneticY }}
-      className="font-body text-lg text-white inline-block"
+      className="font-body text-lg text-paper inline-block"
     >
       {value}
     </motion.span>
   )
   return (
-    <div className="border-b border-white/10 py-6">
+    <div className="border-b border-paper/10 py-6">
       <div className="font-body text-[10px] tracking-[0.2em] text-sage uppercase mb-2">{label}</div>
       {href ? (
         <a href={href} data-cursor="magnetic" className="hover:text-sage transition-colors duration-300">
@@ -62,7 +62,7 @@ export default function ContactForm() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16">
         <div>
           <div className="font-body text-[10px] tracking-[0.2em] text-sage uppercase">Get In Touch</div>
-          <h2 className="mt-4 font-display font-light text-[clamp(28px,4vw,40px)] text-white leading-[1.1]">
+          <h2 className="mt-4 font-display font-light text-[clamp(28px,4vw,40px)] text-paper leading-[1.1]">
             Questions before your next trek? We read every message.
           </h2>
 
@@ -74,7 +74,7 @@ export default function ContactForm() {
 
           <div className="mt-10 flex items-center gap-3">
             <span className="h-2 w-2 rounded-full bg-sage animate-pulse" />
-            <span className="font-body text-xs text-white/60">
+            <span className="font-body text-xs text-paper/60">
               Typical response time: <span className="text-sage">under 24 hours</span>
             </span>
           </div>
@@ -83,14 +83,14 @@ export default function ContactForm() {
             <a
               href={SITE.instagram}
               data-cursor="magnetic"
-              className="font-body text-xs text-white/50 uppercase tracking-[0.1em] hover:text-sage transition-colors duration-300"
+              className="font-body text-xs text-paper/55 uppercase tracking-[0.1em] hover:text-sage transition-colors duration-300"
             >
               Instagram
             </a>
             <a
               href={SITE.whatsapp}
               data-cursor="magnetic"
-              className="font-body text-xs text-white/50 uppercase tracking-[0.1em] hover:text-sage transition-colors duration-300"
+              className="font-body text-xs text-paper/55 uppercase tracking-[0.1em] hover:text-sage transition-colors duration-300"
             >
               WhatsApp
             </a>
@@ -109,33 +109,33 @@ export default function ContactForm() {
                 className="flex flex-col gap-6"
               >
                 <div>
-                  <label className="font-body text-[10px] tracking-[0.15em] text-white/50 uppercase">Name</label>
+                  <label className="font-body text-[10px] tracking-[0.15em] text-paper/55 uppercase">Name</label>
                   <input
                     type="text"
                     required
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full border-b border-white/20 bg-transparent font-body text-sm text-white py-3 mt-1 focus:outline-none focus:border-sage transition-colors"
+                    className="w-full border-b border-paper/40 bg-transparent font-body text-sm text-paper py-3 mt-1 focus:border-paper focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="font-body text-[10px] tracking-[0.15em] text-white/50 uppercase">Email</label>
+                  <label className="font-body text-[10px] tracking-[0.15em] text-paper/55 uppercase">Email</label>
                   <input
                     type="email"
                     required
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full border-b border-white/20 bg-transparent font-body text-sm text-white py-3 mt-1 focus:outline-none focus:border-sage transition-colors"
+                    className="w-full border-b border-paper/40 bg-transparent font-body text-sm text-paper py-3 mt-1 focus:border-paper focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="font-body text-[10px] tracking-[0.15em] text-white/50 uppercase">Message</label>
+                  <label className="font-body text-[10px] tracking-[0.15em] text-paper/55 uppercase">Message</label>
                   <textarea
                     required
                     rows={4}
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className="w-full border-b border-white/20 bg-transparent font-body text-sm text-white py-3 mt-1 focus:outline-none focus:border-sage transition-colors resize-none"
+                    className="w-full border-b border-paper/40 bg-transparent font-body text-sm text-paper py-3 mt-1 focus:border-paper focus:outline-none transition-colors resize-none"
                   />
                 </div>
                 <motion.button
@@ -145,7 +145,7 @@ export default function ContactForm() {
                   style={{ x: submitBtnX, y: submitBtnY }}
                   type="submit"
                   disabled={sending}
-                  className="mt-2 bg-sage text-ink font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 w-fit rounded-sm hover:bg-white transition-colors duration-300 disabled:opacity-50"
+                  className="mt-2 inline-flex min-h-[46px] w-fit items-center justify-center rounded-full bg-paper px-8 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-sage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-paper/50 focus-visible:ring-offset-2 focus-visible:ring-offset-altitude disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   {sending ? 'Sending…' : 'Send Message'}
                 </motion.button>
@@ -158,8 +158,8 @@ export default function ContactForm() {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-start justify-center h-full gap-2"
               >
-                <span className="font-display text-2xl text-white">Message received.</span>
-                <p className="font-body text-sm text-white/60 max-w-xs">
+                <span className="font-display text-2xl text-paper">Message received.</span>
+                <p className="font-body text-sm text-paper/60 max-w-xs">
                   We read every message ourselves — expect a reply within 24 hours.
                 </p>
               </motion.div>

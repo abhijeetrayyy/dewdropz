@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'motion/react'
 import { signup } from '@/actions/auth'
 import { GoogleSignInButton } from './GoogleSignInButton'
+import AuthShell from './AuthShell'
+import { AuthError, Field, OrRule, PASSWORD_MIN, SubmitButton } from './fields'
 
 export default function SignupForm() {
   const [name, setName] = useState('')
@@ -39,119 +40,98 @@ export default function SignupForm() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-paper flex items-center justify-center pt-32 pb-24 px-6 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[radial-gradient(ellipse_at_center,_var(--ink)_1px,_transparent_1px)] bg-[size:12px_12px]" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md relative z-10"
+  // The confirmation state replaces the form rather than sitting under it —
+  // there is nothing left to fill in, so leaving the fields on screen only
+  // invites a second submit.
+  if (success) {
+    return (
+      <AuthShell
+        eyebrow="One step left"
+        title="Check your email"
+        lede={`A confirmation link is on its way to ${email}. Open it and your account is live.`}
       >
-        <div className="text-center mb-10">
-          <h1 className="font-display text-[clamp(32px,5vw,48px)] text-ink">Create Account</h1>
-          <p className="font-body text-sm text-mid mt-3 tracking-wide">
-            Join the journey. Fast checkout and order history.
+        <div className="rounded-[var(--r-panel)] border border-rule bg-surface p-6">
+          <p className="font-body text-[13px] leading-relaxed text-mid">
+            Nothing arrived? It can take a minute, and it sometimes lands in spam. You can
+            also{' '}
+            <Link href="/auth/login" className="text-forest underline-offset-4 hover:underline">
+              sign in
+            </Link>{' '}
+            once the link is confirmed.
           </p>
         </div>
 
-        <AnimatePresence mode="wait">
-          {success ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center p-8 border border-forest/20 rounded-sm bg-forest/5"
-            >
-              <h3 className="font-display text-2xl text-forest mb-2">Check your email</h3>
-              <p className="font-body text-sm text-mid mb-6">
-                We&apos;ve sent a confirmation link to {email}. Please verify your account to continue.
-              </p>
-              <Link href="/" className="font-body text-xs tracking-widest uppercase text-forest hover:underline">
-                Return Home
-              </Link>
-            </motion.div>
-          ) : (
-            <motion.form
-              key="form"
-              onSubmit={handleSubmit}
-              className="space-y-6"
-              exit={{ opacity: 0 }}
-            >
-              <div>
-                <label className="block font-body text-xs tracking-[0.1em] text-forest uppercase mb-2">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-transparent border-b border-rule py-3 font-body text-sm text-ink focus:outline-none focus:border-forest transition-colors"
-                  placeholder="Rohan Thapliyal"
-                />
-              </div>
+        <Link
+          href="/shop"
+          className="mt-6 inline-flex min-h-[46px] w-full items-center justify-center rounded-full border border-forest/30 px-6 font-body text-[11px] font-medium uppercase tracking-[0.16em] text-forest transition-colors duration-300 hover:border-forest hover:bg-forest/5"
+        >
+          Look around the shop
+        </Link>
+      </AuthShell>
+    )
+  }
 
-              <div>
-                <label className="block font-body text-xs tracking-[0.1em] text-forest uppercase mb-2">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent border-b border-rule py-3 font-body text-sm text-ink focus:outline-none focus:border-forest transition-colors"
-                  placeholder="trail@example.com"
-                />
-              </div>
+  return (
+    <AuthShell
+      eyebrow="Create your account"
+      title="Join the range"
+      lede="Faster checkout, saved designs, order history, and a seat at Trek Buddy."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Field
+          id="name"
+          label="Full name"
+          type="text"
+          required
+          autoComplete="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Rohan Thapliyal"
+        />
 
-              <div>
-                <label className="block font-body text-xs tracking-[0.1em] text-forest uppercase mb-2">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent border-b border-rule py-3 font-body text-sm text-ink focus:outline-none focus:border-forest transition-colors"
-                  placeholder="••••••••"
-                />
-                <div className="font-body text-[10px] text-mid mt-2">Must be at least 6 characters.</div>
-              </div>
+        <Field
+          id="email"
+          label="Email"
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+        />
 
-              {error && (
-                <div className="font-body text-xs text-red-700 bg-red-100 p-3 rounded-sm border border-red-200">
-                  {error}
-                </div>
-              )}
+        {/* The hint and minLength both read PASSWORD_MIN, which is the number
+            lib/validations.ts actually enforces. This used to say 6. */}
+        <Field
+          id="password"
+          label="Password"
+          type="password"
+          required
+          minLength={PASSWORD_MIN}
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          hint={`At least ${PASSWORD_MIN} characters.`}
+        />
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-forest text-paper font-body text-xs tracking-[0.15em] uppercase py-4 rounded-sm hover:bg-forest-mid transition-colors disabled:opacity-50 mt-4"
-              >
-                {loading ? 'Creating...' : 'Create Account'}
-              </button>
-            </motion.form>
-          )}
-        </AnimatePresence>
+        {error && <AuthError>{error}</AuthError>}
 
-        {!success && (
-          <>
-            <div className="flex items-center gap-4 my-8">
-              <span className="h-px flex-1 bg-rule" />
-              <span className="font-body text-[10px] tracking-[0.15em] text-light uppercase">Or</span>
-              <span className="h-px flex-1 bg-rule" />
-            </div>
+        <SubmitButton loading={loading} loadingLabel="Creating your account…">
+          Create account
+        </SubmitButton>
+      </form>
 
-            <GoogleSignInButton label="Continue with Google" />
+      <OrRule />
 
-            <div className="mt-10 text-center font-body text-xs text-mid">
-              Already geared up?{' '}
-              <Link href="/auth/login" className="text-forest hover:underline">
-                Sign in
-              </Link>
-            </div>
-          </>
-        )}
-      </motion.div>
-    </main>
+      <GoogleSignInButton label="Continue with Google" />
+
+      <p className="mt-8 font-body text-[13px] text-mid">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="text-forest underline-offset-4 hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   )
 }

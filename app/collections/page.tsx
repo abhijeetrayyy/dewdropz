@@ -31,26 +31,17 @@ export default async function CollectionsPage() {
         {/* "How to Choose" removed at the client's request. It framed the range
             as technical kit selected against trekking conditions — the outdoor
             outfitter positioning the brief is explicitly moving away from. The
-            collections are stories now, not condition-matched kits. */}
-        <section className="bg-paper px-6 md:px-10 pb-16">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-rule border-t border-b border-rule">
-              {COLLECTIONS.map((c) => (
-                <div key={c.id} className="py-6 md:px-8 first:md:pl-0 last:md:pr-0">
-                  <h3 className="font-display text-lg text-text">{c.name}</h3>
-                  {c.tagline && <p className="mt-1 font-body text-[11px] text-mid italic">{c.tagline}</p>}
-                  <dl className="mt-3 flex flex-col gap-1.5">
-                    <div className="flex justify-between gap-2">
-                      <dt className="font-body text-[11px] text-mid uppercase tracking-[0.05em]">Pieces</dt>
-                      <dd className="font-body text-[11px] text-text">{c.products?.length ?? 0}</dd>
-                    </div>
-                  </dl>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+            collections are stories now, not condition-matched kits.
 
+            The three-column index that replaced it is gone too, and for a
+            plainer reason: it printed each collection's name and tagline, and
+            then the plates immediately below printed the same name and the same
+            tagline again, larger and over the photograph. Two identical lists
+            stacked, about 150px apart, and the top one had no picture — so the
+            page spent its first screen and a half saying the same three things
+            twice before showing anything. The only fact the index carried that
+            the plates did not is the piece count, which now sits on the plate
+            it describes. */}
         <section className="bg-paper px-6 md:px-10 pb-24">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
             {COLLECTIONS.map((c) => (
@@ -72,17 +63,21 @@ export default async function CollectionsPage() {
                 )}
                 <div
                   className="absolute inset-0"
-                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.25))' }}
+                  style={{ background: 'linear-gradient(to top, rgba(12,16,13,0.88), rgba(12,16,13,0.10) 55%, rgba(12,16,13,0.28))' }}
                 />
                 <div className="absolute inset-0 flex flex-col justify-end p-8">
-                  <span className="font-body text-[11px] tracking-[0.15em] text-sage uppercase">
+                  <span className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-sage">
                     Collection
+                    <span className="h-px w-6 bg-sage/40" />
+                    <span className="text-paper/60">
+                      {c.products?.length ?? 0} {(c.products?.length ?? 0) === 1 ? 'piece' : 'pieces'}
+                    </span>
                   </span>
-                  <h3 className="mt-2 font-display text-3xl text-white leading-snug transition-transform duration-300 group-hover:-translate-y-1">
+                  <h3 className="mt-3 font-display text-3xl leading-snug text-paper transition-transform duration-300 group-hover:-translate-y-1">
                     {c.name}
                   </h3>
-                  {c.tagline && <p className="mt-2 font-display italic text-white/70 text-base">{c.tagline}</p>}
-                  <span className="mt-5 font-body text-xs tracking-[0.1em] text-white uppercase border-b border-white/40 w-fit pb-1 group-hover:border-white transition-colors duration-300">
+                  {c.tagline && <p className="mt-2 font-display text-base italic text-paper/70">{c.tagline}</p>}
+                  <span className="mt-5 w-fit border-b border-paper/40 pb-1 font-body text-xs uppercase tracking-[0.1em] text-paper transition-colors duration-300 group-hover:border-paper">
                     Explore Collection →
                   </span>
                 </div>

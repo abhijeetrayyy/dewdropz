@@ -60,6 +60,48 @@ const TerrainScene = dynamic(() => import('./TerrainScene'), { ssr: false })
 //                 and the invitation. The loop closes: mountain → range →
 //                 print → mountain.
 //
+/**
+ * The garment colourways act 3's studio rail shows.
+ *
+ * HARDCODED ON PURPOSE. This is a hero — a scroll-scrubbed film that has to
+ * paint at 60fps from the first frame — so it does not fetch the catalogue to
+ * draw a 20px swatch. But it should not invent colours either, which is what it
+ * was doing: the rail was labelled "Ink" and held #FBF7EF / #7BA46F / #C2662A /
+ * #101512 — four brand tokens, none of them a garment colour, against a real
+ * studio that offers three. So the film advertised a palette the customiser
+ * does not have.
+ *
+ * These three are copied verbatim from what the backend serves today. All three
+ * customizable products — custom-hoodie, custom-sweatshirt, custom-print-tee —
+ * carry the identical set in `customization_config.colors`:
+ *
+ *   Jet Black     #2B2B2F   available: true
+ *   Hunter Green  #355E4B   available: false
+ *   Vanilla Ice   #E8E1D1   available: false
+ *
+ * TO RE-SYNC when the catalogue's colourways change, read them straight off the
+ * API rather than guessing:
+ *
+ *   curl -s localhost:3010/api/products \
+ *     | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['customization_config']['colors'])"
+ *
+ * The selected treatment mirrors CustomizerStudio's own colour rail: a sage
+ * ring on the live one, a diagonal bar on the two that are not orderable yet.
+ * The studio ALSO drops those two to 25% opacity; that is deliberately not
+ * copied here. It works at 28px on the studio's light panel, but on a 20px dot
+ * against near-black it turns #E8E1D1 into a mid grey — the frame would be
+ * showing a colour the catalogue does not have, which is the exact fault this
+ * constant was written to fix.
+ */
+const STUDIO_COLORWAYS = [
+  { name: 'Jet Black', hex: '#2B2B2F', available: true },
+  { name: 'Hunter Green', hex: '#355E4B', available: false },
+  { name: 'Vanilla Ice', hex: '#E8E1D1', available: false },
+] as const
+
+/** The one the rail opens on — the only orderable colourway today. */
+const STUDIO_COLOR_SELECTED = STUDIO_COLORWAYS.find((c) => c.available) ?? STUDIO_COLORWAYS[0]
+
 /** How many blanks act 1 shows. */
 const MAX_BLANKS = 3
 /** How many collection plates act 2 racks up. Three is the catalogue today. */
@@ -110,24 +152,24 @@ const ACT1_OUT = [0.23, 0.32] as const
 const ACT2_IN = [0.28, 0.37] as const
 /** The three plates land one at a time rather than as a row appearing. */
 const RANGES_IN = [0.37, 0.47] as const
-const ACT2_OUT = [0.47, 0.55] as const
+const ACT2_OUT = [0.47, 0.535] as const
 
 // ── ACT 3 — the studio ─────────────────────────────────────────────────────
 // Not a screenshot of an editor — an edit session, scrubbed: guides flash on,
 // the mark draws, the words type, the layer lights as each element lands, the
 // selection snaps on last, the zoom readout ticks up.
-const ACT3_IN = [0.51, 0.60] as const
-const GUIDES_ON = [0.605, 0.63] as const
-const MARK_DRAW = [0.625, 0.695] as const
-const TYPE_ON = [0.705, 0.76] as const
+const ACT3_IN = [0.545, 0.615] as const
+const GUIDES_ON = [0.625, 0.65] as const
+const MARK_DRAW = [0.645, 0.705] as const
+const TYPE_ON = [0.71, 0.765] as const
 const SELECT_ON = [0.765, 0.79] as const
-const ZOOM_TICK = [0.605, 0.765] as const
-const ACT3_OUT = [0.79, 0.86] as const
+const ZOOM_TICK = [0.625, 0.77] as const
+const ACT3_OUT = [0.79, 0.85] as const
 
 // ── ACT 4 — Trek Buddy ─────────────────────────────────────────────────────
 // Act 4's footage decodes only while it is on screen.
 const VIDEO_LIVE = 0.78
-const ACT4_IN = [0.835, 0.905] as const
+const ACT4_IN = [0.86, 0.915] as const
 // ACT 4 is one moment, not a lesson.
 //
 // It has been three other things: a day-arc of four columns, then a scrubbed
@@ -167,8 +209,17 @@ const CHAPTER_3TO4 = 0.85
 // have started dimming the mountain a fifth of the way into the brand story,
 // with the headline still at full opacity on top of a range going dark.
 const RANGE_DIM = [0.21, 0.36] as const
-/** What the range holds at behind the plates and the bench — present, not competing. */
-const RANGE_HELD = 0.26
+/** What the range holds at behind the plates and the bench — present, not competing.
+ *
+ * Was 0.26, which did not clear the bar its own comment sets. Against the near
+ * black the acts sit on, a quarter-opacity range is not "present" — it is a
+ * muddy smear that reads as an empty screen, and it became obvious once the
+ * act-2 → act-3 handover was retimed to pass THROUGH the range rather than
+ * dissolving one dense layout into another: that beat is now a frame of pure
+ * mountain, and at 0.26 the frame looked broken. At 0.38 the ridge line, the
+ * treeline and the dawn band behind the summit all actually read, and the acts
+ * still sit clearly in front of it. */
+const RANGE_HELD = 0.38
 const RANGE_OUT = [0.72, 0.83] as const
 const RANGE_DARK = 0.85
 
@@ -255,7 +306,17 @@ function WeatherRail({
         Change the weather
       </p>
 
-      <div className="mt-3 flex flex-col border-t border-paper/20">
+      {/* One vertical hairline down the side, not a rule under every row.
+          This was `border-t` on the group plus `border-b` on each of the four
+          buttons: five stacked horizontal lines in the top-left corner of the
+          frame, which is the drawing of a table. Next to a 132px display
+          headline it read as a debug panel someone had left switched on.
+
+          A single left rule groups the four just as well and costs one line
+          instead of five, and the live condition now marks itself by lighting
+          its own segment of that rule — so the control looks like a reading off
+          the scene it is driving rather than a form. */}
+      <div className="mt-3 flex flex-col gap-0.5 border-l border-paper/15 pl-3">
         {SEASONS.map((s) => {
           const live = season === s
           return (
@@ -264,19 +325,19 @@ function WeatherRail({
               type="button"
               onClick={() => onPick(s)}
               aria-pressed={live}
-              className="group flex items-center gap-2.5 border-b border-paper/12 py-2.5 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage"
+              className="group relative flex items-center py-1.5 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage"
             >
-              {/* The marker keeps its space whether or not it is drawn, so the
-                  names never shift as you move between them. */}
+              {/* The lit segment of the left rule. Sits on the rule itself
+                  (-left-3 = the pl-3 above), so nothing shifts as it moves. */}
               <span
                 aria-hidden="true"
-                className={`h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-300 ${
-                  live ? 'bg-sage' : 'bg-paper/0 group-hover:bg-paper/40'
+                className={`absolute -left-3 top-1/2 h-4 w-px -translate-y-1/2 transition-all duration-300 ${
+                  live ? 'bg-sage-lit' : 'bg-transparent group-hover:bg-paper/35'
                 }`}
               />
               <span
                 className={`font-body text-[15px] capitalize leading-none transition-colors duration-300 ${
-                  live ? 'text-paper' : 'text-paper/50 group-hover:text-paper/85'
+                  live ? 'text-paper' : 'text-paper/45 group-hover:text-paper/80'
                 }`}
               >
                 {s}
@@ -687,9 +748,26 @@ export default function SummitHero({
 
         // ACT 2 → out, past the lens, the same exit the studio takes — so the
         // two middle acts leave the same way and the film keeps one grammar.
+        //
+        // The fade and the scale are two tweens on purpose, because they want
+        // opposite curves. `power2.in` is right for the SCALE — it accelerates,
+        // which is what "past the lens" means. It was badly wrong for the
+        // OPACITY: an ease-in holds near 1 for most of its span, so act 2 was
+        // still at ~85% when the studio began arriving on top of it, and the
+        // two dense layouts crossed at ~0.53/0.57 — a double exposure of the
+        // collections rack over the workbench, both illegible. Measured, not
+        // guessed. The fade now uses `power2.out`: it clears fast and tails
+        // off, so the frame belongs to one act at a time and the acts hand over
+        // through the range holding behind them — which is what the range is
+        // there for.
         tl.to(
           rangesRef.current,
-          { opacity: 0, scale: 1.14, duration: ACT2_OUT[1] - ACT2_OUT[0], ease: 'power2.in' },
+          { opacity: 0, duration: ACT2_OUT[1] - ACT2_OUT[0], ease: 'power2.out' },
+          ACT2_OUT[0]
+        )
+        tl.to(
+          rangesRef.current,
+          { scale: 1.14, duration: ACT2_OUT[1] - ACT2_OUT[0], ease: 'power2.in' },
           ACT2_OUT[0]
         )
       }
@@ -788,7 +866,12 @@ export default function SummitHero({
       // behind it, so act 4 opens after dark.
       tl.to(
         studioRef.current,
-        { opacity: 0, scale: 1.18, duration: ACT3_OUT[1] - ACT3_OUT[0], ease: 'power2.in' },
+        { opacity: 0, duration: ACT3_OUT[1] - ACT3_OUT[0], ease: 'power2.out' },
+        ACT3_OUT[0]
+      )
+      tl.to(
+        studioRef.current,
+        { scale: 1.18, duration: ACT3_OUT[1] - ACT3_OUT[0], ease: 'power2.in' },
         ACT3_OUT[0]
       )
 
@@ -944,6 +1027,12 @@ export default function SummitHero({
           legible ground on the left without flattening the ridgeline on the
           right; the vertical one seats the garments against the valley floor. */}
       <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#101E17] via-[#101E17]/45 to-transparent md:via-[#101E17]/15" />
+
+      {/* Bottom-up, so the valley floor seats into the frame edge and the
+          ridgeline stays open. (A hand-cut multi-stop version of this was tried
+          and reverted: measured against the render it moved the lower third's
+          mean luminance by 0.0000 — the simple three-stop below was already
+          placing its dark exactly where the elaborate one did.) */}
       <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#101E17] via-transparent to-[#101E17]/55" />
 
       {/* ── ACT 1 — the brand ─────────────────────────────────────────────────
@@ -987,7 +1076,12 @@ export default function SummitHero({
                   a hero with one thing in it.
 
                   FEEL is roman in white, ALIVE. is italic in green, and both
-                  are set in `font-display`. The brief asks for Canela and, if
+                  are set in `font-display`. The green is `--sage-lit`, not
+                  `--sage`: measured against the terrain actually rendered
+                  behind it, --sage came out at 4.75:1 while the cream half of
+                  the same headline sat at 12.8:1, so one word was carrying two
+                  different weights and the coloured half sank into the
+                  hillside. Same hue, luminance lifted to 7.6:1. The brief asks for Canela and, if
                   we do not have it, "the font you have used for DEWDROPZ at
                   the top left" — that wordmark is `font-display` (Fraunces),
                   so this is literally the requested fallback rather than a
@@ -998,7 +1092,7 @@ export default function SummitHero({
                   sample rather than like a subheading with air around it. */}
               <h1 className="font-display text-[clamp(52px,10vw,132px)] font-light uppercase leading-[0.9] tracking-[-0.03em] text-paper">
                 <span data-hero-reveal data-summit-reveal className="inline">Feel </span>
-                <span data-hero-reveal data-summit-reveal className="inline italic text-sage">Alive.</span>
+                <span data-hero-reveal data-summit-reveal className="inline italic text-sage-lit">Alive.</span>
               </h1>
 
               {/* Repositioned per the client brief: the shop is not an expedition
@@ -1008,7 +1102,14 @@ export default function SummitHero({
                   happen to be mountain-inspired. The second sentence — "Apparel
                   and drinkware, printed one at a time with your design on it" —
                   was struck out in the 23 August mark-up. */}
-              <p data-hero-reveal data-summit-reveal className="mt-6 max-w-sm font-body text-sm leading-relaxed text-paper/70 md:text-base">
+              {/* 16px sitting under a 132px headline is an eight-to-one drop,
+                  and it made the one line of copy in the frame read as a caption
+                  on the type above it rather than as the second voice in a
+                  two-voice frame. At 19px it holds its own; `max-w-xl` is wide
+                  enough that it still sets on ONE line at that size, which
+                  matters because the whole point of this act is that it holds
+                  exactly one thought. */}
+              <p data-hero-reveal data-summit-reveal className="mt-7 max-w-xl font-body text-[17px] leading-relaxed tracking-[0.01em] text-paper/75 md:text-[19px]">
                 Inspired by mountains. Made for everyday journeys.
               </p>
 
@@ -1333,11 +1434,43 @@ export default function SummitHero({
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 font-mono text-[8px] uppercase tracking-[0.2em] text-paper/35">Ink</div>
+                {/* "Colour", not "Ink" — CustomizerStudio's rail 01 is
+                    labelled Colour and prints the selected colourway's name
+                    beside it. These are garment colourways; nothing here is
+                    ink. */}
+                <div className="mt-4 flex items-baseline justify-between gap-2">
+                  <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-paper/35">
+                    Colour
+                  </span>
+                  <span className="truncate font-body text-[9px] text-paper/55">
+                    {STUDIO_COLOR_SELECTED.name}
+                  </span>
+                </div>
                 <div className="mt-2 flex gap-1.5">
-                  {['#FBF7EF', '#7BA46F', '#C2662A', '#101512'].map((hex, i) => (
-                    <span key={hex} className={`h-5 w-5 rounded-full border ${i === 0 ? 'border-sage' : 'border-paper/20'}`} style={{ background: hex }} />
-                  ))}
+                  {STUDIO_COLORWAYS.map((c) => {
+                    const selected = c.name === STUDIO_COLOR_SELECTED.name
+                    return (
+                      <span
+                        key={c.name}
+                        title={c.available ? c.name : `${c.name} — coming soon`}
+                        className={`relative h-5 w-5 rounded-full border ${
+                          selected
+                            ? 'border-sage ring-1 ring-sage ring-offset-1 ring-offset-ink'
+                            : 'border-paper/20'
+                        }`}
+                        style={{ background: c.hex }}
+                      >
+                        {/* Same device the real rail uses, so "not orderable
+                            yet" does not rely on colour alone — on a colour
+                            control. */}
+                        {!c.available && (
+                          <span className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full">
+                            <span className="block h-px w-full rotate-45 bg-ink/70 mix-blend-normal" />
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })}
                 </div>
                 <div className="mt-4 border-t border-paper/10 pt-3 font-mono text-[8px] uppercase tracking-[0.16em] text-paper/30">
                   Print · DTG

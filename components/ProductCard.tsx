@@ -35,8 +35,14 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
     const rect = el.getBoundingClientRect()
     const px = (e.clientX - rect.left) / rect.width - 0.5
     const py = (e.clientY - rect.top) / rect.height - 0.5
-    rotateY.set(px * 14)
-    rotateX.set(py * -14)
+    // Was ±14°. On a 3:4 photograph of a garment that is enough perspective to
+    // visibly skew the shoulders and shear the print area — the card drew
+    // attention to itself and away from the product, which is the opposite of
+    // what a shop grid is for, and it is the single strongest "cheap web demo"
+    // tell on the page. ±4° still tracks the pointer, so the card reads as a
+    // physical thing that responds; it just no longer distorts the goods.
+    rotateY.set(px * 4)
+    rotateX.set(py * -4)
   }
 
   const handleMouseLeave = () => {
@@ -117,7 +123,7 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
           ref={ref}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 800 }}
+          style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 1200 }}
           className="product-image aspect-[3/4] rounded-sm overflow-hidden relative"
         >
           <div className={`h-full w-full relative bg-rule/40 ${soldOut ? 'opacity-60' : ''}`}>

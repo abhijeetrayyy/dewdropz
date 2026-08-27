@@ -47,7 +47,7 @@ export default function CartView({
             </p>
             <Link
               href="/collections"
-              className="mt-8 inline-block bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300"
+              className="mt-8 inline-flex min-h-[46px] items-center justify-center rounded-full bg-forest px-8 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-forest-mid"
             >
               Explore Collections
             </Link>
@@ -57,7 +57,7 @@ export default function CartView({
         <section className="bg-ink px-6 md:px-10 py-16 md:py-20">
           <div className="max-w-4xl mx-auto">
             <div className="mb-8 font-mono text-[10px] tracking-[0.2em] text-sage uppercase text-center">
-              Three conditions, three kits
+              Every range, a different reason to go
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {collections.map((c) => (
@@ -245,7 +245,7 @@ export default function CartView({
                     trackEvent('begin_checkout', { currency: 'INR', value: subtotal, items: items.map(i => ({ item_id: i.slug, item_name: i.name, quantity: i.quantity })) })
                   })
                 }}
-                className="block w-full text-center bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300"
+                className="flex min-h-[48px] w-full items-center justify-center rounded-full bg-forest px-6 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-forest-mid"
               >
                 Checkout
               </motion.a>

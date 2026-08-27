@@ -59,7 +59,7 @@ export default function WishlistView({
             </p>
             <Link
               href="/shop"
-              className="mt-8 inline-block bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300"
+              className="mt-8 inline-flex min-h-[46px] items-center justify-center rounded-full bg-forest px-8 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-forest-mid"
             >
               Explore Collections
             </Link>
@@ -69,7 +69,7 @@ export default function WishlistView({
         <section className="bg-ink px-6 md:px-10 py-16 md:py-20">
           <div className="max-w-4xl mx-auto">
             <div className="mb-8 font-mono text-[10px] tracking-[0.2em] text-sage uppercase text-center">
-              Three conditions, three kits
+              Every range, a different reason to go
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {collections.map((c) => (
@@ -121,7 +121,7 @@ export default function WishlistView({
             onClick={handleAddAllToCart}
             data-cursor="magnetic"
             data-cursor-text="Add"
-            className="inline-flex items-center justify-center gap-2 flex-shrink-0 bg-forest text-paper px-7 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 w-fit"
+            className="inline-flex min-h-[46px] w-fit flex-shrink-0 items-center justify-center gap-2 rounded-full bg-forest px-7 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-forest-mid"
           >
             {addedAll ? 'Added all to cart ✓' : 'Add all to cart'}
           </button>

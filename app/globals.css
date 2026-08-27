@@ -29,6 +29,14 @@
   --forest-mid:  #3C6A33;
   --forest-deep: #16290F; /* for layering dark-on-dark without going to ink */
   --sage:        #7BA46F;
+  /* Sage, raised for display type standing ON the range.
+     --sage at 132px over the hero's terrain measures 4.75:1, while the cream
+     half of the same headline measures 12.8:1 — so "FEEL ALIVE." was one word
+     carrying two different weights, and the coloured half visually receded.
+     This is the same hue with the luminance lifted until the two halves read as
+     one line (7.6:1, a 1.6x gap instead of 2.7x). It is for large type on dark
+     grounds only; --sage stays the UI green. */
+  --sage-lit:    #A8CD98;
 
   /* ── First light. The colour the brand was missing.
      Warm, saturated, unmistakably sunrise — used where the narrative says the
@@ -139,6 +147,7 @@
   --color-forest-deep: var(--forest-deep);
   --color-altitude:    var(--altitude);
   --color-sage:        var(--sage);
+  --color-sage-lit:    var(--sage-lit);
   --color-clay:        var(--clay);
   --color-clay-deep:   var(--clay-deep);
   --color-dawn:        var(--dawn);
