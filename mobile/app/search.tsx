@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Img as Image } from "@/components/ui/Img";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useCollectionsQuery, useProductsQuery } from "@/lib/queries";
+import { useCollectionsQuery, useProductsQuery, useRentalItemsQuery } from "@/lib/queries";
 import { getRecentSearches, pushRecentSearch, clearRecentSearches } from "@/lib/recentSearches";
 import { Icon } from "@/components/ui/Icon";
 import { Chip } from "@/components/ui/Chip";
@@ -36,6 +37,7 @@ export default function SearchScreen() {
   const panelTop = Platform.OS === "android" ? insets.top + S.sm : S.lg;
   const { data: products = [] } = useProductsQuery();
   const { data: collections = [] } = useCollectionsQuery();
+  const { data: rentals = [] } = useRentalItemsQuery();
   const [query, setQuery] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
 
@@ -54,6 +56,20 @@ export default function SearchScreen() {
       return haystack.includes(q);
     });
   }, [products, query]);
+
+  // Search covered the shop and nothing else, so a person typing "tent" — a
+  // thing this business demonstrably offers — was told "nothing by that name".
+  // Renting is half the catalogue; it belongs in the same box.
+  const rentalResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return rentals.filter((r) => {
+      const haystack = [r.name, r.summary, r.description].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [rentals, query]);
+
+  const total = results.length + rentalResults.length;
 
   function runSearch(term: string) {
     haptics.select();
@@ -104,7 +120,7 @@ export default function SearchScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10} accessibilityRole="button">
+          <TouchableOpacity onPress={() => goBack("/(tabs)/shop")} hitSlop={10} accessibilityRole="button">
             <Text style={s.cancel}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -182,20 +198,19 @@ export default function SearchScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Mono color={C.textMuted} style={{ paddingVertical: S.sm }}>
-            {results.length} {results.length === 1 ? "RESULT" : "RESULTS"} FOR “{query.trim().toUpperCase()}”
+            {total} {total === 1 ? "RESULT" : "RESULTS"} FOR “{query.trim().toUpperCase()}”
           </Mono>
           <Rule weight="soft" />
 
-          {results.length === 0 ? (
+          {total === 0 ? (
             <EmptyState
               eyebrow="No matches"
               title="Nothing by that name."
-              body="Try a broader word — “pack”, “tee”, “merino” — or browse the full gear room."
+              body="Try a broader word — “pack”, “tee”, “tent” — or browse the full gear room."
               ctaLabel="Browse everything"
-              onPress={() => {
-                router.back();
-                router.push("/(tabs)/shop");
-              }}
+              // One navigation, not two: this used to call goBack() AND
+              // push(), which on a modal leaves the shop stacked on the shop.
+              onPress={() => router.replace("/(tabs)/shop")}
             />
           ) : (
             results.map((p: any, i: number) => (
@@ -219,6 +234,40 @@ export default function SearchScreen() {
               </Animated.View>
             ))
           )}
+
+          {rentalResults.length > 0 ? (
+            <View style={{ marginTop: S.block }}>
+              <Mono color={C.sageDeep}>TO RENT, BY THE DAY</Mono>
+              <Rule weight="soft" style={{ marginTop: 8 }} />
+              {rentalResults.map((r, i) => (
+                <Animated.View key={r.id} entering={FadeIn.delay(Math.min(i, 8) * 25).duration(M.base)}>
+                  <TouchableOpacity
+                    style={s.resultRow}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${r.name}, ${formatPrice(r.daily_rate)} a day`}
+                    onPress={() => router.push(`/rent/${r.slug}`)}
+                  >
+                    {r.images?.[0] ? (
+                      <Image source={{ uri: r.images[0] }} style={s.resultImg} contentFit="cover" transition={180} alt="" />
+                    ) : (
+                      <View style={s.resultImg} />
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Mono color={C.sageDeep}>THE GEAR LOCKER</Mono>
+                      <Title style={{ marginTop: 4 }} numberOfLines={2}>{r.name}</Title>
+                      <Numeric style={{ marginTop: 6 }}>
+                        {formatPrice(r.daily_rate)}
+                        <Numeric color={C.textMuted}> / day</Numeric>
+                      </Numeric>
+                    </View>
+                    <Icon name="arrow_forward" size={17} color={C.faintIcon} />
+                  </TouchableOpacity>
+                  <Rule weight="hair" />
+                </Animated.View>
+              ))}
+            </View>
+          ) : null}
         </ScrollView>
       )}
     </View>

@@ -1,8 +1,8 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
 import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
@@ -20,6 +20,11 @@ import { C, F, R, S } from "@/lib/theme";
 // width and a display headline, then the rest as ruled rows. Making every
 // article equally sized is what makes a blog index look like a list of files.
 export default function JournalIndexScreen() {
+  // The header is a SIBLING of the scroll view, not a child, and reads the
+  // offset through `scrollY`. Inside it, the whole panel — back button and
+  // all — scrolled away and left no way back.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
   const [lead, ...rest] = JOURNAL;
 
   return (
@@ -29,12 +34,14 @@ export default function JournalIndexScreen() {
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
-        <ScreenHeader
-          eyebrow="The journal"
-          title="Stories from the trail."
-          lede="Field notes, packing guides, and the people who keep coming back to altitude."
-        />
+      <ScreenHeader
+        eyebrow="The journal"
+        title="Stories from the trail."
+        lede="Field notes, packing guides, and the people who keep coming back to altitude."
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           {/* ── Lead ──────────────────────────────────────────────────────── */}
@@ -104,7 +111,7 @@ export default function JournalIndexScreen() {
             NEW FIELD NOTES ROUGHLY EVERY SIX WEEKS
           </Mono>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

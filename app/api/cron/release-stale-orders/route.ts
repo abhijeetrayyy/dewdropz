@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { releaseAllStaleOrders } from '@/lib/orders-internal'
 
-// Recovers stock (and coupon usage) locked by abandoned stripe/razorpay
+// Recovers stock (and coupon usage) locked by abandoned gateway
 // checkouts — cart decrements stock at order-creation time, before payment
 // confirms, and until now the only release path was opportunistic (a signed-
 // in user's own next cart visit), which never covers guest checkouts or

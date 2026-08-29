@@ -143,7 +143,7 @@ export default function InviteCardPanel({
             aria-label="The invite link"
             value={url}
             onFocus={(e) => e.currentTarget.select()}
-            className={`mt-3 w-full rounded-full border border-rule bg-paper px-3.5 py-2 font-body text-[12px] text-mid ${RING}`}
+            className={`mt-3 w-full rounded-full border border-rule bg-surface px-3.5 py-2 font-body text-[12px] text-mid ${RING}`}
           />
 
           {/* What the link does, and the boundary it does not cross. Ruled off

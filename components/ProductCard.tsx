@@ -7,6 +7,7 @@ import { motion, useMotionValue, useSpring } from 'motion/react'
 import { useCart } from '@/providers/CartProvider'
 import { useWishlist } from '@/providers/WishlistProvider'
 import { useHasMounted } from '@/hooks/useHasMounted'
+import { ContourLines } from '@/components/ui/ContourLines'
 import { BLUR_DATA_URL } from '@/lib/constants'
 import { formatPrice } from '@/lib/utils'
 import type { ProductWithCollection } from '@/types/database'
@@ -88,7 +89,7 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
       <button
         onClick={handleWishlist}
         aria-label={mounted && hasItem(product.slug) ? 'Remove from wishlist' : 'Save to wishlist'}
-        className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-20 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-paper/80 backdrop-blur-sm rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-paper"
+        className="absolute right-2.5 top-2.5 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-surface/85 text-mid shadow-[var(--shadow-card)] backdrop-blur-sm transition-[opacity,background-color,color] hover:bg-surface hover:text-forest focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 sm:right-4 sm:top-4 sm:h-8 sm:w-8 md:opacity-0 md:group-hover:opacity-100"
       >
         <svg
           width="16" height="16" viewBox="0 0 24 24"
@@ -103,15 +104,15 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
       {(discountPct || soldOut || lowStock) && (
         <div className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-20 flex flex-col gap-1 items-start">
           {discountPct ? (
-            <span className="bg-forest text-paper text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-sm">
+            <span className="rounded-[var(--r-tag)] bg-forest px-1.5 py-0.5 text-[10px] font-medium text-paper shadow-[var(--shadow-card)] sm:px-2 sm:py-1 sm:text-[11px]">
               {discountPct}% OFF
             </span>
           ) : null}
           {soldOut ? (
-            <span className="bg-mid text-paper text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-sm">Sold out</span>
+            <span className="rounded-[var(--r-tag)] bg-ink/80 px-1.5 py-0.5 text-[10px] font-medium text-paper backdrop-blur-sm sm:px-2 sm:py-1 sm:text-[11px]">Sold out</span>
           ) : lowStock ? (
-            <span className="bg-paper/90 text-clay text-[10px] sm:text-[11px] font-medium pl-1.5 pr-2 py-0.5 sm:py-1 rounded-sm backdrop-blur-sm flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-clay animate-pulse flex-shrink-0" />
+            <span className="flex items-center gap-1.5 rounded-[var(--r-tag)] bg-surface/95 py-0.5 pl-1.5 pr-2 text-[10px] font-medium text-clay-deep shadow-[var(--shadow-card)] backdrop-blur-sm sm:py-1 sm:text-[11px]">
+              <span className="h-1.5 w-1.5 flex-shrink-0 animate-pulse rounded-full bg-clay-deep" />
               Only {stock} left
             </span>
           ) : null}
@@ -124,9 +125,9 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 1200 }}
-          className="product-image aspect-[3/4] rounded-sm overflow-hidden relative"
+          className="product-image relative aspect-[3/4] overflow-hidden rounded-[var(--r-card)] shadow-[var(--shadow-card)] transition-shadow duration-500 group-hover:shadow-[var(--shadow-lift)]"
         >
-          <div className={`h-full w-full relative bg-rule/40 ${soldOut ? 'opacity-60' : ''}`}>
+          <div className={`relative h-full w-full bg-paper-warm ${soldOut ? 'opacity-60' : ''}`}>
             {product.images?.[0] ? (
               <Image
                 src={product.images[0]}
@@ -137,7 +138,26 @@ export default function ProductCard({ product }: { product: ProductWithCollectio
                 blurDataURL={BLUR_DATA_URL}
                 className={`object-cover transition-[opacity,scale] duration-500 ease-[var(--ease-out)] group-hover:scale-105 ${product.images?.[1] ? 'group-hover:opacity-0' : ''}`}
               />
-            ) : null}
+            ) : (
+              // A product with no photograph yet. This used to render as a bare
+              // cream rectangle — a hole in the grid, and on a four-column row
+              // it read as a broken layout rather than a pending one. It is the
+              // same failure as a dashed grey empty state, just at card scale.
+              //
+              // So the card still carries the brand: the topographic motif the
+              // rest of the site uses for warm ground, and the piece's own
+              // initial set in the display face. It reads as a product awaiting
+              // its picture, which is what it is.
+              <span className="absolute inset-0 flex items-center justify-center overflow-hidden bg-paper-deep">
+                <ContourLines className="opacity-[0.14]" />
+                <span
+                  aria-hidden="true"
+                  className="relative font-display text-[clamp(40px,7vw,64px)] leading-none text-forest/25"
+                >
+                  {product.name.charAt(0).toUpperCase()}
+                </span>
+              </span>
+            )}
             {product.images?.[1] ? (
               <Image
                 src={product.images[1]}

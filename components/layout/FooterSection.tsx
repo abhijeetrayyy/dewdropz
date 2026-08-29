@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import CookieChoicesLink from '@/components/CookieChoicesLink'
 import { Logo } from '@/components/Logo'
 import { SocialLink } from '@/components/layout/SocialLink'
 import { SITE } from '@/lib/constants'
@@ -59,6 +60,7 @@ export default async function FooterSection() {
         { label: 'Hoodies', href: '/shop?category=hoodies' },
         { label: 'Sweatshirts', href: '/shop?category=sweatshirts' },
         { label: 'Drinkware', href: '/shop?category=drinkware' },
+        { label: 'Rent Gear', href: '/rent' },
       ],
     },
     {
@@ -84,6 +86,7 @@ export default async function FooterSection() {
         { label: 'Wishlist', href: '/wishlist' },
         { label: 'Cart', href: '/cart' },
         { label: 'Privacy', href: '/privacy' },
+        { label: 'Cookie choices', href: '#cookie-choices' },
       ],
     },
   ]
@@ -155,9 +158,16 @@ export default async function FooterSection() {
             <ul className="space-y-2.5">
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="font-body text-sm hover:text-white transition-colors">
-                    {link.label}
-                  </Link>
+                  {/* Withdrawing consent is not a page — it re-opens the choice
+                      in place, so this one entry is a control rather than a
+                      link. It has to be as reachable as giving consent was. */}
+                  {link.href === '#cookie-choices' ? (
+                    <CookieChoicesLink className="font-body text-sm hover:text-white transition-colors" />
+                  ) : (
+                    <Link href={link.href} className="font-body text-sm hover:text-white transition-colors">
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

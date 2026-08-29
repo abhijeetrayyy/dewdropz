@@ -64,7 +64,7 @@ export default function CartView({
                 <Link
                   key={c.id}
                   href={`/collections/${c.slug}`}
-                  className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
+                  className="group relative aspect-[4/5] overflow-hidden rounded-[var(--r-card)] bg-ink/60 shadow-[var(--shadow-card)]"
                 >
                   {c.image_url && (
                     <Image
@@ -90,7 +90,7 @@ export default function CartView({
           </div>
         </section>
 
-        <RecentlyViewed className="bg-paper px-6 md:px-10 py-16 md:py-20 border-t border-rule" />
+        <RecentlyViewed className="bg-paper-warm px-6 py-16 md:px-10 md:py-20" />
       </>
     )
   }
@@ -121,7 +121,7 @@ export default function CartView({
                   transition={{ duration: 0.3 }}
                   className="flex flex-wrap items-center gap-x-4 gap-y-3 md:flex-nowrap md:gap-6 border-b border-rule py-6 overflow-hidden"
                 >
-                  <Link href={`/products/${item.slug}`} className="group relative w-20 h-24 md:w-24 md:h-28 rounded-sm overflow-hidden flex-shrink-0 bg-rule/40">
+                  <Link href={`/products/${item.slug}`} className="group relative h-24 w-20 flex-shrink-0 overflow-hidden rounded-[var(--r-input)] border border-rule bg-paper-warm md:h-28 md:w-24">
                     {item.image && (
                       <Image
                         src={item.image}
@@ -142,7 +142,7 @@ export default function CartView({
                     <div className="font-body text-xs text-mid mt-1 uppercase tracking-[0.05em] flex items-center gap-2">
                       Size: {item.size}
                       {item.customDesignId && (
-                        <span className="px-1.5 py-0.5 rounded-sm bg-forest/10 text-forest text-[9px] tracking-[0.08em] normal-case">
+                        <span className="rounded-[var(--r-tag)] bg-sage-soft px-1.5 py-0.5 text-[9px] normal-case tracking-[0.08em] text-forest">
                           Custom Design
                         </span>
                       )}
@@ -157,7 +157,7 @@ export default function CartView({
                       wraps onto its own line on mobile (indented to sit under
                       the name, not the thumbnail) and sits inline again at md+. */}
                   <div className="flex w-full items-center justify-between pl-[96px] md:w-auto md:justify-start md:gap-6 md:pl-0">
-                    <div className="flex items-center border border-rule rounded-sm">
+                    <div className="flex items-center rounded-[var(--r-input)] border border-rule bg-surface">
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.slug, item.size, item.quantity - 1, item.customDesignId)}
@@ -186,7 +186,7 @@ export default function CartView({
                         type="button"
                         onClick={() => removeItem(item.slug, item.size, item.customDesignId)}
                         aria-label="Remove item"
-                        className="text-mid hover:text-clay transition-colors text-lg leading-none"
+                        className="text-lg leading-none text-light transition-colors hover:text-clay-deep"
                       >
                         ×
                       </button>
@@ -198,7 +198,7 @@ export default function CartView({
           </div>
 
           <div className="lg:col-span-1">
-            <div className="border border-rule rounded-lg p-6 sticky top-28">
+            <div className="sticky top-28 rounded-[var(--r-panel)] border border-rule/70 bg-surface p-6 shadow-[var(--shadow-card)]">
               <h2 className="font-body text-[10px] tracking-[0.15em] text-text uppercase mb-4">Order Summary</h2>
 
               {/* Free-shipping progress — the same reassurance TrustBand promises
@@ -211,7 +211,7 @@ export default function CartView({
                 ) : (
                   <p className="font-body text-xs text-forest font-medium">Free shipping unlocked ✓</p>
                 )}
-                <div className="mt-2.5 h-1 rounded-full bg-rule overflow-hidden">
+                <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-paper-deep">
                   <div
                     className="h-full rounded-full bg-forest transition-[width] duration-500"
                     style={{ width: `${shippingProgress}%` }}
@@ -272,7 +272,7 @@ export default function CartView({
       )}
     </section>
 
-    <RecentlyViewed className="bg-paper px-6 md:px-10 pb-24 border-t border-rule pt-16" />
+    <RecentlyViewed className="bg-paper-warm px-6 pb-24 pt-16 md:px-10" />
     </>
   )
 }

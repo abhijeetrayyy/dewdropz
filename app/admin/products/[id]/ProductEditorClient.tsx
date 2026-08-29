@@ -1,10 +1,9 @@
 'use client'
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateProduct, type ProductEditorData } from '@/actions/products'
+import { getCustomRangeOptions } from '@/actions/customRange'
 import { setProductCategories } from '@/actions/categories'
 import { setProductTags } from '@/actions/tags'
 import { setProductAttributes } from '@/actions/attributes'
@@ -48,6 +47,7 @@ type Form = {
   featured: boolean; isActive: boolean
   metaTitle: string; metaDesc: string; images: string[]
   isCustomizable: boolean; colorways: CustomizationColorway[]
+  isCustomRange: boolean; customBlankId: string
   categoryIds: string[]; primaryCat: string
   tagIds: string[]
   attrs: Record<string, { valueId: string; textValue: string }>
@@ -60,7 +60,7 @@ type SectionKey = 'basic' | 'customization' | 'categories' | 'tags' | 'attribute
 const SECTION_FIELDS: Record<SectionKey, (keyof Form)[]> = {
   basic: ['name', 'slug', 'desc', 'shortDesc', 'highlights', 'careInstructions', 'storyBlocks',
     'price', 'comparePrice', 'sku', 'weight', 'featured', 'isActive', 'metaTitle', 'metaDesc', 'images'],
-  customization: ['isCustomizable', 'colorways'],
+  customization: ['isCustomizable', 'colorways', 'isCustomRange', 'customBlankId'],
   categories: ['categoryIds', 'primaryCat'],
   tags: ['tagIds'],
   attributes: ['attrs'],
@@ -93,6 +93,8 @@ function toForm(data: ProductEditorData): Form {
     images: p.images ?? [],
     isCustomizable: p.is_customizable ?? false,
     colorways: p.customization_config?.colors ?? [],
+    isCustomRange: p.is_custom_range ?? false,
+    customBlankId: p.custom_blank_id ?? '',
     categoryIds: cats.map((c) => c.category_id),
     primaryCat: cats.find((c) => c.is_primary)?.category_id ?? '',
     tagIds: ((data.productTags ?? []) as Array<{ tag_id: string }>).map((t) => t.tag_id),
@@ -120,6 +122,9 @@ export default function ProductEditorClient({
   const [allAttrs, setAllAttrs] = useState<AttributeWithValues[]>(data.attributes ?? [])
   const [variants, setVariants] = useState<VariantWithOptions[]>(data.variants ?? [])
   const [movements, setMovements] = useState<InventoryMovementWithDetails[]>(data.movements ?? [])
+  // Blanks and library artwork for the custom-range pickers. Server-rendered
+  // with everything else — see the note above about not fetching on mount.
+  const rangeOptions = data.customRange
 
   const [form, setForm] = useState<Form>(() => toForm(data))
   // The values as loaded. Dirtiness is form-vs-this, so nothing has to be
@@ -192,6 +197,15 @@ export default function ProductEditorClient({
         jobs.push(updateProduct(productId, {
           is_customizable: form.isCustomizable,
           customization_config: form.isCustomizable ? { colors: form.colorways } : null,
+          // A blank is the thing designs are printed ON, so it can never also
+          // be a print OF something. Clearing here keeps the two halves of this
+          // tab from describing a product that cannot exist — the database
+          // would refuse it anyway (095), but refusing in the UI explains why.
+          is_custom_range: form.isCustomizable ? false : form.isCustomRange,
+          // The parent link is subordinate to the tick: untick the range and the
+          // link goes with it, or the CHECK in 095 rejects the whole save.
+          custom_blank_id:
+            form.isCustomizable || !form.isCustomRange ? null : (form.customBlankId || null),
         }))
       }
       if (dirtySections.has('categories')) {
@@ -641,6 +655,69 @@ export default function ProductEditorClient({
               {form.isCustomizable && (
                 <div className="border-t border-gray-100 pt-4">
                   <ColorwaysEditor value={form.colorways} onChange={(v) => set('colorways', v)} />
+                </div>
+              )}
+
+              {/* The other half of the custom range: a garment that is already
+                  printed and photographed, sold as its own product, but still
+                  belonging to the studio. Only offered when this is NOT a blank
+                  — a blank is the thing designs go on, so it cannot also be a
+                  print of one, and 095's CHECK enforces that. */}
+              {!form.isCustomizable && (
+                <div className="space-y-4 border-t border-gray-100 pt-6">
+                  <label className="flex max-w-2xl cursor-pointer items-start gap-3 rounded-md border border-gray-100 p-3 transition-colors hover:bg-gray-50">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={form.isCustomRange}
+                      onCheckedChange={(v) => {
+                        const on = !!v
+                        set('isCustomRange', on)
+                        // The parent link is meaningless without the tick, and
+                        // the database refuses the pair — clear it here so an
+                        // untick never produces a save that bounces.
+                        if (!on) set('customBlankId', '')
+                      }}
+                    />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Part of the custom range</div>
+                      <div className="text-xs text-gray-500">
+                        For a garment you have already printed and photographed. Its product page
+                        gains a card telling shoppers this came out of the studio, with a way in to
+                        design their own. Upload the finished photographs on the Basic tab as usual.
+                      </div>
+                    </div>
+                  </label>
+
+                  {form.isCustomRange && (
+                    <div className="max-w-md space-y-1.5 pl-1">
+                      <Label htmlFor="custom-blank">Printed on (optional)</Label>
+                      <Select
+                        value={form.customBlankId || 'none'}
+                        onValueChange={(v) => set('customBlankId', v === 'none' ? '' : v)}
+                      >
+                        <SelectTrigger id="custom-blank">
+                          <SelectValue placeholder="Not stocked in the studio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Not stocked in the studio</SelectItem>
+                          {rangeOptions?.blanks.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">
+                        Naming the blank sends shoppers straight into the studio on this exact
+                        garment. Leave it unset if we don&apos;t stock this one — the page then says
+                        so and offers the blanks we do.
+                      </p>
+                      {rangeOptions?.blanks.length === 0 && (
+                        <p className="text-xs text-amber-700">
+                          No blanks are set up yet. A blank needs &ldquo;Customizable product&rdquo;
+                          ticked and at least one colourway with print zones.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

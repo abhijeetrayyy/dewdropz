@@ -128,6 +128,7 @@ const NAV_LINKS: NavLink[] = [
     },
   },
   { label: 'Customize', href: '/customize' },
+  { label: 'Rent', href: '/rent' },
   { label: 'Trek Buddy', href: '/trek-buddy' },
   { label: 'Trails', href: '/treks' },
 ]

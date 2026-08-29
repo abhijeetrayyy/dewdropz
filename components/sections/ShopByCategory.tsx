@@ -93,7 +93,7 @@ export default function ShopByCategory({
               <Link
                 key={tile.id}
                 href={`/shop?category=${tile.slug}`}
-                className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
+                className="group relative aspect-[4/5] rounded-[var(--r-card)] overflow-hidden bg-ink/60"
               >
                 {tile.image_url && (
                   <Image

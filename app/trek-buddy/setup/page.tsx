@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 // somebody who walked here from there should feel they came through a door
 // rather than clicked to a different product.
 export default async function TrekSetupPage() {
-  await requireAuth()
+  await requireAuth('/trek-buddy/setup')
   const membership = await getTrekMembership()
   if (membership.signedIn && membership.onboarded) redirect('/trek-buddy')
 

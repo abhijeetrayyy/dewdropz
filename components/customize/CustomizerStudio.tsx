@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2, Check } from 'lucide-react'
@@ -8,6 +8,8 @@ import { Logo } from '@/components/Logo'
 import type { Canvas } from 'fabric'
 import { toast } from 'sonner'
 import CanvasStage from './CanvasStage'
+import BlankSwitcher from './BlankSwitcher'
+import { saveCarry, takeCarry, applyCarry, type CarriedDesign } from '@/lib/customize/carryDesign'
 import Toolbar from './Toolbar'
 import { useCart } from '@/providers/CartProvider'
 import { uploadCustomerImage } from '@/actions/media'
@@ -26,11 +28,15 @@ type Side = 'front' | 'back'
 // reason every serious editor is dark.
 export default function CustomizerStudio({
   product,
+  blanks = [],
   initialVariantId,
   initialColorName,
   openLibrary = false,
 }: {
   product: ProductWithCollection
+  /** The other customizable blanks, so the garment can be changed from inside
+   *  the studio instead of by leaving it. */
+  blanks?: Pick<ProductWithCollection, 'id' | 'slug' | 'name' | 'price' | 'images'>[]
   initialVariantId?: string
   initialColorName?: string
   /** Arrived through the "Browse the library" door (`?start=library`) rather
@@ -85,6 +91,43 @@ export default function CustomizerStudio({
     toast.success(`Copied to ${otherSide}`)
   }
 
+  // Rehydrate a design carried in from another blank.
+  //
+  // Runs once per canvas, after the canvas exists — `takeCarry` clears the
+  // handoff, so the ref is what stops the second side's mount from finding an
+  // empty store and silently dropping the back of the design.
+  const carriedRef = useRef<CarriedDesign | null | undefined>(undefined)
+  useEffect(() => {
+    if (carriedRef.current === undefined) carriedRef.current = takeCarry()
+    const carried = carriedRef.current
+    if (!carried) return
+
+    let cancelled = false
+    ;(async () => {
+      let worstScale = 1
+      for (const side of ['front', 'back'] as const) {
+        const json = carried[side]
+        const canvas = side === 'front' ? frontCanvas : backCanvas
+        const sideZone = color?.[side]
+        if (!json || !canvas || !sideZone || canvas.getObjects().length > 0) continue
+        const k = await applyCarry(canvas, json, carried.fromZone, sideZone)
+        worstScale = Math.max(worstScale, k)
+      }
+      if (cancelled || worstScale === 1) return
+
+      // Growing the artwork spreads the same pixels over more inches, so the
+      // print gets softer. Say so rather than let it be discovered at delivery.
+      if (worstScale > 1.02) {
+        toast(`Brought over from the ${carried.fromName} and resized to fit.`, {
+          description: 'This garment prints larger, so check the quality warning before adding to cart.',
+        })
+      } else {
+        toast(`Brought over from the ${carried.fromName}.`)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [frontCanvas, backCanvas, color])
+
   if (sides.length === 0) {
     return (
       <div className="studio flex min-h-screen items-center justify-center bg-[var(--st-well)] px-6 text-center">
@@ -96,6 +139,33 @@ export default function CustomizerStudio({
       </div>
     )
   }
+
+  /**
+   * Change garment, keeping the work.
+   *
+   * The design is serialised here and re-fitted on arrival rather than being
+   * re-fitted now: only the destination knows its own zone, and reading it
+   * would mean fetching the other product just to decide how to scale.
+   */
+  function switchBlank(slug: string) {
+    const front = frontCanvas?.getObjects().length ? frontCanvas.toJSON() : undefined
+    const back = backCanvas?.getObjects().length ? backCanvas.toJSON() : undefined
+    const basis = zone ?? color?.front ?? color?.back
+
+    if ((front || back) && basis) {
+      saveCarry({
+        fromSlug: product.slug,
+        fromName: product.name,
+        fromZone: {
+          widthPx: basis.widthPx, heightPx: basis.heightPx,
+          widthIn: basis.widthIn, heightIn: basis.heightIn,
+        },
+        front, back,
+      })
+    }
+    router.push(`/products/${slug}/customize`)
+  }
+
 
   async function handleContinue() {
     const hasContent = (frontCanvas?.getObjects().length ?? 0) > 0 || (backCanvas?.getObjects().length ?? 0) > 0
@@ -250,7 +320,7 @@ export default function CustomizerStudio({
                   type="button"
                   disabled={oos}
                   onClick={() => setVariantId(v.id)}
-                  className={`min-w-[44px] rounded-sm border px-3 py-2 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 lg:min-w-[40px] lg:px-2.5 lg:py-1.5 ${
+                  className={`min-w-[44px] rounded-[var(--r-input)] border px-3 py-2 font-body text-[11px] uppercase tracking-[0.05em] transition-colors duration-300 lg:min-w-[40px] lg:px-2.5 lg:py-1.5 ${
                     variantId === v.id
                       ? 'border-[var(--st-accent)] bg-[var(--st-hover)] text-[var(--st-ink)]'
                       : oos
@@ -266,12 +336,21 @@ export default function CustomizerStudio({
         </section>
       )}
 
+      {blanks.length > 1 && (
+        <section>
+          <RailLabel n="03" label="Garment" />
+          <div className="mt-3">
+            <BlankSwitcher blanks={blanks} currentSlug={product.slug} onSwitch={switchBlank} />
+          </div>
+        </section>
+      )}
+
       {/* The print spec is the honest bit people can't see by looking —
           what area they're actually designing into, and at what quality
           it goes to the printer. */}
       {zone && (
         <section>
-          <RailLabel n="03" label="Print area" />
+          <RailLabel n="04" label="Print area" />
           <dl className="mt-3 space-y-1.5">
             <SpecRow k="Size" v={`${zone.widthIn} × ${zone.heightIn} in`} />
             <SpecRow k="Output" v="300 DPI PNG" />
@@ -306,7 +385,7 @@ export default function CustomizerStudio({
           <span className="hidden h-5 w-px bg-[var(--st-rule)] sm:block" aria-hidden />
           <Link
             href={`/products/${product.slug}`}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-sm px-2 py-1.5 font-body text-xs text-[var(--st-ink-2)] transition-colors hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]"
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-[var(--r-input)] px-2 py-1.5 font-body text-xs text-[var(--st-ink-2)] transition-colors hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Back</span>
@@ -324,7 +403,7 @@ export default function CustomizerStudio({
             type="button"
             onClick={handleContinue}
             disabled={saving}
-            className="flex items-center gap-2 rounded-sm bg-[var(--st-ink)] px-4 py-2.5 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--st-well)] transition-all duration-300 hover:bg-white disabled:opacity-50 sm:px-5"
+            className="flex items-center gap-2 rounded-[var(--r-input)] bg-[var(--st-ink)] px-4 py-2.5 font-body text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--st-well)] transition-all duration-300 hover:bg-white disabled:opacity-50 sm:px-5"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             {saving ? 'Saving…' : 'Add to bag'}
@@ -337,7 +416,7 @@ export default function CustomizerStudio({
           garment overflow the viewport instead of scaling down. */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* ── Setup rail — desktop only ────────────────────────────────── */}
-        <aside className="hidden flex-shrink-0 overflow-y-auto bg-[var(--st-panel)] lg:block lg:w-[248px] lg:border-r lg:border-[var(--st-rule)] lg:px-5 lg:py-6">
+        <aside data-lenis-prevent="true" className="hidden flex-shrink-0 overflow-y-auto bg-[var(--st-panel)] lg:block lg:w-[248px] lg:border-r lg:border-[var(--st-rule)] lg:px-5 lg:py-6">
           {setupContent}
         </aside>
 
@@ -353,7 +432,7 @@ export default function CustomizerStudio({
                     type="button"
                     onClick={() => setActiveSide(s)}
                     aria-pressed={effectiveSide === s}
-                    className={`flex items-center gap-2 rounded-sm px-5 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] transition-colors duration-300 ${
+                    className={`flex items-center gap-2 rounded-[var(--r-input)] px-5 py-1.5 font-body text-[10px] uppercase tracking-[0.12em] transition-colors duration-300 ${
                       effectiveSide === s
                         ? 'bg-[var(--st-raise)] text-[var(--st-ink)] shadow-[inset_0_0_0_1px_var(--st-line)]'
                         : 'text-[var(--st-ink-3)] hover:bg-[var(--st-raise)] hover:text-[var(--st-ink-2)]'
@@ -401,6 +480,7 @@ export default function CustomizerStudio({
         <Toolbar
           canvas={activeCanvas}
           zone={zone}
+          blankId={product.id}
           activeSide={effectiveSide}
           twoSided={twoSided}
           garmentHex={color?.hex}

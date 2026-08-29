@@ -499,7 +499,7 @@ export default function OrdersPage() {
             <p className="text-sm text-gray-500">
               {selectedOrder?.payment_method === 'cod'
                 ? 'This was a COD order — no gateway charge to reverse, this just records the refund and restores stock.'
-                : `This issues a real refund through ${selectedOrder?.payment_method === 'stripe' ? 'Stripe' : 'Razorpay'}.`}
+                : `This issues a real refund through ${'Razorpay'}.`}
             </p>
             <div>
               <Label>Refund Amount (₹) *</Label>

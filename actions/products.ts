@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { auditLog } from '@/lib/audit'
 import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
+import { getCustomRangeOptions } from './customRange'
 import type { Product, ProductVariant, Collection, ProductWithCollection } from '@/types/database'
 import { ensureAdmin } from '@/lib/adminAuth'
 import { getCategoryTree, getProductCategories } from './categories'
@@ -122,7 +123,7 @@ export async function getProductEditorData(productId: string) {
 
   const [
     product, categories, productCategories, tags, productTags,
-    attributes, productAttributes, variants, movements,
+    attributes, productAttributes, variants, movements, customRange,
   ] = await Promise.all([
     getProductByIdAdmin(productId),
     getCategoryTree(),
@@ -133,11 +134,15 @@ export async function getProductEditorData(productId: string) {
     getProductAttributes(productId),
     getProductVariantsAdmin(productId),
     getInventoryMovements(productId),
+    // Sent with the page for the same reason as everything else here: the
+    // editor deliberately does not fetch on mount, because these functions run
+    // in US East and the people using this are in India.
+    getCustomRangeOptions(),
   ])
 
   return {
     product, categories, productCategories, tags, productTags,
-    attributes, productAttributes, variants, movements,
+    attributes, productAttributes, variants, movements, customRange,
   }
 }
 
@@ -206,7 +211,32 @@ export async function createProduct(input: {
 
 // Fields where "who changed this, and from what" is a question someone will
 // actually ask. Logging the whole row on every edit would bury those in noise.
-const AUDITED_PRODUCT_FIELDS = ['price', 'compare_at_price', 'inventory_quantity', 'is_active', 'status', 'sku'] as const
+const AUDITED_PRODUCT_FIELDS = ['price', 'compare_at_price', 'inventory_quantity', 'is_active', 'status', 'sku',
+  // Which blank and which artwork a finished print claims to come from decides
+  // what the storefront tells a shopper about it, so a change is worth a record.
+  'custom_blank_id', 'library_design_id'] as const
+
+/**
+ * Turn the database's refusals into sentences an admin can act on.
+ *
+ * Migration 094 enforces the custom-range rules in Postgres rather than trusting
+ * every caller, which is right — but it means the raw failure reaching this
+ * screen is a constraint name or a RAISE from a trigger. The same treatment
+ * `createOrder` gives its 23514 stock violation.
+ */
+function mapProductWriteError(error: { code?: string; message: string }): string {
+  const m = error.message
+  if (m.includes('custom_blank_id must reference a customizable product')) {
+    return 'That blank is not customizable, or has no print zones set up. Pick a product with colourways configured on its Customization tab.'
+  }
+  if (m.includes('products_design_needs_blank')) {
+    return 'Choose the blank this was printed on before choosing the artwork — a design needs a garment to sit on.'
+  }
+  if (m.includes('products_custom_blank_not_self')) {
+    return 'A product cannot be printed on itself. Pick a different blank.'
+  }
+  return m
+}
 
 export async function updateProduct(id: string, input: Record<string, unknown>) {
   const actor = await requireAdmin()
@@ -222,7 +252,7 @@ export async function updateProduct(id: string, input: Record<string, unknown>) 
     else payload[k] = null // Explicit null for cleared fields
   }
   const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single()
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(mapProductWriteError(error))
 
   const before: Record<string, unknown> = {}
   const after: Record<string, unknown> = {}

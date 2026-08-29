@@ -128,6 +128,7 @@ export default function PlanRail({
             <span className="font-body text-[13px] text-dawn-soft">Leaves in</span>
             <Countdown
               iso={plan.starts_at}
+              endsIso={plan.ends_at}
               prefix=""
               className="font-mono text-[13px] font-medium text-dawn-soft tabular-nums"
             />

@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+// The line-identity rule lives in lib/cartIdentity.ts, with tests — see the
+// note there about "no size" arriving in three different spellings.
+import { noSize, sameLine } from "@/lib/cartIdentity";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type CartItem = {
@@ -18,15 +21,7 @@ export type CartItem = {
   variantId?: string | null;
 };
 
-// Identity of a cart line. Plain items still collapse by product+size exactly
-// as before; customized ones only ever merge with themselves.
-function sameLine(a: CartItem, b: { productId: string; size?: string; customDesignId?: string }) {
-  return (
-    a.productId === b.productId &&
-    a.size === b.size &&
-    (a.customDesignId ?? null) === (b.customDesignId ?? null)
-  );
-}
+
 
 type CartStore = {
   items: CartItem[];
@@ -34,6 +29,8 @@ type CartStore = {
   removeItem: (productId: string, size?: string, customDesignId?: string) => void;
   updateQuantity: (productId: string, quantity: number, size?: string, customDesignId?: string) => void;
   clearCart: () => void;
+  /** Swap the whole cart for a server-merged one — see lib/cartAdoption.ts. */
+  replaceItems: (items: CartItem[]) => void;
   itemCount: () => number;
   subtotal: () => number;
 };
@@ -56,7 +53,9 @@ export const useCartStore = create<CartStore>()(
               ),
             };
           }
-          return { items: [...state.items, { ...item, quantity }] };
+          // Stored normalised, so the row label and every later comparison
+          // see one spelling of "no size".
+          return { items: [...state.items, { ...item, size: noSize(item.size) ?? undefined, quantity }] };
         }),
 
       removeItem: (productId, size, customDesignId) =>
@@ -80,6 +79,8 @@ export const useCartStore = create<CartStore>()(
         }),
 
       clearCart: () => set({ items: [] }),
+
+      replaceItems: (items) => set({ items }),
 
       itemCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
 

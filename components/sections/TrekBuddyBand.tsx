@@ -164,7 +164,7 @@ export default async function TrekBuddyBand() {
               a number invented to look busy is the one thing that would undo
               everything the column beside it just promised. */}
           <aside className="lg:pt-2">
-            <div className="rounded-sm border border-paper/20 bg-ink/50 p-6 backdrop-blur-md">
+            <div className="rounded-[var(--r-panel)] border border-paper/20 bg-ink/50 p-6 backdrop-blur-md">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-paper/60">
                 Right now
               </p>

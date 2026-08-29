@@ -14,10 +14,14 @@ function split(ms: number) {
 
 export default function Countdown({
   iso,
+  endsIso,
   className = '',
   prefix = 'in',
 }: {
   iso: string
+  /** When the trip ends. Without it this cannot distinguish "out on the hill"
+   *  from "over", which is why every past trek used to read "under way". */
+  endsIso?: string | null
   className?: string
   /** `in 4h 12m`, or pass '' for a bare `4h 12m`. */
   prefix?: string
@@ -40,7 +44,20 @@ export default function Countdown({
   }
 
   const diff = new Date(iso).getTime() - now
-  if (diff <= 0) return <span className={className}>under way</span>
+  if (diff <= 0) {
+    // Two states, where there needed to be three. Any past instant rendered
+    // "under way" and stayed that way forever, so a walk from March still read
+    // as in progress months later. With an `endsIso` in hand this can tell the
+    // difference between a trip that is out on the hill and one that is over.
+    if (endsIso) {
+      const endDiff = new Date(endsIso).getTime() - now
+      if (endDiff > 0) return <span className={className}>under way</span>
+      return <span className={className}>finished</span>
+    }
+    // No end instant supplied: a single-instant countdown can only say that the
+    // moment has passed, and "under way" is a claim it cannot support.
+    return <span className={className}>started</span>
+  }
 
   const { d, h, m, s } = split(diff)
   const text =

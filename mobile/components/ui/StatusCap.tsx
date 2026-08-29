@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C } from "@/lib/theme";
+import type { HeaderTone } from "@/components/editorial/ScreenHeader";
 
 // The system status bar — clock, signal, battery — is drawn by the OS in one of
 // two fixed colours, and the app only gets to say which. Every screen that now
@@ -11,24 +12,41 @@ import { C } from "@/lib/theme";
 //
 // Asking for light glyphs alone isn't enough, because the ink panel scrolls
 // away — light glyphs would then be invisible against the paper underneath.
-// So this pins an ink band exactly the height of the top inset. At rest it is
+// So this pins a band exactly the height of the top inset. At rest it is
 // indistinguishable from the panel behind it (same colour, and the panel only
 // rounds its bottom corners); once you scroll, it remains as a slim tinted
 // status strip, which is what keeps the clock legible for the rest of the
 // screen's life.
 //
+// `tone` MUST match the ScreenHeader below it. The cap used to be hardcoded to
+// ink with light glyphs, which was right while every header was ink — and
+// silently wrong the moment a screen took the pale `warm` panel, where light
+// glyphs would sit on near-white.
+//
 // Rendered as a SIBLING of the scroll view, never inside it — anything inside
 // would be clipped and scroll away with the content it is meant to outlive.
-export function StatusCap() {
+
+const CAP: Record<HeaderTone, { ground: string; glyphs: "light" | "dark" }> = {
+  ink: { ground: C.ink, glyphs: "light" },
+  altitude: { ground: C.altitude, glyphs: "light" },
+  forest: { ground: C.forestDeep, glyphs: "light" },
+  warm: { ground: C.warmPaper, glyphs: "dark" },
+};
+
+export function StatusCap({ tone = "ink" }: { tone?: HeaderTone }) {
   const insets = useSafeAreaInsets();
+  const c = CAP[tone];
   return (
     <>
-      <StatusBar style="light" />
-      <View pointerEvents="none" style={[s.cap, { height: insets.top }]} />
+      <StatusBar style={c.glyphs} />
+      <View
+        pointerEvents="none"
+        style={[s.cap, { height: insets.top, backgroundColor: c.ground }]}
+      />
     </>
   );
 }
 
 const s = StyleSheet.create({
-  cap: { position: "absolute", top: 0, left: 0, right: 0, backgroundColor: C.ink, zIndex: 20 },
+  cap: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 },
 });

@@ -23,6 +23,12 @@ export const qk = {
   designs: (userId: string) => ["designs", userId] as const,
   notifications: (userId: string) => ["notifications", userId] as const,
   notificationPreferences: (userId: string) => ["notifications", "preferences", userId] as const,
+  rentals: ["rentals"] as const,
+  rentalItem: (slug: string) => ["rentals", slug] as const,
+  rentalQuote: (slug: string, from: string, to: string, qty: number, ful: string) =>
+    ["rentals", "quote", slug, from, to, qty, ful] as const,
+  rentalBookings: (userId: string) => ["rentals", "bookings", userId] as const,
+  rentalBooking: (number: string) => ["rentals", "booking", number] as const,
 };
 
 export function useProductsQuery() {
@@ -440,5 +446,196 @@ export function useMyDesignsQuery(userId: string | undefined) {
     queryKey: qk.designs(userId ?? ""),
     queryFn: () => Data.getMyDesigns(userId!),
     enabled: !!userId,
+  });
+}
+
+/**
+ * The design library, filtered to the blank the studio is open on.
+ *
+ * Keyed by blank so switching garment refetches rather than showing artwork
+ * that cannot be printed on what the shopper is now holding. `enabled` keeps a
+ * shopper who brings their own image from paying for a catalogue they will
+ * never open — the panel fetches when it is first shown, not on studio mount.
+ */
+export function useLibraryDesignsQuery(blankId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["library-designs", blankId],
+    queryFn: () => Data.getLibraryDesigns(blankId!),
+    enabled: !!blankId && enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** The blank and artwork behind a finished print, for the product page badge. */
+export function useCustomRangeQuery(product: {
+  id: string; is_custom_range?: boolean | null; custom_blank_id?: string | null;
+} | undefined) {
+  return useQuery({
+    queryKey: ["custom-range", product?.id, product?.is_custom_range, product?.custom_blank_id],
+    queryFn: () => Data.getCustomRangeContext(product!),
+    // Only asks when there is something to ask about — an ordinary product
+    // never pays for this round trip. Keyed off the TICK, not the parent link:
+    // a range product with no blank stocked still needs its card.
+    enabled: !!product?.is_custom_range,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ─── Rentals ─────────────────────────────────────────────────────────────────
+
+export function useRentalItemsQuery() {
+  return useQuery({ queryKey: qk.rentals, queryFn: Data.getRentalItems, staleTime: 5 * 60_000 });
+}
+
+export function useRentalItemQuery(slug: string | undefined) {
+  return useQuery({
+    queryKey: qk.rentalItem(slug ?? ""),
+    queryFn: () => Data.getRentalItem(slug!),
+    enabled: !!slug,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export type RentalQuote = {
+  price: {
+    lines: {
+      itemId: string; slug: string; name: string; days: number; quantity: number;
+      dailyRate: number; rentAmount: number; discountAmount: number;
+      depositAmount: number; taxAmount: number; gstRate: number;
+    }[];
+    rentAmount: number;
+    discountAmount: number;
+    deliveryAmount: number;
+    taxAmount: number;
+    depositAmount: number;
+    totalAmount: number;
+    payableWithDeposit: number;
+    taxIsIgst: boolean;
+    errors: string[];
+  };
+  /** Units free for exactly the dates that were just priced, keyed by slug. */
+  availability: Record<string, number>;
+};
+
+export type RentalTerms = {
+  slug: string;
+  startsOn: string;
+  endsOn: string;
+  quantity: number;
+  fulfilment: "pickup" | "ship";
+  address?: { line1: string; city: string; state: string; postal_code: string } | null;
+};
+
+/**
+ * The price of a hire and the state of the shelf, both from the server.
+ *
+ * Neither figure may be computed on the device. Rentals have more places to
+ * drift than a cart does — days are counted inclusively, a long hire earns a
+ * discount, posting is charged both ways, and the deposit is deliberately NOT
+ * taxed — and `lib/rentalPricing.ts` is the only implementation of any of it.
+ * The lesson is the one `useCartQuoteQuery` above exists to remember: the app
+ * once quoted ₹2,049 for a hoodie the server billed at ₹2,226.88.
+ *
+ * Availability rides along in the same response on purpose. Fetched
+ * separately, the price and the count can straddle somebody else's booking and
+ * the screen ends up quoting for gear that is no longer there.
+ */
+export function useRentalForProductQuery(productId: string | undefined) {
+  return useQuery({
+    queryKey: ["rentals", "for-product", productId ?? ""],
+    queryFn: () => Data.getRentalForProduct(productId!),
+    enabled: !!productId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRentalQuoteQuery(terms: RentalTerms | null) {
+  return useQuery({
+    queryKey: terms
+      ? qk.rentalQuote(terms.slug, terms.startsOn, terms.endsOn, terms.quantity, terms.fulfilment)
+      : ["rentals", "quote", "idle"],
+    enabled: !!terms,
+    // A quote is a claim about a shelf other people are also booking from, so
+    // it is never served stale.
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    queryFn: async (): Promise<RentalQuote> => {
+      const t = terms!;
+      const res = await fetch(`${ENV.apiUrl}/api/mobile/rentals/quote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lines: [{ slug: t.slug, startsOn: t.startsOn, endsOn: t.endsOn, quantity: t.quantity }],
+          fulfilment: t.fulfilment,
+          // The schema wants an address for a posted hire because tax depends
+          // on the destination state. Before one is entered we still want a
+          // price, so a quote for "ship" with no address prices as Uttarakhand
+          // and the total is refreshed the moment a pincode is typed.
+          email: "quote@dewdropz.shop",
+          address: t.fulfilment === "ship" && t.address ? t.address : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Couldn't price those dates.");
+      return data as RentalQuote;
+    },
+  });
+}
+
+export function useRentalBookingMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: RentalTerms & { email: string; phone?: string },
+    ): Promise<{ bookingId: string; bookingNumber: string }> => {
+      // Signing in is optional — a guest can hire with an email, as on the web.
+      // The token, when there is one, attaches the booking to the account so it
+      // shows under "Your hires" and RLS lets that person read it back.
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${ENV.apiUrl}/api/mobile/rentals/book`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          lines: [{ slug: input.slug, startsOn: input.startsOn, endsOn: input.endsOn, quantity: input.quantity }],
+          fulfilment: input.fulfilment,
+          email: input.email,
+          phone: input.phone,
+          address: input.fulfilment === "ship" && input.address
+            ? { ...input.address, country: "India" }
+            : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "That booking didn't go through.");
+      }
+      return data as { bookingId: string; bookingNumber: string };
+    },
+    onSuccess: () => {
+      // Every quote in the cache is now a statement about a shelf that has
+      // changed. Drop them rather than let a stale count say a unit is free.
+      client.invalidateQueries({ queryKey: qk.rentals });
+    },
+  });
+}
+
+export function useMyRentalBookingsQuery(userId: string | undefined) {
+  return useQuery({
+    queryKey: qk.rentalBookings(userId ?? ""),
+    queryFn: () => Data.getMyRentalBookings(userId!),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+export function useRentalBookingQuery(bookingNumber: string | undefined) {
+  return useQuery({
+    queryKey: qk.rentalBooking(bookingNumber ?? ""),
+    queryFn: () => Data.getRentalBookingByNumber(bookingNumber!),
+    enabled: !!bookingNumber,
   });
 }

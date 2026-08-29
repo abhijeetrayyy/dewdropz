@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { adoptLocalCart } from '@/actions/cartAdoption'
+import { claimGuestRentalBookings } from '@/actions/rentals'
 import { login } from '@/actions/auth'
 import { GoogleSignInButton } from './GoogleSignInButton'
 import AuthShell from './AuthShell'
@@ -50,6 +52,28 @@ export default function LoginForm() {
           setError('Invalid credentials.')
         }
       } else {
+        // The cart the person built as a guest becomes the account's cart —
+        // joined with anything already saved there, not replacing it. Done
+        // BEFORE navigating, because the next page reads localStorage on mount
+        // and would otherwise show the pre-merge cart for a beat.
+        //
+        // A failure here must never block a successful sign-in: the local cart
+        // is untouched and checkout still syncs it, so the worst case is the
+        // status quo we had before this existed.
+        try {
+          const raw = window.localStorage.getItem('dewdropz_cart')
+          const lines = raw ? JSON.parse(raw) : []
+          if (Array.isArray(lines) && lines.length > 0 && result.userId) {
+            const { items } = await adoptLocalCart(lines, result.userId)
+            window.localStorage.setItem('dewdropz_cart', JSON.stringify(items))
+          }
+          // Any rental booked as a guest under this address becomes theirs, so
+          // it appears on "your rentals" instead of being reachable only
+          // through the lookup form.
+          if (result.userId) await claimGuestRentalBookings(result.userId, email)
+        } catch {
+          // Keep the guest cart as-is and carry on.
+        }
         window.location.href = safeNext(searchParams)
       }
     } catch {

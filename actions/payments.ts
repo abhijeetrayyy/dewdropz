@@ -1,20 +1,15 @@
 'use server'
 
-import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import crypto from 'crypto'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
-import { getStripe } from '@/lib/stripe'
-import { getCart } from './cart'
 import { createOrder } from './orders'
 import { setPaymentStatusInternal } from '@/lib/orders-internal'
 import { enqueue } from '@/lib/jobs'
 import { requireAdmin } from './auth'
-import type Stripe from 'stripe'
 
 // Not exported (see the same note on notifyCancellation in actions/orders.ts)
-// — payment_intent.payment_failed and Razorpay's payment.failed both need
-// the same "tell the customer, ping ops" follow-up.
+// — Razorpay's payment.failed needs the same "tell the customer, ping ops"
+// follow-up.
 async function notifyPaymentFailed(orderId: string) {
   const supabase = createAdminSupabaseClient()
   const { data: order } = await supabase.from('orders').select('email, order_number').eq('id', orderId).single()
@@ -23,62 +18,6 @@ async function notifyPaymentFailed(orderId: string) {
   // provider having a bad minute must not decide whether the webhook succeeds.
   await enqueue('payment.failed', { email: order.email, orderNumber: order.order_number })
   await enqueue('slack.alert', { text: `:x: Payment failed for order ${order.order_number} (${order.email}).` })
-}
-
-export async function createStripeCheckoutSession(input: {
-  userId?: string | null
-  sessionId?: string | null
-  email: string
-  phone?: string
-  shipping_address_id: string
-  billing_address_id?: string
-  coupon_code?: string
-  notes?: string
-  /** One per checkout attempt. Without it a retried "pay" creates a second
-   *  order AND a second gateway intent — the customer can be charged twice. */
-  idempotencyKey?: string
-}) {
-  const orderResult = await createOrder({
-    ...input,
-    payment_method: 'stripe',
-  })
-
-  if ('error' in orderResult) return { error: orderResult.error }
-
-  const cart = await getCart(input.userId, input.sessionId)
-  if (!cart?.items?.length) return { error: 'Cart is empty' }
-
-  const headersList = await headers()
-  const origin = headersList.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL!
-
-  const lineItems = cart.items.map((item) => ({
-    price_data: {
-      currency: 'inr',
-      product_data: {
-        name: item.product.name,
-        description: item.variant?.name ?? undefined,
-        images: item.product.images?.length ? [item.product.images[0]] : undefined,
-      },
-      unit_amount: item.product.price + (item.variant?.price_adjustment ?? 0),
-    },
-    quantity: item.quantity,
-  }))
-
-  const session = await getStripe().checkout.sessions.create({
-    customer_email: input.email,
-    mode: 'payment',
-    line_items: lineItems,
-    metadata: {
-      order_id: orderResult.orderId,
-    },
-    success_url: `${origin}/orders/${orderResult.orderId}?success=true`,
-    cancel_url: `${origin}/checkout?cancelled=true`,
-    shipping_address_collection: {
-      allowed_countries: ['IN'],
-    },
-  })
-
-  redirect(session.url!)
 }
 
 export async function createRazorpayOrder(input: {
@@ -90,7 +29,7 @@ export async function createRazorpayOrder(input: {
   billing_address_id?: string
   coupon_code?: string
   notes?: string
-  /** See the Stripe entry point above — same reasoning. */
+  /** Kept out of the client payload: the server resolves it from the cart. */
   idempotencyKey?: string
 }) {
   const orderResult = await createOrder({
@@ -141,77 +80,6 @@ export async function createRazorpayOrder(input: {
   }
 }
 
-export async function verifyStripeWebhook(payload: string, signature: string) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
-  const event = getStripe().webhooks.constructEvent(payload, signature, webhookSecret)
-
-  const supabase = createAdminSupabaseClient()
-
-  // Stripe retries webhook delivery on anything short of a prompt 200, so the same
-  // event.id can arrive more than once. The unique index on (provider, event_type,
-  // event_id) makes this insert fail with 23505 on a redelivery — that failure IS
-  // the dedup check, not an error to surface; caught below, we just no-op and ack.
-  const { data: eventRow, error: insertError } = await supabase
-    .from('webhook_events')
-    .insert({
-      provider: 'stripe',
-      event_type: event.type,
-      event_id: event.id,
-      payload: event.data.object as unknown as Record<string, unknown>,
-    })
-    .select('id')
-    .single()
-
-  if (insertError) {
-    if (insertError.code === '23505') return { received: true }
-    throw new Error(insertError.message)
-  }
-
-  async function markProcessed(error?: string) {
-    if (!eventRow) return
-    await supabase.from('webhook_events').update({
-      processed: !error,
-      error: error ?? null,
-      processed_at: new Date().toISOString(),
-    }).eq('id', eventRow.id)
-  }
-
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        const orderId = session.metadata?.order_id
-        if (orderId) {
-          const { data: existing } = await supabase.from('orders').select('payment_status').eq('id', orderId).single()
-          const alreadyPaid = existing?.payment_status === 'paid'
-          await setPaymentStatusInternal(orderId, 'paid', { gatewayOrderId: session.id })
-          await supabase
-            .from('orders')
-            .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
-            .eq('id', orderId)
-          if (!alreadyPaid) await enqueue('order.confirmation', { orderId })
-        }
-        break
-      }
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent
-        const orderId = paymentIntent.metadata?.order_id
-        if (orderId) {
-          await setPaymentStatusInternal(orderId, 'failed')
-          await notifyPaymentFailed(orderId)
-        }
-        break
-      }
-    }
-    await markProcessed()
-  } catch (e) {
-    await markProcessed(e instanceof Error ? e.message : 'Unknown error handling webhook')
-    throw e
-  }
-
-  return { received: true }
-}
-
 // Takes the *raw* request body text, not a parsed object — Razorpay signs the exact
 // bytes it sent, and re-serializing a parsed object via JSON.stringify is not
 // guaranteed to reproduce that byte sequence (key order, spacing, unicode escaping
@@ -243,7 +111,7 @@ export async function verifyRazorpayWebhook(rawBody: string, signature: string) 
   }
   const supabase = createAdminSupabaseClient()
 
-  // Unlike Stripe, a Razorpay webhook body has no single top-level event id — the
+  // A Razorpay webhook body has no single top-level event id — the
   // identity that actually needs deduplicating is "this event type happened to this
   // payment/order/refund again", so the entity's own id stands in for it.
   const razorpayEventId =

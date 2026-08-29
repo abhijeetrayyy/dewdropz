@@ -113,7 +113,7 @@ export default function HomeTrails({ trails, stop }: { trails: HomeTrail[]; stop
             <li key={trail.slug} className="w-[74vw] flex-shrink-0 snap-start sm:w-[46vw] lg:w-auto">
               <Link
                 href={guideHref(trail.slug)}
-                className="group flex h-full flex-col rounded-sm border border-paper/15 bg-ink/45 p-4 backdrop-blur-md transition-colors duration-300 hover:border-dawn/50 hover:bg-ink/60"
+                className="group flex h-full flex-col rounded-[var(--r-input)] border border-paper/15 bg-ink/45 p-4 backdrop-blur-md transition-colors duration-300 hover:border-dawn/50 hover:bg-ink/60"
               >
                 <div className="relative aspect-[5/4] overflow-hidden rounded-[2px] bg-forest-deep">
                   <Image

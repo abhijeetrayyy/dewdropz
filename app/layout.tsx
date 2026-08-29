@@ -7,6 +7,8 @@ import Preloader from '@/components/Preloader'
 import CustomCursor from '@/components/CustomCursor'
 import Grain from '@/components/Grain'
 import AnalyticsProvider from '@/providers/AnalyticsProvider'
+import { ConsentProvider } from '@/providers/ConsentProvider'
+import ConsentBanner from '@/components/ConsentBanner'
 import { WishlistProvider } from '@/providers/WishlistProvider'
 import ShopToaster from '@/components/shop/ShopToaster'
 import './globals.css'
@@ -135,23 +137,26 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        <AnalyticsProvider>
-          <WishlistProvider>
-            <CartProvider>
-              <IntroProvider>
-                <Preloader />
-                <CustomCursor />
-                <Grain />
-                <LenisProvider>{children}</LenisProvider>
-                {/* sonner has been a dependency for this project's whole life
-                    and <Toaster/> was mounted only in /admin and /trek-buddy,
-                    so every toast fired from the storefront rendered nothing.
-                    The cart could change with no confirmation of any kind. */}
-                <ShopToaster />
-              </IntroProvider>
-            </CartProvider>
-          </WishlistProvider>
-        </AnalyticsProvider>
+        <ConsentProvider>
+          <AnalyticsProvider>
+            <WishlistProvider>
+              <CartProvider>
+                <IntroProvider>
+                  <Preloader />
+                  <CustomCursor />
+                  <Grain />
+                  <LenisProvider>{children}</LenisProvider>
+                  {/* sonner has been a dependency for this project's whole life
+                      and <Toaster/> was mounted only in /admin and /trek-buddy,
+                      so every toast fired from the storefront rendered nothing.
+                      The cart could change with no confirmation of any kind. */}
+                  <ShopToaster />
+                </IntroProvider>
+              </CartProvider>
+            </WishlistProvider>
+          </AnalyticsProvider>
+          <ConsentBanner />
+        </ConsentProvider>
       </body>
     </html>
   )

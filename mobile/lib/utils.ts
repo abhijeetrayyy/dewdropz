@@ -1,6 +1,19 @@
 export function formatPrice(paise: number): string {
+  // Whole rupees print bare (₹1,899); anything with paise prints BOTH digits
+  // (₹189.90, not ₹189.9). `toLocaleString` alone drops the trailing zero, so
+  // a GST line came out as "₹118.8" and a total as "₹3,778.8" — a price ending
+  // in one decimal reads as a typo, not a price.
+  //
+  // The web's `lib/utils.ts` already carried this fix and its reasoning; the
+  // app never got it, and nothing showed until rentals started producing real
+  // fractions (18% of ₹660 is ₹118.80). Two formatters, one rule — the same
+  // drift `lib/rentalPricing.ts` exists to prevent, in miniature.
   const rupees = paise / 100;
-  return `₹${rupees.toLocaleString("en-IN")}`;
+  const fraction = paise % 100 === 0 ? 0 : 2;
+  return `₹${rupees.toLocaleString("en-IN", {
+    minimumFractionDigits: fraction,
+    maximumFractionDigits: fraction,
+  })}`;
 }
 
 /**

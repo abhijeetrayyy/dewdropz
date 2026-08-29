@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { router } from "expo-router";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
 import { StatusCap } from "@/components/ui/StatusCap";
@@ -25,6 +26,11 @@ const FACTS = [
 ];
 
 export default function SustainabilityScreen() {
+  // The header is a SIBLING of the scroll view, not a child, and reads the
+  // offset through `scrollY`. Inside it, the whole panel — back button and
+  // all — scrolled away and left no way back.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
   return (
     <View style={s.root}>
       <StatusCap />
@@ -32,12 +38,14 @@ export default function SustainabilityScreen() {
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
-        <ScreenHeader
-          eyebrow="Sustainability"
-          title="What we'll actually claim."
-          lede="No badges, no offsets we can't trace. Just the decisions behind how this gear gets made."
-        />
+      <ScreenHeader
+        eyebrow="Sustainability"
+        title="What we'll actually claim."
+        lede="No badges, no offsets we can't trace. Just the decisions behind how this gear gets made."
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <PullQuote quote={SUSTAINABILITY_INTRO} attribution="DEWDROPZ" />
@@ -99,7 +107,7 @@ export default function SustainabilityScreen() {
             />
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

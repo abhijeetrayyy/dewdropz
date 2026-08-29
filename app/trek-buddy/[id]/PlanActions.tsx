@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { LIFECYCLE_LABEL, type TrekLifecycle } from '@/lib/trek-lifecycle'
 import { requestToJoin, withdrawRequest, decideRequest, cancelPlan } from '@/actions/trekBuddy'
 
 type RosterRow = { user_id: string; display_name: string; status: string; message: string | null }
@@ -108,11 +109,16 @@ function Problem({ error }: { error: string }) {
 }
 
 export default function PlanActions({
-  planId, isHost, myStatus, full, cancelled, roster, waitlistPosition,
+  planId, isHost, myStatus, full, cancelled, roster, waitlistPosition, lifecycle,
 }: {
   planId: string
   isHost: boolean
   myStatus: string | null
+  /** Where the trek is in its own life. This file had no notion of time at all
+   *  — 394 lines and not one reference to the clock — so a trek from three
+   *  months ago rendered a live "Ask to come" button, and the row trigger was
+   *  what stopped it, at the point of press. */
+  lifecycle: TrekLifecycle
   /** Where you stand in the queue, 1-based. Null unless you are waitlisted. */
   waitlistPosition?: number | null
   full: boolean
@@ -139,6 +145,29 @@ export default function PlanActions({
   }
 
   if (cancelled) return null
+
+  // Nothing here is actionable once the trek has left: joining is refused by
+  // `trek_requests_guard`, and a host has no decision left to make. Say what
+  // happened instead of rendering controls that error when pressed.
+  if (lifecycle === 'under_way' || lifecycle === 'finished') {
+    const mine = myStatus === 'confirmed'
+    return (
+      <div className="rounded-[var(--r-card)] border border-rule-warm bg-paper-warm px-4 py-3.5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">
+          {LIFECYCLE_LABEL[lifecycle]}
+        </p>
+        <p className="mt-1.5 font-body text-[13px] leading-relaxed text-mid">
+          {lifecycle === 'under_way'
+            ? mine
+              ? 'You are on this one. The group chat stays open.'
+              : 'This one has set off. Nobody new can join it now.'
+            : mine
+              ? 'You were on this one.'
+              : 'This one is over.'}
+        </p>
+      </div>
+    )
+  }
 
   if (isHost) {
     const waiting = roster.filter((r) => r.status === 'requested')

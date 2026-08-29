@@ -25,7 +25,7 @@ export default function BlankCard({
   return (
     <Link
       href={`/products/${product.slug}/customize${start ? `?start=${start}` : ''}`}
-      className="group block overflow-hidden rounded-md bg-[#131A15] ring-1 ring-paper/10 transition-all duration-300 hover:ring-sage/50"
+      className="group block overflow-hidden rounded-[var(--r-input)] bg-[#131A15] ring-1 ring-paper/10 transition-all duration-300 hover:ring-sage/50"
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-[#D9D9D7]">
         {product.images?.[0] && (
@@ -39,7 +39,7 @@ export default function BlankCard({
             className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
           />
         )}
-        <span className="absolute left-3 top-3 rounded-sm bg-ink/70 px-2.5 py-1 font-body text-[9px] tracking-[0.15em] uppercase text-paper backdrop-blur-sm">
+        <span className="absolute left-3 top-3 rounded-[var(--r-input)] bg-ink/70 px-2.5 py-1 font-body text-[9px] tracking-[0.15em] uppercase text-paper backdrop-blur-sm">
           Front &amp; back
         </span>
       </div>

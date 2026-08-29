@@ -327,7 +327,7 @@ export default function RecapPanel({
         rows={5}
         maxLength={1200}
         placeholder="Clear all the way up. Nine of us, maggi at the temple hut, back at the cars by two."
-        className="w-full resize-y rounded-[var(--r-card)] border border-rule bg-paper px-4 py-3 font-body text-sm leading-relaxed text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
+        className="w-full resize-y rounded-[var(--r-card)] border border-rule bg-surface px-4 py-3 font-body text-sm leading-relaxed text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
       />
 
       <input ref={input} type="file" accept="image/*" className="sr-only"

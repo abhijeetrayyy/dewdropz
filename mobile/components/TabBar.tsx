@@ -9,7 +9,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { C, F, M, S } from "@/lib/theme";
-import { useCartStore } from "@/stores/cart";
 import { haptics } from "@/lib/haptics";
 import { Icon } from "@/components/ui/Icon";
 import { Badge } from "@/components/ui/Badge";
@@ -60,18 +59,24 @@ export function useTabBarSpace() {
   return PILL_H + PILL_GAP + Math.max(insets.bottom, 10);
 }
 
+// Rent replaces Pack in the bar. Renting is the second-largest commerce
+// surface in the business — its own inventory, availability and lifecycle —
+// and it was a row buried in the account list, while the pack (a destination
+// you visit with intent, once, at the end) held a permanent fifth of the bar.
+// The pack moved to the masthead with its badge, where every commerce app on a
+// phone keeps it.
 const ICON: Record<string, string> = {
   index: "home",
   shop: "storefront",
+  rent: "camping",
   design: "draw",
-  cart: "backpack",
   account: "person",
 };
 const LABEL: Record<string, string> = {
   index: "Home",
   shop: "Shop",
+  rent: "Rent",
   design: "Studio",
-  cart: "Pack",
   account: "You",
 };
 
@@ -85,7 +90,6 @@ type TabBarProps = {
 
 export function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
-  const cartCount = useCartStore((s) => s.itemCount());
 
   return (
     <View
@@ -98,9 +102,19 @@ export function TabBar({ state, navigation }: TabBarProps) {
         ) : null}
         <View style={[StyleSheet.absoluteFill, s.pillFill]} />
 
-        {state.routes.map((route, index) => {
+        {/* ICON is the guest list, not just a lookup.
+            `href: null` on a Tabs.Screen removes a route from expo-router's
+            OWN bar — it does nothing here, because this custom bar renders
+            `state.routes` directly, and the pack duly appeared as a sixth tab
+            after it was supposed to have left. Rendering only the routes this
+            bar has an identity for keeps the two in step: to remove a tab,
+            remove it from ICON and LABEL. */}
+        {state.routes
+          .map((route, index) => ({ route, index }))
+          .filter(({ route }) => route.name in ICON)
+          .map(({ route, index }) => {
           const focused = state.index === index;
-          const badge = route.name === "cart" ? cartCount : 0;
+          const badge = 0;
 
           return (
             <Tab

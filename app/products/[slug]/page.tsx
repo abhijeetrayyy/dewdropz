@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { getCustomRangeContext } from '@/actions/customRange'
+import CustomRangeBanner from '@/components/sections/CustomRangeBanner'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import ProductDetail from '@/components/sections/ProductDetail'
 import { getProductBySlug, getProducts, getCollections } from '@/actions/products'
+import { getRentalForProduct } from '@/actions/rentals'
 import { getRelatedProducts } from '@/lib/recommendations'
 import { getStoreSettings } from '@/actions/settings'
 import { getOffersForProduct } from '@/actions/promotions'
@@ -42,7 +45,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [allProducts, collections, settings, offers] = await Promise.all([
+  const [allProducts, collections, settings, offers, customRange, rentable] = await Promise.all([
     getProducts(),
     getCollections(),
     getStoreSettings(),
@@ -50,6 +53,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     // offer nobody learns about until checkout is an offer that did not do its
     // job — the point of running one is that it affects what people buy.
     getOffersForProduct(product.slug, product.collection?.slug ?? null),
+    // Null for an ordinary product, which is the common case — the banner then
+    // renders nothing rather than claiming studio provenance it does not have.
+    getCustomRangeContext(product),
+    // Six pieces of equipment can be bought OR rented (migration 098). Null for
+    // everything else, which is the common case.
+    getRentalForProduct(product.id),
   ])
   const related = getRelatedProducts(allProducts, product.slug, 6)
 
@@ -62,8 +71,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           collection={product.collection}
           related={related}
           collections={collections}
+          rentable={rentable}
           freeShippingThreshold={settings.free_shipping_threshold}
           offers={offers}
+          customRangeSlot={
+            customRange ? (
+              <CustomRangeBanner
+                blank={customRange.blank}
+                siblings={customRange.siblings}
+                alternatives={customRange.alternatives}
+              />
+            ) : null
+          }
         />
       </main>
       <FooterSection />

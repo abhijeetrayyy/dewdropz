@@ -37,6 +37,23 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { AppSplash } from "@/components/AppSplash";
 import { C } from "@/lib/theme";
 
+/**
+ * What sits BEHIND a screen opened from a link.
+ *
+ * Cold-starting on a deep link (or a notification) builds a stack containing
+ * exactly one route. Android's system back then has nothing to pop, so it
+ * closes the app, and React Navigation refuses the header's back with
+ * "The action 'GO_BACK' was not handled by any navigator".
+ *
+ * Naming the tabs as the anchor makes expo-router put them underneath any
+ * deep-linked route, so back goes home instead of quitting. `anchor` is what
+ * SDK 57 reads first — it still honours the older `initialRouteName`, per
+ * getRoutesCore.js — and `lib/nav.ts` covers the remaining case this cannot:
+ * a screen reached by `router.replace()`, which leaves no history either.
+ */
+export const unstable_settings = { anchor: "(tabs)" };
+
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
@@ -147,6 +164,17 @@ export default function RootLayout() {
                 <Stack.Screen name="orders/[id]/index" options={{ headerShown: false }} />
                 <Stack.Screen name="orders/[id]/return" options={{ headerShown: false }} />
                 <Stack.Screen name="saved" options={{ headerShown: false }} />
+                {/* Every screen in this app draws its own header, so a route
+                    missing from this list gets expo-router's default bar
+                    stacked on top of one — which is exactly what /rent did
+                    until these four lines existed. */}
+                <Stack.Screen name="rent/[slug]" options={{ headerShown: false }} />
+                {/* The confirmation is reached with `router.replace`, so there is
+                    nothing behind it. Locking the gesture as well left no way off
+                    the screen but its own buttons — `lib/nav.ts` sends its back
+                    control to the locker instead, so the gesture can stay. */}
+                <Stack.Screen name="rent/booked/[number]" options={{ headerShown: false }} />
+                <Stack.Screen name="rent/bookings" options={{ headerShown: false }} />
                 {/* Every screen in this app draws its own header. A route that
                     is not declared here inherits the native one and appears
                     with two stacked headers. */}

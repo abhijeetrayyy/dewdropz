@@ -271,7 +271,6 @@ export default function PaymentsPage() {
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All methods</SelectItem>
-                <SelectItem value="stripe">Stripe</SelectItem>
                 <SelectItem value="razorpay">Razorpay</SelectItem>
                 <SelectItem value="cod">COD</SelectItem>
               </SelectContent>

@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import CopyLink from './CopyLink'
-import { getInviteCard } from '@/actions/trekShare'
+import { classifyInviteMiss, getInviteCard } from '@/actions/trekShare'
 import Avatar from '@/components/trek/ui/Avatar'
 import Cover from '@/components/trek/ui/Cover'
 import HourPill from '@/components/trek/ui/HourPill'
@@ -55,9 +55,16 @@ export const metadata: Metadata = {
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const card = await getInviteCard(token)
-  // Wrong token, revoked link, cancelled walk, or one that has already left.
-  // All four are the same answer: there is nothing here.
-  if (!card) notFound()
+
+  // Four causes, and they are NOT the same answer. A wrong or revoked token is
+  // genuinely nothing. A walk that has set off, or been called off, is something
+  // the person holding this link should be told about — they were invited to it,
+  // and a bare 404 makes a real invitation look like a broken one.
+  if (!card) {
+    const miss = await classifyInviteMiss(token)
+    if (miss === 'unknown') notFound()
+    return <InviteGone reason={miss} />
+  }
 
   const light = lightForTime(card.start_time ?? '06:00')
   const when = new Date(card.starts_at).toLocaleDateString('en-IN', {
@@ -201,6 +208,45 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             it feels wrong.
           </p>
         </div>
+      </div>
+    </main>
+  )
+}
+
+/**
+ * The invitation that has already passed.
+ *
+ * Deliberately says nothing about the walk itself — not the place, not the
+ * host, not the date. The link holder learns only that it was real and that the
+ * moment has gone, which is the least that is honest and the most that is safe.
+ */
+function InviteGone({ reason }: { reason: 'gone' | 'cancelled' }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-paper px-6 py-24">
+      <div className="w-full max-w-sm rounded-[var(--r-panel)] border border-rule/70 bg-surface p-8 text-center shadow-[var(--shadow-card)]">
+        <span
+          aria-hidden="true"
+          className="mx-auto mb-5 block h-px w-14 bg-gradient-to-r from-transparent via-dawn/60 to-transparent"
+        />
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mid">
+          {reason === 'cancelled' ? 'Called off' : 'Already gone'}
+        </p>
+        <h1 className="mt-4 font-display text-[26px] leading-tight text-text">
+          {reason === 'cancelled'
+            ? 'This one was called off.'
+            : 'This one has already set off.'}
+        </h1>
+        <p className="mt-3 font-body text-sm leading-relaxed text-mid">
+          {reason === 'cancelled'
+            ? 'The host called it off after sending you this. Nothing is happening at the other end of this link.'
+            : 'Your invitation was real — it just left before you opened it. There will be others.'}
+        </p>
+        <Link
+          href="/trek-buddy"
+          className="mt-7 inline-flex min-h-[44px] items-center rounded-full bg-forest px-7 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+        >
+          See what else is on
+        </Link>
       </div>
     </main>
   )

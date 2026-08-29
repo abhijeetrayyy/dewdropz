@@ -30,7 +30,7 @@ export default function TrailGuide() {
           >
             {/* Plate */}
             <div className="relative">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-paper-deep md:aspect-[3/4]">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--r-card)] bg-paper-deep md:aspect-[3/4]">
                 <Image
                   src={trail.image}
                   alt=""
@@ -105,7 +105,7 @@ export default function TrailGuide() {
 
               {/* Restrictions are the one thing a guide must not bury. */}
               {'access' in trail && trail.access && (
-                <p className="mt-6 rounded-sm border-l-2 border-clay bg-clay/[0.07] px-4 py-3 font-body text-[12.5px] leading-relaxed text-mid">
+                <p className="mt-6 rounded-[var(--r-input)] border-l-2 border-clay bg-clay/[0.07] px-4 py-3 font-body text-[12.5px] leading-relaxed text-mid">
                   <span className="font-medium text-text">Before you go — </span>
                   {trail.access}
                 </p>

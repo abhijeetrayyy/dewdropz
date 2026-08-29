@@ -33,7 +33,7 @@ export default function AboutStory() {
     <section ref={sectionRef} className="bg-paper px-6 md:px-10 py-24 md:py-32">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         <div
-          className="relative h-[45vh] md:h-[65vh] min-h-[360px] rounded-lg overflow-hidden order-1 md:order-none"
+          className="relative h-[45vh] md:h-[65vh] min-h-[360px] rounded-[var(--r-panel)] overflow-hidden order-1 md:order-none"
           style={{ background: 'linear-gradient(135deg, #1C3018 0%, #27481F 60%, #7BA46F 100%)' }}
         >
           <div ref={imageRef} className="absolute inset-0">

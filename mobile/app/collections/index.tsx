@@ -1,8 +1,8 @@
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
 import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
@@ -25,35 +25,44 @@ import { C, F, R, S } from "@/lib/theme";
 // piece-count and entry price underneath, so the index is genuinely useful
 // rather than three more pretty rectangles.
 export default function CollectionsIndexScreen() {
+  // The header is a SIBLING of the scroll view, not a child, and reads the
+  // offset through `scrollY`. Inside it, the whole panel — back button and
+  // all — scrolled away and left no way back.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
   const { data: collections = [], isLoading, isError, refetch } = useCollectionsQuery();
   const { data: products = [] } = useProductsQuery();
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
 
   return (
     <View style={s.root}>
-      <StatusCap />
+      <StatusCap tone="forest" />
       {/* These are paper screens pushed from dark-hero ones (product,
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <ScrollView
+      <ScreenHeader
+        tone="forest"
+        eyebrow="The index"
+        title="Collections"
+        lede="Every piece we make belongs to one set of conditions. Start with the weather you're walking into."
+        stats={
+          collections.length > 0
+            ? [
+                { label: "Collections", value: String(collections.length) },
+                { label: "Pieces", value: String(products.length) },
+              ]
+            : undefined
+        }
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ink} />}
       >
-        <ScreenHeader
-          eyebrow="The index"
-          title="Collections"
-          lede="Every piece we make belongs to one set of conditions. Start with the weather you're walking into."
-          stats={
-            collections.length > 0
-              ? [
-                  { label: "Collections", value: String(collections.length) },
-                  { label: "Pieces", value: String(products.length) },
-                ]
-              : undefined
-          }
-        />
 
         <View style={{ paddingHorizontal: S.gutter }}>
           {isError ? (
@@ -130,7 +139,7 @@ export default function CollectionsIndexScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

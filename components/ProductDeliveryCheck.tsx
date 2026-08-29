@@ -39,13 +39,13 @@ export default function ProductDeliveryCheck({ subtotal, weightGrams }: { subtot
           onChange={(e) => setPincode(e.target.value.replace(/[^0-9]/g, ''))}
           onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
           placeholder="Enter pincode"
-          className="flex-1 border border-rule rounded-sm px-3 py-2 text-sm font-body text-text focus:outline-none focus:border-forest transition-colors"
+          className="flex-1 border border-rule rounded-[var(--r-input)] px-3 py-2 text-sm font-body text-text focus:outline-none focus:border-forest transition-colors"
         />
         <button
           type="button"
           onClick={handleCheck}
           disabled={checking || pincode.length !== 6}
-          className="px-4 py-2 text-xs font-body tracking-[0.05em] uppercase border border-rule rounded-sm text-mid hover:border-forest hover:text-forest transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-xs font-body tracking-[0.05em] uppercase border border-rule rounded-[var(--r-input)] text-mid hover:border-forest hover:text-forest transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {checking ? 'Checking...' : 'Check'}
         </button>

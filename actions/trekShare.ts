@@ -67,3 +67,33 @@ export async function getInviteCard(token: string): Promise<InviteCard | null> {
   const rows = (data ?? []) as InviteCard[]
   return rows[0] ?? null
 }
+
+/**
+ * Why a card came back empty.
+ *
+ * `trek_invite_card` ends with `AND p.starts_at > NOW()`, which is right — an
+ * invitation to something that has already left is not an invitation. But the
+ * page turned every empty result into a bare `notFound()`, so the person who
+ * opened the link a day late got an unstyled 404 and no idea whether they had
+ * the wrong link or simply missed it. That is the exact person this feature
+ * exists for.
+ *
+ * This distinguishes the two without widening what the anon RPC returns: it
+ * looks the token up on the service role purely to classify, and returns a
+ * state — never the walk's place, time or host. A holder of the link learns
+ * only that it was once real, which they already knew, having been sent it.
+ */
+export type InviteMiss = 'unknown' | 'gone' | 'cancelled'
+
+export async function classifyInviteMiss(token: string): Promise<InviteMiss> {
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_plans')
+    .select('status, hidden_at, ends_at')
+    .eq('share_token', token)
+    .maybeSingle()
+
+  if (!data) return 'unknown'
+  if (data.hidden_at) return 'unknown'
+  if (data.status === 'cancelled') return 'cancelled'
+  return 'gone'
+}

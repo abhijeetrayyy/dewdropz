@@ -13,7 +13,7 @@ import Animated, {
   useReducedMotion,
   useScrollOffset,
 } from "react-native-reanimated";
-import { useCollectionsQuery, useCustomizableProductsQuery, useHomeQuery, useOrdersQuery, useProductsQuery } from "@/lib/queries";
+import { useCollectionsQuery, useCustomizableProductsQuery, useHomeQuery, useOrdersQuery, useProductsQuery, useRentalItemsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { useAuthStore } from "@/stores/auth";
 import { useCartStore } from "@/stores/cart";
@@ -135,6 +135,7 @@ export default function HomeScreen() {
   const { data: products = [], isLoading, isError, refetch } = useProductsQuery();
   const { data: collections = [] } = useCollectionsQuery();
   const { data: blanks = [] } = useCustomizableProductsQuery();
+  const { data: rentals = [] } = useRentalItemsQuery();
   const { data: home } = useHomeQuery();
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
   const user = useAuthStore((s) => s.user);
@@ -474,6 +475,56 @@ export default function HomeScreen() {
             <View style={{ paddingHorizontal: S.gutter, marginTop: S.xl }}>
               <Button title="Open the studio" icon="draw" variant="dark" onPress={() => router.push("/(tabs)/design")} />
             </View>
+          </View>
+        ) : null}
+
+        {/* ── The gear locker ─────────────────────────────────────────────
+            Renders only when there is something to rent, so an empty locker
+            leaves no gap in the issue. The section NUMBER comes from `idx()`
+            like every other, which is why inserting one here doesn't strand
+            the ones below it. ──────────────────────────────────────────── */}
+        {rentals.length > 0 ? (
+          <View style={s.section}>
+            <SectionHead
+              index={idx()}
+              eyebrow="The gear locker"
+              title="Borrow the heavy things."
+              lede="A four-season tent is worth carrying and not worth owning if you use it twice a year. Checked, dried and re-lofted between trips."
+              actionLabel="See all"
+              onAction={() => router.push("/rent")}
+              style={{ paddingHorizontal: S.gutter }}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              contentContainerStyle={s.rail}
+            >
+              {rentals.slice(0, 6).map((it) => (
+                <TouchableOpacity
+                  key={it.id}
+                  activeOpacity={0.93}
+                  onPress={() => {
+                    haptics.tap();
+                    router.push(`/rent/${it.slug}`);
+                  }}
+                  style={{ width: RAIL_CARD_W }}
+                >
+                  <View style={s.blankFrame}>
+                    {it.images?.[0] ? (
+                      <Image source={{ uri: it.images[0] }} style={StyleSheet.absoluteFill} contentFit="cover" transition={220} alt="" />
+                    ) : null}
+                  </View>
+                  <Title style={{ marginTop: 11 }} numberOfLines={1}>{it.name}</Title>
+                  {/* A day rate and a deposit, shown as the two figures they
+                      are. Nothing here adds them up — what a rental actually
+                      costs depends on the dates and is priced by the server. */}
+                  <Mono color={C.textMuted} style={{ marginTop: 3 }}>
+                    {formatPrice(it.daily_rate)} / DAY
+                  </Mono>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         ) : null}
 

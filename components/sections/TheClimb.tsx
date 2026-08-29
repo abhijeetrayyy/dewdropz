@@ -71,7 +71,7 @@ function StationRow({ station, index }: { station: Station; index: number }) {
         <span className="h-2 w-2 rounded-full bg-forest ring-4 ring-paper" />
       </div>
 
-      <div className={`relative aspect-[4/3] rounded-sm overflow-hidden bg-rule/40 ${flip ? 'md:order-2' : ''}`}>
+      <div className={`relative aspect-[4/3] rounded-[var(--r-card)] overflow-hidden bg-paper-warm ${flip ? 'md:order-2' : ''}`}>
         <Image
           src={p.images?.[0] ?? ''}
           alt={p.name}
@@ -81,7 +81,7 @@ function StationRow({ station, index }: { station: Station; index: number }) {
           blurDataURL={BLUR_DATA_URL}
           className="object-cover transition-transform duration-700 ease-[var(--ease-out)] hover:scale-105"
         />
-        <span className="absolute top-3 left-3 font-mono text-[10px] tracking-[0.12em] text-paper bg-ink/55 backdrop-blur-sm rounded-sm px-2 py-1">
+        <span className="absolute top-3 left-3 font-mono text-[10px] tracking-[0.12em] text-paper bg-ink/55 backdrop-blur-sm rounded-[var(--r-tag)] px-2 py-1">
           {station.label}
         </span>
       </div>
@@ -162,7 +162,7 @@ export default function TheClimb({
         </div>
 
         {stations.length === 0 ? (
-          <div className="rounded-sm border border-dashed border-rule p-14 text-center">
+          <div className="rounded-[var(--r-panel)] border border-dashed border-rule p-14 text-center">
             <p className="font-body text-sm text-mid">New pieces are on the way — check back soon.</p>
           </div>
         ) : (

@@ -3,7 +3,7 @@ import Link from 'next/link'
 export default function AboutSustainabilityLink() {
   return (
     <section className="bg-paper px-6 md:px-10 pb-24 md:pb-32">
-      <div className="max-w-3xl mx-auto border border-rule rounded-lg px-8 py-10 md:px-12 md:py-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="max-w-3xl mx-auto border border-rule rounded-[var(--r-panel)] px-8 py-10 md:px-12 md:py-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="font-body text-[10px] tracking-[0.3em] text-forest uppercase">Beyond The Gear</div>
           <p className="mt-3 font-display font-light text-xl md:text-2xl text-text leading-snug">

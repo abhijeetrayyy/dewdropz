@@ -32,6 +32,12 @@ export type CustomizationConfig = { colors: CustomizationColorway[] };
 
 export type Product = {
   id: string; slug: string; name: string; price: number;
+  /** Ticked in admin: this finished, already-printed garment belongs to the
+   *  custom range. The switch. See migration 095. */
+  is_custom_range?: boolean | null;
+  /** Optional parent: the blank it was printed on. Null means we do not stock
+   *  that garment, and the page offers the blanks we do. */
+  custom_blank_id?: string | null;
   images: string[]; collection?: { id: string; slug: string; name: string };
   /** Taxonomy junction rows — a product can sit in several categories. */
   categories?: { category_id: string; is_primary?: boolean }[];
@@ -70,7 +76,7 @@ const CUSTOMIZABLE_SELECT =
 // that powers the "Specifications" accordion — kept out of PRODUCT_SELECT so
 // list screens (Shop/Home/Collections) don't pull a heavier payload per card.
 const PRODUCT_DETAIL_SELECT =
-  "id,slug,name,price,images,collection:collections(id,slug,name,tagline),variants:product_variants(id,name,price_adjustment,inventory_quantity),description,short_description,compare_at_price,highlights,care_instructions,low_stock_threshold,inventory_quantity,created_at,is_customizable,customization_config,attributes:product_attribute_values(text_value,attribute:attributes(name),value:attribute_values(value))";
+  "id,slug,name,price,images,collection:collections(id,slug,name,tagline),variants:product_variants(id,name,price_adjustment,inventory_quantity),description,short_description,compare_at_price,highlights,care_instructions,low_stock_threshold,inventory_quantity,created_at,is_customizable,customization_config,is_custom_range,custom_blank_id,attributes:product_attribute_values(text_value,attribute:attributes(name),value:attribute_values(value))";
 
 // Product and collection imagery is authored in admin as a mix of absolute
 // URLs (Supabase storage, Unsplash) and site-relative paths (e.g.
@@ -397,7 +403,8 @@ export async function getOrderById(id: string): Promise<Order> {
     // a site-relative path that a native app cannot fetch as-is.
     image:
       resolveAssetUrl(
-        item.design?.front_preview_url ?? item.design?.back_preview_url ?? item.product?.images?.[0],
+        // `||` — an empty preview column must fall through, not win.
+        item.design?.front_preview_url || item.design?.back_preview_url || item.product?.images?.[0],
       ) || null,
     product: item.product
       ? { ...item.product, images: (item.product.images ?? []).map(resolveAssetUrl).filter(Boolean) }
@@ -707,4 +714,248 @@ export async function getMyDesigns(userId: string): Promise<SavedDesign[]> {
 
   if (error) throw error;
   return (data ?? []) as unknown as SavedDesign[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The DEWDROPZ design library
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Pre-set artwork the studio offers alongside "upload your own". The web studio
+// has had this since the 23 August brief; the phone only ever had the upload
+// door, so half the customisation offer was invisible on mobile.
+//
+// Read straight from Supabase with the session client, like every other
+// catalogue read here — `design_library` is public-read by policy (migration
+// 092) because it is a shop window, and there is no API route to go through.
+
+export type LibraryDesign = {
+  id: string;
+  name: string;
+  slug: string;
+  image_url: string;
+  collection: string;
+  sort: number;
+};
+
+/**
+ * The artwork offered on one blank.
+ *
+ * `blank_ids` empty means EVERY blank — the default (094), and the common case,
+ * so a design added without thinking about garments shows up everywhere rather
+ * than nowhere. The containment test runs in Postgres so a growing library does
+ * not turn opening the panel into a full-table read.
+ */
+export async function getLibraryDesigns(blankId: string): Promise<LibraryDesign[]> {
+  const { data, error } = await supabase
+    .from("design_library")
+    .select("id,name,slug,image_url,collection,sort")
+    .eq("active", true)
+    .or(`blank_ids.eq.{},blank_ids.cs.{${blankId}}`)
+    .order("sort", { ascending: true });
+
+  // An unreachable shelf is not worth breaking the studio over — the upload
+  // door still works, which is what the phone had before this existed.
+  if (error) return [];
+  return (data ?? []) as LibraryDesign[];
+}
+
+
+/**
+ * What the product page needs to render the custom-range card.
+ *
+ * Returns null for an ordinary product. `blank` is null when we do not stock
+ * that garment as a blank — not a failure, just the other honest answer, and
+ * `alternatives` is what the card offers instead.
+ *
+ * Mirrors actions/customRange.ts on the web.
+ */
+export async function getCustomRangeContext(product: {
+  id: string;
+  is_custom_range?: boolean | null;
+  custom_blank_id?: string | null;
+}): Promise<{
+  blank: { id: string; slug: string; name: string } | null;
+  alternatives: Product[];
+} | null> {
+  if (!product.is_custom_range) return null;
+
+  if (!product.custom_blank_id) {
+    return { blank: null, alternatives: await getCustomizableProducts() };
+  }
+
+  const { data: blank } = await supabase
+    .from("products")
+    .select("id,slug,name,is_customizable,is_active")
+    .eq("id", product.custom_blank_id)
+    .maybeSingle();
+
+  // Stale link: the blank was archived or had customization switched off.
+  // Treat it exactly like "not stocked" rather than offering a dead studio.
+  const usable = blank && (blank as { is_customizable: boolean }).is_customizable
+    && (blank as { is_active: boolean }).is_active;
+  if (!usable) return { blank: null, alternatives: await getCustomizableProducts() };
+
+  return { blank: blank as { id: string; slug: string; name: string }, alternatives: [] };
+}
+
+// ─── Rentals ─────────────────────────────────────────────────────────────────
+//
+// Gear for hire, read straight from the device.
+//
+// The catalogue and the availability count are safe to read here because both
+// are public by design: `rental_items` has a "Public read active rental items"
+// policy, and `rental_available_units` is SECURITY DEFINER precisely so an
+// anonymous caller gets a TRUTHFUL count (migration 097 — before that fix RLS
+// hid every reservation from anon and the shelf always claimed everything was
+// free). What it returns is a unit id and the code on the tag; who booked what
+// stays private.
+//
+// PRICE IS NOT READ HERE, and cannot be. Nothing on this screen multiplies a
+// daily rate by a number of days — inclusive day counting, the long-hire
+// discount, return postage charged both ways and a deposit that must stay
+// outside the taxable base all live in `lib/rentalPricing.ts` on the server.
+// The quote and the booking both go through /api/mobile/rentals/*. `daily_rate`
+// and `deposit` below are shown as headline figures on a card, never summed.
+
+export type RentalItem = {
+  id: string;
+  slug: string;
+  name: string;
+  summary?: string | null;
+  description?: string | null;
+  images: string[];
+  daily_rate: number;
+  deposit: number;
+  weekly_discount_pct: number;
+  min_days: number;
+  max_days: number;
+  buffer_days: number;
+  gst_rate: number;
+  allows_pickup: boolean;
+  allows_shipping: boolean;
+  /** The same gear, to own. NULL for kits and bundles we assemble but do not
+   *  sell. Never a stock link — see migration 098. */
+  product?: { slug: string; name: string; price: number; inventory_quantity: number | null } | null;
+};
+
+export type RentalBookingSummary = {
+  id: string;
+  booking_number: string;
+  status: "reserved" | "out" | "returned" | "closed" | "cancelled";
+  fulfilment: "pickup" | "ship";
+  total_amount: number;
+  deposit_amount: number;
+  deposit_state: string;
+  late_fee: number;
+  damage_fee: number;
+  created_at: string;
+  reservations?: {
+    id: string;
+    starts_on: string;
+    ends_on: string;
+    days: number;
+    item?: { name: string; images: string[] | null } | null;
+    unit?: { code: string } | null;
+  }[];
+};
+
+const RENTAL_SELECT =
+  "id,slug,name,summary,description,images,daily_rate,deposit,weekly_discount_pct,min_days,max_days,buffer_days,gst_rate,allows_pickup,allows_shipping";
+
+// The detail read also carries the sellable product, so the page can offer
+// "own it instead" without a second round trip.
+const RENTAL_DETAIL_SELECT =
+  RENTAL_SELECT + ",product:products(slug,name,price,inventory_quantity)";
+
+export async function getRentalItems(): Promise<RentalItem[]> {
+  const { data } = await supabase
+    .from("rental_items")
+    .select(RENTAL_SELECT)
+    .eq("is_active", true)
+    .order("sort", { ascending: true });
+  // Same image normalisation every other list read gets — admin authors a mix
+  // of absolute URLs and site-relative paths, and a relative path renders as
+  // nothing at all on native.
+  return ((data ?? []) as unknown as RentalItem[]).map(resolveImages);
+}
+
+export async function getRentalItem(slug: string): Promise<RentalItem | null> {
+  const { data } = await supabase
+    .from("rental_items")
+    .select(RENTAL_DETAIL_SELECT)
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+  return data ? resolveImages(data as unknown as RentalItem) : null;
+}
+
+/**
+ * How many units of an item are free between two dates.
+ *
+ * Calls the SAME database function the booking write calls, so the shelf shown
+ * on the phone and the shelf booked against cannot disagree. The cleaning
+ * buffer is applied inside the function — the app does not know or need to
+ * know that a wet tent is held back for two days.
+ */
+export async function getRentalAvailability(
+  itemId: string,
+  startsOn: string,
+  endsOn: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("rental_available_units", {
+    p_item_id: itemId,
+    p_start: startsOn,
+    p_end: endsOn,
+  });
+  // Zero on error, never "probably fine". Advertising gear that may already be
+  // out is the one failure mode worth being pessimistic about.
+  if (error) return 0;
+  return ((data ?? []) as unknown[]).length;
+}
+
+/**
+ * Can this product also be rented, and from how much a day?
+ *
+ * The link lives on `rental_items.product_id`, not on the product — renting is
+ * the narrower case and every product list would otherwise pay for a join it
+ * never uses. So the product page asks this question separately, and only for
+ * the one product it is showing.
+ */
+export async function getRentalForProduct(
+  productId: string,
+): Promise<{ slug: string; daily_rate: number; deposit: number } | null> {
+  const { data } = await supabase
+    .from("rental_items")
+    .select("slug,daily_rate,deposit")
+    .eq("product_id", productId)
+    .eq("is_active", true)
+    .maybeSingle();
+  return (data as { slug: string; daily_rate: number; deposit: number }) ?? null;
+}
+
+export async function getMyRentalBookings(userId: string): Promise<RentalBookingSummary[]> {
+  const { data } = await supabase
+    .from("rental_bookings")
+    .select(
+      "id,booking_number,status,fulfilment,total_amount,deposit_amount,deposit_state,late_fee,damage_fee,created_at," +
+        "reservations:rental_reservations(id,starts_on,ends_on,days,item:rental_items(name,images),unit:rental_units(code))",
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  return (data ?? []) as unknown as RentalBookingSummary[];
+}
+
+/** One booking by its number — for the confirmation screen after booking. */
+export async function getRentalBookingByNumber(
+  bookingNumber: string,
+): Promise<RentalBookingSummary | null> {
+  const { data } = await supabase
+    .from("rental_bookings")
+    .select(
+      "id,booking_number,status,fulfilment,total_amount,deposit_amount,deposit_state,late_fee,damage_fee,created_at," +
+        "reservations:rental_reservations(id,starts_on,ends_on,days,item:rental_items(name,images),unit:rental_units(code))",
+    )
+    .eq("booking_number", bookingNumber)
+    .maybeSingle();
+  return (data as unknown as RentalBookingSummary) ?? null;
 }

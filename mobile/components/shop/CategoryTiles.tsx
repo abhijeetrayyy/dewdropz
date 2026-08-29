@@ -22,11 +22,16 @@ import { C, F, R, S } from "@/lib/theme";
 export function CategoryTiles({
   categories,
   counts,
+  covers,
 }: {
   categories: CategoryRow[];
   /** Product count per category id. Omitted entirely when zero — an empty
    *  category is still worth navigating to, but "0 PIECES" reads as broken. */
   counts: Record<string, number>;
+  /** Fallback photograph per category id, borrowed from a product inside it.
+   *  Every category has `image_url` NULL today, so without this the whole rail
+   *  is grey rectangles. An explicit admin image still takes precedence. */
+  covers?: Record<string, string>;
 }) {
   // Measured per render, not captured once at import. See the note in
   // components/ProductGallery.tsx — module-scope `Dimensions.get()` is wrong
@@ -47,6 +52,10 @@ export function CategoryTiles({
     >
       {categories.map((cat, i) => {
         const n = counts[cat.id] ?? 0;
+        // `||`, not `??`. Every category carries `image_url = ""` — an empty
+        // string, not NULL — and nullish coalescing keeps it, so the tile fell
+        // through to a bare gradient while a perfectly good cover sat unused.
+        const cover = cat.image_url?.trim() || covers?.[cat.id];
         return (
           <Animated.View key={cat.id} entering={FadeInDown.delay(Math.min(i, 5) * 55).duration(380)}>
             <TouchableOpacity
@@ -60,9 +69,9 @@ export function CategoryTiles({
               style={{ width: TILE_W }}
             >
               <View style={s.frame}>
-                {cat.image_url ? (
+                {cover ? (
                   <Image
-                    source={{ uri: cat.image_url }}
+                    source={{ uri: cover }}
                     style={StyleSheet.absoluteFill}
                     contentFit="cover"
                     transition={200}

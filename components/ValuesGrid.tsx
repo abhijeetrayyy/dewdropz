@@ -48,7 +48,7 @@ export default function ValuesGrid({ eyebrow, title, values }: ValuesGridProps) 
           {values.map((value, i) => (
             <div
               key={value.title}
-              className="value-card border border-white/10 rounded-lg p-8 hover:border-sage/40 transition-colors duration-300"
+              className="value-card border border-white/10 rounded-[var(--r-panel)] p-8 hover:border-sage/40 transition-colors duration-300"
             >
               <span className="font-mono text-xs text-sage/70">0{i + 1}</span>
               <h3 className="mt-3 font-display text-xl text-white leading-snug">{value.title}</h3>

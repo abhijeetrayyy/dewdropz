@@ -12,13 +12,14 @@ import { Rule } from "@/components/editorial/Rule";
 import { SectionHead } from "@/components/editorial/SectionHead";
 import { Display1, Eyebrow, Lede, Mono } from "@/components/ui/Type";
 import { CategoryTiles } from "@/components/shop/CategoryTiles";
+import { SectionBand } from "@/components/editorial/SectionBand";
 import { CollectionBanner } from "@/components/shop/CollectionBanner";
 import { PromoStrip } from "@/components/shop/PromoStrip";
 import { FilterSheet, ShopFilters } from "@/components/shop/FilterSheet";
 import { SkeletonProductGrid } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { useCategoriesQuery, useCollectionsQuery, useProductsQuery } from "@/lib/queries";
+import { useCategoriesQuery, useCollectionsQuery, useProductsQuery, useRentalItemsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { haptics } from "@/lib/haptics";
 import { C, F, S } from "@/lib/theme";
@@ -84,6 +85,8 @@ export default function ShopScreen() {
   // Category counts come off the taxonomy junction, the same match the web shop
   // uses. Empty today (nothing is categorised yet), which is why the tiles hide
   // the count rather than printing a zero.
+  const { data: rentals = [] } = useRentalItemsQuery();
+
   const categoryCounts = useMemo(() => {
     const acc: Record<string, number> = {};
     for (const p of products as any[]) {
@@ -93,6 +96,38 @@ export default function ShopScreen() {
     }
     return acc;
   }, [products]);
+
+  // A tile with no photograph falls back to a grey gradient, and every one of
+  // the nine categories has `image_url` NULL — so the whole "what are you
+  // packing for?" rail rendered as grey rectangles, the same emptiness the
+  // rental locker had before it was photographed.
+  //
+  // Rather than upload stock imagery that would go stale, the tile borrows a
+  // photograph from a product ACTUALLY IN that category. It cannot misrepresent
+  // what is behind the tile, it needs no new assets, and it corrects itself as
+  // the catalogue changes. An explicit `image_url` set in admin still wins.
+  const categoryCovers = useMemo(() => {
+    const acc: Record<string, string> = {};
+    for (const p of products) {
+      const cover = p.images?.[0];
+      if (!cover) continue;
+      for (const link of p.categories ?? []) {
+        if (!acc[link.category_id]) acc[link.category_id] = cover;
+      }
+    }
+    return acc;
+  }, [products]);
+
+  // Only shelves that have something on them.
+  //
+  // Five of the nine categories hold zero products, and a tile that leads to
+  // "this shelf is still being stocked" is a dead end dressed as a route. The
+  // fallback keeps the rail alive on a fresh database, where nothing is
+  // categorised yet and hiding everything would be worse than showing all.
+  const shownCategories = useMemo(() => {
+    const stocked = categories.filter((c) => (categoryCounts[c.id] ?? 0) > 0);
+    return stocked.length > 0 ? stocked : categories;
+  }, [categories, categoryCounts]);
 
   const perCollection = useMemo(() => {
     const acc: Record<string, number> = {};
@@ -176,7 +211,7 @@ export default function ShopScreen() {
         <View style={{ paddingBottom: S.md }}>
           <PromoStrip />
 
-          {categories.length > 0 && showingAll ? (
+          {shownCategories.length > 0 && showingAll ? (
             <View style={{ paddingTop: S.block }}>
               <SectionHead
                 eyebrow="Shop by category"
@@ -186,10 +221,28 @@ export default function ShopScreen() {
                 onAction={() => router.push("/collections")}
                 style={{ paddingHorizontal: S.gutter }}
               />
-              <CategoryTiles categories={categories} counts={categoryCounts} />
+              <CategoryTiles categories={shownCategories} counts={categoryCounts} covers={categoryCovers} />
             </View>
           ) : null}
         </View>
+
+        {/* The locker, at full width, between the categories and the grid.
+            Two things this fixes at once: the shop ran cream from its header to
+            a single ink block two and a half screens down with nothing to reset
+            the eye, and it never mentioned that this business rents gear at all
+            — the other half of what we sell was invisible from the place people
+            come to buy. */}
+        {rentals.length > 0 ? (
+          <SectionBand
+            tone="forest"
+            eyebrow="Also from the locker"
+            title="Some of it is worth borrowing."
+            body="Tents, bags, packs and poles by the day — checked, dried and re-lofted between trips."
+            actionLabel="Browse the locker"
+            image={rentals.find((r) => r.images?.[0])?.images?.[0]}
+            onPress={() => router.push("/rent")}
+          />
+        ) : null}
 
         {/* 2 — sticky collection rail */}
         <View style={s.stickyWrap}>

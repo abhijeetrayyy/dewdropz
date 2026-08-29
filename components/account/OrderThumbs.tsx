@@ -40,7 +40,7 @@ export default function OrderThumbs({ items, size = 44 }: { items: Line[]; size?
           <div
             key={line.id}
             style={{ width: size, height: size, marginLeft: i === 0 ? 0 : -size * 0.28, zIndex: shown.length - i }}
-            className="relative shrink-0 overflow-hidden rounded-sm border border-rule bg-paper-warm"
+            className="relative shrink-0 overflow-hidden rounded-[var(--r-input)] border border-rule bg-paper-warm shadow-[var(--shadow-card)]"
           >
             {src ? (
               <Image
@@ -65,7 +65,7 @@ export default function OrderThumbs({ items, size = 44 }: { items: Line[]; size?
       {more > 0 && (
         <span
           style={{ width: size, height: size, marginLeft: -size * 0.28 }}
-          className="relative flex shrink-0 items-center justify-center rounded-sm border border-rule bg-paper font-mono text-[11px] text-mid"
+          className="relative flex shrink-0 items-center justify-center rounded-[var(--r-input)] border border-rule bg-surface font-mono text-[11px] text-mid shadow-[var(--shadow-card)]"
         >
           +{more}
         </span>

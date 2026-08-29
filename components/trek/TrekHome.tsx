@@ -229,6 +229,7 @@ export default function TrekHome({
                         />
                         <Countdown
                           iso={p.starts_at}
+                          endsIso={p.ends_at}
                           prefix="in"
                           className="hidden shrink-0 font-mono text-[12px] text-mid tabular-nums md:block"
                         />

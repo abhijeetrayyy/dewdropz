@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View , useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { afterAuth } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/auth";
@@ -25,6 +26,9 @@ const PERKS = [
 ];
 
 export default function SignUpScreen() {
+  // Carried through from login, so finishing signup lands where the person
+  // was going rather than on Account.
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const { signUp } = useAuthStore();
   const insets = useSafeAreaInsets();
   const { width: SCREEN_W } = useWindowDimensions();
@@ -64,7 +68,7 @@ export default function SignUpScreen() {
       <View style={s.root}>
         <StatusBar style="dark" />
         <View style={[s.top, { paddingTop: insets.top + 6 }]}>
-          <IconButton name="arrow_back" onPress={() => router.replace("/auth/login")} />
+          <IconButton name="arrow_back" onPress={() => router.replace(next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login")} />
         </View>
         <View style={s.successBody}>
           <View style={s.mailMark}>
@@ -82,7 +86,7 @@ export default function SignUpScreen() {
           <Button
             title="Back to sign in"
             variant="dark"
-            onPress={() => router.replace("/auth/login")}
+            onPress={() => router.replace(next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login")}
             style={{ marginTop: S.xl, alignSelf: "flex-start" }}
           />
         </View>
@@ -110,7 +114,7 @@ export default function SignUpScreen() {
             name="arrow_back"
             tone="glass"
             accessibilityLabel="Back"
-            onPress={() => router.back()}
+            onPress={() => afterAuth(next)}
           />
           <Text style={s.kicker}>FREE · NO SPAM</Text>
         </View>
@@ -177,7 +181,7 @@ export default function SignUpScreen() {
 
         <View style={s.switchRow}>
           <Text style={s.switchT}>Already have one?</Text>
-          <Button title="Sign in" variant="link" onPress={() => router.replace("/auth/login")} />
+          <Button title="Sign in" variant="link" onPress={() => router.replace(next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login")} />
         </View>
 
         {/* What the account is actually for — v4 asked for three fields and

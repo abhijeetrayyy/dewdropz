@@ -71,6 +71,7 @@ export default function SoonRail({ plans }: { plans: TrekPlanRow[] }) {
                   >
                     <Countdown
                       iso={p.starts_at}
+                      endsIso={p.ends_at}
                       className="trek-glass absolute right-2.5 top-2.5 rounded-full px-2.5 py-1 font-mono text-[11px] font-medium text-dawn-soft tabular-nums"
                     />
                   </Cover>

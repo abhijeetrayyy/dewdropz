@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusCap } from "@/components/ui/StatusCap";
 import { IconButton } from "@/components/ui/IconButton";
@@ -85,7 +86,7 @@ export default function ReturnScreen() {
       });
       haptics.success();
       toast.show("Return requested — we will email you the next step");
-      router.back();
+      goBack("/orders");
     } catch (e: unknown) {
       haptics.error();
       setErr(e instanceof Error ? e.message : "Could not open that return.");
@@ -96,7 +97,7 @@ export default function ReturnScreen() {
     <View style={s.root}>
       <StatusCap />
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <IconButton name="arrow_back" accessibilityLabel="Back to the order" onPress={() => router.back()} />
+        <IconButton name="arrow_back" accessibilityLabel="Back to the order" onPress={() => goBack("/orders")} />
       </View>
 
       <ScrollView
@@ -119,7 +120,7 @@ export default function ReturnScreen() {
             title="This order cannot be returned."
             body={data?.reason ?? "Returns close a few days after delivery."}
             ctaLabel="Get help"
-            onPress={() => router.back()}
+            onPress={() => goBack("/orders")}
             style={{ marginTop: S.lg }}
           />
         ) : (

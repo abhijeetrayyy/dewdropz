@@ -3,7 +3,7 @@
 // the dashboard open and noticing. A single incoming-webhook URL is the
 // lowest-friction way to close that gap without standing up new infra.
 // No-ops silently when SLACK_WEBHOOK_URL isn't set, same lazy-init pattern as
-// getStripe()/getResend() — importing this file must never crash a route
+// getResend() — importing this file must never crash a route
 // that happens not to need it configured.
 export async function sendSlackAlert(text: string) {
   const url = process.env.SLACK_WEBHOOK_URL

@@ -1,6 +1,7 @@
 import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Img as Image } from "@/components/ui/Img";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatPrice, pickVariant } from "@/lib/utils";
 import { useCancelOrderMutation, useOrderQuery } from "@/lib/queries";
@@ -131,7 +132,7 @@ export default function OrderDetailScreen() {
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 6 }]}>
-        <IconButton name="arrow_back" onPress={() => router.back()} />
+        <IconButton name="arrow_back" onPress={() => goBack("/orders")} />
         <Mono color={C.textMuted}>{o ? `#${o.order_number}` : "ORDER"}</Mono>
         <IconButton
           name="help"

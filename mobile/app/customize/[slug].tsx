@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Image as RNImage, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import * as ImagePicker from "expo-image-picker";
 import Animated, { FadeIn, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useProductQuery } from "@/lib/queries";
+import { useProductQuery, useCustomizableProductsQuery, useLibraryDesignsQuery } from "@/lib/queries";
 import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
@@ -12,12 +13,16 @@ import { toast } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CustomizeStage, useMockupAspect } from "@/components/customize/CustomizeStage";
+import { Img as Image } from "@/components/ui/Img";
 import { Icon } from "@/components/ui/Icon";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusCap } from "@/components/ui/StatusCap";
 import { StudioToolbar } from "@/components/customize/StudioToolbar";
 import { saveDesign, uploadPickedImage } from "@/lib/customize/save";
 import { effectiveDpi, qualityNote, qualityOf } from "@/lib/customize/printQuality";
+import { studioErrorMessage } from "@/lib/customize/errors";
+import { placeInZone } from "@/lib/customize/placement";
+import { putCarry, takeCarry, refitDesign } from "@/lib/customize/carry";
 import {
   DesignLayer, DesignState, EMPTY_DESIGN, SideKey, defaultInkFor, newId,
 } from "@/lib/customize/types";
@@ -25,13 +30,18 @@ import type { CustomizationColorway } from "@/lib/data";
 import { C, F, M, R, S } from "@/lib/theme";
 
 
-type StudioTab_ = "none" | "blank" | "add" | "edit" | "layers";
+type StudioTab_ = "none" | "blank" | "add" | "edit" | "layers" | "library";
 
 export default function CustomizeScreen() {
   // `size` arrives from the product page's buy bar, which shows a size selector
   // above a "Design yours" CTA. Without honouring it the studio silently
   // restarts the shopper at the first variant.
-  const { slug, size: sizeParam } = useLocalSearchParams<{ slug: string; size?: string }>();
+  // `start=library` opens straight into the DEWDROPZ shelf, matching the web
+  // studio's own door (`/customize?start=library`). Somebody arriving from a
+  // printed garment is browsing artwork, not planning to upload their own.
+  const { slug, size: sizeParam, start } = useLocalSearchParams<{
+    slug: string; size?: string; start?: string;
+  }>();
   // Measured per render — the studio is the screen most likely to be used in
   // Android split-screen (artwork in one pane, gallery in the other).
   const insets = useSafeAreaInsets();
@@ -39,6 +49,8 @@ export default function CustomizeScreen() {
   /** Panels never take more than this, so the garment keeps the majority. */
   const SHEET_MAX = Math.round(SCREEN_H * 0.34);
   const { data: product, isLoading, isError } = useProductQuery(slug);
+  // The other blanks, so the garment can be changed without leaving the studio.
+  const { data: blanks = [] } = useCustomizableProductsQuery();
   const { addItem } = useCartStore();
 
   const colors = useMemo<CustomizationColorway[]>(
@@ -76,19 +88,92 @@ export default function CustomizeScreen() {
 
   // Exactly one tool panel open at a time; "none" is a resting state that
   // hands the whole screen back to the garment.
-  const [tab, setTab] = useState<StudioTab_>("add");
+  const [tab, setTab] = useState<StudioTab_>(start === "library" ? "library" : "add");
   const [stageBox, setStageBox] = useState({ w: 0, h: 0 });
 
   // Undo/redo over whole-design snapshots. Every mutation goes through
   // `commit`, so history is one entry per user action — not per frame of a drag.
-  const [history, setHistory] = useState<DesignState[]>([EMPTY_DESIGN]);
-  const [cursor, setCursor] = useState(0);
-  const design = history[cursor];
+  // HISTORY AND CURSOR ARE ONE PIECE OF STATE, NOT TWO.
+  //
+  // They used to be separate, and `commit` read `cursor` from its closure while
+  // advancing it with a functional update. That is consistent only while every
+  // commit is a user tap, because a tap guarantees a render in between. The
+  // moment two commits land inside one render — which is what adding a library
+  // design does, once to place the layer and again when its measured size
+  // arrives — the stack was trimmed against a stale cursor and the cursor then
+  // advanced past the end of it. `history[cursor]` came back undefined and the
+  // studio crashed on `design[effectiveSide]`: "Cannot convert undefined value
+  // to object".
+  //
+  // Holding both in one object makes every update atomic: the new cursor is
+  // derived from the stack that was just built, in the same reducer, so the two
+  // can no longer disagree.
+  const [hist, setHist] = useState<{ stack: DesignState[]; cursor: number }>(() => ({
+    stack: [EMPTY_DESIGN],
+    cursor: 0,
+  }));
+  // Defensive: a design is what every render below indexes into, so falling
+  // back to empty degrades a future bug into "nothing on the garment" rather
+  // than a red screen.
+  const design = hist.stack[hist.cursor] ?? EMPTY_DESIGN;
 
-  const commit = useCallback((next: DesignState) => {
-    setHistory((h) => [...h.slice(0, cursor + 1), next]);
-    setCursor((c) => c + 1);
-  }, [cursor]);
+  // The library shelf. Fetched only once the panel is opened — a shopper
+  // bringing their own artwork should not pay for a catalogue they never look at.
+  const { data: libraryDesigns = [], isLoading: libraryLoading } =
+    useLibraryDesignsQuery(product?.id, tab === "library");
+
+  // Accepts an updater as well as a value, and that is not a convenience.
+  //
+  // Every mutation used to be built from `design` as captured by the render
+  // that scheduled it. Fine for a tap, wrong for anything that awaits: pick an
+  // image, tap Text while it uploads, and when the upload lands it commits a
+  // design from BEFORE the text existed — the text silently disappears. An
+  // updater reads the live design inside the reducer, so a slow upload can no
+  // longer overwrite work done while it was in flight.
+  const commit = useCallback(
+    (next: DesignState | ((prev: DesignState) => DesignState)) => {
+      setHist((h) => {
+        const current = h.stack[h.cursor] ?? EMPTY_DESIGN;
+        const value = typeof next === "function" ? next(current) : next;
+        const stack = [...h.stack.slice(0, h.cursor + 1), value];
+        return { stack, cursor: stack.length - 1 };
+      });
+    },
+    [],
+  );
+
+  // Rehydrate a design carried in from another blank.
+  //
+  // Runs once, when the destination's colourway (and therefore its zones) is
+  // known — re-fitting before that would scale against a zone that does not
+  // exist yet. `takeCarry` clears the handoff, and the ref stops a re-render
+  // from trying again with nothing there.
+  const carryDoneRef = useRef(false);
+  useEffect(() => {
+    if (carryDoneRef.current || !color) return;
+    const carried = takeCarry();
+    if (!carried) { carryDoneRef.current = true; return; }
+    carryDoneRef.current = true;
+
+    const { design: refitted, scale } = refitDesign(carried.design, carried.fromZone, {
+      front: color.front,
+      back: color.back,
+    });
+    // The carry is an external one-shot handoff, not derived state: it is read
+    // and cleared here, and the accompanying toast cannot fire during render.
+    // Syncing an external source into state is exactly what an effect is for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHist({ stack: [EMPTY_DESIGN, refitted], cursor: 1 });
+    setSrcDims(carried.srcDims);
+
+    // Spreading the same pixels over a bigger garment lowers the print
+    // resolution. Say so here rather than let it be discovered on delivery.
+    if (scale > 1.02) {
+      toast.show(`Brought over from the ${carried.fromName} — check the print quality, this garment prints larger.`);
+    } else {
+      toast.success(`Brought over from the ${carried.fromName}.`);
+    }
+  }, [color]);
 
   const sides = useMemo<SideKey[]>(
     () => (["front", "back"] as SideKey[]).filter((sd) => color?.[sd]),
@@ -145,9 +230,14 @@ export default function CustomizeScreen() {
   }, [zoom]);
 
 
-  function patchSide(side: SideKey, mutate: (list: DesignLayer[]) => DesignLayer[]) {
-    commit({ ...design, [side]: mutate(design[side]) });
-  }
+  // Memoised because the library and garment handlers below depend on it; an
+  // unstable identity there would rebuild those callbacks on every render.
+  const patchSide = useCallback(
+    (side: SideKey, mutate: (list: DesignLayer[]) => DesignLayer[]) => {
+      commit((current) => ({ ...current, [side]: mutate(current[side]) }));
+    },
+    [commit],
+  );
 
   function addText() {
     haptics.tap();
@@ -177,6 +267,102 @@ export default function CustomizeScreen() {
     focus(layer.x, layer.y);
   }
 
+  /**
+   * Drop a library design onto the garment.
+   *
+   * Deliberately the SAME path an uploaded photo takes once a URL exists — the
+   * layer that lands is an ordinary image layer, so it is draggable, scalable,
+   * deletable and printed identically. The only difference between the two
+   * doors is where the URL came from.
+   */
+  /**
+   * Drop a library design onto the garment.
+   *
+   * Deliberately the SAME path an uploaded photo takes once a URL exists — the
+   * layer that lands is an ordinary image layer, so it is draggable, scalable,
+   * deletable and printed identically. The only difference between the two
+   * doors is where the URL came from.
+   *
+   * The artwork is MEASURED BEFORE it is added, and the whole thing lands in a
+   * single commit. The first version added a placeholder layer and then patched
+   * its size from the `getSize` callback — two commits for one user action,
+   * which is precisely what broke the undo stack and red-screened the studio.
+   * One action, one history entry, is also just the right behaviour: undo after
+   * adding a design should remove the design, not resize it.
+   */
+  const addLibraryDesign = useCallback(
+    async (design: { id: string; name: string; image_url: string }) => {
+      const zone = color?.[effectiveSide];
+      if (!zone) return;
+
+      // Library artwork is authored at print resolution, so its source pixels
+      // are what decide DPI. If the measurement fails the design is still
+      // usable — it is placed to the zone's own ratio and simply reports no
+      // quality reading, which is honest rather than a guess.
+      const measured = await new Promise<{ width: number; height: number } | null>((resolve) => {
+        RNImage.getSize(
+          design.image_url,
+          (width, height) => resolve({ width, height }),
+          () => resolve(null),
+        );
+      });
+
+      const source = measured ?? { width: zone.widthPx, height: zone.heightPx };
+      const box = placeInZone(zone, source);
+      const layerId = newId();
+
+      if (measured) {
+        setSrcDims((prev) => ({ ...prev, [layerId]: measured }));
+      }
+
+      const layer: DesignLayer = {
+        kind: "image",
+        id: layerId,
+        uri: design.image_url,
+        width: box.width,
+        height: box.height,
+        x: box.x,
+        y: box.y,
+        scale: 1,
+        rotation: 0,
+      };
+      patchSide(effectiveSide, (l) => [...l, layer]);
+      setSelectedId(layerId);
+      haptics.select();
+      setTab("edit");
+    },
+    [color, effectiveSide, patchSide],
+  );
+
+  /**
+   * Change garment without losing the work.
+   *
+   * The design is handed over as-is and re-fitted on ARRIVAL, because only the
+   * destination knows its own zone — deciding the scale here would mean
+   * fetching the other product just to do the arithmetic.
+   */
+  const switchBlank = useCallback(
+    (nextSlug: string) => {
+      const basis = color?.front ?? color?.back;
+      const hasWork = design.front.length > 0 || design.back.length > 0;
+      if (hasWork && basis && product) {
+        putCarry({
+          fromSlug: product.slug,
+          fromName: product.name,
+          fromZone: {
+            widthPx: basis.widthPx, heightPx: basis.heightPx,
+            widthIn: basis.widthIn, heightIn: basis.heightIn,
+          },
+          design,
+          srcDims,
+        });
+      }
+      haptics.select();
+      router.replace({ pathname: "/customize/[slug]", params: { slug: nextSlug } });
+    },
+    [color, design, srcDims, product],
+  );
+
   async function addImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -201,14 +387,14 @@ export default function CustomizeScreen() {
       // not after they've finished designing.
       const uri = await uploadPickedImage(asset.uri);
 
-      // Fit the longest edge to ~70% of the zone so a large photo lands
-      // usable instead of overflowing the print area on arrival.
+      // Placement is the shared rule — see lib/customize/placement.ts for why
+      // the old "longest edge to 70% of the shortest zone side, centred" was
+      // wrong for both wide and tall artwork.
       const srcW = asset.width ?? zone.widthPx;
       const srcH = asset.height ?? zone.heightPx;
-      const target = Math.min(zone.widthPx, zone.heightPx) * 0.7;
-      const fit = target / Math.max(srcW, srcH);
-      const w = srcW * fit;
-      const h = srcH * fit;
+      const box = placeInZone(zone, { width: srcW, height: srcH });
+      const w = box.width;
+      const h = box.height;
 
       const layer: DesignLayer = {
         kind: "image",
@@ -216,8 +402,8 @@ export default function CustomizeScreen() {
         uri,
         width: w,
         height: h,
-        x: (zone.widthPx - w) / 2,
-        y: (zone.heightPx - h) / 2,
+        x: box.x,
+        y: box.y,
         scale: 1,
         rotation: 0,
       };
@@ -228,7 +414,7 @@ export default function CustomizeScreen() {
       haptics.select();
     } catch (err) {
       haptics.error();
-      toast.error(err instanceof Error ? err.message : "Could not add that image.");
+      toast.error(studioErrorMessage(err, "Could not add that image. Try another one."));
     } finally {
       setUploading(false);
     }
@@ -287,7 +473,7 @@ export default function CustomizeScreen() {
       });
       return next;
     });
-    commit({ ...design, [other]: copies });
+    commit((current) => ({ ...current, [other]: copies }));
     toast.success(`Copied to ${other}`);
   }
 
@@ -302,7 +488,7 @@ export default function CustomizeScreen() {
   // no undo once the screen unmounted.
   function leaveStudio() {
     if (!hasWork) {
-      router.back();
+      goBack("/(tabs)/design");
       return;
     }
     haptics.warning();
@@ -311,7 +497,7 @@ export default function CustomizeScreen() {
       "This design is not saved anywhere yet. Adding it to your pack keeps it — leaving now discards it.",
       [
         { text: "Keep editing", style: "cancel" },
-        { text: "Discard", style: "destructive", onPress: () => router.back() },
+        { text: "Discard", style: "destructive", onPress: () => goBack("/(tabs)/design") },
       ],
     );
   }
@@ -376,7 +562,7 @@ export default function CustomizeScreen() {
       router.replace("/cart");
     } catch (err) {
       haptics.error();
-      toast.error(err instanceof Error ? err.message : "Could not save your design.");
+      toast.error(studioErrorMessage(err, "Could not save your design. Try again in a moment."));
     } finally {
       setSaving(false);
     }
@@ -572,6 +758,37 @@ export default function CustomizeScreen() {
                   </Text>
                 </View>
 
+                {blanks.length > 1 && (
+                  <>
+                    <Text style={[s.lbl, { marginTop: 16 }]}>Print it on something else</Text>
+                    <View style={s.blankRow}>
+                      {blanks
+                        .filter((b) => b.slug !== product?.slug)
+                        .map((b) => (
+                          <TouchableOpacity
+                            key={b.id}
+                            style={s.blankCell}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Switch to ${b.name}`}
+                            onPress={() => switchBlank(b.slug)}
+                          >
+                            <View style={s.blankThumb}>
+                              <Image
+                                source={{ uri: b.images?.[0] ?? "" }}
+                                alt=""
+                                style={{ width: "100%", height: "100%" }}
+                                contentFit="cover"
+                              />
+                            </View>
+                            <Text style={s.blankName} numberOfLines={2}>{b.name}</Text>
+                            <Text style={s.blankPrice}>{formatPrice(b.price)}</Text>
+                          </TouchableOpacity>
+                        ))}
+                    </View>
+                  </>
+                )}
+
                 {variants.length > 0 && (
                   <>
                     <Text style={[s.lbl, { marginTop: 16 }]}>Size</Text>
@@ -592,6 +809,48 @@ export default function CustomizeScreen() {
                       })}
                     </View>
                   </>
+                )}
+              </View>
+            ) : tab === "library" ? (
+              <View style={s.pickers}>
+                <Text style={s.lbl}>DEWDROPZ library</Text>
+                {libraryLoading ? (
+                  <View style={{ paddingVertical: 20, alignItems: "center" }}>
+                    <ActivityIndicator color={C.forest} />
+                  </View>
+                ) : libraryDesigns.length === 0 ? (
+                  // An empty shelf is a real state, not an error: the upload
+                  // door still works, which is all the phone had before this.
+                  <Text style={s.libEmpty}>
+                    No designs for this garment yet. You can still upload your own.
+                  </Text>
+                ) : (
+                  <View style={s.libGrid}>
+                    {libraryDesigns.map((d) => (
+                      <TouchableOpacity
+                        key={d.id}
+                        style={s.libCell}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add ${d.name} to the design`}
+                        onPress={() => addLibraryDesign(d)}
+                      >
+                        {/* On the garment's own colour, because most library
+                            artwork is light ink meant for a dark blank — on a
+                            white tile it would be an invisible thumbnail. */}
+                        <View style={[s.libThumb, { backgroundColor: color?.hex ?? C.ink }]}>
+                          <Image
+                            source={{ uri: d.image_url }}
+                            alt={d.name}
+                            style={{ width: "100%", height: "100%" }}
+                            contentFit="contain"
+                          />
+                        </View>
+                        <Text style={s.libName} numberOfLines={1}>{d.name}</Text>
+                        <Text style={s.libColl} numberOfLines={1}>{d.collection}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 )}
               </View>
             ) : tab === "layers" ? (
@@ -620,12 +879,13 @@ export default function CustomizeScreen() {
                 twoSided={twoSided}
                 activeSide={effectiveSide}
                 uploading={uploading}
-                canUndo={cursor > 0}
-                canRedo={cursor < history.length - 1}
+                canUndo={hist.cursor > 0}
+                canRedo={hist.cursor < hist.stack.length - 1}
                 onAddText={() => { addText(); setTab("edit"); }}
                 onAddImage={async () => { await addImage(); setTab("edit"); }}
-                onUndo={() => { haptics.select(); setCursor((c) => Math.max(0, c - 1)); setSelectedId(null); }}
-                onRedo={() => { haptics.select(); setCursor((c) => Math.min(history.length - 1, c + 1)); setSelectedId(null); }}
+                onOpenLibrary={() => { haptics.select(); setTab("library"); }}
+                onUndo={() => { haptics.select(); setHist((h) => ({ ...h, cursor: Math.max(0, h.cursor - 1) })); setSelectedId(null); }}
+                onRedo={() => { haptics.select(); setHist((h) => ({ ...h, cursor: Math.min(h.stack.length - 1, h.cursor + 1) })); setSelectedId(null); }}
                 onPatch={patchSelected}
                 onDelete={() => {
                   haptics.warning();
@@ -658,10 +918,10 @@ export default function CustomizeScreen() {
       {/* Tab bar — one tool at a time; tapping the open tab hands the height
           back to the garment. */}
       <View style={s.tabs}>
-        <StudioTab label="Blank" icon="checkroom" tab="blank" current={tab} onSelect={setTab} />
-        <StudioTab label="Add" icon="add" tab="add" current={tab} onSelect={setTab} />
-        <StudioTab label="Edit" icon="tune" tab="edit" current={tab} onSelect={setTab} dimmed={!selected} />
-        <StudioTab label={layers.length ? `Layers ${layers.length}` : "Layers"} icon="layers" tab="layers" current={tab} onSelect={setTab} />
+        <StudioTab label="Blank" icon="checkroom" tab="blank" current={tab === "library" ? "add" : tab} onSelect={setTab} />
+        <StudioTab label="Add" icon="add" tab="add" current={tab === "library" ? "add" : tab} onSelect={setTab} />
+        <StudioTab label="Edit" icon="tune" tab="edit" current={tab === "library" ? "add" : tab} onSelect={setTab} dimmed={!selected} />
+        <StudioTab label={layers.length ? `Layers ${layers.length}` : "Layers"} icon="layers" tab="layers" current={tab === "library" ? "add" : tab} onSelect={setTab} />
       </View>
 
       <View style={s.footer}>
@@ -827,4 +1087,28 @@ const s = StyleSheet.create({
   },
   ctaOff: { opacity: 0.45 },
   ctaT: { fontFamily: F.bodyBold, fontSize: 14, color: C.white, letterSpacing: -0.1 },
+
+  // ── The design library shelf ───────────────────────────────────────────
+  // Three across: wide enough to judge a mark at a glance, narrow enough that
+  // a shelf of seven does not need scrolling inside a panel that is already
+  // capped at a third of the screen.
+  libGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  libCell: { width: "31%" },
+  libThumb: {
+    width: "100%", aspectRatio: 1, borderRadius: R.card, overflow: "hidden",
+    alignItems: "center", justifyContent: "center", padding: 8,
+  },
+  libName: { fontFamily: F.bodyBold, fontSize: 11, color: C.ink, marginTop: 5 },
+  libColl: { fontFamily: F.mono, fontSize: 9, letterSpacing: 0.6, color: C.textMid, marginTop: 1 },
+  libEmpty: { fontFamily: F.body, fontSize: 13, color: C.textMid, lineHeight: 19 },
+
+  // ── The garment switcher ───────────────────────────────────────────────
+  blankRow: { flexDirection: "row", gap: 10 },
+  blankCell: { width: 96 },
+  blankThumb: {
+    width: "100%", aspectRatio: 4 / 5, borderRadius: R.card, overflow: "hidden",
+    backgroundColor: C.sand, borderWidth: 1, borderColor: C.rule,
+  },
+  blankName: { fontFamily: F.bodyBold, fontSize: 11, color: C.ink, marginTop: 5, lineHeight: 14 },
+  blankPrice: { fontFamily: F.mono, fontSize: 10, color: C.textMid, marginTop: 1 },
 });

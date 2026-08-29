@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import CustomizerStudio from '@/components/customize/CustomizerStudio'
-import { getProductBySlug } from '@/actions/products'
+import { getProductBySlug, getProducts } from '@/actions/products'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -23,12 +23,20 @@ export default async function CustomizeProductPage({
 }) {
   const { slug } = await params
   const { variant, color, start } = await searchParams
-  const product = await getProductBySlug(slug)
+  const [product, all] = await Promise.all([getProductBySlug(slug), getProducts()])
   if (!product || !product.is_customizable) notFound()
+
+  // The other blanks, so the garment can be changed without leaving. Same
+  // filter the /customize index uses: customizable AND actually set up with
+  // colourways, because a blank with no zones opens a studio with nothing in it.
+  const blanks = all
+    .filter((p) => p.is_customizable && (p.customization_config?.colors?.length ?? 0) > 0)
+    .map((p) => ({ id: p.id, slug: p.slug, name: p.name, price: p.price, images: p.images }))
 
   return (
     <CustomizerStudio
       product={product}
+      blanks={blanks}
       initialVariantId={variant}
       initialColorName={color}
       openLibrary={start === 'library'}

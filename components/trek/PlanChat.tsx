@@ -244,7 +244,7 @@ export default function PlanChat({
           // everywhere else, and the one place somebody is most likely to try
           // is the thread with the people they are about to meet.
           placeholder="Message the group — numbers and emails are filtered out, on purpose"
-          className="h-[46px] min-h-[46px] min-w-0 flex-1 resize-none overflow-y-auto rounded-full border border-rule bg-paper px-5 py-3 font-body text-sm leading-snug text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
+          className="h-[46px] min-h-[46px] min-w-0 flex-1 resize-none overflow-y-auto rounded-full border border-rule bg-surface px-5 py-3 font-body text-sm leading-snug text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
         />
         <button
           type="button"

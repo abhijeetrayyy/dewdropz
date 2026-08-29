@@ -16,7 +16,7 @@ export default function DesignYourOwnConfigurator({ products }: { products: Prod
   const product = products[Math.min(activeIndex, products.length - 1)]
 
   return (
-    <div className="mt-10 md:mt-14 rounded-lg bg-[#0F1410] p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_-40px_rgba(12,16,13,0.7)]">
+    <div className="mt-10 md:mt-14 rounded-[var(--r-panel)] bg-[#0F1410] p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_-40px_rgba(12,16,13,0.7)]">
       {/* Garment tabs, thumbnail-led — reads as picking up a garment off the
           bench rather than clicking a text tab. Driven off the real catalogue,
           so a fourth blank flagged customizable in admin appears here too. */}
@@ -30,13 +30,13 @@ export default function DesignYourOwnConfigurator({ products }: { products: Prod
               type="button"
               onClick={() => setActiveIndex(i)}
               aria-pressed={active}
-              className={`group flex w-full items-center gap-3 rounded-md border py-2 pl-2 pr-4 transition-all duration-300 sm:w-auto ${
+              className={`group flex w-full items-center gap-3 rounded-[var(--r-input)] border py-2 pl-2 pr-4 transition-all duration-300 sm:w-auto ${
                 active
                   ? 'border-sage/70 bg-sage/10'
                   : 'border-paper/10 hover:border-paper/30 hover:bg-paper/[0.04]'
               }`}
             >
-              <span className="relative h-11 w-9 flex-shrink-0 overflow-hidden rounded-sm bg-paper/10">
+              <span className="relative h-11 w-9 flex-shrink-0 overflow-hidden rounded-[var(--r-input)] bg-paper/10">
                 {thumb && (
                   <Image
                     src={thumb}
@@ -91,7 +91,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
     <div className="mt-5 sm:mt-6 grid grid-cols-1 lg:grid-cols-[0.82fr_1fr] gap-5 lg:gap-8">
       {/* The lit stage — product photography on its own light surface, the way
           a garment sits under a lamp on a dark bench. */}
-      <div className="relative overflow-hidden rounded-md bg-[#D9D9D7]">
+      <div className="relative overflow-hidden rounded-[var(--r-input)] bg-[#D9D9D7]">
         <div className="relative aspect-[4/5]">
           {previewImage && (
             <Image
@@ -110,7 +110,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
         {/* Front/back toggle sits on the stage itself — flipping the garment is
             part of looking at it, not a separate form field. */}
         {color?.front && color?.back && (
-          <div className="absolute left-3 top-3 flex gap-1 rounded-sm bg-ink/70 p-1 backdrop-blur-sm">
+          <div className="absolute left-3 top-3 flex gap-1 rounded-[var(--r-input)] bg-ink/70 p-1 backdrop-blur-sm">
             {(['front', 'back'] as const).map((s) => (
               <button
                 key={s}
@@ -127,7 +127,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
           </div>
         )}
 
-        <span className="absolute right-3 top-3 rounded-sm bg-ink/70 px-2.5 py-1 font-body text-[9px] tracking-[0.15em] uppercase text-paper backdrop-blur-sm">
+        <span className="absolute right-3 top-3 rounded-[var(--r-input)] bg-ink/70 px-2.5 py-1 font-body text-[9px] tracking-[0.15em] uppercase text-paper backdrop-blur-sm">
           Your canvas
         </span>
       </div>
@@ -193,7 +193,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
                     type="button"
                     disabled={oos}
                     onClick={() => setVariantId(v.id)}
-                    className={`min-w-[46px] rounded-sm border px-3 py-2 font-body text-xs uppercase tracking-[0.06em] transition-colors duration-300 ${
+                    className={`min-w-[46px] rounded-[var(--r-input)] border px-3 py-2 font-body text-xs uppercase tracking-[0.06em] transition-colors duration-300 ${
                       variant?.id === v.id
                         ? 'border-sage bg-sage/15 text-paper'
                         : oos
@@ -228,7 +228,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
         <div className="mt-auto pt-7">
           <Link
             href={studioHref}
-            className="group flex w-full items-center justify-center gap-2.5 rounded-sm bg-sage px-6 py-4 font-body text-[11px] uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-paper"
+            className="group flex w-full items-center justify-center gap-2.5 rounded-[var(--r-input)] bg-sage px-6 py-4 font-body text-[11px] uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-paper"
           >
             Customize
             <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>

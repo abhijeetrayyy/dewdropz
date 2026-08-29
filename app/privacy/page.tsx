@@ -20,7 +20,7 @@ const SECTIONS = [
   },
   {
     title: 'Payments',
-    body: 'Card and UPI payments are processed securely through Stripe and Razorpay. DEWDROPZ never sees or stores your full card number.',
+    body: 'Card and UPI payments are processed securely through Razorpay. DEWDROPZ never sees or stores your full card number.',
   },
   {
     title: 'Cookies',
@@ -45,21 +45,30 @@ export default function PrivacyPage() {
           eyebrow="Legal"
           title="Privacy Policy"
           subtitle="Last updated April 2026. Plain language, no legalese we wouldn't say to your face."
+          variant="altitude"
         />
 
-        <section className="bg-paper px-6 md:px-10 pb-24">
-          <div className="max-w-2xl mx-auto flex flex-col gap-10">
-            {SECTIONS.map((section) => (
-              <div key={section.title}>
-                <h2 className="font-display text-xl text-text mb-3">{section.title}</h2>
-                <p className="font-body text-sm text-mid leading-relaxed">{section.body}</p>
+        <section className="bg-paper-warm px-6 pb-24 pt-16 md:px-10">
+          <div className="mx-auto flex max-w-2xl flex-col gap-4">
+            {SECTIONS.map((section, i) => (
+              <div
+                key={section.title}
+                className="rounded-[var(--r-panel)] border border-rule/70 bg-surface p-6 shadow-[var(--shadow-card)] md:p-7"
+              >
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-[10px] tabular-nums text-light">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h2 className="font-display text-xl text-text">{section.title}</h2>
+                </div>
+                <p className="mt-3 font-body text-sm leading-relaxed text-mid">{section.body}</p>
               </div>
             ))}
 
-            <div className="border-t border-rule pt-8">
-              <p className="font-body text-sm text-mid leading-relaxed">
+            <div className="mt-4 rounded-[var(--r-panel)] border border-sage/40 bg-sage-soft p-6 md:p-7">
+              <p className="font-body text-sm leading-relaxed text-mid">
                 Questions about this policy? Reach us at{' '}
-                <a href={`mailto:${SITE.email}`} className="text-forest hover:underline">
+                <a href={`mailto:${SITE.email}`} className="font-medium text-forest hover:underline">
                   {SITE.email}
                 </a>
                 .

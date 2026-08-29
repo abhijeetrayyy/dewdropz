@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
@@ -14,6 +15,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconButton } from "@/components/ui/IconButton";
 import { OverlayHeader } from "@/components/editorial/OverlayHeader";
+import { Img as Image } from "@/components/ui/Img";
 import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
 import { SectionHead } from "@/components/editorial/SectionHead";
@@ -24,7 +26,7 @@ import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD_PAISE } from "@/lib/constants";
 import { useCartStore } from "@/stores/cart";
 import { useWishlistStore } from "@/stores/wishlist";
-import { useProductQuery, useProductRatingQuery, useProductsQuery, useRecentlyViewedQuery } from "@/lib/queries";
+import { useProductQuery, useProductRatingQuery, useProductsQuery, useRecentlyViewedQuery, useCustomRangeQuery, useRentalForProductQuery } from "@/lib/queries";
 import { getRelatedProducts } from "@/lib/data";
 import { pushRecentlyViewed } from "@/lib/recentlyViewed";
 import { toast } from "@/components/ui/Toast";
@@ -58,6 +60,9 @@ export default function ProductScreen() {
   // can't choose a size on the shopper's behalf, so it sends them here.
   const { slug, pick } = useLocalSearchParams<{ slug: string; pick?: string }>();
   const { data: p, isLoading, isPending, isError } = useProductQuery(slug);
+  // Null for an ordinary product, which is most of them — the band below then
+  // renders nothing rather than claiming studio provenance it does not have.
+  const { data: customRange } = useCustomRangeQuery(p ?? undefined);
   const { data: allProducts = [] } = useProductsQuery();
   const { data: recentlyViewed = [] } = useRecentlyViewedQuery(slug);
   const { data: rating } = useProductRatingQuery(p?.id);
@@ -86,6 +91,15 @@ export default function ProductScreen() {
     if (slug) pushRecentlyViewed(slug);
   }, [slug]);
 
+  // ABOVE the early returns, with every other hook.
+  //
+  // Placed after them it ran on some renders and not others, and React said so
+  // immediately: "Rendered more hooks than during the previous render" — the
+  // loading branch returns before it, so the first paint registered one hook
+  // fewer than the second. `enabled` inside the query already handles the
+  // undefined id; what is not allowed is the CALL being conditional.
+  const { data: rentable } = useRentalForProductQuery(p?.id);
+
   // `isPending` and not just `isLoading`: react-query v5 reports
   // isLoading === false for a query that is disabled or hasn't started,
   // which on a cold deep link (where `slug` lands a tick after first
@@ -108,7 +122,7 @@ export default function ProductScreen() {
   if (isError || !p) {
     return (
       <View style={[s.root, { paddingTop: insets.top + 20, paddingHorizontal: S.gutter }]}>
-        <IconButton name="arrow_back" onPress={() => router.back()} />
+        <IconButton name="arrow_back" onPress={() => goBack("/(tabs)/shop")} />
         <EmptyState
           eyebrow="Not found"
           title="This piece isn't here."
@@ -216,6 +230,131 @@ export default function ProductScreen() {
           <Mono color={C.textFaint} style={{ marginTop: 6 }}>
             PLUS GST · SHOWN IN YOUR CART
           </Mono>
+
+          {/* The same gear, by the day.
+              Six pieces of equipment can be either bought or rented (migration
+              098), and until now the product page only ever offered one of the
+              two — somebody who needs a tent for one weekend was shown ₹12,000
+              and nothing else. Secondary to the buy CTA on purpose: this page
+              is the buying page, and renting is the alternative it should
+              mention rather than compete with. */}
+          {rentable ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push(`/rent/${rentable.slug}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`Rent this instead, from ${formatPrice(rentable.daily_rate)} a day`}
+              style={s.rentInstead}
+            >
+              <View style={s.rentIcon}>
+                <Icon name="camping" size={17} color={C.paper} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Mono style={{ fontSize: 10 }}>NEED IT FOR ONE TRIP?</Mono>
+                <Body style={{ marginTop: 2 }}>
+                  Rent it from {formatPrice(rentable.daily_rate)} a day
+                </Body>
+              </View>
+              <Icon name="arrow_forward" size={18} color={C.forestDeep} />
+            </TouchableOpacity>
+          ) : null}
+
+          {/* ── From the studio ─────────────────────────────────────────────
+              A finished, already-printed garment is an ordinary product row —
+              its own photographs, its own SKU — so nothing here connected it to
+              the studio it came out of. A shopper who liked the shirt but not
+              the artwork had no way to find out the same blank takes anything
+              they want, and left. Mirrors CustomRangeBanner.tsx on the web. */}
+          {customRange ? (
+            <View style={s.rangeBand}>
+              <Mono color={C.sageDeep} style={{ marginBottom: 6 }}>
+                FROM THE DESIGN STUDIO
+              </Mono>
+              <Text style={s.rangeTitle}>
+                {customRange.blank
+                  ? `Printed on the ${customRange.blank.name} — put your own artwork on the same garment.`
+                  : "Want this with your own artwork on it?"}
+              </Text>
+              <Text style={s.rangeBody}>
+                {customRange.blank
+                  ? "Ours or yours, printed to order, front and back."
+                  : "We don't stock this exact garment as a blank yet — but these ones we do print to order."}
+              </Text>
+
+              {customRange.blank ? (
+                <View style={s.rangeBtns}>
+                  <TouchableOpacity
+                    style={s.rangePrimary}
+                    activeOpacity={0.9}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      haptics.tap();
+                      router.push({
+                        pathname: "/customize/[slug]",
+                        params: { slug: customRange.blank!.slug, start: "library" },
+                      });
+                    }}
+                  >
+                    <Text style={s.rangePrimaryT}>Browse designs</Text>
+                    <Icon name="arrow_forward" size={14} color={C.paper} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={s.rangeSecondary}
+                    activeOpacity={0.9}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      haptics.tap();
+                      router.push({
+                        pathname: "/customize/[slug]",
+                        params: { slug: customRange.blank!.slug },
+                      });
+                    }}
+                  >
+                    <Text style={s.rangeSecondaryT}>Upload your own</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                /* Not stocked. Offer the blanks that exist rather than a dead
+                   link — a rail of them, right here, so the answer and the way
+                   forward are the same tap. */
+                <View style={{ marginTop: 12 }}>
+                  {customRange.alternatives.length === 0 ? (
+                    <Text style={s.rangeBody}>Nothing is set up in the studio yet.</Text>
+                  ) : (
+                    <View style={s.rangeAlts}>
+                      {customRange.alternatives.map((b) => (
+                        <TouchableOpacity
+                          key={b.id}
+                          style={s.rangeAlt}
+                          activeOpacity={0.85}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Design on the ${b.name}`}
+                          onPress={() => {
+                            haptics.tap();
+                            router.push({
+                              pathname: "/customize/[slug]",
+                              params: { slug: b.slug, start: "library" },
+                            });
+                          }}
+                        >
+                          <View style={s.rangeAltThumb}>
+                            <Image
+                              source={{ uri: b.images?.[0] ?? "" }}
+                              alt=""
+                              style={{ width: "100%", height: "100%" }}
+                              contentFit="cover"
+                            />
+                          </View>
+                          <Text style={s.rangeAltName} numberOfLines={2}>{b.name}</Text>
+                          <Text style={s.rangeAltPrice}>{formatPrice(b.price)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : null}
 
           {/* ── Delivery & returns, stated up front ─────────────────────────
               Baymard's product-page research puts two of the most common
@@ -407,7 +546,7 @@ export default function ProductScreen() {
       <OverlayHeader
         scrolled={scrolled}
         title={p.name}
-        onBack={() => router.back()}
+        onBack={() => goBack("/(tabs)/shop")}
         renderRight={(tone) => (
           <>
             <IconButton
@@ -498,6 +637,15 @@ export default function ProductScreen() {
 }
 
 const s = StyleSheet.create({
+  rentInstead: {
+    flexDirection: "row", alignItems: "center", gap: S.md,
+    backgroundColor: C.forest12, borderRadius: R.panel,
+    padding: S.md, marginTop: S.lg,
+  },
+  rentIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: "center", justifyContent: "center", backgroundColor: C.forest,
+  },
   root: { flex: 1, backgroundColor: C.paper },
   info: { paddingHorizontal: S.gutter, paddingTop: S.xl },
 
@@ -575,5 +723,32 @@ const s = StyleSheet.create({
   ctaOff: { backgroundColor: C.disabled },
   ctaT: { fontFamily: F.bodyBold, fontSize: 16, color: C.white, letterSpacing: -0.1 },
   ctaRule: { width: 1, height: 18, backgroundColor: "rgba(255,255,255,0.3)" },
+  // ── From the studio band ────────────────────────────────────────────────
+  rangeBand: {
+    marginTop: 18, padding: 16, borderRadius: R.panel,
+    backgroundColor: C.forest12, borderWidth: 1, borderColor: C.sage12,
+  },
+  rangeTitle: { fontFamily: F.display, fontSize: 18, lineHeight: 24, color: C.ink, letterSpacing: -0.2 },
+  rangeBody: { fontFamily: F.body, fontSize: 13, lineHeight: 19, color: C.textMid, marginTop: 6 },
+  rangeBtns: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
+  rangePrimary: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: C.forest, borderRadius: R.pill, paddingVertical: 11, paddingHorizontal: 18,
+  },
+  rangePrimaryT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.paper, letterSpacing: -0.1 },
+  rangeSecondary: {
+    borderRadius: R.pill, paddingVertical: 11, paddingHorizontal: 18,
+    borderWidth: 1, borderColor: C.forest,
+  },
+  rangeAlts: { flexDirection: "row", gap: 8 },
+  rangeAlt: { width: 88 },
+  rangeAltThumb: {
+    width: "100%", aspectRatio: 4 / 5, borderRadius: R.card, overflow: "hidden",
+    backgroundColor: C.sand, borderWidth: 1, borderColor: C.rule,
+  },
+  rangeAltName: { fontFamily: F.bodySemiBold, fontSize: 10, color: C.ink, marginTop: 4, lineHeight: 13 },
+  rangeAltPrice: { fontFamily: F.mono, fontSize: 9, color: C.textMid, marginTop: 1 },
+  rangeSecondaryT: { fontFamily: F.bodySemiBold, fontSize: 13, color: C.forest, letterSpacing: -0.1 },
+
   ctaPrice: { fontFamily: F.monoBold, fontSize: 13, color: C.white },
 });

@@ -14,6 +14,7 @@ import {
   createLibraryDesign,
   updateLibraryDesign,
   deleteLibraryDesign,
+  getBlanksForDesignScoping,
 } from '@/actions/designLibrary'
 import type { LibraryDesign } from '@/types/database'
 
@@ -31,10 +32,14 @@ export function DesignLibraryEngine() {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  // The garments a design can be restricted to. Loaded alongside the library
+  // because the scope control is useless without it, and an empty list is a
+  // meaningful state (no blanks configured) rather than a loading one.
+  const [blanks, setBlanks] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    getAllDesigns()
-      .then(setDesigns)
+    Promise.all([getAllDesigns(), getBlanksForDesignScoping()])
+      .then(([rows, bs]) => { setDesigns(rows); setBlanks(bs) })
       .catch(() => {
         toast.error('Could not load the design library')
         setDesigns([])
@@ -167,10 +172,8 @@ export function DesignLibraryEngine() {
         </CardHeader>
         <CardContent className="space-y-3">
           {designs.map((d) => (
-            <div
-              key={d.id}
-              className="grid grid-cols-[64px_1fr_auto] items-start gap-4 rounded-md border border-gray-200 p-3 sm:grid-cols-[64px_1fr_1fr_90px_auto_auto]"
-            >
+            <div key={d.id} className="space-y-3 rounded-md border border-gray-200 p-3">
+            <div className="grid grid-cols-[64px_1fr_auto] items-start gap-4 sm:grid-cols-[64px_1fr_1fr_90px_auto_auto]">
               {/* Checkerboard behind the thumbnail — a transparent PNG on a
                   white admin card is an invisible PNG. */}
               <div
@@ -206,6 +209,53 @@ export function DesignLibraryEngine() {
               <Button variant="ghost" size="sm" onClick={() => remove(d.id, d.name)} aria-label={`Delete ${d.name}`}>
                 <Trash2 className="h-4 w-4 text-red-600" />
               </Button>
+            </div>
+
+            {/* Which garments this artwork is offered on.
+                EMPTY MEANS EVERY GARMENT, and the control says so rather than
+                rendering as "none selected" — that ambiguity is the whole reason
+                to spell it out here instead of leaving a bare multi-select. */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+              <span className="text-xs text-gray-500">Offered on</span>
+              <button
+                type="button"
+                onClick={() => patch(d.id, { blank_ids: [] })}
+                aria-pressed={(d.blank_ids?.length ?? 0) === 0}
+                className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                  (d.blank_ids?.length ?? 0) === 0
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                Every garment
+              </button>
+              {blanks.map((b) => {
+                const on = d.blank_ids?.includes(b.id) ?? false
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => {
+                      const cur = d.blank_ids ?? []
+                      patch(d.id, { blank_ids: on ? cur.filter((x) => x !== b.id) : [...cur, b.id] })
+                    }}
+                    className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                      on
+                        ? 'border-emerald-700 bg-emerald-50 text-emerald-800'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {b.name}
+                  </button>
+                )
+              })}
+              {blanks.length === 0 && (
+                <span className="text-xs text-amber-700">
+                  No customizable blanks are set up, so there is nothing to restrict this to.
+                </span>
+              )}
+            </div>
             </div>
           ))}
         </CardContent>

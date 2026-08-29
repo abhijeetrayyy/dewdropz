@@ -37,8 +37,7 @@ function dateline() {
 }
 
 type Props = {
-  /** Right-hand slot override. Defaults to search + saved + notifications. */
-  showCart?: boolean;
+  /** Right-hand slot: search, saved, pack, notifications. */
   unread?: boolean;
   /**
    * `onDark` strips the paper background and inverts the glyphs so the
@@ -50,7 +49,7 @@ type Props = {
   tone?: "onLight" | "onDark";
 };
 
-export function Masthead({ showCart, unread = true, tone = "onLight" }: Props) {
+export function Masthead({ unread = true, tone = "onLight" }: Props) {
   const insets = useSafeAreaInsets();
   const onDark = tone === "onDark";
   const fg = onDark ? C.paper : C.ink;
@@ -94,21 +93,23 @@ export function Masthead({ showCart, unread = true, tone = "onLight" }: Props) {
             />
           </TouchableOpacity>
 
-          {showCart ? (
-            <TouchableOpacity onPress={() => router.push("/(tabs)/cart")} hitSlop={10} accessibilityLabel="Pack">
-              <View>
-                <Icon name="backpack" size={22} color={fg} />
-                <Badge count={cartCount} />
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => router.push("/notifications")} hitSlop={10} accessibilityLabel="Notifications">
-              <View>
-                <Icon name="notifications" size={22} color={fg} />
-                {unread ? <View style={s.dot} /> : null}
-              </View>
-            </TouchableOpacity>
-          )}
+          {/* Both, always. The pack used to trade places with notifications
+              because it also had a tab; now that Rent has taken that slot and
+              the pack lives only here, an either/or would make the cart
+              unreachable from half the app. */}
+          <TouchableOpacity onPress={() => router.push("/(tabs)/cart")} hitSlop={10} accessibilityLabel="Pack">
+            <View>
+              <Icon name="backpack" size={22} color={fg} />
+              <Badge count={cartCount} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push("/notifications")} hitSlop={10} accessibilityLabel="Notifications">
+            <View>
+              <Icon name="notifications" size={22} color={fg} />
+              {unread ? <View style={s.dot} /> : null}
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 

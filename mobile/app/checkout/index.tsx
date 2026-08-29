@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useCartStore } from "@/stores/cart";
+import { useCartStore, type CartItem } from "@/stores/cart";
 import { useAuthStore } from "@/stores/auth";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/Button";
@@ -12,6 +13,7 @@ import { StatusCap } from "@/components/ui/StatusCap";
 import { Input } from "@/components/Input";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/Icon";
+import { Img as Image } from "@/components/ui/Img";
 import { Rule } from "@/components/editorial/Rule";
 import { SpecTable } from "@/components/editorial/SpecTable";
 import { Body, Display2, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
@@ -39,7 +41,7 @@ const STEPS = ["Delivery", "Payment"];
 //     that hid the address you were trying to identify.
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
-  const { items, subtotal: st, clearCart } = useCartStore();
+  const { items, subtotal: st, itemCount, clearCart } = useCartStore();
   const { user } = useAuthStore();
   const { data: addresses = [] } = useAddressesQuery(user?.id);
   const checkout = useCheckoutMutation();
@@ -127,17 +129,59 @@ export default function CheckoutScreen() {
             where they were invisible. Cream screen, dark glyphs. */}
         <StatusBar style="dark" />
         <View style={s.header}>
-          <IconButton name="close" onPress={() => router.back()} />
+          <IconButton name="close" onPress={() => goBack("/(tabs)/cart")} />
         </View>
         <View style={s.gate}>
           <Eyebrow>One step first</Eyebrow>
           <Rule weight="strong" style={{ marginTop: 9 }} />
           <Display2 style={{ marginTop: S.md }}>Sign in to check out.</Display2>
-          <Body color={C.textMid} style={{ marginTop: 10 }}>
+          <Body color={C.textMid} style={{ marginTop: 10, lineHeight: 22 }}>
             You&apos;ll need an account so we can send you tracking and keep your order history.
           </Body>
-          <Button title="Sign in" variant="dark" onPress={() => router.push("/auth/login")} style={{ marginTop: S.xl, alignSelf: "flex-start" }} />
-          <Button title="Create an account" variant="link" onPress={() => router.push("/auth/signup")} style={{ marginTop: S.md }} />
+
+          {/* WHAT THEY ARE ABOUT TO BUY, on the screen that asks them to stop.
+              This was a sign-in form on an otherwise empty cream field, shown
+              at the exact moment a person has decided to spend money. Nothing
+              on it acknowledged the pack they had just filled, so the gate read
+              as a wall rather than a step. Their own items are the best
+              argument for getting past it. */}
+          {items.length > 0 ? (
+            <View style={s.gatePack}>
+              <View style={s.gateThumbs}>
+                {(items as CartItem[]).slice(0, 3).map((it, i) => (
+                  <Image
+                    key={`${it.productId}-${it.size ?? ""}-${i}`}
+                    source={{ uri: it.image }}
+                    style={[s.gateThumb, i > 0 && { marginLeft: -14 }]}
+                    contentFit="cover"
+                    alt=""
+                  />
+                ))}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Mono style={{ fontSize: 10 }}>WAITING IN YOUR PACK</Mono>
+                <Body style={{ marginTop: 2 }}>
+                  {itemCount()} {itemCount() === 1 ? "piece" : "pieces"} · {formatPrice(st())}
+                </Body>
+              </View>
+            </View>
+          ) : null}
+
+          <Button title="Sign in" variant="dark" onPress={() => router.push("/auth/login?next=%2Fcheckout")} style={{ marginTop: S.xl, alignSelf: "stretch" }} />
+          <Button title="Create an account" variant="link" onPress={() => router.push("/auth/signup?next=%2Fcheckout")} style={{ marginTop: S.md }} />
+
+          <View style={s.gateTrust}>
+            {([
+              ["local_shipping", "Free delivery over ₹2,000"],
+              ["payments", "Cash on delivery across India"],
+              ["history", "7-day returns on unused items"],
+            ] as const).map(([icon, label]) => (
+              <View key={label} style={s.gateTrustRow}>
+                <Icon name={icon} size={16} color={C.forestDeep} />
+                <Body color={C.textMid} style={{ fontSize: 13, flex: 1 }}>{label}</Body>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
     );
@@ -329,7 +373,7 @@ export default function CheckoutScreen() {
             name={step === 1 ? "arrow_back" : "close"}
             tone="glass"
             accessibilityLabel={step === 1 ? "Back to delivery" : "Close checkout"}
-            onPress={() => (step === 1 ? setStep(0) : router.back())}
+            onPress={() => (step === 1 ? setStep(0) : goBack("/(tabs)/cart"))}
           />
           <View style={{ flex: 1, alignItems: "center" }}>
             <Text style={s.panelKicker}>CHECKOUT</Text>
@@ -666,6 +710,20 @@ export default function CheckoutScreen() {
 }
 
 const s = StyleSheet.create({
+  gatePack: {
+    flexDirection: "row", alignItems: "center", gap: S.md,
+    backgroundColor: C.cream, borderRadius: R.panel, padding: S.md, marginTop: S.lg,
+  },
+  gateThumbs: { flexDirection: "row" },
+  gateThumb: {
+    width: 44, height: 54, borderRadius: R.card,
+    backgroundColor: C.sand, borderWidth: 2, borderColor: C.paper,
+  },
+  gateTrust: {
+    gap: 10, marginTop: S.block,
+    borderTopWidth: 1, borderTopColor: C.ruleSoft, paddingTop: S.lg,
+  },
+  gateTrustRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   root: { flex: 1, backgroundColor: C.paper },
   couponOn: {
     flexDirection: "row",

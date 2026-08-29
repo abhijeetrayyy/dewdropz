@@ -418,7 +418,27 @@ export default function SummitHero({
 
   // The blank on the bench in act 3 — the cheapest, because it is the one most
   // people will actually print on.
-  const studioBlank = garments.length ? garments[garments.length - 1] : null
+  //
+  // This used to be `garments[garments.length - 1]`: the cheapest of the top
+  // three by price. That was correct only while every product in the catalogue
+  // was a blank. List one finished, already-printed garment and it does two
+  // things at once — pushes the real blank out of the three-item slice, and
+  // takes its place on the bench. The studio act then opens on a tee that has
+  // already been printed, under a caption saying it is being designed.
+  //
+  // So: the cheapest product that can ACTUALLY be printed on. And prefer the
+  // colourway's own mockup to images[0] — that is the bare-garment shot the
+  // studio itself draws on, whereas images[0] is whatever photograph admin put
+  // first, which for a finished product is the printed one.
+  const studioBlank = useMemo(() => {
+    const blank = [...products]
+      .filter((p) => p.is_customizable && (p.customization_config?.colors?.length ?? 0) > 0)
+      .sort((a, b) => a.price - b.price)[0]
+    if (!blank) return null
+    const colour = blank.customization_config?.colors?.find((c) => c.available && c.front)
+    const image = colour?.front?.mockupImage ?? blank.images?.[0]
+    return image ? { slug: blank.slug, name: blank.name, price: blank.price, image } : null
+  }, [products])
 
   // ── ACT 2's content ────────────────────────────────────────────────────────
   //
@@ -1282,7 +1302,7 @@ export default function SummitHero({
                 <li key={c.id} data-range-plate className="opacity-0">
                   <Link
                     href={`/collections/${c.slug}`}
-                    className="group pointer-events-auto block overflow-hidden rounded-sm border border-paper/15 bg-ink/45 backdrop-blur-sm transition-colors duration-300 hover:border-sage/60"
+                    className="group pointer-events-auto block overflow-hidden rounded-[var(--r-card)] border border-paper/15 bg-ink/45 backdrop-blur-sm transition-colors duration-300 hover:border-sage/60"
                   >
                     <div className="relative aspect-[3/4] max-h-[56vh] overflow-hidden bg-forest-deep">
                       {c.image_url && (
@@ -1425,11 +1445,11 @@ export default function SummitHero({
 
             <div className="grid gap-3 lg:grid-cols-[156px_minmax(0,1fr)_176px]">
               {/* Type + ink. */}
-              <div data-studio-panel className="hidden origin-right rounded-sm border border-paper/12 bg-ink/55 p-3 backdrop-blur-sm lg:block">
+              <div data-studio-panel className="hidden origin-right rounded-[var(--r-input)] border border-paper/12 bg-ink/55 p-3 backdrop-blur-sm lg:block">
                 <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-paper/35">Type</div>
                 <div className="mt-2 space-y-1">
                   {['Fraunces', 'Archivo', 'Space Mono'].map((f, i) => (
-                    <div key={f} className={`rounded-sm px-2 py-1.5 font-body text-[11px] ${i === 0 ? 'bg-paper/10 text-paper' : 'text-paper/45'}`}>
+                    <div key={f} className={`rounded-[var(--r-input)] px-2 py-1.5 font-body text-[11px] ${i === 0 ? 'bg-paper/10 text-paper' : 'text-paper/45'}`}>
                       {f}
                     </div>
                   ))}
@@ -1478,10 +1498,10 @@ export default function SummitHero({
               </div>
 
               {/* The bench: the garment, being worked on. */}
-              <div data-studio-panel className="relative origin-center overflow-hidden rounded-sm border border-paper/12 bg-[#0B120E]">
+              <div data-studio-panel className="relative origin-center overflow-hidden rounded-[var(--r-card)] border border-paper/12 bg-[#0B120E]">
                 <div className="flex items-center justify-between border-b border-paper/10 px-3 py-2">
                   <div className="flex items-center gap-1">
-                    <span className="rounded-sm bg-paper px-2.5 py-1 font-body text-[9px] uppercase tracking-[0.12em] text-ink">Front</span>
+                    <span className="rounded-[var(--r-input)] bg-paper px-2.5 py-1 font-body text-[9px] uppercase tracking-[0.12em] text-ink">Front</span>
                     <span className="px-2.5 py-1 font-body text-[9px] uppercase tracking-[0.12em] text-paper/40">Back</span>
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[9px] tracking-[0.12em] text-paper/40 tabular-nums">
@@ -1528,7 +1548,7 @@ export default function SummitHero({
               </div>
 
               {/* Layers. */}
-              <div data-studio-panel className="hidden origin-left rounded-sm border border-paper/12 bg-ink/55 p-3 backdrop-blur-sm lg:block">
+              <div data-studio-panel className="hidden origin-left rounded-[var(--r-input)] border border-paper/12 bg-ink/55 p-3 backdrop-blur-sm lg:block">
                 <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-paper/35">Layers</div>
                 <div className="mt-2 space-y-1">
                   {[
@@ -1536,7 +1556,7 @@ export default function SummitHero({
                     { n: 'Ridge mark', on: true, sel: false },
                     { n: 'Back print', on: false, sel: false },
                   ].map((l) => (
-                    <div key={l.n} data-layer-row className={`flex items-center gap-2 rounded-sm px-2 py-1.5 ${l.sel ? 'bg-sage/15' : ''}`}>
+                    <div key={l.n} data-layer-row className={`flex items-center gap-2 rounded-[var(--r-input)] px-2 py-1.5 ${l.sel ? 'bg-sage/15' : ''}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${l.on ? 'bg-sage' : 'bg-paper/20'}`} />
                       <span className={`truncate font-body text-[10px] ${l.on ? 'text-paper/80' : 'text-paper/30'}`}>{l.n}</span>
                     </div>

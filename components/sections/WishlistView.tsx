@@ -76,7 +76,7 @@ export default function WishlistView({
                 <Link
                   key={c.id}
                   href={`/collections/${c.slug}`}
-                  className="group relative aspect-[4/5] rounded-sm overflow-hidden bg-ink/60"
+                  className="group relative aspect-[4/5] rounded-[var(--r-card)] overflow-hidden bg-ink/60"
                 >
                   {c.image_url && (
                     <Image

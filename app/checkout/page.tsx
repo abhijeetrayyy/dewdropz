@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function CheckoutPage() {
   // Addresses need a real user_id (no guest-checkout support at the schema
   // level), so checkout requires login — same gate as /account.
-  const user = await requireAuth()
+  const user = await requireAuth('/checkout')
   const addresses = await getAddresses('shipping')
 
   return (

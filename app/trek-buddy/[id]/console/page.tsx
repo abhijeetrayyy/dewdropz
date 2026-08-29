@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import Countdown from '@/components/trek/Countdown'
+import { lifecycleOf } from '@/lib/trek-lifecycle'
 import ConsoleClient from './ConsoleClient'
 import { getTrekMemberCard, getTrekMembership } from '@/actions/trekBuddy'
 import { getMessages, type TrekMessage } from '@/actions/trekChat'
@@ -165,7 +166,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
       <dl className="mt-9 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-paper/15 pt-5 sm:grid-cols-3 lg:grid-cols-5">
         <Reading k="Leaves" v={whenLabel} />
         {!cancelled && (
-          <Reading k="Countdown" v={<Countdown iso={p.starts_at} prefix="" />} />
+          <Reading k="Countdown" v={<Countdown iso={p.starts_at} endsIso={p.ends_at} prefix="" />} />
         )}
         <Reading k="Confirmed" v={`${p.going_count} / ${p.capacity}`} tone="sage" />
         {!cancelled && (
@@ -222,6 +223,12 @@ export default async function ConsolePage({ params }: { params: Promise<{ id: st
       goingCount={p.going_count}
       capacity={p.capacity}
       canCheckIn={canCheckIn}
+      // The console offered Confirm and Decline with no idea whether the trek
+      // had already left. The row trigger refuses a confirm once `starts_at`
+      // passes, so the host pressed a live button and got an exception back for
+      // an action the interface had just invited. The lifecycle is computed
+      // here, where the instants already are.
+      lifecycle={lifecycleOf(p)}
       shareToken={p.share_token}
       nameOf={nameOf}
       costPaise={p.cost_paise}

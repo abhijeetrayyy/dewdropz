@@ -28,7 +28,7 @@ export default function ShopToaster() {
       toastOptions={{
         classNames: {
           toast:
-            'group !rounded-sm !border !border-forest/15 !bg-paper !text-text !shadow-[var(--shadow-panel)] !font-body',
+            'group !rounded-[var(--r-input)] !border !border-forest/15 !bg-paper !text-text !shadow-[var(--shadow-panel)] !font-body',
           title: '!font-body !text-[14px] !font-medium !text-text',
           description: '!font-body !text-[13px] !text-mid !mt-0.5',
           actionButton:

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { cancelPlan, decideRequest } from '@/actions/trekBuddy'
+import type { TrekLifecycle } from '@/lib/trek-lifecycle'
 import {
   checkIn, updateMeetingPoint, announce, promoteWaitlisted, addCoHost, removeCoHost, setCostState,
   type ConsoleRoster,
@@ -144,6 +145,7 @@ export default function ConsoleClient({
   goingCount,
   capacity,
   canCheckIn,
+  lifecycle,
   shareToken,
   nameOf,
   costPaise,
@@ -165,12 +167,16 @@ export default function ConsoleClient({
   goingCount: number
   capacity: number
   canCheckIn: boolean
+  lifecycle: TrekLifecycle
   shareToken: string | null
   /** user id -> display name, for the "confirmed by" line. */
   nameOf: Record<string, string | null>
   /** Null or zero means the walk has no cost share, and none of this appears. */
   costPaise: number | null
 }) {
+  // Only an upcoming trek can take a decision on an ask: `trek_requests_guard`
+  // refuses any move into `confirmed` the moment `starts_at` passes.
+  const answerable = lifecycle === 'upcoming'
   const router = useRouter()
   const [pending, start] = useTransition()
   const [tab, setTab] = useState<TabKey>('roster')
@@ -351,29 +357,40 @@ export default function ConsoleClient({
                               </p>
                             )}
                           </div>
-                          <div className="flex shrink-0 gap-2">
-                            <button
-                              type="button"
-                              disabled={pending}
-                              onClick={() =>
-                                run(
-                                  () => decideRequest(planId, r.user_id, 'confirmed'),
-                                  `${r.display_name} is coming`
-                                )
-                              }
-                              className={`trek-pill trek-pill-sm trek-pill-act font-body disabled:opacity-40 ${RING}`}
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              type="button"
-                              disabled={pending}
-                              onClick={() => run(() => decideRequest(planId, r.user_id, 'declined'))}
-                              className={`trek-pill trek-pill-sm trek-pill-quiet bg-surface font-body disabled:opacity-40 ${RING}`}
-                            >
-                              Decline
-                            </button>
-                          </div>
+                          {/* Once the trek has left, `trek_requests_guard`
+                              refuses any move into `confirmed`. Decline still
+                              works — it is not in the guarded set — but two
+                              buttons where one silently errors is worse than
+                              saying plainly that the moment has gone. */}
+                          {answerable ? (
+                            <div className="flex shrink-0 gap-2">
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() =>
+                                  run(
+                                    () => decideRequest(planId, r.user_id, 'confirmed'),
+                                    `${r.display_name} is coming`
+                                  )
+                                }
+                                className={`trek-pill trek-pill-sm trek-pill-act font-body disabled:opacity-40 ${RING}`}
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => run(() => decideRequest(planId, r.user_id, 'declined'))}
+                                className={`trek-pill trek-pill-sm trek-pill-quiet bg-surface font-body disabled:opacity-40 ${RING}`}
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="shrink-0 rounded-[var(--r-tag)] border border-rule-warm bg-paper-warm px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-mid">
+                              Never answered
+                            </span>
+                          )}
                         </li>
                       )
                     })}
@@ -560,7 +577,7 @@ export default function ConsoleClient({
                   rows={3}
                   maxLength={1000}
                   placeholder="Road is washed out past Pantwari — we are leaving an hour later."
-                  className="mt-3 w-full resize-y rounded-[var(--r-card)] border border-rule bg-paper px-4 py-3.5 font-body text-[15px] leading-relaxed text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
+                  className="mt-3 w-full resize-y rounded-[var(--r-card)] border border-rule bg-surface px-4 py-3.5 font-body text-[15px] leading-relaxed text-text placeholder:text-mid/60 focus:border-forest focus:outline-none"
                 />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-md font-body text-[13px] leading-relaxed text-mid">
@@ -754,7 +771,7 @@ export default function ConsoleClient({
                     value={point}
                     onChange={(e) => setPoint(e.target.value)}
                     placeholder="Gate 2, behind the tea stall"
-                    className="mt-3 w-full rounded-[var(--r-input)] border border-rule bg-paper px-3 py-2.5 font-body text-[15px] text-text focus:border-forest focus:outline-none"
+                    className="mt-3 w-full rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2.5 font-body text-[15px] text-text focus:border-forest focus:outline-none"
                   />
                   <label className="sr-only" htmlFor="console-logistics">Getting there</label>
                   <input
@@ -762,7 +779,7 @@ export default function ConsoleClient({
                     value={logi}
                     onChange={(e) => setLogi(e.target.value)}
                     placeholder="Shared cab from ISBT, roughly ₹300 each way"
-                    className="mt-2 w-full rounded-[var(--r-input)] border border-rule bg-paper px-3 py-2.5 font-body text-[14px] text-text focus:border-forest focus:outline-none"
+                    className="mt-2 w-full rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2.5 font-body text-[14px] text-text focus:border-forest focus:outline-none"
                   />
                   <p className="mt-2.5 font-body text-[13px] leading-relaxed text-mid">
                     Everyone already confirmed is told it changed. Somebody still waiting on you is

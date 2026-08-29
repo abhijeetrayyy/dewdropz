@@ -2,6 +2,7 @@ import { useState } from "react";
 import { shareLink } from "@/lib/support";
 import { useWindowDimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
@@ -40,7 +41,7 @@ export default function JournalArticleScreen() {
   if (!article) {
     return (
       <View style={[s.root, { paddingTop: insets.top + 20, paddingHorizontal: S.gutter }]}>
-        <IconButton name="arrow_back" onPress={() => router.back()} />
+        <IconButton name="arrow_back" onPress={() => goBack("/journal")} />
         <EmptyState
           eyebrow="Not found"
           title="That story isn't here."
@@ -167,7 +168,7 @@ export default function JournalArticleScreen() {
       <OverlayHeader
         scrolled={scrolled}
         title={article.title}
-        onBack={() => router.back()}
+        onBack={() => goBack("/journal")}
         renderRight={(tone) => (
           <IconButton
             name="ios_share"

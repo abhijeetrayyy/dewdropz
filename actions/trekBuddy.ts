@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAuth, getUser } from '@/actions/auth'
+import { askStateOf, isCurrent } from '@/lib/trek-lifecycle'
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase'
 import { sendSlackAlert } from '@/lib/slack'
 
@@ -290,7 +291,11 @@ export async function getTrekBoard(filters?: {
     .select('*')
     .eq('status', 'open')
     .is('hidden_at', null)
-    .gt('starts_at', new Date().toISOString())
+    // `ends_at`, not `starts_at`: 055 set the rule — "a trip post expires the
+    // day the trek ENDS" — and then every read compared the wrong column, so a
+    // multi-day trip vanished from the board while it was still walking. The
+    // rows that come back are split into upcoming and under-way by the caller.
+    .gt('ends_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .limit(60)
 
@@ -331,32 +336,74 @@ export async function getTrekBoard(filters?: {
   return withViewerStatus(await withKindLabels(rows), user.id)
 }
 
-/** Everything this member is involved in — hosting or going. */
+/**
+ * Everything this member is involved in — hosting or going.
+ *
+ * Both lists used to end at `starts_at > now()`, which meant a trip left the
+ * member's own dashboard the moment it set off. On a day walk that is a few
+ * hours of nobody looking; on the six-day expedition 055 widened the schema to
+ * allow, the host and every confirmed joiner lost the meeting point, the roster
+ * and the link to their group chat for the five days they were actually out.
+ * This page is the only dashboard there is — /trek-buddy/yours redirects here.
+ *
+ * The boundary is `ends_at` now, via `isCurrent`, so a trek stays with its
+ * party until it is genuinely over. `ends_at` is fetched rather than filtered on
+ * in SQL because the same predicate has to hold for the joined rows, which come
+ * back through an embed.
+ */
 export async function getMyTreks() {
   const user = await getUser()
-  if (!user) return { hosting: [], going: [] }
+  if (!user) return { hosting: [], going: [], lapsed: [] }
 
   const admin = createAdminSupabaseClient()
   const [{ data: hosting }, { data: joined }] = await Promise.all([
     admin.from('trek_plans').select('*').eq('host_id', user.id)
-      .neq('status', 'cancelled').gt('starts_at', new Date().toISOString())
+      .neq('status', 'cancelled')
+      // Still cheap: a trek cannot end before it starts, so anything that could
+      // still be running has ends_at in the future. The precise call is made in
+      // JS below, where ends_at is actually in hand.
+      .gt('ends_at', new Date().toISOString())
       .order('starts_at'),
     admin.from('trek_plan_requests').select('status, plan:trek_plans(*)')
       .eq('user_id', user.id).in('status', ['requested', 'confirmed']),
   ])
 
-  const going = (joined ?? [])
+  const asks = (joined ?? [])
     .map((r) => ({ status: r.status as string, plan: r.plan as unknown as TrekPlanRow }))
-    .filter((r) => r.plan && r.plan.status !== 'cancelled' && new Date(r.plan.starts_at) > new Date())
+    .filter((r) => r.plan)
+
+  const going = asks
+    .filter((r) => isCurrent(r.plan))
     .sort((a, b) => a.plan.starts_at.localeCompare(b.plan.starts_at))
 
-  const [hostingLabelled, goingLabelled] = await Promise.all([
+  // The asks nobody ever answered.
+  //
+  // A request that was never decided stays `requested` forever: the row trigger
+  // stops it becoming `confirmed` the moment the trek leaves, no job settles it,
+  // and all seven notification kinds in 060 are caused by a person doing
+  // something — none by time passing. So the person who asked got silence, and
+  // then, because this list ended at `starts_at`, absence.
+  //
+  // Derived rather than swept. 055 already made the argument for this shape:
+  // "a boolean a cron has to maintain is a boolean that is wrong whenever the
+  // cron is late." Nothing is written; the fact was always implied by the
+  // request's status and the plan's dates, and it is simply read now.
+  //
+  // Capped and recent-first, because this is a closing note and not an archive.
+  const lapsed = asks
+    .filter((r) => askStateOf(r.status, r.plan) === 'lapsed')
+    .sort((a, b) => b.plan.starts_at.localeCompare(a.plan.starts_at))
+    .slice(0, 5)
+
+  const [hostingLabelled, goingLabelled, lapsedLabelled] = await Promise.all([
     withKindLabels((hosting ?? []) as TrekPlanRow[]),
     withKindLabels(going.map((g) => g.plan)),
+    withKindLabels(lapsed.map((g) => g.plan)),
   ])
   return {
     hosting: hostingLabelled as TrekPlanRow[],
     going: going.map((g, i) => ({ ...g, plan: goingLabelled[i] as TrekPlanRow })),
+    lapsed: lapsed.map((g, i) => ({ ...g, plan: lapsedLabelled[i] as TrekPlanRow })),
   }
 }
 
@@ -377,7 +424,10 @@ export async function getTrekMemberCard(userId: string) {
   const [{ data: p }, { count: hosted }, { count: joined }] = await Promise.all([
     admin.from('profiles').select('trek_display_name, trek_terms_at').eq('id', userId).maybeSingle(),
     admin.from('trek_plans').select('id', { count: 'exact', head: true })
-      .eq('host_id', userId).lt('starts_at', new Date().toISOString()).neq('status', 'cancelled'),
+      // Finished, not merely started — someone on day one of a Himalayan
+      // crossing had it in their completed count on a card other members use
+      // to decide whether to walk with them.
+      .eq('host_id', userId).lt('ends_at', new Date().toISOString()).neq('status', 'cancelled'),
     admin.from('trek_plan_requests').select('plan_id', { count: 'exact', head: true })
       .eq('user_id', userId).eq('status', 'confirmed'),
   ])
@@ -404,7 +454,7 @@ export async function getOpenPlanCount() {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'open')
     .is('hidden_at', null)
-    .gt('starts_at', new Date().toISOString())
+    .gt('ends_at', new Date().toISOString())
   return count ?? 0
 }
 
@@ -818,10 +868,12 @@ export async function getPerson(userId: string): Promise<PersonCard | null> {
  * then gave you no way to reach the one they are hosting on Saturday. You could
  * read that a person was worth going out with and have nowhere to go with it.
  *
- * Deliberately the same four guards `getTrekBoard` uses — open, not hidden, in
- * the future, soonest first — so a walk that is not on the board cannot appear
- * on a profile instead. A back door into cancelled or hidden plans is exactly
- * the kind of thing a second query grows when it invents its own filters.
+ * Deliberately the same four guards `getTrekBoard` uses — open, not hidden, not
+ * yet finished, soonest first — so a walk that is not on the board cannot
+ * appear on a profile instead. A back door into cancelled or hidden plans is
+ * exactly the kind of thing a second query grows when it invents its own
+ * filters, which is also why this moved to `ends_at` when the board did rather
+ * than being left behind on `starts_at`.
  */
 export async function getPersonPlans(userId: string): Promise<TrekPlanRow[]> {
   const viewer = await getUser()
@@ -833,7 +885,7 @@ export async function getPersonPlans(userId: string): Promise<TrekPlanRow[]> {
     .eq('host_id', userId)
     .eq('status', 'open')
     .is('hidden_at', null)
-    .gt('starts_at', new Date().toISOString())
+    .gt('ends_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .limit(8)
 
@@ -1149,7 +1201,8 @@ export async function getVouchable() {
   const { data: past } = await admin
     .from('trek_plans')
     .select('id, place, starts_at, host_id, host_name')
-    .lt('starts_at', new Date().toISOString())
+    // You can vouch for someone once the walk is over, not once it has begun.
+    .lt('ends_at', new Date().toISOString())
     .neq('status', 'cancelled')
     .order('starts_at', { ascending: false })
     .limit(20)

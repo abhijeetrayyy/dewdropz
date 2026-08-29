@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Loader2, X } from 'lucide-react'
-import { getDesignLibrary } from '@/actions/designLibrary'
+import { getDesignsForBlank } from '@/actions/customRange'
 import type { LibraryDesign } from '@/types/database'
 
 /**
@@ -25,10 +25,15 @@ import type { LibraryDesign } from '@/types/database'
  */
 export default function DesignLibraryPicker({
   open,
+  blankId,
   onClose,
   onPick,
 }: {
   open: boolean
+  /** Which blank the studio is open on. Artwork can be restricted to certain
+   *  garments (design_library.blank_ids), so the shelf is filtered rather than
+   *  showing designs that cannot be printed on what the shopper is holding. */
+  blankId: string
   onClose: () => void
   /** Given the artwork's public URL. The caller owns placing it. */
   onPick: (url: string, name: string) => void
@@ -43,7 +48,7 @@ export default function DesignLibraryPicker({
   useEffect(() => {
     if (!open || designs !== null) return
     let cancelled = false
-    getDesignLibrary()
+    getDesignsForBlank(blankId)
       .then((rows) => {
         if (!cancelled) setDesigns(rows)
       })
@@ -56,7 +61,7 @@ export default function DesignLibraryPicker({
     return () => {
       cancelled = true
     }
-  }, [open, designs])
+  }, [open, designs, blankId])
 
   // Escape closes it. The canvas underneath binds Delete and arrow keys, so a
   // panel sitting over it has to take the keyboard seriously.
@@ -93,7 +98,7 @@ export default function DesignLibraryPicker({
         // The backdrop closes on click; the panel must not, or every attempt to
         // scroll the shelf would dismiss it.
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-lg border border-[var(--st-edge)] bg-[var(--st-panel)] sm:rounded-lg"
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-lg border border-[var(--st-edge)] bg-[var(--st-panel)] sm:rounded-[var(--r-panel)]"
       >
         <div className="flex items-start justify-between gap-4 border-b border-[var(--st-edge)] px-5 py-4">
           <div>
@@ -108,13 +113,19 @@ export default function DesignLibraryPicker({
             type="button"
             onClick={onClose}
             aria-label="Close the library"
-            className="-mr-1 -mt-1 rounded-sm p-2 text-[var(--st-ink-3)] transition-colors hover:text-[var(--st-ink)]"
+            className="-mr-1 -mt-1 rounded-[var(--r-input)] p-2 text-[var(--st-ink-3)] transition-colors hover:text-[var(--st-ink)]"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        {/* data-lenis-prevent, like every other scrollable overlay in the app
+            (dialog, popover, select, the admin shell). Lenis is mounted app-wide
+            and swallows wheel events, so without this the shelf scrolls
+            programmatically but not with a mouse or a trackpad — it just looks
+            stuck. The shadcn primitives all carry it; these hand-rolled studio
+            panels never inherited it. */}
+        <div data-lenis-prevent="true" className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {loading && (
             <div className="flex items-center gap-2 font-body text-[12px] text-[var(--st-ink-3)]">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Opening the library…
@@ -140,7 +151,7 @@ export default function DesignLibraryPicker({
                       <button
                         type="button"
                         onClick={() => onPick(d.image_url, d.name)}
-                        className="group block w-full overflow-hidden rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] text-left transition-colors hover:border-[var(--st-accent)]"
+                        className="group block w-full overflow-hidden rounded-[var(--r-input)] border border-[var(--st-edge)] bg-[var(--st-raise)] text-left transition-colors hover:border-[var(--st-accent)]"
                       >
                         {/* Checkerboard, because most of these are PNGs with
                             transparent grounds and a transparent design on a

@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring } from 'motion/react'
-import { ChevronLeft, ChevronRight, Smartphone, CreditCard, Landmark, Banknote } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Smartphone, CreditCard, Landmark, Banknote, Tent, ArrowRight } from 'lucide-react'
 import { gsap } from '@/lib/gsap'
 import { useCart } from '@/providers/CartProvider'
 import { useWishlist } from '@/providers/WishlistProvider'
@@ -37,6 +37,13 @@ interface ProductDetailProps {
   /** In paise, from store settings. */
   freeShippingThreshold: number
   offers: { label: string; description: string }[]
+  /** The custom-range banner, rendered on the server and slotted in here so it
+   *  can sit next to the buy controls without this client component having to
+   *  fetch the blank, the artwork and the sibling prints itself. Absent for an
+   *  ordinary product, which is most of them. */
+  customRangeSlot?: React.ReactNode
+  /** Set when this product can also be rented by the day (migration 098). */
+  rentable?: { slug: string; daily_rate: number; deposit: number } | null
 }
 
 // The free-shipping figure is no longer written here. It said "over Rs. 3,000"
@@ -51,7 +58,7 @@ const TRUST_BADGES = [
 const SHIP_ICON = 'M3 12h18M3 12l4-4m-4 4l4 4M21 12l-4-4m4 4l-4 4'
 
 export default function ProductDetail({
-  product, collection, related, collections, freeShippingThreshold, offers,
+  product, collection, related, collections, freeShippingThreshold, offers, customRangeSlot, rentable,
 }: ProductDetailProps) {
   const { addItem } = useCart()
   const { toggleItem, hasItem } = useWishlist()
@@ -249,7 +256,7 @@ export default function ProductDetail({
                 onMouseLeave={handleMouseLeave}
                 onClick={() => images[activeImage] && setLightboxOpen(true)}
                 style={{ rotateX: springRotateX, rotateY: springRotateY, transformPerspective: 900 }}
-                className="group aspect-[3/4] rounded-sm overflow-hidden relative bg-rule/40 cursor-zoom-in"
+                className="group relative aspect-[3/4] cursor-zoom-in overflow-hidden rounded-[var(--r-panel)] bg-paper-warm shadow-[var(--shadow-card)]"
               >
                 {images[activeImage] ? (
                   <Image
@@ -264,17 +271,17 @@ export default function ProductDetail({
                   />
                 ) : null}
                 {discountPct ? (
-                  <span className="absolute top-4 left-4 z-10 bg-forest text-paper text-xs font-medium px-2.5 py-1 rounded-sm">
+                  <span className="absolute left-4 top-4 z-10 rounded-[var(--r-tag)] bg-forest px-2.5 py-1 text-xs font-medium text-paper shadow-[var(--shadow-card)]">
                     {discountPct}% OFF
                   </span>
                 ) : null}
                 {images.length > 1 && (
-                  <span className="absolute bottom-4 right-4 z-10 bg-black/50 text-paper text-[11px] font-body px-2 py-1 rounded-sm">
+                  <span className="absolute bottom-4 right-4 z-10 rounded-[var(--r-tag)] bg-ink/60 px-2 py-1 font-body text-[11px] text-paper backdrop-blur-sm">
                     {activeImage + 1} / {images.length}
                   </span>
                 )}
                 {collection?.tagline && (
-                  <span className="absolute bottom-4 left-4 z-10 font-mono text-[10px] tracking-[0.15em] uppercase text-paper bg-ink/55 backdrop-blur-sm rounded-sm px-2.5 py-1.5 max-w-[70%]">
+                  <span className="absolute bottom-4 left-4 z-10 font-mono text-[10px] tracking-[0.15em] uppercase text-paper bg-ink/55 backdrop-blur-sm rounded-[var(--r-tag)] px-2.5 py-1.5 max-w-[70%]">
                     {collection.tagline}
                   </span>
                 )}
@@ -288,7 +295,7 @@ export default function ProductDetail({
                       key={img}
                       type="button"
                       onClick={() => setActiveImage(i)}
-                      className={`group flex-1 aspect-square rounded-sm overflow-hidden relative border transition-colors duration-300 ${
+                      className={`group relative aspect-square flex-1 overflow-hidden rounded-[var(--r-input)] border transition-[border-color,box-shadow] duration-300 ${
                         activeImage === i ? 'border-forest' : 'border-rule hover:border-mid'
                       }`}
                     >
@@ -329,18 +336,45 @@ export default function ProductDetail({
                     <span className="font-body text-sm text-mid line-through">{formatPrice(product.compare_at_price)}</span>
                   )}
                   {discountPct ? (
-                    <span className="font-body text-xs text-clay font-medium">{discountPct}% off</span>
+                    <span className="font-body text-xs font-medium text-clay-deep">{discountPct}% off</span>
                   ) : null}
                 </div>
                 {/* Prices are exclusive of GST, which is added at checkout —
                     said here rather than discovered on the payment screen. */}
                 <div className="mt-1 font-body text-[11px] text-mid">Plus GST, calculated at checkout</div>
 
+                {/* The same gear, by the day.
+                    Six pieces of equipment are both sellable and rentable, and
+                    this page only ever offered one of the two — somebody who
+                    needs a tent for a single weekend saw ₹12,000 and nothing
+                    else. Secondary to the buy CTA on purpose: this is the
+                    buying page, and renting is the alternative it should
+                    mention rather than compete with. */}
+                {rentable && (
+                  <Link
+                    href={`/rent/${rentable.slug}`}
+                    className="mt-5 flex items-center gap-3 rounded-[var(--r-panel)] border border-sage/40 bg-sage-soft p-4 transition-colors hover:border-forest/40 hover:bg-sage-soft/70"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-forest">
+                      <Tent className="h-4 w-4 text-paper" aria-hidden="true" />
+                    </span>
+                    <span className="flex-1">
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-mid">
+                        Need it for one trip?
+                      </span>
+                      <span className="mt-0.5 block font-body text-[15px] text-ink">
+                        Rent it from {formatPrice(rentable.daily_rate)} a day
+                      </span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-forest" aria-hidden="true" />
+                  </Link>
+                )}
+
                 {offers.length > 0 && (
                   <ul className="mt-4 space-y-1.5">
                     {offers.map((o) => (
                       <li key={o.label} className="flex items-baseline gap-2 font-body text-xs">
-                        <span className="rounded-sm bg-forest/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-forest">
+                        <span className="rounded-[var(--r-tag)] bg-sage-soft px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-forest">
                           Offer
                         </span>
                         <span className="text-text">
@@ -352,8 +386,8 @@ export default function ProductDetail({
                   </ul>
                 )}
                 {lowStock && (
-                  <p className="mt-2 font-body text-xs text-clay flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-clay animate-pulse flex-shrink-0" />
+                  <p className="mt-2 flex items-center gap-1.5 font-body text-xs text-clay-deep">
+                    <span className="h-1.5 w-1.5 flex-shrink-0 animate-pulse rounded-full bg-clay-deep" />
                     Only {stockQty} left in stock
                   </p>
                 )}
@@ -444,7 +478,7 @@ export default function ProductDetail({
                           type="button"
                           disabled={oos}
                           onClick={() => setVariantId(v.id)}
-                          className={`px-4 py-2 text-xs font-body tracking-[0.05em] uppercase rounded-sm border transition-colors duration-300 ${
+                          className={`rounded-[var(--r-input)] border px-4 py-2 font-body text-xs uppercase tracking-[0.05em] transition-colors duration-300 ${
                             variantId === v.id
                               ? 'bg-forest text-paper border-forest'
                               : oos
@@ -461,7 +495,7 @@ export default function ProductDetail({
               )}
 
               <div className="mt-8 flex items-center gap-6">
-                <div className="flex items-center border border-rule rounded-sm">
+                <div className="flex items-center rounded-[var(--r-input)] border border-rule bg-surface">
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -489,7 +523,7 @@ export default function ProductDetail({
                     })}`}
                     data-cursor="magnetic"
                     data-cursor-text="Design"
-                    className="flex-1 bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 text-center"
+                    className="flex-1 rounded-full bg-forest px-8 py-3.5 text-center font-body text-[10px] font-medium uppercase tracking-[0.12em] text-paper shadow-[var(--shadow-card)] transition-colors duration-300 hover:bg-forest-mid"
                   >
                     Customize This Shirt →
                   </Link>
@@ -504,7 +538,7 @@ export default function ProductDetail({
                     data-cursor="magnetic"
                     data-cursor-text="Add"
                     type="button"
-                    className="flex-1 bg-forest text-paper px-8 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-forest"
+                    className="flex-1 rounded-full bg-forest px-8 py-3.5 font-body text-[10px] font-medium uppercase tracking-[0.12em] text-paper shadow-[var(--shadow-card)] transition-colors duration-300 hover:bg-forest-mid disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-forest"
                   >
                     {!inStock ? 'Out of Stock' : added ? 'Added to cart ✓' : 'Add to Cart'}
                   </motion.button>
@@ -517,7 +551,7 @@ export default function ProductDetail({
                   aria-pressed={saved}
                   data-cursor="magnetic"
                   data-cursor-text={saved ? 'Saved' : 'Save'}
-                  className="w-[52px] h-[52px] flex-shrink-0 flex items-center justify-center border border-rule rounded-sm hover:border-forest transition-colors duration-300"
+                  className="flex h-[52px] w-[52px] flex-shrink-0 items-center justify-center rounded-[var(--r-input)] border border-rule bg-surface text-mid transition-colors duration-300 hover:border-forest hover:text-forest"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill={mounted && saved ? 'var(--forest)' : 'none'} stroke={mounted && saved ? 'var(--forest)' : 'currentColor'} strokeWidth="1.5" className="text-mid">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
@@ -535,6 +569,11 @@ export default function ProductDetail({
               </div>
 
               <ProductDeliveryCheck subtotal={price * quantity} weightGrams={product.weight ?? ASSUMED_PRODUCT_WEIGHT_GRAMS} />
+
+              {/* Sits directly under the buy controls, not at the foot of the
+                  page: a shopper deciding whether to buy this print is exactly
+                  the person who wants to know the same garment takes others. */}
+              {customRangeSlot}
 
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Built from the real setting, so changing the threshold in
@@ -647,7 +686,7 @@ export default function ProductDetail({
                   type="button"
                   onClick={() => showImage(activeImage - 1)}
                   aria-label="Previous image"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-black/50 text-paper rounded-full hover:bg-black/70 transition-colors"
+                  className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-sm transition-colors hover:bg-ink/75"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -655,11 +694,11 @@ export default function ProductDetail({
                   type="button"
                   onClick={() => showImage(activeImage + 1)}
                   aria-label="Next image"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-black/50 text-paper rounded-full hover:bg-black/70 transition-colors"
+                  className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-sm transition-colors hover:bg-ink/75"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
-                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-paper text-xs font-body px-2.5 py-1 rounded-sm">
+                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-[var(--r-tag)] bg-ink/60 px-2.5 py-1 font-body text-xs text-paper backdrop-blur-sm">
                   {activeImage + 1} / {images.length}
                 </span>
               </>
@@ -669,9 +708,9 @@ export default function ProductDetail({
       </Dialog>
 
       {related.length > 0 && (
-        <section className="bg-paper px-6 md:px-10 pb-24">
+        <section className="bg-paper-warm px-6 pb-24 pt-20 md:px-10">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-10 font-body text-xs tracking-[0.18em] text-forest uppercase">You Might Also Like</div>
+            <div className="mb-10 font-body text-xs uppercase tracking-[0.18em] text-forest">You Might Also Like</div>
             {/* Three columns against a single related piece left two thirds of
                 the row empty and the lone card stranded — the same "grid wider
                 than its contents" problem the shop had. */}
@@ -698,9 +737,12 @@ export default function ProductDetail({
           paper from the navbar to here. */}
       <CollectionCrossSell others={collections.filter((c) => c.slug !== collection?.slug)} />
 
+      {/* The quietest ground, at the foot of the page. The ground step itself
+          separates this from the related row, so the hairline rule that used to
+          do that job is gone. */}
       <RecentlyViewed
         excludeSlug={product.slug}
-        className={`bg-paper px-6 md:px-10 pb-24 ${related.length > 0 ? 'pt-8 border-t border-rule' : ''}`}
+        className={`bg-paper-deep px-6 pb-24 md:px-10 ${related.length > 0 ? 'pt-16' : 'pt-8'}`}
       />
     </>
   )

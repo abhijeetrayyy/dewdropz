@@ -113,7 +113,7 @@ export default function NewsletterBar({ stop }: { stop?: TrailStop }) {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="bg-paper text-forest font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 rounded-sm hover:bg-sage hover:text-ink transition-colors duration-300 disabled:opacity-50"
+                      className="bg-paper text-forest font-body text-xs tracking-[0.12em] uppercase font-medium px-8 py-3.5 rounded-[var(--r-input)] hover:bg-sage hover:text-ink transition-colors duration-300 disabled:opacity-50"
                     >
                       {loading ? 'Joining...' : 'Get the Dispatch'}
                     </button>
@@ -128,7 +128,7 @@ export default function NewsletterBar({ stop }: { stop?: TrailStop }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
-                  className="border border-sage/30 rounded-sm p-6"
+                  className="border border-sage/30 rounded-[var(--r-panel)] p-6"
                 >
                   <div className="font-display italic text-xl text-paper">You&apos;re on the list.</div>
                   <p className="mt-2 font-body text-sm text-paper/60 leading-relaxed">

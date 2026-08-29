@@ -55,7 +55,7 @@ export default function ReturnRequest({
 
   if (done) {
     return (
-      <div className="mt-10 rounded-sm border border-rule bg-paper-warm p-5">
+      <div className="rounded-[var(--r-panel)] border border-sage/40 bg-sage-soft p-5 shadow-[var(--shadow-card)]">
         <div className="font-body text-sm text-text">Return requested — {done}</div>
         <p className="mt-1 font-body text-xs text-mid">
           We’ll review it and email you what to do next. Nothing is charged or refunded until the parcel is back with us.
@@ -67,12 +67,12 @@ export default function ReturnRequest({
   if (!returnable.length) return null
 
   return (
-    <div className="mt-10 border-t border-rule pt-6">
+    <div className="rounded-[var(--r-panel)] border border-rule/70 bg-surface p-5 shadow-[var(--shadow-card)] md:p-6">
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="font-body text-xs uppercase tracking-[0.1em] text-forest underline underline-offset-4"
+          className="font-body text-xs uppercase tracking-[0.1em] text-forest underline underline-offset-4 transition-colors hover:text-forest-mid"
         >
           Return an item
         </button>
@@ -96,7 +96,7 @@ export default function ReturnRequest({
                     onChange={(e) =>
                       setQty({ ...qty, [l.orderItemId]: Math.max(0, Math.min(l.returnable, Number(e.target.value))) })
                     }
-                    className="w-16 rounded-sm border border-rule px-2 py-1 text-right tabular-nums"
+                    className="w-16 rounded-[var(--r-input)] border border-rule bg-surface px-2 py-1 text-right tabular-nums focus:border-forest focus:outline-none"
                   />
                   <span className="w-12 font-body text-xs text-mid">of {l.returnable}</span>
                 </span>
@@ -108,7 +108,7 @@ export default function ReturnRequest({
             <label className="font-body text-xs text-mid" htmlFor="return-reason">Reason</label>
             <select
               id="return-reason" value={reason} onChange={(e) => setReason(e.target.value)}
-              className="mt-1 w-full rounded-sm border border-rule bg-transparent px-3 py-2 text-sm text-text"
+              className="mt-1 w-full rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 text-sm text-text focus:border-forest focus:outline-none"
             >
               {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
@@ -118,7 +118,7 @@ export default function ReturnRequest({
             value={note} onChange={(e) => setNote(e.target.value)}
             placeholder="Anything else we should know? (optional)"
             rows={2}
-            className="mt-3 w-full rounded-sm border border-rule bg-transparent px-3 py-2 text-sm text-text"
+            className="mt-3 w-full rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 text-sm text-text focus:border-forest focus:outline-none"
           />
 
           {/* An estimate, and labelled as one: what is actually refunded is

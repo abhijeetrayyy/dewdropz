@@ -15,7 +15,7 @@ export function GoogleSignInButton({ label = 'Continue with Google' }: { label?:
     <form action={signInWithGoogle}>
       <button
         type="submit"
-        className="w-full flex items-center justify-center gap-3 border border-rule bg-paper text-text font-body text-xs tracking-[0.1em] uppercase py-3.5 rounded-sm hover:border-forest hover:text-forest transition-colors duration-300"
+        className="w-full flex items-center justify-center gap-3 border border-rule bg-surface text-text font-body text-xs tracking-[0.1em] uppercase py-3.5 rounded-[var(--r-input)] hover:border-forest hover:text-forest transition-colors duration-300"
       >
         <GoogleMark />
         {label}

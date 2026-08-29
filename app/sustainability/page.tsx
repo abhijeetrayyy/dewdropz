@@ -21,10 +21,11 @@ export default function SustainabilityPage() {
           eyebrow="Doing Right By The Trail"
           title="Honest, not perfect."
           subtitle={SUSTAINABILITY_INTRO}
+          variant="altitude"
         />
 
         <section className="bg-paper px-6 md:px-10 pb-24">
-          <div className="max-w-5xl mx-auto relative h-[40vh] min-h-[280px] rounded-lg overflow-hidden">
+          <div className="max-w-5xl mx-auto relative h-[40vh] min-h-[280px] rounded-[var(--r-panel)] overflow-hidden">
             <Image
               src={ADVENTURE_IMAGE_2}
               alt="Snowy Himalayan peak"

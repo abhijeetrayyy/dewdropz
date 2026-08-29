@@ -27,6 +27,7 @@ export function StudioToolbar({
   canRedo,
   onAddText,
   onAddImage,
+  onOpenLibrary,
   onUndo,
   onRedo,
   onPatch,
@@ -38,6 +39,9 @@ export function StudioToolbar({
   qualityTone,
 }: {
   mode: "add" | "edit";
+  /** Opens the DEWDROPZ library panel. The phone only ever had the "upload
+   *  your own" door; this is the other one the brief asked for. */
+  onOpenLibrary: () => void;
   selected: DesignLayer | null;
   twoSided: boolean;
   activeSide: "front" | "back";
@@ -63,6 +67,16 @@ export function StudioToolbar({
     <View style={s.root}>
       {mode === "add" && (
       <View style={s.addRow}>
+        <TouchableOpacity
+          style={s.addBtn}
+          onPress={onOpenLibrary}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Browse the DEWDROPZ design library"
+        >
+          <Icon name="auto_awesome" size={16} color={C.forest} />
+          <Text style={s.addT}>Library</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={s.addBtn} onPress={onAddText} activeOpacity={0.85}>
           <Icon name="title" size={16} color={C.forest} />
           <Text style={s.addT}>Text</Text>

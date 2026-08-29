@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedRef, useAnimatedStyle, useScrollOffset, useSharedValue, withTiming } from "react-native-reanimated";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
 import { StatusCap } from "@/components/ui/StatusCap";
 import { Rule } from "@/components/editorial/Rule";
@@ -25,6 +25,11 @@ import { C, F, M, S } from "@/lib/theme";
 // flipping them didn't persist anywhere, so they silently reset every time
 // the app reopened. They now read from and write to profiles.notification_preferences.
 export default function SettingsScreen() {
+  // The header is a SIBLING of the scroll view, not a child, and reads the
+  // offset through `scrollY`. Inside it, the whole panel — back button and
+  // all — scrolled away and left no way back.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
   const { user, deleteAccount } = useAuthStore();
   const [deleting, setDeleting] = useState(false);
   const { data: prefs, isLoading } = useNotificationPreferencesQuery(user?.id);
@@ -92,11 +97,16 @@ export default function SettingsScreen() {
   if (!user) {
     return (
       <View style={s.root}>
-        <StatusCap />
-        <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
-          <ScreenHeader eyebrow="Preferences" title="Settings" />
+        <StatusCap tone="altitude" />
+        <ScreenHeader
+        tone="altitude" eyebrow="Preferences" title="Settings"
+          scrollY={scrollY}
+        />
+
+        <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
           <View style={{ paddingHorizontal: S.gutter }}>
             <EmptyState
+              tone="altitude"
               eyebrow="Signed out"
               icon="settings"
               title="Sign in to change these."
@@ -120,16 +130,22 @@ export default function SettingsScreen() {
               />
             </Group>
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       </View>
     );
   }
 
   return (
     <View style={s.root}>
-      <StatusCap />
-      <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
-        <ScreenHeader eyebrow="Preferences" title="Settings" />
+      <StatusCap tone="altitude" />
+      <ScreenHeader
+        eyebrow="Preferences"
+        title="Settings"
+        tone="altitude"
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Group eyebrow="Email & inbox">
@@ -243,7 +259,7 @@ export default function SettingsScreen() {
             <Mono color={C.textFaint}>MADE IN DEHRADUN · {SITE.coords}</Mono>
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

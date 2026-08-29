@@ -16,6 +16,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Surface } from '@/components/ui/surface'
+import EmptyState from '@/components/ui/empty-state'
+import { MapPin, Plus, Star } from 'lucide-react'
 import type { Address } from '@/types/database'
 
 const emptyForm = {
@@ -105,44 +108,84 @@ export default function AddressesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl text-text">Addresses</h2>
-        <Button onClick={openAdd} className="bg-forest hover:bg-forest-mid">+ Add Address</Button>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl text-text">Addresses</h2>
+          <p className="mt-1 font-body text-sm text-mid">
+            Where your orders go. The default is used first at checkout.
+          </p>
+        </div>
+        <Button onClick={openAdd} className="shrink-0 gap-1.5 rounded-full bg-forest hover:bg-forest-mid">
+          <Plus className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+          Add
+        </Button>
       </div>
 
       {loading ? (
-        <p className="font-body text-sm text-mid">Loading…</p>
-      ) : addresses.length === 0 ? (
-        <div className="p-8 border border-dashed border-rule rounded-sm text-center">
-          <p className="font-body text-sm text-mid">No saved addresses yet.</p>
+        /* A skeleton in the shape of the answer, rather than the word
+           "Loading…" — the layout no longer jumps when the data lands. */
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[0, 1].map((i) => (
+            <Surface key={i} elevation="flat" className="animate-pulse p-5">
+              <div className="h-3.5 w-32 rounded-full bg-rule/60" />
+              <div className="mt-4 space-y-2">
+                <div className="h-3 w-full rounded-full bg-paper-warm" />
+                <div className="h-3 w-3/4 rounded-full bg-paper-warm" />
+              </div>
+            </Surface>
+          ))}
         </div>
+      ) : addresses.length === 0 ? (
+        <EmptyState
+          icon={<MapPin className="h-5 w-5" strokeWidth={1.5} />}
+          title="No addresses saved."
+          body="Add one now and checkout gets a good deal shorter next time."
+          secondary={{ label: 'Add an address', onClick: openAdd }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {addresses.map((addr) => (
-            <div key={addr.id} className="p-5 border border-rule rounded-sm bg-paper space-y-2">
-              <div className="flex items-start justify-between">
+            /* The default address is the one that matters, so it is the one
+               that looks different — a forest edge and a marked badge, rather
+               than the identical box with a quiet grey label it had before. */
+            <Surface
+              key={addr.id}
+              className={`flex flex-col p-5 ${addr.is_default ? 'border-forest/40 ring-1 ring-forest/10' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
                 <div className="font-body text-sm font-medium text-text">{addr.full_name}</div>
                 {addr.is_default && (
-                  <span className="px-1.5 py-0.5 rounded-sm bg-forest/10 text-forest text-[10px] tracking-[0.08em] uppercase">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--r-tag)] bg-sage-soft px-1.5 py-0.5 font-body text-[10px] uppercase tracking-[0.08em] text-forest">
+                    <Star className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
                     Default
                   </span>
                 )}
               </div>
-              <div className="font-body text-sm text-mid leading-relaxed">
+
+              <address className="mt-2 flex-1 font-body text-sm not-italic leading-relaxed text-mid">
                 {addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ''}<br />
                 {addr.city}, {addr.state} {addr.postal_code}<br />
-                {addr.phone}
-              </div>
-              <div className="flex items-center gap-4 pt-2 font-body text-xs">
-                <button type="button" onClick={() => openEdit(addr)} className="text-forest hover:underline">Edit</button>
+                <span className="font-mono text-xs">{addr.phone}</span>
+              </address>
+
+              <div className="mt-4 flex items-center gap-4 border-t border-rule-soft pt-3 font-body text-xs">
+                <button type="button" onClick={() => openEdit(addr)} className="text-forest transition-colors hover:text-forest-mid">
+                  Edit
+                </button>
                 {!addr.is_default && (
-                  <button type="button" onClick={() => handleSetDefault(addr.id)} className="text-mid hover:text-forest transition-colors">
-                    Set as default
+                  <button type="button" onClick={() => handleSetDefault(addr.id)} className="text-mid transition-colors hover:text-forest">
+                    Make default
                   </button>
                 )}
-                <button type="button" onClick={() => setDeleteTarget(addr)} className="text-clay hover:underline">Delete</button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(addr)}
+                  className="ml-auto text-light transition-colors hover:text-clay-deep"
+                >
+                  Delete
+                </button>
               </div>
-            </div>
+            </Surface>
           ))}
         </div>
       )}
@@ -205,7 +248,7 @@ export default function AddressesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+            <AlertDialogAction onClick={handleDelete} className="bg-clay-deep hover:bg-clay focus:ring-clay-deep">
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>

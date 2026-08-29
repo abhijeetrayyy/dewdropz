@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { Img as Image } from "@/components/ui/Img";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 // The Reanimated implementation. The legacy `Swipeable` exported from the
 // package root is marked `@deprecated use Reanimated version of Swipeable
 // instead` — it drives the row off the old Animated API, on the JS thread.
@@ -17,8 +18,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Rule } from "@/components/editorial/Rule";
 import { Topography } from "@/components/editorial/Topography";
 import { SectionHead } from "@/components/editorial/SectionHead";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Body, Display1, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
+import { Body, Display1, Display2, Eyebrow, Mono, Numeric, Title } from "@/components/ui/Type";
 import { useProductsBySlugsQuery, useProductsQuery, useQuoteQuery } from "@/lib/queries";
 import { getCartRecommendations } from "@/lib/data";
 import { FREE_SHIPPING_THRESHOLD_PAISE } from "@/lib/constants";
@@ -314,6 +314,10 @@ function EmptyPack() {
 
   return (
     <View style={s.root}>
+      {/* Paper screen: the glyphs must be dark. expo-status-bar is
+          last-mount-wins, so without this the light glyphs set by the dark
+          home hero persist and the clock disappears into the page. */}
+      <StatusBar style="dark" />
       <ScrollView contentContainerStyle={{ paddingBottom: S.section + tabSpace }} showsVerticalScrollIndicator={false}>
         <View style={[s.header, { paddingTop: insets.top + 14 }]}>
           <Eyebrow>Empty</Eyebrow>
@@ -322,16 +326,44 @@ function EmptyPack() {
         </View>
 
         <View style={{ paddingHorizontal: S.gutter }}>
-          <EmptyState
-            eyebrow="Nothing packed"
-            icon="backpack"
-            title="Light, but empty."
-            body="Browse the gear room, or start something of your own in the studio."
-            ctaLabel="Browse the gear room"
-            onPress={() => router.push("/(tabs)/shop")}
-            altLabel="Design your own"
-            onAlt={() => router.push("/(tabs)/design")}
-          />
+          {/* An empty pack used to be one grey icon and two buttons on cream —
+              the emptiest screen in the app, on the tab people open when they
+              are closest to buying. It now offers the three things you can
+              actually do, each in its own colour, including renting, which this
+              screen never mentioned at all. */}
+          <View style={s.emptyHero}>
+            <Icon name="backpack" size={26} color={C.forestDeep} />
+            <Display2 style={{ marginTop: S.sm }}>Light, but empty.</Display2>
+            <Body color={C.textMid} style={{ marginTop: 6, lineHeight: 22 }}>
+              Nothing packed yet. Three ways to change that.
+            </Body>
+          </View>
+
+          <View style={{ gap: S.sm, marginTop: S.lg }}>
+            {([
+              ["storefront", "The gear room", "Small-batch layers, packs and headwear.", C.cream, C.ink, "/(tabs)/shop"],
+              ["draw", "The studio", "Put your own artwork on a heavyweight blank.", C.forest12, C.forestDeep, "/(tabs)/design"],
+              ["camping", "Rent gear", "Tents, bags and poles by the day.", C.clay12, C.clayDeep, "/rent"],
+            ] as const).map(([icon, title, body, bg, fg, href]) => (
+              <TouchableOpacity
+                key={title}
+                activeOpacity={0.85}
+                onPress={() => router.push(href)}
+                accessibilityRole="button"
+                accessibilityLabel={title}
+                style={[s.routeTile, { backgroundColor: bg }]}
+              >
+                <View style={[s.routeIcon, { backgroundColor: fg }]}>
+                  <Icon name={icon} size={17} color={C.paper} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Title>{title}</Title>
+                  <Body color={C.textMid} style={{ marginTop: 1, fontSize: 13 }}>{body}</Body>
+                </View>
+                <Icon name="arrow_forward" size={18} color={fg} />
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {saved.length > 0 ? (
             <View style={{ marginTop: S.block }}>
@@ -365,6 +397,20 @@ function EmptyPack() {
 }
 
 const s = StyleSheet.create({
+  emptyHero: {
+    backgroundColor: C.paperDeep,
+    borderRadius: R.panel,
+    padding: S.lg,
+    marginTop: S.lg,
+  },
+  routeTile: {
+    flexDirection: "row", alignItems: "center", gap: S.md,
+    borderRadius: R.panel, padding: S.md,
+  },
+  routeIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+  },
   gone: {
     flexDirection: "row",
     alignItems: "flex-start",

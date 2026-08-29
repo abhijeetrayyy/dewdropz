@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useWindowDimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
@@ -259,7 +260,7 @@ export default function CollectionScreen() {
       <OverlayHeader
         scrolled={scrolled || !c}
         title={c?.name}
-        onBack={() => router.back()}
+        onBack={() => goBack("/collections")}
         renderRight={(tone) =>
           c ? (
             <IconButton

@@ -1,5 +1,4 @@
 import { createAdminSupabaseClient } from '@/lib/supabase'
-import { getStripe } from '@/lib/stripe'
 import { sendSlackAlert } from '@/lib/slack'
 import type { Order } from '@/types/database'
 
@@ -14,8 +13,8 @@ import type { Order } from '@/types/database'
  * Two identifiers, named separately, because conflating them broke refunds.
  *
  *   gatewayOrderId   the gateway's handle for the ATTEMPT — Razorpay `order_…`,
- *                    Stripe `cs_…`. Written when checkout starts.
- *   gatewayPaymentId the CAPTURED payment — Razorpay `pay_…`, Stripe `pi_…`.
+ *                    Razorpay `order_…`. Written when checkout starts.
+ *   gatewayPaymentId the CAPTURED payment — Razorpay `pay_…`.
  *                    Written when the money actually arrives.
  *
  * Both used to go into `payment_intent_id`, whichever wrote last. See migration
@@ -104,22 +103,22 @@ export async function releaseStaleOrdersForUser(userId: string) {
 
   // COD orders are always payment_status 'pending' by design (paid on
   // delivery, not at checkout) — that's a real, confirmed order awaiting
-  // fulfillment, not an abandoned one. Only stripe/razorpay orders can
-  // actually be "stuck" this way, since those decrement stock before the
-  // gateway ever confirms payment.
+  // fulfillment, not an abandoned one. Only gateway orders can actually be
+  // "stuck" this way, since those decrement stock before the gateway ever
+  // confirms payment.
   await releaseStaleOrderBatch(
     admin
       .from('orders')
       .select('id')
       .eq('user_id', userId)
       .eq('status', 'pending')
-      .in('payment_method', ['stripe', 'razorpay'])
+      .eq('payment_method', 'razorpay')
       .in('payment_status', ['pending', 'failed'])
       .lt('created_at', cutoff)
   )
 }
 
-// The real sweep: every stale stripe/razorpay order, not just the current
+// The real sweep: every stale gateway order, not just the current
 // user's — this is what actually recovers stock from abandoned guest
 // checkouts (no user_id to ever key an opportunistic release off) and from
 // signed-in users who never come back to their cart. Meant to be called on a
@@ -133,7 +132,7 @@ export async function releaseAllStaleOrders() {
       .from('orders')
       .select('id')
       .eq('status', 'pending')
-      .in('payment_method', ['stripe', 'razorpay'])
+      .eq('payment_method', 'razorpay')
       .in('payment_status', ['pending', 'failed'])
       .lt('created_at', cutoff)
   )
@@ -217,21 +216,6 @@ export async function issueGatewayRefund(
   if (order.payment_method === 'cod') return { success: true, gatewayRefundId: null }
 
   try {
-    if (order.payment_method === 'stripe') {
-      if (!order.payment_intent_id) {
-        return { error: 'No Stripe session recorded on this order — refund it by hand in Stripe' }
-      }
-      const stripe = getStripe()
-      const session = await stripe.checkout.sessions.retrieve(order.payment_intent_id)
-      const paymentIntentId =
-        typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
-      if (!paymentIntentId) {
-        return { error: 'That Stripe session never captured a payment — nothing to refund' }
-      }
-      const refund = await stripe.refunds.create({ payment_intent: paymentIntentId, amount })
-      return { success: true, gatewayRefundId: refund.id }
-    }
-
     if (order.payment_method === 'razorpay') {
       const payment = await resolveRazorpayPaymentId(order)
       if ('error' in payment) return payment
@@ -262,7 +246,9 @@ export async function issueGatewayRefund(
  *  "no credit note", not as an error. */
 export async function recordRefund(input: {
   orderId: string
-  gateway: 'stripe' | 'razorpay' | 'cod' | 'manual'
+  // 'stripe' was removed with the integration — no order or refund ever used
+  // it. Historical rows would still read fine; nothing can write one now.
+  gateway: 'razorpay' | 'cod' | 'manual'
   amount: number
   status: 'succeeded' | 'failed'
   gatewayRefundId?: string | null

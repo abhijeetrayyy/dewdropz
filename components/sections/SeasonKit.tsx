@@ -113,9 +113,9 @@ export default function SeasonKit({
           {collection && (
             <Link
               href={`/collections/${collection.slug}`}
-              className="group mt-8 flex items-center gap-4 border border-paper/15 rounded-sm p-4 max-w-md hover:border-sage/40 transition-colors duration-300"
+              className="group mt-8 flex items-center gap-4 border border-paper/15 rounded-[var(--r-input)] p-4 max-w-md hover:border-sage/40 transition-colors duration-300"
             >
-              <div className="relative h-16 w-16 rounded-sm overflow-hidden flex-shrink-0 bg-ink/60">
+              <div className="relative h-16 w-16 rounded-[var(--r-card)] overflow-hidden flex-shrink-0 bg-ink/60">
                 {collection.image_url && (
                   <Image
                     src={collection.image_url}
@@ -147,7 +147,7 @@ export default function SeasonKit({
         {/* The kit */}
         <div>
           {products.length === 0 ? (
-            <div className="rounded-sm border border-dashed border-paper/20 p-10 text-center">
+            <div className="rounded-[var(--r-panel)] border border-dashed border-paper/20 p-10 text-center">
               <p className="font-body text-sm text-paper/50">New pieces are on the way — check back soon.</p>
             </div>
           ) : (
@@ -155,7 +155,7 @@ export default function SeasonKit({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {products.map((p, i) => (
                   <Link key={p.slug} href={`/products/${p.slug}`} className="group">
-                    <div className="relative aspect-[3/4] rounded-sm overflow-hidden bg-ink/40">
+                    <div className="relative aspect-[3/4] rounded-[var(--r-card)] overflow-hidden bg-ink/40">
                       {p.images?.[0] && (
                         <Image
                           src={p.images[0]}
@@ -167,7 +167,7 @@ export default function SeasonKit({
                           className="object-cover transition-transform duration-700 ease-[var(--ease-out)] group-hover:scale-105"
                         />
                       )}
-                      <span className="absolute top-2 left-2 font-mono text-[9px] text-paper/80 bg-ink/50 backdrop-blur-sm rounded-sm px-1.5 py-0.5">
+                      <span className="absolute top-2 left-2 font-mono text-[9px] text-paper/80 bg-ink/50 backdrop-blur-sm rounded-[var(--r-tag)] px-1.5 py-0.5">
                         {String(i + 1).padStart(2, '0')}
                       </span>
                     </div>

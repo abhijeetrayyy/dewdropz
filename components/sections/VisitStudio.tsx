@@ -27,7 +27,7 @@ export default function VisitStudio() {
           </a>
         </div>
 
-        <div className="relative aspect-[4/3] md:aspect-[16/10] rounded-lg overflow-hidden border border-rule">
+        <div className="relative aspect-[4/3] md:aspect-[16/10] rounded-[var(--r-panel)] overflow-hidden border border-rule">
           <iframe
             src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
             title="DEWDROPZ studio location"

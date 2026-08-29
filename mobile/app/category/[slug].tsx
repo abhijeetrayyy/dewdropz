@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useWindowDimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { StatusBar } from "expo-status-bar";
 import { Img as Image } from "@/components/ui/Img";
 import { LinearGradient } from "expo-linear-gradient";
@@ -66,9 +67,29 @@ export default function CategoryScreen() {
     return sortByPrice ? [...list].sort((a, b) => a.price - b.price) : list;
   }, [products, category, sortByPrice]);
 
+  // Every category holds `image_url = ''` — an empty string, not NULL — so the
+  // hero rendered as a black void and each sibling tile as a grey gradient.
+  // `||` (never `??`) lets the empty string fall through to a photograph
+  // borrowed from a product actually inside that category.
+  const covers = useMemo(() => {
+    const acc: Record<string, string> = {};
+    for (const p of products) {
+      const cover = p.images?.[0];
+      if (!cover) continue;
+      for (const link of p.categories ?? []) {
+        if (!acc[link.category_id]) acc[link.category_id] = cover;
+      }
+    }
+    return acc;
+  }, [products]);
+
+  const heroImage = category ? (category.image_url?.trim() || covers[category.id]) : undefined;
+
+  // Only siblings that actually have something on them. A tile leading to
+  // "this shelf is still being stocked" is a dead end dressed as a route.
   const siblings = useMemo(
-    () => categories.filter((c) => c.slug !== slug),
-    [categories, slug],
+    () => categories.filter((c) => c.slug !== slug && !!covers[c.id]),
+    [categories, slug, covers],
   );
 
   const loading = catsLoading || prodLoading;
@@ -116,9 +137,9 @@ export default function CategoryScreen() {
           <>
             {/* ── Plate ─────────────────────────────────────────────────── */}
             <View style={[s.hero, { height: HERO_H }]}>
-              {category.image_url ? (
+              {heroImage ? (
                 <Image
-                  source={{ uri: category.image_url }}
+                  source={{ uri: heroImage }}
                   style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   transition={260}
@@ -240,9 +261,9 @@ export default function CategoryScreen() {
                       }}
                       style={s.sib}
                     >
-                      {c.image_url ? (
+                      {(c.image_url?.trim() || covers[c.id]) ? (
                         <Image
-                          source={{ uri: c.image_url }}
+                          source={{ uri: (c.image_url?.trim() || covers[c.id]) as string }}
                           style={StyleSheet.absoluteFill}
                           contentFit="cover"
                           transition={200}
@@ -269,7 +290,7 @@ export default function CategoryScreen() {
       <OverlayHeader
         scrolled={scrolled || !category}
         title={category?.name}
-        onBack={() => router.back()}
+        onBack={() => goBack("/(tabs)/shop")}
         renderRight={(tone) =>
           category ? (
             <IconButton

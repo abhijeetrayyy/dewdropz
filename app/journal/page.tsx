@@ -21,6 +21,7 @@ export default function JournalPage() {
           eyebrow="The Journal"
           title="Stories from the trail."
           subtitle="Field notes, packing guides, and the people who keep coming back to altitude."
+          variant="ink"
         />
 
         <section className="bg-paper px-6 md:px-10 pb-24">
@@ -30,7 +31,7 @@ export default function JournalPage() {
               href={`/journal/${JOURNAL[0].id}`}
               className="group grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center mb-20 pb-20 border-b border-rule"
             >
-              <div className="relative h-[60vw] max-h-[420px] md:h-[52vh] rounded-lg overflow-hidden order-1 md:order-none">
+              <div className="relative h-[60vw] max-h-[420px] md:h-[52vh] rounded-[var(--r-panel)] overflow-hidden order-1 md:order-none">
                 <Image
                   src={JOURNAL[0].image}
                   alt={JOURNAL[0].title}
@@ -71,7 +72,7 @@ export default function JournalPage() {
                   href={`/journal/${entry.id}`}
                   className="group"
                 >
-                  <div className="relative h-[50vw] max-h-[320px] md:h-[38vh] rounded-lg overflow-hidden">
+                  <div className="relative h-[50vw] max-h-[320px] md:h-[38vh] rounded-[var(--r-panel)] overflow-hidden">
                     <Image
                       src={entry.image}
                       alt={entry.title}

@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 
-// Lazy, like getStripe() in lib/stripe.ts — constructing this at module scope
+// Lazy — constructing this at module scope
 // throws immediately if RESEND_API_KEY isn't set, which crashes the build (and
 // any other route) the moment something imports this file, even if that code
 // path never actually sends an email at runtime.
@@ -227,5 +227,79 @@ export async function sendAbandonedCartEmail(params: {
         <p style="font-size:12px;color:#999;margin-top:32px;">If you have changed your mind, no action is needed — the cart will clear itself.</p>
       </div>
     `,
+  })
+}
+
+
+/**
+ * The email a rental booking promised and never sent.
+ *
+ * Both storefronts told the customer "we confirm by email" / "the email is on
+ * its way" from the moment the feature shipped, and there was no rental email
+ * anywhere in this file — six order emails, none for a booking. The screen was
+ * making a promise the system could not keep, for a transaction where the
+ * customer is expected to turn up at a shop on a particular day carrying a
+ * number they were told would be sent to them.
+ *
+ * Deliberately plain: the booking number large, the dates, what to bring and
+ * what the deposit does. Everything a person needs at the counter.
+ */
+export async function sendRentalConfirmationEmail(params: {
+  email: string
+  bookingNumber: string
+  fulfilment: 'pickup' | 'ship'
+  lines: Array<{ name: string; startsOn: string; endsOn: string; days: number; quantity: number }>
+  rentAmount: number
+  deliveryAmount: number
+  taxAmount: number
+  totalAmount: number
+  depositAmount: number
+}) {
+  const money = (paise: number) =>
+    `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: paise % 100 === 0 ? 0 : 2 })}`
+  const day = (iso: string) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+    })
+
+  const rows = params.lines
+    .map(
+      (l) => `<tr>
+        <td style="padding:10px 0;border-bottom:1px solid #DDD7C6">
+          <strong style="color:#15150F">${l.name}</strong>${l.quantity > 1 ? ` × ${l.quantity}` : ''}<br>
+          <span style="color:#52504A;font-size:13px">${day(l.startsOn)} → ${day(l.endsOn)} · ${l.days} day${l.days === 1 ? '' : 's'}</span>
+        </td>
+      </tr>`,
+    )
+    .join('')
+
+  return sendEmail({
+    to: params.email,
+    subject: `Your gear is booked — ${params.bookingNumber}`,
+    html: `<div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FBF7EF;color:#15150F">
+      <p style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#27481F;margin:0 0 8px">Held for you</p>
+      <h1 style="font-size:26px;font-weight:400;margin:0 0 4px">Your gear is booked.</h1>
+      <p style="font-size:22px;font-family:ui-monospace,monospace;margin:16px 0 24px">${params.bookingNumber}</p>
+
+      <table style="width:100%;border-collapse:collapse;border-top:1px solid #DDD7C6">${rows}</table>
+
+      <table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px">
+        <tr><td style="padding:4px 0;color:#52504A">Rental</td><td align="right">${money(params.rentAmount)}</td></tr>
+        ${params.deliveryAmount > 0 ? `<tr><td style="padding:4px 0;color:#52504A">Delivery, both ways</td><td align="right">${money(params.deliveryAmount)}</td></tr>` : ''}
+        <tr><td style="padding:4px 0;color:#52504A">GST</td><td align="right">${money(params.taxAmount)}</td></tr>
+        <tr><td style="padding:8px 0;border-top:1px solid #DDD7C6"><strong>To pay</strong></td><td align="right" style="padding:8px 0;border-top:1px solid #DDD7C6"><strong>${money(params.totalAmount)}</strong></td></tr>
+        <tr><td style="padding:4px 0;color:#52504A">Refundable deposit</td><td align="right">${money(params.depositAmount)}</td></tr>
+      </table>
+
+      <p style="margin-top:24px;font-size:14px;line-height:1.6;color:#52504A">
+        ${
+          params.fulfilment === 'ship'
+            ? 'We pack it and post it to arrive on the first day of your booking. The return label is in the box.'
+            : 'Collect from the Dehradun shop on the first day of your booking. Bring this number and some ID.'
+        }
+        Nothing is charged now — you pay the rental and hand over the deposit when you collect.
+        The deposit comes back when the gear does, less anything owed for a late return or damage, itemised.
+      </p>
+    </div>`,
   })
 }

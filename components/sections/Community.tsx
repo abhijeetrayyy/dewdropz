@@ -156,7 +156,7 @@ export default function Community({
               to a flat panel when the product has no photo yet, rather than
               borrowing a stock trek shot to stand in for it. */}
           <div className="order-1 lg:order-2 relative">
-            <div className="relative aspect-[4/5] max-h-[520px] w-full rounded-sm overflow-hidden bg-paper-deep">
+            <div className="relative aspect-[4/5] max-h-[520px] w-full rounded-[var(--r-card)] overflow-hidden bg-paper-deep">
               <AnimatePresence mode="popLayout">
                 <motion.div
                   key={report.id}
@@ -181,7 +181,7 @@ export default function Community({
               </AnimatePresence>
               <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent pointer-events-none" />
 
-              <div className="absolute top-4 left-4 bg-ink/70 backdrop-blur-sm rounded-sm px-3 py-2">
+              <div className="absolute top-4 left-4 bg-ink/70 backdrop-blur-sm rounded-[var(--r-input)] px-3 py-2">
                 <div className="font-mono text-[13px] text-paper tabular-nums">{report.rating}.0</div>
                 <div className="font-body text-[8px] tracking-[0.18em] text-paper/60 uppercase mt-0.5">
                   Rated out of 5

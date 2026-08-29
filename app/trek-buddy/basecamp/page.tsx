@@ -430,6 +430,43 @@ export default async function BasecampPage() {
                     })}
                   </ul>
 
+                  {/* ── The asks nobody answered ────────────────────────────
+                      A request that was never decided stays `requested`
+                      forever: the row trigger stops it becoming `confirmed`
+                      once the trek leaves, no job settles it, and none of the
+                      seven notification kinds fires on time passing. So the
+                      person who asked used to get silence and then absence —
+                      the trip simply dropped off this list at its start time
+                      and was never mentioned again.
+
+                      Derived, never written, and deliberately quiet: this is a
+                      closing note, not a grievance. It exists so the answer to
+                      "what happened to that one?" is on the screen. */}
+                  {mine.lapsed.length > 0 && (
+                    <div className="mt-6 rounded-[var(--r-card)] border border-rule-warm bg-paper-warm px-4 py-3.5">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">
+                        Never answered
+                      </p>
+                      <ul className="mt-2 flex flex-col gap-1.5">
+                        {mine.lapsed.map(({ plan }) => (
+                          <li key={plan.id} className="font-body text-[13px] leading-snug text-mid">
+                            <Link
+                              href={`/trek-buddy/${plan.id}`}
+                              className="text-text underline-offset-4 hover:underline"
+                            >
+                              {plan.place}
+                            </Link>{' '}
+                            set off without a reply from {plan.host_name}.
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2.5 font-body text-[12px] leading-relaxed text-light">
+                        Hosts are not obliged to answer, and a full walk often just fills up.
+                        Nothing was held against you.
+                      </p>
+                    </div>
+                  )}
+
                   {/* The one thing on this list that could leave somebody at a
                       dark bus stand, so it is set as a note against the ground
                       rather than as a 12px grey afterthought under a list. */}

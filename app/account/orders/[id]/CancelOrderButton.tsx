@@ -43,7 +43,7 @@ export default function CancelOrderButton({ orderId, userId }: { orderId: string
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="font-body text-xs text-clay hover:underline transition-colors"
+        className="rounded-[var(--r-input)] border border-clay/30 px-3 py-1.5 font-body text-xs text-clay-deep transition-colors hover:border-clay-deep hover:bg-clay-wash"
       >
         Cancel Order
       </button>
@@ -58,7 +58,7 @@ export default function CancelOrderButton({ orderId, userId }: { orderId: string
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={cancelling}>Keep Order</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancel} disabled={cancelling} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+            <AlertDialogAction onClick={handleCancel} disabled={cancelling} className="bg-clay-deep hover:bg-clay focus:ring-clay-deep">
               {cancelling ? 'Cancelling…' : 'Cancel Order'}
             </AlertDialogAction>
           </AlertDialogFooter>

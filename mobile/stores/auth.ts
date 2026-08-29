@@ -55,6 +55,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       password,
     });
     if (error) return { error: error.message };
+    // The pack built as a guest becomes this account's pack, joined with
+    // whatever was already saved to it. Awaited so the screen we return to
+    // renders the merged cart rather than the pre-merge one for a beat.
+    // Imported lazily to keep the auth store free of a cycle: the adoption
+    // helper reads the cart store, which nothing here should depend on.
+    await (await import("@/lib/cartAdoption")).adoptCartForSignedInUser();
     return {};
   },
 

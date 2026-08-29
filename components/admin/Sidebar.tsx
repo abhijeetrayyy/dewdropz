@@ -31,7 +31,8 @@ import {
   Settings,
   ExternalLink,
   ChevronDown,
-  Undo2, Mountain, Palette,} from 'lucide-react'
+  Undo2, Mountain, Palette, Tent,
+} from 'lucide-react'
 
 const navGroups = [
   {
@@ -50,6 +51,7 @@ const navGroups = [
       { href: '/admin/tags', label: 'Tags', icon: Hash },
       { href: '/admin/attributes', label: 'Attributes', icon: Shapes },
       { href: '/admin/designs', label: 'Design Library', icon: Palette },
+      { href: '/admin/rentals', label: 'Rentals', icon: Tent },
       { href: '/admin/homepage', label: 'Homepage', icon: LayoutTemplate },
     ],
   },

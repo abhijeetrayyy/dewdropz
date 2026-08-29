@@ -8,6 +8,7 @@ import {
 import { getFollowState } from '@/actions/trekSocial'
 import { getMyTrust } from '@/actions/trekTrust'
 import { formatPrice } from '@/lib/utils'
+import { lifecycleOf } from '@/lib/trek-lifecycle'
 import PlanActions from './PlanActions'
 import PlanMasthead from '@/components/trek/PlanMasthead'
 import PlanRail from '@/components/trek/PlanRail'
@@ -863,6 +864,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
               cancelled={cancelled}
               roster={rosterRows}
               waitlistPosition={waitlistPosition}
+              lifecycle={lifecycleOf(plan)}
             />
           </PlanRail>
         </div>

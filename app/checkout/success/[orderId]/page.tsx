@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { requireAuth } from '@/actions/auth'
 import { getOrder } from '@/actions/orders'
 import { getStoreSettings } from '@/actions/settings'
+import { Check } from 'lucide-react'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import { formatPrice } from '@/lib/utils'
@@ -56,10 +57,20 @@ export default async function OrderConfirmedPage({
   return (
     <>
       <NavBar />
-      <main className="bg-paper px-6 md:px-10 pt-32 pb-24 md:pt-40 min-h-[70vh]">
+      <main className="relative min-h-[70vh] overflow-hidden bg-paper-warm px-6 pb-24 pt-32 md:px-10 md:pt-40">
         <ClearCartOnMount />
-        <div className="max-w-2xl mx-auto">
-          <p className="font-body text-[10px] tracking-[0.18em] uppercase text-forest">
+
+        {/* First light, breaking behind the confirmation. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[600px] -translate-x-1/2 rounded-full bg-dawn/15 blur-3xl"
+        />
+
+        <div className="relative mx-auto max-w-2xl">
+          <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-full bg-dawn text-ink shadow-[var(--shadow-lift)]">
+            <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
+          </span>
+          <p className="font-body text-[10px] uppercase tracking-[0.18em] text-ember">
             Order confirmed
           </p>
           <h1 className="mt-3 font-display font-light text-[clamp(30px,5vw,44px)] leading-tight text-text">
@@ -71,8 +82,8 @@ export default async function OrderConfirmedPage({
               : `We've got your order and your payment came through.`}
           </p>
 
-          <div className="mt-8 border border-rule rounded-sm">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4 border-b border-rule">
+          <div className="mt-8 overflow-hidden rounded-[var(--r-panel)] border border-rule/70 bg-surface shadow-[var(--shadow-card)]">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule-soft px-5 py-4">
               <div>
                 <div className="font-body text-[10px] tracking-[0.14em] uppercase text-mid">Order number</div>
                 <div className="font-mono text-base text-text mt-0.5">{order.order_number}</div>
@@ -170,13 +181,13 @@ export default async function OrderConfirmedPage({
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/shop"
-              className="px-6 py-3 border border-text text-text font-body text-[10px] tracking-[0.12em] uppercase rounded-sm hover:bg-text hover:text-paper transition-colors"
+              className="rounded-full border border-text px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-text transition-colors hover:bg-text hover:text-paper"
             >
               Keep shopping
             </Link>
             <Link
               href={`/account/orders/${order.id}`}
-              className="px-6 py-3 bg-forest text-paper font-body text-[10px] tracking-[0.12em] uppercase rounded-sm hover:bg-forest-mid transition-colors"
+              className="rounded-full bg-forest px-6 py-3 font-body text-[10px] uppercase tracking-[0.12em] text-paper shadow-[var(--shadow-card)] transition-colors hover:bg-forest-mid"
             >
               View order
             </Link>

@@ -5,6 +5,7 @@ import Countdown from './Countdown'
 import Cover from './ui/Cover'
 import Avatar from './ui/Avatar'
 import SeatMeter from './ui/SeatMeter'
+import { dayNumber, durationDays, lifecycleOf } from '@/lib/trek-lifecycle'
 import { Tag } from './ui/Bits'
 import HourPill from './ui/HourPill'
 
@@ -53,6 +54,11 @@ export default function TrekPlanCard({
   const { day, month, weekday } = istParts(plan.starts_at)
   const full = plan.spots_left <= 0
   const cancelled = plan.status === 'cancelled'
+  // Out on the hill right now. The board filters on `ends_at`, so these are on
+  // it deliberately rather than by accident, and they must not read as joinable.
+  const underWay = lifecycleOf(plan) === 'under_way'
+  const days = durationDays(plan)
+  const dayNo = dayNumber(plan)
   const nights = Math.round(
     (new Date(plan.ends_on).getTime() - new Date(plan.starts_on).getTime()) / 86400000
   )
@@ -130,6 +136,15 @@ export default function TrekPlanCard({
             <span className="trek-glass-sm rounded-full px-2.5 py-1 text-[11px] font-medium text-[#C09A85]">
               Called off
             </span>
+          ) : underWay ? (
+            /* The board carries trips that are out on the hill now — it filters
+               on `ends_at`, so a six-day trek no longer disappears on its first
+               morning. It has to SAY so, or a walk that left on Monday reads as
+               one you could still join on Wednesday. `dayNumber` is the useful
+               half of that: "day 3 of 6", not merely "started". */
+            <span className="trek-glass-sm rounded-full px-2.5 py-1 font-mono text-[11px] font-medium text-dawn-soft">
+              {days > 1 && dayNo ? `Day ${dayNo} of ${days}` : 'Out now'}
+            </span>
           ) : full ? (
             <span className="trek-glass-sm rounded-full px-2.5 py-1 text-[11px] font-medium text-paper/85">
               Waitlist open
@@ -137,6 +152,7 @@ export default function TrekPlanCard({
           ) : (
             <Countdown
               iso={plan.starts_at}
+              endsIso={plan.ends_at}
               prefix="Leaves in"
               className="trek-glass-sm rounded-full px-2.5 py-1 font-mono text-[11px] font-medium text-paper tabular-nums"
             />

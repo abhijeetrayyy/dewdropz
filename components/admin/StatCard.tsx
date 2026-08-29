@@ -27,7 +27,7 @@ export function StatCard({
   className?: string
 }) {
   return (
-    <Card className={cn('transition-shadow hover:shadow-[0_2px_4px_rgba(15,23,42,0.06),0_12px_28px_-12px_rgba(15,23,42,0.16)]', className)}>
+    <Card className={cn('transition-shadow duration-300 hover:shadow-[var(--shadow-card)]', className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-gray-600">{label}</CardTitle>
         <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', toneClasses[tone])}>
@@ -42,11 +42,20 @@ export function StatCard({
   )
 }
 
+// The skeleton has to be the SHAPE of the answer, not a grey bar where the
+// answer will go. This one was a single 40px block inside `pt-6`, while the real
+// card is a header row plus a 2xl figure plus an optional sub-line — so every
+// dashboard load visibly jumped when the numbers arrived.
 export function StatCardSkeleton() {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="h-10 animate-pulse bg-gray-100 rounded" />
+    <Card aria-hidden="true">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
+        <div className="h-8 w-8 animate-pulse rounded-full bg-gray-100" />
+      </CardHeader>
+      <CardContent>
+        <div className="h-7 w-16 animate-pulse rounded bg-gray-100" />
+        <div className="mt-2 h-3 w-32 animate-pulse rounded bg-gray-100" />
       </CardContent>
     </Card>
   )

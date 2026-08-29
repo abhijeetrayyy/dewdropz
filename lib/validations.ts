@@ -65,7 +65,7 @@ export const checkoutSchema = z.object({
   billing_address_id: z.string().uuid().optional(),
   coupon_code: z.string().optional(),
   notes: z.string().max(500).optional(),
-  payment_method: z.enum(['stripe', 'razorpay', 'cod']).default('razorpay'),
+  payment_method: z.enum(['razorpay', 'cod']).default('razorpay'),
 })
 
 // Mobile checkout has no `addresses` row to reference yet (the app collects

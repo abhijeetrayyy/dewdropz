@@ -42,6 +42,7 @@ type MobileTab = 'none' | 'add' | 'edit' | 'layers' | 'setup'
 export default function Toolbar({
   canvas,
   zone,
+  blankId,
   activeSide,
   twoSided,
   garmentHex,
@@ -57,6 +58,9 @@ export default function Toolbar({
   // so the first characters fell outside the print area and were clipped out
   // of the exported print file.
   zone: CustomizationZone | undefined
+  /** The product the studio is open on, so the library shelf can be filtered
+   *  to artwork actually offered on this garment. */
+  blankId: string
   activeSide: 'front' | 'back'
   twoSided: boolean
   garmentHex?: string
@@ -166,12 +170,37 @@ export default function Toolbar({
     async (url: string) => {
       if (!canvas || !zone) return
       const img = await FabricImage.fromURL(url, { crossOrigin: 'anonymous' })
-      // Same origin rule as addText: left/top are the centre point in
-      // Fabric v6, so this is just the middle of the print area.
-      const maxDim = Math.min(zone.widthPx, zone.heightPx) * 0.7
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+
+      // WHERE A PRINT ACTUALLY GOES.
+      //
+      // This used to scale the image's LONGEST side to 70% of the zone's
+      // SHORTEST side, then centre it in the print area. Both halves were
+      // wrong in a way you only see with real artwork:
+      //
+      //   · a wide design (the ridgeline is 3.5:1) got measured against the
+      //     zone's 12in width but sized off its 16in height, landing far
+      //     smaller than the space it had;
+      //   · a tall design filled barely half the height available;
+      //   · and everything sat in the vertical middle of a 16in box, which on
+      //     a garment is the navel, not the chest.
+      //
+      // Contain-fit inside the zone with a small margin sizes both shapes
+      // correctly, and the upper third is where a chest print belongs.
+      const MARGIN = 0.9
+      const scale = Math.min(
+        1, // never upscale: blowing a small file up to fill the zone is how a
+           // 100px logo becomes an 8 DPI print that looked fine on screen
+        (zone.widthPx * MARGIN) / img.width,
+        (zone.heightPx * MARGIN) / img.height,
+      )
       img.scale(scale)
-      img.set({ left: zone.widthPx / 2, top: zone.heightPx / 2 })
+
+      // left/top are the object's CENTRE in Fabric v6.
+      const h = img.getScaledHeight()
+      // Sit it high, but never push a tall design off the bottom of the zone —
+      // clamping here is what keeps the rule safe for every aspect ratio.
+      const top = Math.min(zone.heightPx * 0.12 + h / 2, Math.max(h / 2, zone.heightPx - h / 2))
+      img.set({ left: zone.widthPx / 2, top })
       canvas.add(img)
       canvas.setActiveObject(img)
       canvas.renderAll()
@@ -297,7 +326,7 @@ export default function Toolbar({
         <button
           type="button"
           onClick={onCopyToOtherSide}
-          className="ml-auto flex items-center gap-1.5 rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-3 py-2 font-body text-[11px] text-[var(--st-ink-2)] transition-colors hover:border-[var(--st-line)] hover:text-[var(--st-ink)]"
+          className="ml-auto flex items-center gap-1.5 rounded-[var(--r-input)] border border-[var(--st-edge)] bg-[var(--st-raise)] px-3 py-2 font-body text-[11px] text-[var(--st-ink-2)] transition-colors hover:border-[var(--st-line)] hover:text-[var(--st-ink)]"
         >
           <FlipHorizontal2 className="h-3 w-3" />
           Copy to {activeSide === 'front' ? 'back' : 'front'}
@@ -315,7 +344,7 @@ export default function Toolbar({
           <select
             value={textbox.fontFamily ?? 'Inter'}
             onChange={(e) => updateText({ fontFamily: e.target.value })}
-            className="w-full rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2 font-body text-[12px] text-[var(--st-ink)] outline-none transition-colors focus:border-[var(--st-accent)]"
+            className="w-full rounded-[var(--r-input)] border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2 font-body text-[12px] text-[var(--st-ink)] outline-none transition-colors focus:border-[var(--st-accent)]"
           >
             {FONTS.map((f) => (
               <option key={f} value={f} className="bg-[#1F1F1C]">
@@ -325,7 +354,7 @@ export default function Toolbar({
           </select>
 
           <div className="flex items-center gap-2">
-            <label className="flex flex-1 items-center gap-2 rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2">
+            <label className="flex flex-1 items-center gap-2 rounded-[var(--r-input)] border border-[var(--st-edge)] bg-[var(--st-raise)] px-2.5 py-2">
               <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--st-ink-3)]">Size</span>
               <input
                 type="number"
@@ -419,7 +448,7 @@ export default function Toolbar({
               <button
                 type="button"
                 onClick={() => selectLayer(obj)}
-                className={`flex w-full items-center gap-2 truncate rounded-sm px-2.5 py-2 text-left font-body text-[12px] transition-colors ${
+                className={`flex w-full items-center gap-2 truncate rounded-[var(--r-input)] px-2.5 py-2 text-left font-body text-[12px] transition-colors ${
                   selected === obj
                     ? 'bg-[var(--st-hover)] text-[var(--st-ink)] shadow-[inset_0_0_0_1px_var(--st-line)]'
                     : 'text-[var(--st-ink-2)] hover:bg-[var(--st-raise)] hover:text-[var(--st-ink)]'
@@ -449,12 +478,13 @@ export default function Toolbar({
 
       <DesignLibraryPicker
         open={libraryOpen}
+        blankId={blankId}
         onClose={() => setLibraryOpen(false)}
         onPick={pickFromLibrary}
       />
 
       {/* ── Desktop rail ───────────────────────────────────────────────── */}
-      <aside className="hidden w-[300px] flex-shrink-0 space-y-5 overflow-y-auto border-l border-[var(--st-rule)] bg-[var(--st-panel)] p-5 lg:block">
+      <aside data-lenis-prevent="true" className="hidden w-[300px] flex-shrink-0 space-y-5 overflow-y-auto border-l border-[var(--st-rule)] bg-[var(--st-panel)] p-5 lg:block">
         {addActions}
         {historyActions}
         {inspector && <div className="border-t border-[var(--st-edge)] pt-5">{inspector}</div>}
@@ -476,7 +506,7 @@ export default function Toolbar({
           height. Nothing the studio can do ever hides the artwork. ────────── */}
       <div className="flex-shrink-0 border-t border-[var(--st-rule)] bg-[var(--st-panel)] lg:hidden">
         {mobileTab !== 'none' && (
-          <div className="max-h-[38vh] overflow-y-auto border-b border-[var(--st-edge)] p-4">
+          <div data-lenis-prevent="true" className="max-h-[38vh] overflow-y-auto border-b border-[var(--st-edge)] p-4">
             {mobileTab === 'add' && (
               <div className="space-y-3">
                 <SectionLabel>Add to your design</SectionLabel>
@@ -485,7 +515,7 @@ export default function Toolbar({
                   <button
                     type="button"
                     onClick={onCopyToOtherSide}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-sm border border-[var(--st-edge)] bg-[var(--st-raise)] px-3 py-2.5 font-body text-[12px] text-[var(--st-ink-2)] transition-colors hover:border-[var(--st-line)] hover:text-[var(--st-ink)]"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-[var(--r-input)] border border-[var(--st-edge)] bg-[var(--st-raise)] px-3 py-2.5 font-body text-[12px] text-[var(--st-ink-2)] transition-colors hover:border-[var(--st-line)] hover:text-[var(--st-ink)]"
                   >
                     <FlipHorizontal2 className="h-3.5 w-3.5" />
                     Copy this side to the {activeSide === 'front' ? 'back' : 'front'}
@@ -572,7 +602,7 @@ function MobileTabButton({
       // the garment.
       onClick={() => onSelect((t) => (t === tab ? 'none' : tab))}
       aria-pressed={active}
-      className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-sm transition-colors duration-200 ${
+      className={`flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[var(--r-input)] transition-colors duration-200 ${
         active
           ? 'bg-[var(--st-raise)] text-[var(--st-ink)] shadow-[inset_0_0_0_1px_var(--st-line)]'
           : dimmed
@@ -609,7 +639,7 @@ function ToolButton({
       disabled={disabled}
       // A control you can see: a real surface and a real edge, not a hairline
       // at 15% over the same black the panel is painted in.
-      className={`flex items-center justify-center gap-2 rounded-sm border px-3 py-2.5 font-body text-[12px] transition-colors duration-200 disabled:opacity-35 ${
+      className={`flex items-center justify-center gap-2 rounded-[var(--r-input)] border px-3 py-2.5 font-body text-[12px] transition-colors duration-200 disabled:opacity-35 ${
         danger
           ? 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[#E09A9A] hover:border-[#E09A9A]/60 hover:bg-[#E09A9A]/12'
           : 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-line)] hover:bg-[var(--st-hover)] hover:text-[var(--st-ink)]'
@@ -632,7 +662,7 @@ function IconButton({
       disabled={disabled}
       aria-label={label}
       aria-pressed={active}
-      className={`flex h-9 w-9 items-center justify-center rounded-sm border transition-colors duration-200 disabled:opacity-30 ${
+      className={`flex h-9 w-9 items-center justify-center rounded-[var(--r-input)] border transition-colors duration-200 disabled:opacity-30 ${
         active
           ? 'border-[var(--st-accent)] bg-[var(--st-hover)] text-[var(--st-ink)]'
           : 'border-[var(--st-edge)] bg-[var(--st-raise)] text-[var(--st-ink-2)] hover:border-[var(--st-line)] hover:bg-[var(--st-hover)] hover:text-[var(--st-ink)]'

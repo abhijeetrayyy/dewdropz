@@ -132,6 +132,9 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     designId: data.id as string,
-    previewUrl: (row.front_preview_url ?? row.back_preview_url ?? null) as string | null,
+    // `||`, not `??`: these columns hold '' as often as NULL, and nullish
+    // coalescing keeps an empty string, so a blank front preview would win
+    // over a perfectly good back one.
+    previewUrl: (row.front_preview_url || row.back_preview_url || null) as string | null,
   })
 }

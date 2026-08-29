@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { goBack } from "@/lib/nav";
+import Animated, { FadeInDown, useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { useAuthStore } from "@/stores/auth";
 import { useAddressesQuery, useDeleteAddressMutation, useSetDefaultAddressMutation } from "@/lib/queries";
 import { StatusCap } from "@/components/ui/StatusCap";
@@ -9,7 +10,6 @@ import { Button } from "@/components/Button";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
-import { Rule } from "@/components/editorial/Rule";
 import { Body, Mono, Title } from "@/components/ui/Type";
 import { usePullToRefresh } from "@/lib/hooks";
 import { toast } from "@/components/ui/Toast";
@@ -33,6 +33,11 @@ import { C, F, R, S } from "@/lib/theme";
 // person is actually thinking about where a parcel should go. A second address
 // form here would be a second thing to keep in step with it.
 export default function AddressesScreen() {
+  // The header is a SIBLING of the scroll view, not a child, and reads the
+  // offset through `scrollY`. Inside it, the whole panel — back button and
+  // all — scrolled away and left no way back.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
   const { user } = useAuthStore();
   const { data: addresses = [], isLoading, refetch } = useAddressesQuery(user?.id);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -85,33 +90,46 @@ export default function AddressesScreen() {
   if (!user) {
     return (
       <View style={s.root}>
-        <StatusCap />
-        <ScrollView contentContainerStyle={s.pad}>
-          <ScreenHeader eyebrow="Delivery" title="Your addresses" />
+        <StatusCap tone="warm" />
+        <ScreenHeader
+        tone="warm" eyebrow="Delivery" title="Your addresses"
+          scrollY={scrollY}
+        />
+
+        <Animated.ScrollView contentContainerStyle={s.pad} ref={scrollRef}>
           <EmptyState
+              tone="warm"
             icon="location_on"
             title="Sign in to see your addresses."
             body="Addresses are saved to your account so you do not have to type one twice."
             ctaLabel="Sign in"
             onPress={() => router.push("/auth/login")}
           />
-        </ScrollView>
+        </Animated.ScrollView>
       </View>
     );
   }
 
   return (
     <View style={s.root}>
-      <StatusCap />
-      <ScrollView
+      <StatusCap tone="warm" />
+      <ScreenHeader
+        eyebrow="Delivery"
+        title="Your addresses"
+        tone="warm"
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={s.pad}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.forest} />}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader eyebrow="Delivery" title="Your addresses" />
 
         {!isLoading && addresses.length === 0 ? (
           <EmptyState
+              tone="warm"
             icon="location_on"
             title="No addresses saved yet."
             body="The address you enter at checkout is kept here, so the next order takes one tap."
@@ -125,8 +143,17 @@ export default function AddressesScreen() {
               const label = [a.address_line1, a.city, a.postal_code].filter(Boolean).join(", ");
               return (
                 <Animated.View key={a.id} entering={FadeInDown.delay(i * 40).duration(260)}>
-                  <View style={[s.card, busy && { opacity: 0.5 }]}>
+                  <View style={[s.card, a.is_default && s.cardDefault, busy && { opacity: 0.5 }]}>
                     <View style={s.cardTop}>
+                      {/* The pin does real work here: it tells a scanning eye
+                          which block is an address before any of it is read. */}
+                      <View style={[s.pin, a.is_default && s.pinDefault]}>
+                        <Icon
+                          name={a.is_default ? "home_pin" : "location_on"}
+                          size={16}
+                          color={a.is_default ? C.paper : C.clayDeep}
+                        />
+                      </View>
                       <Title style={{ flex: 1 }}>{a.full_name}</Title>
                       {a.is_default ? (
                         <View style={s.tag}>
@@ -171,24 +198,27 @@ export default function AddressesScreen() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <Rule weight="soft" />
                 </Animated.View>
               );
             })}
 
-            <Body color={C.textMuted} style={{ marginTop: S.lg }}>
-              A new address is saved automatically when you use it at checkout.
-            </Body>
+            <View style={s.note}>
+              <Icon name="info" size={16} color={C.clayDeep} />
+              <Body color={C.textMid} style={{ flex: 1, lineHeight: 21 }}>
+                A new address is saved automatically when you use it at checkout — there is
+                nothing to fill in here.
+              </Body>
+            </View>
           </View>
         )}
 
         <Button
           title="Back"
           variant="link"
-          onPress={() => router.back()}
+          onPress={() => goBack("/(tabs)/account")}
           style={{ marginTop: S.block, alignSelf: "flex-start" }}
         />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -196,10 +226,38 @@ export default function AddressesScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
   pad: { paddingHorizontal: S.gutter, paddingBottom: 120 },
-  card: { paddingVertical: S.md },
-  cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
-  tag: { backgroundColor: C.forest12, borderRadius: R.tag, paddingHorizontal: 6, paddingVertical: 2 },
-  tagT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 1, color: C.forestDeep },
-  actions: { flexDirection: "row", alignItems: "center", gap: S.lg, marginTop: S.md },
+  // An address was a block of text with vertical padding and a hairline under
+  // it, which is why this screen read as a paragraph rather than a list of
+  // things you can act on. It is now a card, and the default one carries a
+  // forest edge so which address gets used is answerable at a glance.
+  card: {
+    backgroundColor: C.cream,
+    borderRadius: R.panel,
+    padding: S.md,
+    marginBottom: S.md,
+  },
+  cardDefault: {
+    backgroundColor: C.forest12,
+    borderLeftWidth: 3,
+    borderLeftColor: C.forest,
+  },
+  cardTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  pin: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: C.clay12,
+  },
+  pinDefault: { backgroundColor: C.forest },
+  tag: { backgroundColor: C.forest, borderRadius: R.tag, paddingHorizontal: 6, paddingVertical: 3 },
+  tagT: { fontFamily: F.monoBold, fontSize: 8, letterSpacing: 1, color: C.paper },
+  actions: {
+    flexDirection: "row", alignItems: "center", gap: S.lg,
+    marginTop: S.md, paddingTop: S.sm,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(16,21,18,0.12)",
+  },
+  note: {
+    flexDirection: "row", gap: 10, alignItems: "flex-start",
+    backgroundColor: C.clay12, borderRadius: R.panel, padding: S.md, marginTop: S.md,
+  },
   act: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 },
 });

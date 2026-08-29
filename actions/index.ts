@@ -56,7 +56,6 @@ export {
   removeFromCart,
   getCart,
   clearCart,
-  mergeGuestCart,
   getCartTotal,
   validateCoupon,
 } from './cart'
@@ -114,7 +113,6 @@ export {
 } from './reviews'
 
 export {
-  createStripeCheckoutSession,
   createRazorpayOrder,
   getPaymentsLedger,
   getPaymentsSummary,

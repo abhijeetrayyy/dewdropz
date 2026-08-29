@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { RefreshControl, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { useWishlistStore } from "@/stores/wishlist";
 import { ProductCard } from "@/components/ProductCard";
 import { StatusCap } from "@/components/ui/StatusCap";
@@ -29,6 +29,10 @@ import { C, R, S } from "@/lib/theme";
 // marigold rounded box, and it now names every at-risk piece instead of just
 // the first one it happened to find.
 export default function SavedScreen() {
+  // Pinned, like every other screen: the header is a sibling of the list and
+  // reads its offset, so the back button cannot scroll out of reach.
+  const listRef = useAnimatedRef<Animated.FlatList<unknown>>();
+  const scrollY = useScrollOffset(listRef);
   const { slugs } = useWishlistStore();
   const { data: products = [], isLoading, isError, refetch } = useProductsBySlugsQuery(slugs);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -59,14 +63,34 @@ export default function SavedScreen() {
 
   return (
     <View style={s.root}>
-      <StatusCap />
+      <StatusCap tone="warm" />
+      <ScreenHeader
+        tone="warm"
+        eyebrow="Kept for later"
+        title="Saved"
+        lede={products.length === 0 ? "Tap the heart on any piece and it waits for you here." : undefined}
+        stats={
+          products.length > 0
+            ? [
+                { label: "Pieces", value: String(products.length) },
+                { label: "Altogether", value: formatPrice(total) },
+                ...(lowStock.length > 0
+                  ? [{ label: "Running low", value: String(lowStock.length) }]
+                  : []),
+              ]
+            : undefined
+        }
+        scrollY={scrollY}
+      />
+
       {/* VIRTUALIZED. Saved is a list that only ever grows — there is no
           filter on it and no paging — and it was a ScrollView with `.map()`,
           so every saved piece mounted at once with its image. `numColumns={2}`
-          keeps the two-up grid the design asks for; everything that used to sit
-          above the grid is the header, so it scrolls with the list rather than
-          being pinned. */}
-      <FlatList
+          keeps the two-up grid the design asks for. The panel above is NOT the
+          list header any more: as a ListHeaderComponent it scrolled away and
+          took the back button with it. */}
+      <Animated.FlatList
+        ref={listRef}
         data={products as any[]}
         keyExtractor={(p) => p.id}
         numColumns={2}
@@ -100,23 +124,6 @@ export default function SavedScreen() {
         )}
         ListHeaderComponent={
           <>
-            <ScreenHeader
-              eyebrow="Kept for later"
-              title="Saved"
-              lede={products.length === 0 ? "Tap the heart on any piece and it waits for you here." : undefined}
-              stats={
-                products.length > 0
-                  ? [
-                      { label: "Pieces", value: String(products.length) },
-                      { label: "Altogether", value: formatPrice(total) },
-                      ...(lowStock.length > 0
-                        ? [{ label: "Running low", value: String(lowStock.length) }]
-                        : []),
-                    ]
-                  : undefined
-              }
-            />
-
             <View style={{ paddingHorizontal: S.gutter }}>
               {lowStock.length > 0 ? (
                 <View style={s.alert}>
@@ -144,6 +151,7 @@ export default function SavedScreen() {
                 // branch and rendered "0 PIECES", an "Add all to pack" button and a
                 // rule above an empty void — no empty state at all.
                 <EmptyState
+              tone="warm"
                   eyebrow="Nothing saved"
                   icon="favorite"
                   title={slugs.length > 0 ? "Nothing left to show." : "Keep a shortlist."}

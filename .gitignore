@@ -59,3 +59,4 @@ supabase/.temp/
 # Scratch notes from the 26-Aug platform audit. The deliverable is
 # PLATFORM-AUDIT.md at the root; these are the workings behind it.
 /.audit/
+.doc-shots/

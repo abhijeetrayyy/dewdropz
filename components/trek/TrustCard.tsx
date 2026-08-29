@@ -72,7 +72,7 @@ const RUNGS = [
 ] as const
 
 const field =
-  'min-w-0 rounded-[var(--r-input)] border border-rule bg-paper px-3 py-2.5 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none'
+  'min-w-0 rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2.5 font-body text-sm text-text placeholder:text-mid/60 focus:border-forest focus:outline-none'
 
 export default function TrustCard({
   trust,

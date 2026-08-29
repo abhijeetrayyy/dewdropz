@@ -63,10 +63,10 @@ export default function AccountScreen() {
             <View style={{ marginTop: S.section }}>
               <Eyebrow>Read while you&apos;re here</Eyebrow>
               <Rule weight="ink" style={{ marginTop: 9 }} />
-              <NavRow icon="explore" label="Trail guide" onPress={() => router.push("/trails")} />
-              <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
-              <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
-              <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} last />
+              <NavRow icon="explore" label="Trail guide" tint="ink" onPress={() => router.push("/trails")} />
+              <NavRow icon="menu_book" label="The journal" tint="ink" onPress={() => router.push("/journal")} />
+              <NavRow icon="landscape" label="Our story" tint="ink" onPress={() => router.push("/about")} />
+              <NavRow icon="eco" label="Sustainability" tint="ink" onPress={() => router.push("/sustainability")} last />
             </View>
 
             {/* The only route to Settings — and therefore to the privacy policy
@@ -78,7 +78,7 @@ export default function AccountScreen() {
             <View style={{ marginTop: S.section }}>
               <Eyebrow>Privacy &amp; app</Eyebrow>
               <Rule weight="ink" style={{ marginTop: 9 }} />
-              <NavRow icon="settings" label="Settings" onPress={() => router.push("/settings")} last />
+              <NavRow icon="settings" label="Settings" tint="altitude" onPress={() => router.push("/settings")} last />
             </View>
           </View>
         </ScrollView>
@@ -187,27 +187,28 @@ export default function AccountScreen() {
           <View style={{ marginTop: S.block }}>
             <Eyebrow>Your things</Eyebrow>
             <Rule weight="soft" style={{ marginTop: 9 }} />
-            <NavRow icon="receipt_long" label="Orders" value={String(orders.length)} onPress={() => router.push("/orders")} />
+            <NavRow icon="receipt_long" label="Orders" tint="warm" value={String(orders.length)} onPress={() => router.push("/orders")} />
             {/* The address book. It had no entry point anywhere in the app —
                 addresses could only be created as a side effect of checking
                 out, and never seen, defaulted or removed. */}
-            <NavRow icon="location_on" label="Addresses" onPress={() => router.push("/addresses")} />
-            <NavRow icon="favorite" label="Saved" value={String(wishlistCount)} onPress={() => router.push("/saved")} />
-            <NavRow icon="draw" label="The studio" onPress={() => router.push("/(tabs)/design")} />
+            <NavRow icon="camping" label="Your rentals" tint="warm" onPress={() => router.push("/rent/bookings")} />
+            <NavRow icon="location_on" label="Addresses" tint="warm" onPress={() => router.push("/addresses")} />
+            <NavRow icon="favorite" label="Saved" tint="warm" value={String(wishlistCount)} onPress={() => router.push("/saved")} />
+            <NavRow icon="draw" label="The studio" tint="forest" onPress={() => router.push("/(tabs)/design")} />
             {/* What you have already made — unreachable until now. */}
-            <NavRow icon="palette" label="Your designs" onPress={() => router.push("/designs")} />
-            <NavRow icon="notifications" label="Notifications" onPress={() => router.push("/notifications")} last />
+            <NavRow icon="palette" label="Your designs" tint="warm" onPress={() => router.push("/designs")} />
+            <NavRow icon="notifications" label="Notifications" tint="altitude" onPress={() => router.push("/notifications")} last />
           </View>
 
           {/* ── Read ─────────────────────────────────────────────────────── */}
           <View style={{ marginTop: S.block }}>
             <Eyebrow>Read</Eyebrow>
             <Rule weight="soft" style={{ marginTop: 9 }} />
-            <NavRow icon="explore" label="Trail guide" onPress={() => router.push("/trails")} />
-            <NavRow icon="menu_book" label="The journal" onPress={() => router.push("/journal")} />
-            <NavRow icon="landscape" label="Our story" onPress={() => router.push("/about")} />
-            <NavRow icon="eco" label="Sustainability" onPress={() => router.push("/sustainability")} />
-            <NavRow icon="grid_view" label="Collections" onPress={() => router.push("/collections")} last />
+            <NavRow icon="explore" label="Trail guide" tint="ink" onPress={() => router.push("/trails")} />
+            <NavRow icon="menu_book" label="The journal" tint="ink" onPress={() => router.push("/journal")} />
+            <NavRow icon="landscape" label="Our story" tint="ink" onPress={() => router.push("/about")} />
+            <NavRow icon="eco" label="Sustainability" tint="ink" onPress={() => router.push("/sustainability")} />
+            <NavRow icon="grid_view" label="Collections" tint="ink" onPress={() => router.push("/collections")} last />
           </View>
 
           {/* ── Quiet ────────────────────────────────────────────────────── */}
@@ -219,7 +220,7 @@ export default function AccountScreen() {
               label="Help & returns"
               onPress={() => contactSupport("Help & returns")}
             />
-            <NavRow icon="settings" label="Settings" onPress={() => router.push("/settings")} />
+            <NavRow icon="settings" label="Settings" tint="altitude" onPress={() => router.push("/settings")} />
             <TouchableOpacity style={s.row} activeOpacity={0.7} onPress={handleSignOut}>
               <Icon name="logout" size={20} color={C.danger} />
               <Text style={[s.rowLabel, { color: C.danger }]}>{signingOut ? "Signing out…" : "Sign out"}</Text>
@@ -237,23 +238,49 @@ export default function AccountScreen() {
   );
 }
 
+/**
+ * A row in the account list.
+ *
+ * `tint` is not decoration. This is the longest list in the app — eleven rows
+ * of identical grey glyph on cream — and it was the single dullest surface we
+ * had. The chip colours match the four header families, so the colour a row
+ * carries here is the colour of the screen it opens: warm for your own things,
+ * forest for the studio and the locker, altitude for system, ink for reading.
+ * By the second visit that is navigation, not ornament.
+ */
+type RowTint = "warm" | "forest" | "altitude" | "ink";
+
+const ROW_TINT: Record<RowTint, { bg: string; fg: string }> = {
+  warm: { bg: C.clay12, fg: C.clayDeep },
+  forest: { bg: C.forest12, fg: C.forestDeep },
+  altitude: { bg: "rgba(20,37,54,0.10)", fg: C.altitude },
+  // A cream chip on a cream page is not a chip. These rows open the ink-headed
+  // editorial screens, so the chip carries that ground: dark disc, paper glyph.
+  ink: { bg: C.ink, fg: C.paper },
+};
+
 function NavRow({
   icon,
   label,
   value,
   last,
   onPress,
+  tint = "ink",
 }: {
   icon: string;
   label: string;
   value?: string;
   last?: boolean;
   onPress?: () => void;
+  tint?: RowTint;
 }) {
+  const t = ROW_TINT[tint];
   return (
     <>
       <TouchableOpacity style={s.row} onPress={onPress} activeOpacity={0.7} accessibilityRole="button">
-        <Icon name={icon} size={20} color={C.textMid} />
+        <View style={[s.rowIcon, { backgroundColor: t.bg }]}>
+          <Icon name={icon} size={17} color={t.fg} />
+        </View>
         <Title style={{ flex: 1 }}>{label}</Title>
         {value ? <Mono color={C.textMuted}>{value}</Mono> : null}
         <Icon name="chevron_right" size={19} color={C.faintIcon} />
@@ -287,5 +314,9 @@ const s = StyleSheet.create({
   tileL: { fontFamily: F.mono, fontSize: 9, letterSpacing: 1.2, color: "rgba(251,247,239,0.5)", marginTop: 4 },
   tileRule: { width: 1, backgroundColor: "rgba(251,247,239,0.14)", marginHorizontal: S.md },
   row: { flexDirection: "row", alignItems: "center", gap: S.md, paddingVertical: S.md },
+  rowIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+  },
   rowLabel: { flex: 1, fontFamily: F.bodyBold, fontSize: 16, letterSpacing: -0.1 },
 });

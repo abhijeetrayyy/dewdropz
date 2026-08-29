@@ -73,7 +73,7 @@ export default function CollectionsRow({
             <Link
               key={c.id}
               href={`/collections/${c.slug}`}
-              className="group relative aspect-[4/3] md:aspect-[3/4] lg:aspect-[4/3] rounded-sm overflow-hidden bg-ink"
+              className="group relative aspect-[4/3] md:aspect-[3/4] lg:aspect-[4/3] rounded-[var(--r-card)] overflow-hidden bg-ink"
             >
               {c.image_url && (
                 <Image

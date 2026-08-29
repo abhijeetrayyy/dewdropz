@@ -187,72 +187,15 @@ export async function clearCart(userId?: string | null, sessionId?: string | nul
   return { success: true }
 }
 
-export async function mergeGuestCart(sessionId: string, userId: string) {
-  const supabase = await createServerSupabaseClient()
+// `mergeGuestCart(sessionId, userId)` used to live here. It merged a DATABASE
+// session cart into a user's cart — a flow this storefront never had: the cart
+// lives in localStorage (web) and AsyncStorage (app), and there is no
+// session-id cart row to merge from. Nothing called it, and being exported from
+// actions/index.ts made it a reachable endpoint that did nothing.
+//
+// What actually does this job is `actions/cartAdoption.ts`, which takes the
+// CLIENT's lines on sign-in and unions them with the account's saved cart.
 
-  // Get guest cart
-  const { data: guestCart } = await supabase
-    .from('carts')
-    .select('id')
-    .eq('session_id', sessionId)
-    .single()
-
-  if (!guestCart) return
-
-  // Get user cart
-  const { data: userCart } = await supabase
-    .from('carts')
-    .select('id')
-    .eq('user_id', userId)
-    .single()
-
-  if (userCart) {
-    // Move guest items to user cart
-    const { data: guestItems } = await supabase
-      .from('cart_items')
-      .select('*')
-      .eq('cart_id', guestCart.id)
-
-    if (guestItems) {
-      for (const item of guestItems) {
-        const { data: existing } = await supabase
-          .from('cart_items')
-          .select('id, quantity')
-          .eq('cart_id', userCart.id)
-          .eq('product_id', item.product_id)
-          .eq('variant_id', item.variant_id)
-          .single()
-
-        if (existing) {
-          await supabase
-            .from('cart_items')
-            .update({ quantity: existing.quantity + item.quantity })
-            .eq('id', existing.id)
-        } else {
-          await supabase
-            .from('cart_items')
-            .insert({
-              cart_id: userCart.id,
-              product_id: item.product_id,
-              variant_id: item.variant_id,
-              quantity: item.quantity,
-            })
-        }
-      }
-    }
-
-    // Delete guest cart
-    await supabase.from('carts').delete().eq('id', guestCart.id)
-  } else {
-    // Reassign guest cart to user
-    await supabase
-      .from('carts')
-      .update({ user_id: userId, session_id: null })
-      .eq('id', guestCart.id)
-  }
-
-  revalidatePath('/cart')
-}
 
 export async function getCartTotal(userId?: string | null, sessionId?: string | null) {
   const cart = await getCart(userId, sessionId)

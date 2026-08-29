@@ -336,7 +336,7 @@ export default function CheckoutClient({
                   {addresses.map((a) => (
                     <label
                       key={a.id}
-                      className={`block border rounded-sm p-4 cursor-pointer transition-colors ${selectedAddressId === a.id ? 'border-forest bg-forest/5' : 'border-rule'}`}
+                      className={`block cursor-pointer rounded-[var(--r-card)] border p-4 transition-[border-color,background-color,box-shadow] ${selectedAddressId === a.id ? 'border-forest bg-sage-soft shadow-[var(--shadow-card)]' : 'border-rule bg-surface hover:border-forest/30'}`}
                     >
                       <input
                         type="radio"
@@ -363,17 +363,17 @@ export default function CheckoutClient({
               )}
 
               {addingAddress && (
-                <div className="border border-rule rounded-sm p-5 space-y-3">
+                <div className="space-y-3 rounded-[var(--r-panel)] border border-rule/70 bg-surface p-5 shadow-[var(--shadow-card)]">
                   <div className="grid grid-cols-2 gap-3">
-                    <input value={addressForm.full_name} onChange={(e) => setAddressForm({ ...addressForm, full_name: e.target.value })} placeholder="Full name" className="border border-rule rounded-sm px-3 py-2 text-sm font-body" />
-                    <input value={addressForm.phone} onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })} placeholder="Phone" className="border border-rule rounded-sm px-3 py-2 text-sm font-body" />
+                    <input value={addressForm.full_name} onChange={(e) => setAddressForm({ ...addressForm, full_name: e.target.value })} placeholder="Full name" className="rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
+                    <input value={addressForm.phone} onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })} placeholder="Phone" className="rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
                   </div>
-                  <input value={addressForm.address_line1} onChange={(e) => setAddressForm({ ...addressForm, address_line1: e.target.value })} placeholder="Address line 1" className="w-full border border-rule rounded-sm px-3 py-2 text-sm font-body" />
-                  <input value={addressForm.address_line2} onChange={(e) => setAddressForm({ ...addressForm, address_line2: e.target.value })} placeholder="Address line 2 (optional)" className="w-full border border-rule rounded-sm px-3 py-2 text-sm font-body" />
+                  <input value={addressForm.address_line1} onChange={(e) => setAddressForm({ ...addressForm, address_line1: e.target.value })} placeholder="Address line 1" className="w-full rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
+                  <input value={addressForm.address_line2} onChange={(e) => setAddressForm({ ...addressForm, address_line2: e.target.value })} placeholder="Address line 2 (optional)" className="w-full rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
                   <div className="grid grid-cols-3 gap-3">
-                    <input value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} placeholder="City" className="border border-rule rounded-sm px-3 py-2 text-sm font-body" />
-                    <input value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} placeholder="State" className="border border-rule rounded-sm px-3 py-2 text-sm font-body" />
-                    <input value={addressForm.postal_code} onChange={(e) => setAddressForm({ ...addressForm, postal_code: e.target.value })} placeholder="Pincode" className="border border-rule rounded-sm px-3 py-2 text-sm font-body" />
+                    <input value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} placeholder="City" className="rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
+                    <input value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} placeholder="State" className="rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
+                    <input value={addressForm.postal_code} onChange={(e) => setAddressForm({ ...addressForm, postal_code: e.target.value })} placeholder="Pincode" className="rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15" />
                   </div>
                   <div className="flex gap-3 pt-1">
                     {addresses.length > 0 && (
@@ -395,7 +395,7 @@ export default function CheckoutClient({
                 {(['razorpay', 'cod'] as const).map((method) => (
                   <label
                     key={method}
-                    className={`flex-1 border rounded-sm p-4 cursor-pointer text-center transition-colors ${paymentMethod === method ? 'border-forest bg-forest/5' : 'border-rule'}`}
+                    className={`flex-1 cursor-pointer rounded-[var(--r-card)] border p-4 text-center transition-[border-color,background-color,box-shadow] ${paymentMethod === method ? 'border-forest bg-sage-soft shadow-[var(--shadow-card)]' : 'border-rule bg-surface hover:border-forest/30'}`}
                   >
                     <input type="radio" name="payment" className="hidden" checked={paymentMethod === method} onChange={() => setPaymentMethod(method)} />
                     <span className="font-body text-sm text-text">{method === 'razorpay' ? 'Card / UPI / Netbanking' : 'Cash on Delivery'}</span>
@@ -406,7 +406,7 @@ export default function CheckoutClient({
           </div>
 
           <div className="lg:col-span-1">
-            <div className="border border-rule rounded-lg p-6 sticky top-28">
+            <div className="sticky top-28 rounded-[var(--r-panel)] border border-rule/70 bg-surface p-6 shadow-[var(--shadow-card)]">
               <h2 className="font-body text-[10px] tracking-[0.15em] text-text uppercase mb-4">Order Summary</h2>
               {items.map((item) => (
                 <div key={`${item.slug}-${item.size}`} className="flex items-center justify-between font-body text-sm text-mid py-2">
@@ -446,13 +446,13 @@ export default function CheckoutClient({
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon() } }}
                     placeholder="Coupon code"
                     aria-label="Coupon code"
-                    className="flex-1 min-w-0 border border-rule rounded-sm px-3 py-2 font-body text-sm uppercase tracking-wide placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:border-forest"
+                    className="min-w-0 flex-1 rounded-[var(--r-input)] border border-rule bg-surface px-3 py-2 font-body text-sm uppercase tracking-wide transition-colors placeholder:normal-case placeholder:tracking-normal focus:border-forest focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={applyCoupon}
                     disabled={couponBusy || !couponInput.trim()}
-                    className="px-4 py-2 border border-forest text-forest font-body text-[10px] tracking-[0.12em] uppercase rounded-sm disabled:opacity-40 hover:bg-forest hover:text-paper transition-colors"
+                    className="rounded-[var(--r-input)] border border-forest px-4 py-2 font-body text-[10px] uppercase tracking-[0.12em] text-forest transition-colors hover:bg-forest hover:text-paper disabled:opacity-40"
                   >
                     {couponBusy ? '…' : 'Apply'}
                   </button>
@@ -525,13 +525,17 @@ export default function CheckoutClient({
                 </div>
               )}
 
-              {error && <p className="text-clay text-xs font-body mt-3 mb-1">{error}</p>}
+              {error && (
+                <p role="alert" className="mb-1 mt-3 rounded-[var(--r-input)] border border-clay/30 bg-clay-wash px-3 py-2 font-body text-xs text-clay-deep">
+                  {error}
+                </p>
+              )}
 
               <button
                 type="button"
                 onClick={placeOrder}
                 disabled={placing || quoting || !priced}
-                className="mt-3 w-full bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm hover:bg-forest-mid transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-3 w-full rounded-full bg-forest px-6 py-3.5 font-body text-[10px] font-medium uppercase tracking-[0.12em] text-paper shadow-[var(--shadow-card)] transition-colors duration-300 hover:bg-forest-mid disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {placing
                   ? 'Placing Order…'

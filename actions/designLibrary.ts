@@ -133,17 +133,69 @@ export async function createLibraryDesign(input: {
 
 export async function updateLibraryDesign(
   id: string,
-  patch: Partial<Pick<LibraryDesign, 'name' | 'collection' | 'sort' | 'active'>>
+  patch: Partial<Pick<LibraryDesign, 'name' | 'collection' | 'sort' | 'active' | 'blank_ids'>>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   await requireAdmin()
+
+  // `blank_ids` decides which garments this artwork is offered on, and an empty
+  // array means EVERY garment (094). Two things have to be true before it is
+  // written: the ids must be real customizable blanks, and duplicates must not
+  // accumulate — an array column has no unique constraint to lean on.
+  const clean: Record<string, unknown> = { ...patch }
+  if (patch.blank_ids) {
+    const wanted = [...new Set(patch.blank_ids)]
+    if (wanted.length > 0) {
+      const { data: real } = await createAdminSupabaseClient()
+        .from('products')
+        .select('id')
+        .in('id', wanted)
+        .eq('is_customizable', true)
+        .is('deleted_at', null)
+      const realIds = new Set((real ?? []).map((r) => r.id as string))
+      const unknown = wanted.filter((w) => !realIds.has(w))
+      if (unknown.length > 0) {
+        return { ok: false, error: 'One of those garments is no longer a customizable blank.' }
+      }
+      clean.blank_ids = wanted
+    } else {
+      clean.blank_ids = []
+    }
+  }
+
   const { error } = await createAdminSupabaseClient()
     .from('design_library')
-    .update(patch)
+    .update(clean)
     .eq('id', id)
 
   if (error) return { ok: false, error: error.message }
   revalidateDesignSurfaces()
   return { ok: true }
+}
+
+/**
+ * The blanks an admin can restrict a design to.
+ *
+ * Same filter the storefront and the studio use — customizable, with real
+ * colourways. A blank with no print zones would be an option that changes
+ * nothing, because no studio session can ever be opened on it.
+ */
+export async function getBlanksForDesignScoping(): Promise<
+  { id: string; name: string }[]
+> {
+  await requireAdmin()
+  const { data } = await createAdminSupabaseClient()
+    .from('products')
+    .select('id,name,customization_config')
+    .eq('is_customizable', true)
+    .is('deleted_at', null)
+    .order('name')
+
+  return (data ?? [])
+    .filter((b) => {
+      const cfg = b.customization_config as { colors?: unknown[] } | null
+      return (cfg?.colors?.length ?? 0) > 0
+    })
+    .map(({ id, name }) => ({ id, name: name as string }))
 }
 
 export async function deleteLibraryDesign(

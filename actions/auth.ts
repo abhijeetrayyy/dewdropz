@@ -31,14 +31,17 @@ export async function login(input: LoginInput) {
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors }
 
   const supabase = await createServerSupabaseClient()
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   })
 
   if (error) return { error: error.message }
   revalidatePath('/', 'layout')
-  return { success: true }
+  // The id comes back so the caller can hand the guest cart to the account it
+  // now belongs to — see `adoptLocalCart`. Without it the sign-in form has no
+  // way to name the user it just signed in.
+  return { success: true, userId: data.user?.id ?? null }
 }
 
 export async function logout() {
@@ -140,9 +143,18 @@ export async function getUser() {
   return user
 }
 
-export async function requireAuth() {
+export async function requireAuth(redirectTo?: string) {
   const user = await getUser()
-  if (!user) redirect('/auth/login?redirected=true')
+  if (!user) {
+    // Carry where they were going. Without this the gate sent everybody to
+    // `/auth/login?redirected=true` with no return path, so `safeNext` fell
+    // back to /account and a person who was three items into a cart signed in
+    // and landed on their profile — having to find their own way back to
+    // checkout. LoginForm has read `redirectTo` since launch; nothing was
+    // sending it.
+    const next = redirectTo ? `&redirectTo=${encodeURIComponent(redirectTo)}` : ''
+    redirect(`/auth/login?redirected=true${next}`)
+  }
   return user
 }
 

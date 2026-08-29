@@ -1,54 +1,39 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { X } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ArrowUpDown, Check, SlidersHorizontal, X } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
+import FilterSidebar from '@/components/shop/FilterSidebar'
+import EmptyState from '@/components/ui/empty-state'
 import { BLUR_DATA_URL } from '@/lib/constants'
+import {
+  SORTS, EMPTY_FILTERS, applyFilters, priceBands, groupCategories,
+  stockedCollections, catalogueSizes, filtersToParams, filtersFromParams,
+  countActive, toggle,
+  type ShopFilters, type SortKey,
+} from '@/lib/shop-filter'
 import type { ProductWithCollection, Collection, Category } from '@/types/database'
 
 // ── The shop ─────────────────────────────────────────────────────────────────
-// Built for the catalogue this is becoming — bottles, mugs, packs, many
-// collections — not for the three blanks that happen to be in it today.
 //
-// The rail this replaces was a 280px sidebar of radio lists plus a modal for
-// phones. That shape gets worse as a catalogue grows: it costs a column on every
-// screen, it hides the choices behind a button on the device most people shop
-// on, and it can only ever be a flat list. Filtering lives across the top now —
-// chips a thumb can reach, the same control on every breakpoint, and it stays
-// legible whether there are four categories or forty.
+// A left rail, per the brief. Two things make it worth the column it costs.
 //
-// Everything here is driven by what is actually in the backend. Categories and
-// collections with nothing behind them never render, so a control can never
-// promise a result it cannot deliver; the moment stock is attached they appear
-// on their own, with no change here.
-
-type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'newest'
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'featured', label: 'Featured' },
-  { key: 'newest', label: 'Newest' },
-  { key: 'price-asc', label: 'Price ↑' },
-  { key: 'price-desc', label: 'Price ↓' },
-]
-
-/** Price bands, derived from the catalogue rather than hardcoded, so they stay
- *  meaningful when a ₹399 bottle and a ₹4,000 shell are both on the shelf. */
-function priceBands(products: ProductWithCollection[]) {
-  if (products.length < 4) return []
-  const prices = products.map((p) => p.price).sort((a, b) => a - b)
-  const lo = prices[Math.floor(prices.length / 3)]
-  const hi = prices[Math.floor((prices.length * 2) / 3)]
-  const r = (paise: number) => Math.round(paise / 100)
-  if (r(lo) === r(hi)) return []
-  return [
-    { key: 'low', label: `Under ₹${r(lo).toLocaleString('en-IN')}`, test: (p: number) => p < lo },
-    { key: 'mid', label: `₹${r(lo).toLocaleString('en-IN')} – ₹${r(hi).toLocaleString('en-IN')}`, test: (p: number) => p >= lo && p <= hi },
-    { key: 'high', label: `Over ₹${r(hi).toLocaleString('en-IN')}`, test: (p: number) => p > hi },
-  ]
-}
+// It holds still. Every facet is visible at once, with its values and its
+// counts, so choosing is reading rather than opening — which is the argument a
+// disclosure bar can never win once a catalogue has five dimensions.
+//
+// And it is the same control on a phone. The rail moves into a sheet rather
+// than becoming a different, simpler thing, because the device most people shop
+// on should not get the weaker instrument.
+//
+// The filtering itself lives in `lib/shop-filter.ts` as pure functions with 37
+// tests behind them; this file is layout and state. The URL remains the single
+// source of truth — there is no local mirror to fall out of step, the back
+// button works because it changes the thing being read, and a filtered shop is
+// shareable by construction.
 
 export default function ShopContent({
   products,
@@ -59,113 +44,111 @@ export default function ShopContent({
   collections: Collection[]
   categories: Category[]
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
-  const categoryParam = searchParams.get('category')
-  const collectionParam = searchParams.get('collection')
 
-  // Only ever offer a filter that can return something.
-  const stockedCategories = useMemo(
-    () => categories.filter((c) => products.some((p) => p.categories?.some((pc) => pc.category_id === c.id))),
-    [categories, products]
-  )
-
-  // Grouped under their department, because that is how the range is organised
-  // now: Apparel and Drinkware, each holding its garments. A flat row of chips
-  // reads as a pile of unrelated tags once there is more than a handful, and
-  // the brief asks for the two departments explicitly.
-  //
-  // Parents are found by id from the full list, not from `stockedCategories` —
-  // a department has no products of its own, so it never survives the stocked
-  // filter and would otherwise lose its label. Sorted by the sort_order the
-  // migration set, so the row reads T-Shirts, Hoodies, Sweatshirts rather than
-  // alphabetically.
-  const categoryGroups = useMemo(() => {
-    const byParent = new Map<string, { heading: string; order: number; items: Category[] }>()
-    const ungrouped: Category[] = []
-
-    for (const c of stockedCategories) {
-      const parent = c.parent_id ? categories.find((p) => p.id === c.parent_id) : null
-      if (!parent) { ungrouped.push(c); continue }
-      const g = byParent.get(parent.id) ?? { heading: parent.name, order: parent.sort_order ?? 0, items: [] }
-      g.items.push(c)
-      byParent.set(parent.id, g)
-    }
-
-    const groups = [...byParent.values()].sort((a, b) => a.order - b.order)
-    for (const g of groups) g.items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    // Anything with no department still gets shown, under no heading, so a
-    // category added in admin without a parent cannot silently disappear.
-    if (ungrouped.length) groups.push({ heading: '', order: 99, items: ungrouped })
-    return groups
-  }, [stockedCategories, categories])
-  const stockedCollections = useMemo(
-    () => collections.filter((c) => products.some((p) => p.collection?.slug === c.slug)),
-    [collections, products]
-  )
-
-  const [category, setCategory] = useState<string>(
-    stockedCategories.some((c) => c.slug === categoryParam) ? categoryParam! : 'all'
-  )
-  const [collection, setCollection] = useState<string>(
-    stockedCollections.some((c) => c.slug === collectionParam) ? collectionParam! : 'all'
-  )
-  const [band, setBand] = useState<string>('all')
-  const [sort, setSort] = useState<SortKey>('featured')
+  const filters = useMemo<ShopFilters>(() => filtersFromParams(searchParams), [searchParams])
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
 
   const bands = useMemo(() => priceBands(products), [products])
+  const groups = useMemo(() => groupCategories(products, categories), [products, categories])
+  const stockedCols = useMemo(() => stockedCollections(products, collections), [products, collections])
+  const sizes = useMemo(() => catalogueSizes(products), [products])
+  const ctx = useMemo(() => ({ categories, bands }), [categories, bands])
 
-  const countFor = (predicate: (p: ProductWithCollection) => boolean) => products.filter(predicate).length
+  const filtered = useMemo(() => applyFilters(products, filters, ctx), [products, filters, ctx])
+  const activeCount = countActive(filters)
 
-  const filtered = useMemo(() => {
-    const activeBand = bands.find((b) => b.key === band)
-    const out = products.filter((p) => {
-      const okCategory =
-        category === 'all' ||
-        p.categories?.some((pc) => stockedCategories.find((c) => c.id === pc.category_id)?.slug === category)
-      const okCollection = collection === 'all' || p.collection?.slug === collection
-      const okBand = !activeBand || activeBand.test(p.price)
-      return okCategory && okCollection && okBand
-    })
+  const commit = useCallback(
+    (next: ShopFilters) => {
+      const qs = filtersToParams(next).toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    },
+    [router, pathname]
+  )
 
-    const sorted = [...out]
-    if (sort === 'price-asc') sorted.sort((a, b) => a.price - b.price)
-    if (sort === 'price-desc') sorted.sort((a, b) => b.price - a.price)
-    if (sort === 'newest')
-      sorted.sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
-    return sorted
-  }, [products, stockedCategories, category, collection, band, bands, sort])
+  const toggleValue = (dimension: 'categories' | 'collections' | 'bands' | 'sizes', value: string) =>
+    commit({ ...filters, [dimension]: toggle(filters[dimension], value) })
+
+  const clearAll = () => commit({ ...EMPTY_FILTERS, sort: filters.sort })
+
+  // A sheet that traps the page behind it must not let that page scroll, and it
+  // must close on Escape like every other dismissible thing on the site.
+  useEffect(() => {
+    if (!sheetOpen) return
+    const prior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSheetOpen(false)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prior
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [sheetOpen])
+
+  useEffect(() => {
+    if (!sortOpen) return
+    const onDown = () => setSortOpen(false)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSortOpen(false)
+    document.addEventListener('click', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('click', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [sortOpen])
 
   const activeChips = [
-    category !== 'all' && {
-      label: stockedCategories.find((c) => c.slug === category)?.name ?? category,
-      clear: () => setCategory('all'),
-    },
-    collection !== 'all' && {
-      label: stockedCollections.find((c) => c.slug === collection)?.name ?? collection,
-      clear: () => setCollection('all'),
-    },
-    band !== 'all' && { label: bands.find((b) => b.key === band)?.label ?? '', clear: () => setBand('all') },
-  ].filter(Boolean) as { label: string; clear: () => void }[]
+    ...filters.categories.map((slug) => ({
+      key: `c:${slug}`,
+      label: categories.find((c) => c.slug === slug)?.name ?? slug,
+      clear: () => toggleValue('categories', slug),
+    })),
+    ...filters.collections.map((slug) => ({
+      key: `k:${slug}`,
+      label: collections.find((c) => c.slug === slug)?.name ?? slug,
+      clear: () => toggleValue('collections', slug),
+    })),
+    ...filters.bands.map((key) => ({
+      key: `b:${key}`,
+      label: bands.find((b) => b.key === key)?.label ?? key,
+      clear: () => toggleValue('bands', key),
+    })),
+    ...filters.sizes.map((size) => ({
+      key: `s:${size}`,
+      label: `Size ${size}`,
+      clear: () => toggleValue('sizes', size),
+    })),
+    ...(filters.inStock
+      ? [{ key: 'stock', label: 'In stock', clear: () => commit({ ...filters, inStock: false }) }]
+      : []),
+  ]
 
-  function clearAll() {
-    setCategory('all')
-    setCollection('all')
-    setBand('all')
-  }
-
-  const chip = (active: boolean) =>
-    `whitespace-nowrap rounded-full border px-4 py-2 font-body text-[11px] uppercase tracking-[0.1em] transition-colors duration-200 ${
-      active
-        ? 'border-forest bg-forest text-paper'
-        : 'border-rule text-mid hover:border-forest hover:text-forest'
-    }`
+  const rail = (
+    <FilterSidebar
+      products={products}
+      filters={filters}
+      ctx={ctx}
+      groups={groups}
+      collections={stockedCols}
+      bands={bands}
+      sizes={sizes}
+      onToggle={toggleValue}
+      onSetInStock={(next) => commit({ ...filters, inStock: next })}
+      onClear={clearAll}
+      activeCount={activeCount}
+    />
+  )
 
   return (
-    <main className="min-h-screen bg-paper pt-32">
-      <div className="mx-auto max-w-7xl px-6 pb-24 md:px-10">
-        {/* Masthead. Short, because a shop is for scanning — the facts under it
-            are read from the catalogue so they cannot drift as stock lands. */}
-        <div className="border-b border-rule pb-8">
+    <main className="min-h-screen bg-paper-warm">
+      {/* ── Masthead ─────────────────────────────────────────────────────────
+          On its own ground, so the catalogue below reads as a separate thing
+          rather than a continuation of the copy. */}
+      <div className="bg-paper pt-32">
+        <div className="mx-auto max-w-[1400px] px-6 pb-10 md:px-10">
           <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-forest">
             Made to order · Printed in Dehradun
           </p>
@@ -177,9 +160,7 @@ export default function ShopContent({
           </p>
           {products.length > 0 && (
             <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-mono text-[10px] uppercase tracking-[0.18em] text-mid">
-              <span>
-                {products.length} {products.length === 1 ? 'piece' : 'pieces'}
-              </span>
+              <span>{products.length} {products.length === 1 ? 'piece' : 'pieces'}</span>
               <span>
                 ₹{Math.round(Math.min(...products.map((p) => p.price)) / 100).toLocaleString('en-IN')} — ₹
                 {Math.round(Math.max(...products.map((p) => p.price)) / 100).toLocaleString('en-IN')}
@@ -189,55 +170,48 @@ export default function ShopContent({
           )}
         </div>
 
-        {/* Browse by world before browsing by filter. Collections carry real
-            photography, so they are the one part of this page that can sell
-            something on its own — a filter chip never will. Hidden entirely
-            until collections actually hold stock. */}
-        {stockedCollections.length > 0 && (
-          <div className="mt-12">
-            <div className="mb-4 flex items-baseline justify-between">
+        {/* Collections stay: they are the one control on this page that can
+            actually sell, because they carry photography. Wired to the same
+            state as the rail, so a tile and its checkbox always agree. */}
+        {stockedCols.length > 0 && (
+          <div className="mx-auto max-w-[1400px] px-6 pb-12 md:px-10">
+            <div className="mb-3 flex items-baseline justify-between">
               <h2 className="font-mono text-[10px] uppercase tracking-[0.24em] text-mid">Collections</h2>
-              {collection !== 'all' && (
+              {filters.collections.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setCollection('all')}
+                  onClick={() => commit({ ...filters, collections: [] })}
                   className="font-mono text-[10px] uppercase tracking-[0.18em] text-forest hover:underline"
                 >
                   Show all
                 </button>
               )}
             </div>
-            {/* Columns follow how many collections there actually are, capped
-                at four. Hardcoded `lg:grid-cols-4` against a catalogue of three
-                left a dead fourth cell on every desktop view, and squeezed the
-                three that exist into a third of the width they had earned. */}
-            <div
-              className={`grid gap-3 ${
-                stockedCollections.length <= 2
-                  ? 'grid-cols-2'
-                  : stockedCollections.length === 3
-                    ? 'grid-cols-2 md:grid-cols-3'
-                    : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-              }`}
-            >
-              {stockedCollections.map((c) => {
-                const on = collection === c.slug
+            {/* A wide, shallow plate. The tall portrait tiles this replaces
+                pushed the actual catalogue a full screen down the page. */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {stockedCols.map((c) => {
+                const on = filters.collections.includes(c.slug)
+                const n = products.filter((p) => p.collection?.slug === c.slug).length
                 return (
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setCollection(on ? 'all' : c.slug)}
+                    onClick={() => toggleValue('collections', c.slug)}
                     aria-pressed={on}
-                    className={`group relative aspect-[4/5] overflow-hidden rounded-[var(--r-card)] border text-left transition-colors duration-300 ${
-                      on ? 'border-forest' : 'border-transparent hover:border-rule'
-                    }`}
+                    className={cnx(
+                      'group relative aspect-[16/10] overflow-hidden rounded-[var(--r-card)] border text-left transition-[border-color,box-shadow] duration-300',
+                      on
+                        ? 'border-forest shadow-[var(--shadow-lift)]'
+                        : 'border-transparent hover:border-rule hover:shadow-[var(--shadow-card)]'
+                    )}
                   >
                     {c.image_url ? (
                       <Image
                         src={c.image_url}
                         alt=""
                         fill
-                        sizes="(min-width:1024px) 300px, 45vw"
+                        sizes="(min-width:1024px) 320px, 45vw"
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
                         className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
@@ -245,11 +219,16 @@ export default function ShopContent({
                     ) : (
                       <span className="absolute inset-0" style={{ background: c.gradient ?? '#2A3B31' }} />
                     )}
-                    <span className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent" />
-                    <span className="absolute inset-x-0 bottom-0 p-4">
-                      <span className="block font-display text-lg leading-tight text-paper">{c.name}</span>
-                      <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.14em] text-paper/60">
-                        {countFor((p) => p.collection?.slug === c.slug)} pieces
+                    <span className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
+                    {on && (
+                      <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-forest text-paper">
+                        <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
+                      </span>
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 p-3.5">
+                      <span className="block font-display text-[17px] leading-tight text-paper">{c.name}</span>
+                      <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.14em] text-paper/60">
+                        {n} {n === 1 ? 'piece' : 'pieces'}
                       </span>
                     </span>
                   </button>
@@ -258,168 +237,164 @@ export default function ShopContent({
             </div>
           </div>
         )}
+      </div>
 
-        {/* The control bar. Sticky, because on a long grid the filters have to
-            stay in reach — and identical on every breakpoint, so a phone is not
-            sent to a modal to do what a desktop does inline. */}
-        <div className="sticky top-14 z-30 -mx-6 mt-12 border-y border-rule bg-paper/95 px-6 py-3 backdrop-blur-sm md:-mx-10 md:px-10">
-          {/* The chips scroll; the sort control does NOT.
-              It used to: everything below lived in one `overflow-x-auto` row
-              with the sort group pushed to its far end by `ml-auto`. On a phone
-              that put "3 results" and the sort dropdown roughly 300px past the
-              right edge, reachable only by dragging the chip strip sideways
-              first — so on the device most people shop on, sorting was
-              effectively hidden. They are siblings now: the chip rail takes the
-              free space and scrolls inside it (`min-w-0` so it is allowed to
-              shrink below its content), and sort keeps a fixed seat on screen. */}
-          <div className="flex items-center gap-4">
-            <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {stockedCategories.length > 0 && (
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setCategory('all')} className={chip(category === 'all')}>
-                  All Products
+      {/* ── Rail + results ───────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-[1400px] px-6 pb-24 pt-10 md:px-10">
+        <div className="lg:grid lg:grid-cols-[264px_1fr] lg:gap-10">
+          {/* Sticky, and scrollable within its own height so a long facet list
+              never runs past the bottom of the viewport with no way to reach it. */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto [scrollbar-width:thin]">
+              {rail}
+            </div>
+          </aside>
+
+          <div className="min-w-0">
+            {/* Results bar */}
+            <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-rule pb-4">
+              <button
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-rule bg-surface px-4 font-body text-[11px] uppercase tracking-[0.1em] text-text shadow-[var(--shadow-card)] transition-colors hover:border-forest lg:hidden"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+                Filter
+                {activeCount > 0 && (
+                  <span className="rounded-full bg-forest px-1.5 py-0.5 font-mono text-[9px] text-paper">
+                    {activeCount}
+                  </span>
+                )}
+              </button>
+
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid">
+                {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
+                {activeCount > 0 && products.length !== filtered.length && (
+                  <span className="text-light"> of {products.length}</span>
+                )}
+              </span>
+
+              <div className="relative ml-auto" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setSortOpen(!sortOpen)}
+                  aria-expanded={sortOpen}
+                  className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-rule bg-surface px-4 font-body text-[11px] uppercase tracking-[0.1em] text-text transition-colors hover:border-forest"
+                >
+                  <ArrowUpDown className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />
+                  <span className="hidden sm:inline">{SORTS.find((s) => s.key === filters.sort)?.label}</span>
+                  <span className="sm:hidden">Sort</span>
                 </button>
-                {categoryGroups.map((group, gi) => (
+                {sortOpen && (
                   <div
-                    key={group.heading || `ungrouped-${gi}`}
-                    className="flex items-center gap-2 border-l border-rule pl-4"
+                    role="listbox"
+                    className="absolute right-0 top-full z-40 mt-2 w-56 overflow-hidden rounded-[var(--r-panel)] border border-rule bg-surface py-1 shadow-[var(--shadow-panel)]"
                   >
-                    {group.heading && (
-                      <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.18em] text-mid/70">
-                        {group.heading}
-                      </span>
-                    )}
-                    {group.items.map((c) => (
+                    {SORTS.map((s) => (
                       <button
-                        key={c.id}
+                        key={s.key}
                         type="button"
-                        onClick={() => setCategory(category === c.slug ? 'all' : c.slug)}
-                        className={chip(category === c.slug)}
+                        role="option"
+                        aria-selected={filters.sort === s.key}
+                        onClick={() => { commit({ ...filters, sort: s.key as SortKey }); setSortOpen(false) }}
+                        className={cnx(
+                          'flex w-full items-center gap-2 px-4 py-2.5 text-left font-body text-[13px] transition-colors',
+                          filters.sort === s.key
+                            ? 'bg-sage-soft text-forest'
+                            : 'text-mid hover:bg-paper-warm hover:text-text'
+                        )}
                       >
-                        {c.name}
-                        <span className="ml-2 opacity-50">
-                          {countFor((p) => !!p.categories?.some((pc) => pc.category_id === c.id))}
-                        </span>
+                        <Check
+                          className={cnx('h-3.5 w-3.5 shrink-0', filters.sort === s.key ? 'opacity-100' : 'opacity-0')}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        {s.label}
                       </button>
                     ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </div>
 
-            {bands.length > 0 && (
-              <div className="flex items-center gap-2 border-l border-rule pl-4">
-                {bands.map((b) => (
+            {/* What is currently narrowing the list. The rail already shows it,
+                but next to the grid is where you are looking when you wonder
+                why something is missing. */}
+            {activeChips.length > 0 && (
+              <div className="mb-6 flex flex-wrap items-center gap-2">
+                {activeChips.map((chip) => (
                   <button
-                    key={b.key}
+                    key={chip.key}
                     type="button"
-                    onClick={() => setBand(band === b.key ? 'all' : b.key)}
-                    className={chip(band === b.key)}
+                    onClick={chip.clear}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-sage-soft px-3 py-1.5 font-body text-[11px] text-forest transition-colors hover:bg-forest hover:text-paper"
                   >
-                    {b.label}
+                    {chip.label}
+                    <X className="h-3 w-3" aria-hidden="true" />
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="ml-1 font-mono text-[10px] uppercase tracking-[0.16em] text-light transition-colors hover:text-forest"
+                >
+                  Clear all
+                </button>
               </div>
             )}
 
-            </div>
-
-            <div className="flex flex-shrink-0 items-center gap-3 border-l border-rule pl-4">
-              <span className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.16em] text-mid">
-                {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
-              </span>
-              <select
-                id="shop-sort"
-                aria-label="Sort products"
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                className="cursor-pointer rounded-full border border-rule bg-paper px-3 py-2 font-body text-[11px] uppercase tracking-[0.1em] text-text transition-colors hover:border-forest focus:border-forest focus:outline-none"
-              >
-                {SORTS.map((s) => (
-                  <option key={s.key} value={s.key}>
-                    {s.label}
-                  </option>
+            {filtered.length > 0 ? (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 xl:grid-cols-3">
+                {filtered.map((p) => (
+                  <ProductCard key={p.slug} product={p} />
                 ))}
-              </select>
-            </div>
+              </div>
+            ) : (
+              <NoResults products={products} filters={filters} ctx={ctx} onClear={clearAll} onRelax={commit} />
+            )}
           </div>
-
-          {/* What is currently narrowing the list, and how to undo it — the old
-              rail gave no way to see or remove one filter at a time. */}
-          {activeChips.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {activeChips.map((c) => (
-                <button
-                  key={c.label}
-                  type="button"
-                  onClick={c.clear}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-forest/10 px-3 py-1.5 font-body text-[11px] text-forest transition-colors hover:bg-forest/20"
-                >
-                  {c.label}
-                  <X className="h-3 w-3" />
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={clearAll}
-                className="font-mono text-[10px] uppercase tracking-[0.16em] text-mid hover:text-forest"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
         </div>
-
-        {/* The column count is capped by how many pieces are actually being
-            shown. A fixed `xl:grid-cols-4` against today's catalogue of three
-            drew three small cards and a hole where the fourth should be, on the
-            widest screens — which is most of why this page read as empty. Four
-            columns are still there the moment there are enough pieces to fill
-            them, so this does not trade the future catalogue away for today's;
-            it just stops advertising the gap. */}
-        {filtered.length > 0 ? (
-          <div
-            className={`mt-10 grid gap-x-4 gap-y-10 sm:gap-x-6 ${
-              filtered.length <= 2
-                ? 'grid-cols-2'
-                : filtered.length === 3
-                  ? 'grid-cols-2 lg:grid-cols-3'
-                  : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-            }`}
-          >
-            {filtered.map((p) => (
-              <ProductCard key={p.slug} product={p} />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-10 rounded-sm border border-dashed border-rule py-20 text-center">
-            <p className="font-body text-mid">Nothing matches that combination.</p>
-            <button
-              type="button"
-              onClick={clearAll}
-              className="mt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-forest hover:underline"
-            >
-              Clear filters
-            </button>
-          </div>
-        )}
-
       </div>
 
-      {/* The shop's own argument, at the end of the scroll where a grid would
-          otherwise just stop.
-          
-          Full-bleed and on the dark ground, which is the point: everything
-          above it — masthead, collections, filter bar, grid — sits on one
-          continuous sheet of `paper`, so the page ran top to bottom as a single
-          cream slab and the closing pitch read as one more row of it. The
-          homepage already alternates paper against forest to mark where one
-          idea ends and the next begins; the shop just never did. This is the
-          same device, used once, at the one place the page changes subject:
-          from what we made to what you can make. */}
+      {/* ── The phone's rail ───────────────────────────────────────────────
+          The same component in a sheet, not a reduced version of it. */}
+      {sheetOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <button
+            type="button"
+            aria-label="Close filters"
+            onClick={() => setSheetOpen(false)}
+            className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
+          />
+          <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm flex-col bg-paper-warm shadow-[var(--shadow-float)]">
+            <div className="flex items-center justify-between border-b border-rule bg-surface px-4 py-3">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-text">Filter</span>
+              <button
+                type="button"
+                onClick={() => setSheetOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-mid transition-colors hover:bg-paper-warm hover:text-text"
+                aria-label="Close filters"
+              >
+                <X className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">{rail}</div>
+            <div className="border-t border-rule bg-surface p-3">
+              <button
+                type="button"
+                onClick={() => setSheetOpen(false)}
+                className="w-full rounded-full bg-forest py-3 font-body text-[11px] font-medium uppercase tracking-[0.14em] text-paper transition-colors hover:bg-forest-mid"
+              >
+                Show {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {products.some((p) => p.is_customizable) && (
         <section className="bg-forest-deep">
-          <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-16 md:px-10 md:py-20 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-8 px-6 py-16 sm:flex-row sm:items-end sm:justify-between md:px-10 md:py-20">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-dawn">Made yours</p>
               <p className="mt-4 max-w-md font-display text-[clamp(26px,3vw,40px)] font-light leading-tight text-paper">
@@ -439,5 +414,68 @@ export default function ShopContent({
         </section>
       )}
     </main>
+  )
+}
+
+/** Local class joiner — this file has no other need for `cn`'s tailwind-merge. */
+function cnx(...parts: (string | false | undefined)[]) {
+  return parts.filter(Boolean).join(' ')
+}
+
+// ── Nothing matched ──────────────────────────────────────────────────────────
+function NoResults({
+  products,
+  filters,
+  ctx,
+  onClear,
+  onRelax,
+}: {
+  products: ProductWithCollection[]
+  filters: ShopFilters
+  ctx: { categories: Category[]; bands: ReturnType<typeof priceBands> }
+  onClear: () => void
+  onRelax: (next: ShopFilters) => void
+}) {
+  // Which single filter is responsible? Drop one dimension at a time and see
+  // which removal brings results back. If exactly one does, it can be named.
+  const culprit = useMemo(() => {
+    const dims: { key: keyof ShopFilters; label: string }[] = [
+      { key: 'categories', label: 'category' },
+      { key: 'collections', label: 'collection' },
+      { key: 'bands', label: 'price' },
+      { key: 'sizes', label: 'size' },
+      { key: 'inStock', label: 'in-stock' },
+    ]
+    const rescuers = dims.filter((d) => {
+      const active = d.key === 'inStock' ? filters.inStock : (filters[d.key] as string[]).length > 0
+      if (!active) return false
+      const relaxed = { ...filters, [d.key]: d.key === 'inStock' ? false : [] } as ShopFilters
+      return applyFilters(products, relaxed, ctx).length > 0
+    })
+    return rescuers.length === 1 ? rescuers[0] : null
+  }, [products, filters, ctx])
+
+  return (
+    <EmptyState
+      title="Nothing matches that combination."
+      body={
+        culprit
+          ? `Everything else you have chosen has pieces behind it — it is the ${culprit.label} filter that empties the shelf.`
+          : 'Try widening one of the filters, or start again.'
+      }
+      secondary={
+        culprit
+          ? {
+              label: `Drop the ${culprit.label} filter`,
+              onClick: () =>
+                onRelax({
+                  ...filters,
+                  [culprit.key]: culprit.key === 'inStock' ? false : [],
+                } as ShopFilters),
+            }
+          : { label: 'Clear all filters', onClick: onClear }
+      }
+      action={{ label: 'See everything', href: '/shop' }}
+    />
   )
 }

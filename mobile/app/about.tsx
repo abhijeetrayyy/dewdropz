@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { router } from "expo-router";
 import { ScreenHeader } from "@/components/editorial/ScreenHeader";
 import { StatusCap } from "@/components/ui/StatusCap";
@@ -23,6 +24,11 @@ import { C, S } from "@/lib/theme";
 // founder note, values, timeline, sustainability link — which is a well-built
 // narrative that mobile simply never had access to.
 export default function AboutScreen() {
+  // The header is a SIBLING of the scroll view, not a child, and reads the
+  // offset through `scrollY`. Inside it, the whole panel — back button and
+  // all — scrolled away and left no way back.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
   return (
     <View style={s.root}>
       <StatusCap />
@@ -30,12 +36,14 @@ export default function AboutScreen() {
           collection, article). expo-status-bar is last-mount-wins, so
           without an explicit dark style here the light glyphs set by the
           pushing screen persist and the clock vanishes into the paper. */}
-      <ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false}>
-        <ScreenHeader
-          eyebrow="Our story"
-          title="Built on a foggy ridgeline."
-          lede="DEWDROPZ started as three trekking guides fixing the gear that kept failing their clients. Seven years later, the philosophy hasn't moved an inch."
-        />
+      <ScreenHeader
+        eyebrow="Our story"
+        title="Built on a foggy ridgeline."
+        lede="DEWDROPZ started as three trekking guides fixing the gear that kept failing their clients. Seven years later, the philosophy hasn't moved an inch."
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Figure
@@ -126,7 +134,7 @@ export default function AboutScreen() {
             <Mono color={C.textFaint}>{SITE.coords}</Mono>
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

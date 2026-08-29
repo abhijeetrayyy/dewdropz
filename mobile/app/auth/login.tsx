@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { afterAuth, goBack } from "@/lib/nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/stores/auth";
 import { Button } from "@/components/Button";
@@ -17,6 +18,8 @@ import { C, F, R, S } from "@/lib/theme";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
+  // Where the person was heading before they were asked to sign in.
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const { signIn, resetPassword } = useAuthStore();
   const insets = useSafeAreaInsets();
   const { width: SCREEN_W } = useWindowDimensions();
@@ -69,7 +72,7 @@ export default function LoginScreen() {
       haptics.error();
     } else {
       haptics.success();
-      router.back();
+      afterAuth(next);
     }
   }
 
@@ -96,7 +99,7 @@ export default function LoginScreen() {
             name="arrow_back"
             tone="glass"
             accessibilityLabel="Back"
-            onPress={() => router.back()}
+            onPress={() => goBack("/(tabs)/account")}
           />
           <TouchableOpacity
             onPress={() => router.replace("/(tabs)")}
@@ -170,7 +173,7 @@ export default function LoginScreen() {
 
         <View style={s.switchRow}>
           <Text style={s.switchT}>New here?</Text>
-          <Button title="Create an account" variant="link" onPress={() => router.push("/auth/signup")} />
+          <Button title="Create an account" variant="link" onPress={() => router.push(next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup")} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

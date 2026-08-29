@@ -273,6 +273,13 @@ export interface Product {
   story_blocks: { images: string[]; heading: string; body: string }[]
   is_customizable: boolean
   customization_config: CustomizationConfig | null
+  /** Ticked in admin: this finished, already-printed garment belongs to the
+   *  custom range, so its page offers the studio. This alone is the switch. */
+  is_custom_range: boolean
+  /** Optional parent: the customizable blank it was printed on. Null is normal
+   *  and means "that garment is not in the studio" — the storefront then offers
+   *  the blanks that are, rather than a dead link. See migration 095. */
+  custom_blank_id: string | null
   is_featured: boolean
   is_active: boolean
   status: 'draft' | 'active' | 'archived'
@@ -691,6 +698,9 @@ export interface LibraryDesign {
   collection: string
   sort: number
   active: boolean
+  /** Blanks this artwork is offered on. EMPTY MEANS EVERY BLANK — the default,
+   *  so adding a design needs no decision about garments. */
+  blank_ids: string[]
   created_at: string
 }
 
@@ -964,4 +974,113 @@ export interface ShippingRate {
 
 export interface ShippingZoneWithRates extends ShippingZone {
   rates: ShippingRate[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rentals (migration 096)
+//
+// Gear that is hired rather than sold. Deliberately its own set of tables:
+// availability is a calendar, not a stock count, and a hire is a supply of
+// SERVICE under SAC — taxed at its own rate — rather than goods under HSN.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RentalItem {
+  id: string
+  slug: string
+  name: string
+  summary: string | null
+  description: string | null
+  images: string[]
+  /** Paise per day. */
+  daily_rate: number
+  /** Refundable security, in paise. Never taxed — it is not consideration. */
+  deposit: number
+  /** Applied to hires of 7 days or more, so one rate stays the only rate. */
+  weekly_discount_pct: number
+  min_days: number
+  max_days: number
+  /** Days a unit is held back after return for cleaning and drying. */
+  buffer_days: number
+  sac_code: string | null
+  gst_rate: number
+  allows_pickup: boolean
+  allows_shipping: boolean
+  is_active: boolean
+  sort: number
+  created_at: string
+  updated_at: string
+  /** The same gear, to own. NULL for kits and bundles we assemble but do not
+   *  sell. Never a stock link — selling is governed by inventory_quantity,
+   *  lending by rental_units. See migration 098. */
+  product?: { slug: string; name: string; price: number; inventory_quantity: number | null } | null
+}
+
+export interface RentalUnit {
+  id: string
+  item_id: string
+  /** What is written on the tag, so a person and the database agree. */
+  code: string
+  condition: 'good' | 'fair' | 'repair' | 'retired'
+  notes: string | null
+  acquired_at: string
+  retired_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RentalBooking {
+  id: string
+  booking_number: string
+  user_id: string | null
+  email: string
+  phone: string | null
+  fulfilment: 'pickup' | 'ship'
+  address: Json | null
+  pickup_slot: string | null
+  status: 'reserved' | 'out' | 'returned' | 'closed' | 'cancelled'
+  rent_amount: number
+  delivery_amount: number
+  tax_amount: number
+  deposit_amount: number
+  late_fee: number
+  damage_fee: number
+  total_amount: number
+  deposit_state: 'pending' | 'held' | 'refunded' | 'forfeited' | 'waived'
+  notes: string | null
+  admin_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RentalReservation {
+  id: string
+  booking_id: string
+  item_id: string
+  unit_id: string
+  starts_on: string
+  ends_on: string
+  status: 'reserved' | 'out' | 'returned' | 'cancelled'
+  daily_rate: number
+  days: number
+  rent_amount: number
+  deposit: number
+  returned_at: string | null
+  created_at: string
+  updated_at: string
+  item?: Pick<RentalItem, 'name' | 'slug' | 'images'>
+  unit?: Pick<RentalUnit, 'code'>
+}
+
+export interface RentalEvent {
+  id: string
+  booking_id: string
+  reservation_id: string | null
+  kind:
+    | 'created' | 'deposit_held' | 'handed_over' | 'returned' | 'inspected'
+    | 'late_fee' | 'damage_fee' | 'deposit_refunded' | 'deposit_forfeited'
+    | 'cancelled' | 'note'
+  amount: number | null
+  note: string | null
+  actor_id: string | null
+  created_at: string
 }

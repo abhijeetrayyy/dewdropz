@@ -6,6 +6,10 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Node 24 runs the test files directly (`npm test`, no bundler), and its
+    // TypeScript loader requires explicit `.ts` on relative imports. Safe here
+    // because noEmit is true — nothing is compiled out of this config.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

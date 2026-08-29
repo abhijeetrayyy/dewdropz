@@ -1,5 +1,6 @@
 import { useWindowDimensions, ScrollView, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/nav";
 import { Img as Image } from "@/components/ui/Img";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,7 +56,7 @@ export default function TrailDetailScreen() {
             style={StyleSheet.absoluteFill}
           />
           <View style={[s.back, { top: insets.top + 6 }]}>
-            <IconButton name="arrow_back" onPress={() => router.back()} tone="glass" />
+            <IconButton name="arrow_back" onPress={() => goBack("/trails")} tone="glass" />
           </View>
           <View style={s.heroFoot}>
             <Mono color="rgba(255,255,255,0.78)">{trail.region.toUpperCase()}</Mono>

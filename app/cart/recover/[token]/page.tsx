@@ -21,7 +21,7 @@ export default async function RecoverCartPage({ params }: { params: Promise<{ to
         </p>
         <Link
           href="/shop"
-          className="mt-8 bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-sm"
+          className="mt-8 bg-forest text-paper px-6 py-3.5 text-[10px] tracking-[0.12em] uppercase font-body font-medium rounded-full"
         >
           Browse the shop
         </Link>

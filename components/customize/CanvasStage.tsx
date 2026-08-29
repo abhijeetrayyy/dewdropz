@@ -136,10 +136,10 @@ export default function CanvasStage({
           object on a surface rather than as a rectangle pasted over a hole —
           which is what a 10%-opacity ring on a flat black ground gave. */}
       <div
-        className="relative overflow-hidden rounded-lg shadow-[0_24px_70px_-24px_rgba(0,0,0,0.9)] ring-1 ring-[rgba(237,239,232,0.14)]"
+        className="relative overflow-hidden rounded-[var(--r-panel)] shadow-[0_24px_70px_-24px_rgba(0,0,0,0.9)] ring-1 ring-[rgba(237,239,232,0.14)]"
         style={{ width: scale > 0 ? CANONICAL_WIDTH * scale : '100%' }}
       >
-        <div className="absolute left-3 top-3 z-10 rounded-sm bg-[rgba(11,11,10,0.82)] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[#EDEFE8] backdrop-blur-sm">
+        <div className="absolute left-3 top-3 z-10 rounded-[var(--r-input)] bg-[rgba(11,11,10,0.82)] px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[#EDEFE8] backdrop-blur-sm">
           {side === 'front' ? 'Front' : 'Back'}
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}

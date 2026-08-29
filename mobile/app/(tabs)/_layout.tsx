@@ -19,8 +19,12 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="shop" />
+      <Tabs.Screen name="rent" />
       <Tabs.Screen name="design" />
-      <Tabs.Screen name="cart" />
+      {/* Still a tab ROUTE — it keeps its URL and its state — but `href: null`
+          takes it out of the bar. The pack is reached from the masthead icon,
+          which carries the count. */}
+      <Tabs.Screen name="cart" options={{ href: null }} />
       <Tabs.Screen name="account" />
     </Tabs>
   );
