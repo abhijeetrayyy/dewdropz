@@ -190,6 +190,29 @@ export function matches(
 
   if (on('sizes') && filters.sizes.length) {
     const has = sizesOf(product)
+    // STRICT, and deliberately not the same rule as `inStock()` twenty lines
+    // above. The shop council filed the difference as an inconsistency — two
+    // policies for one silence — and it is not one. The two questions are
+    // different questions:
+    //
+    //   inStock  asks "can this be bought?"  A product with no variant rows
+    //            does not track stock per size, and it is buyable. Don't hide it.
+    //   size=L   asks "does this come in L?" A product with no variant rows
+    //            does not come in L. It has no sizes at all.
+    //
+    // Relaxing this so a variant-less product survives any size filter was
+    // tried and reverted the same day: `?size=L` then returned all ten
+    // products, including a four-person tent and a sleeping bag, because six of
+    // ten products in this catalogue are equipment and none of them has sizes.
+    // A size facet that returns tents is worse than the defect it was fixing.
+    //
+    // The real finding underneath it stands and is a DATA defect, not a
+    // predicate one: `garhwal-ridgeline-tee` is apparel with 25 in stock and no
+    // size variants at all, so a size filter correctly excludes a tee that
+    // almost certainly does come in L. That is fixed in admin by giving the tee
+    // its variants — not here. What protects a shopper today is that the Size
+    // facet no longer renders unless its values actually partition the
+    // catalogue; see `partitions` in ShopContent.
     if (!filters.sizes.some((s) => has.includes(s))) return false
   }
 
@@ -200,6 +223,21 @@ export function matches(
 
 export function sortProducts(products: ProductWithCollection[], sort: SortKey): ProductWithCollection[] {
   const out = [...products]
+  // `featured` had no branch at all, so it was the identity function over
+  // whatever `getProducts()` returned — which is `created_at desc`. That made
+  // the shop's DEFAULT order "most recently seeded first", and it made
+  // `?sort=newest` return a byte-identical list: a menu of four choices of
+  // which three were distinct. It also meant a page headed "Apparel and
+  // everyday essentials" opened with six pieces of trekking hardware, because
+  // the equipment was seeded last.
+  //
+  // Array.prototype.sort is stable (spec, ES2019), so unflagged products keep
+  // `created_at desc` underneath and nothing moves until someone actually
+  // curates. Which products lead is the owner's call, not this function's.
+  // `?? false` because a comparator that returns NaN — which `Number(undefined)`
+  // gives on any row without the column — is unspecified behaviour, not a no-op.
+  if (sort === 'featured')
+    out.sort((a, b) => Number(b.is_featured ?? false) - Number(a.is_featured ?? false))
   if (sort === 'price-asc') out.sort((a, b) => a.price - b.price)
   if (sort === 'price-desc') out.sort((a, b) => b.price - a.price)
   if (sort === 'newest')

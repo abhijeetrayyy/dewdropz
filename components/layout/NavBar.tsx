@@ -423,8 +423,14 @@ export default function NavBar() {
               {actDoor !== null && (
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full border border-sage/60 transition-opacity duration-500 motion-reduce:animate-none ${
-                    spotlit ? 'animate-pulse opacity-100' : 'opacity-0'
+                  // Lit, not pulsing. `animate-pulse` is an infinite opacity
+                  // loop, and it ran for as long as a hero act held — ambient
+                  // motion in the one element that is on screen for the entire
+                  // page, which Law 6 forbids outright. The ring still marks
+                  // the door the hero is currently pointing at; it just says so
+                  // once, by arriving, instead of breathing about it.
+                  className={`pointer-events-none absolute -inset-x-3 -inset-y-1 rounded-full border transition-opacity duration-500 ${
+                    spotlit ? 'border-dawn/70 opacity-100' : 'border-sage/60 opacity-0'
                   }`}
                 />
               )}

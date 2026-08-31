@@ -1,3 +1,4 @@
+import SectionHeader from '@/components/SectionHeader'
 import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -72,38 +73,36 @@ export default function HomeTrails({ trails, stop }: { trails: HomeTrail[]; stop
         <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(12,16,13,0.62)_0%,rgba(12,16,13,0.14)_52%,transparent_72%)]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 py-24 md:px-10 md:py-32">
+      <div className="relative mx-auto max-w-measure px-6 py-24 md:px-10 md:py-32">
         {/* ── Masthead ─────────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-[19ch] sm:max-w-2xl">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-dawn-soft">
-              {stopEyebrow(stop)}
-            </div>
-            {/* The page's largest type after the hero — this is the site's second
-                thesis and should look like it. Capped at 60px: at the old 74px
-                the line broke to four ragged lines and the last word hung alone. */}
-            <h2 className="mt-4 font-display text-[clamp(34px,4.8vw,60px)] font-light leading-[1.02] text-paper">
+        {/* INDEX — reference material, and the rule is drawn across the full
+            measure on the page's only full-bleed photograph, where a single
+            hairline does more than a box would. Capped by the species: at the
+            old 60px this was the largest type after the hero, a claim the
+            trails do not need to make twice when the photograph behind them is
+            already making it. */}
+        <SectionHeader
+          species="index"
+          ground="ink"
+          no="06"
+          eyebrow={stopEyebrow(stop)}
+          title={
+            <>
               The journey starts before the trail.
               <span className="mt-1 block italic text-dawn-soft">Here&apos;s where to begin.</span>
-            </h2>
-            {/* No longer "Eight Uttarakhand routes". The list is admin-editable
-                now, so a hardcoded count would go wrong the first time somebody
-                added a fifth card — the exact failure this section was changed
-                to prevent. */}
-            <p className="mt-6 max-w-xl font-body text-sm leading-relaxed text-paper/80 md:text-[15px]">
-              Curated trails, seasonal insights, and practical notes to help you discover your
-              next adventure — before you take the first step.
-            </p>
-          </div>
-
-          <Link
-            href="/treks"
-            className="group flex-shrink-0 self-start font-body text-[11px] uppercase tracking-[0.14em] text-dawn transition-colors duration-300 hover:text-paper md:self-auto"
-          >
-            The full guide{' '}
-            <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
-          </Link>
-        </div>
+            </>
+          }
+          lede="Curated trails, seasonal insights, and practical notes to help you discover your next adventure — before you take the first step."
+          aside={
+            <Link
+              href="/treks"
+              className="group flex-shrink-0 self-start font-body text-[11px] uppercase tracking-[0.14em] text-dawn transition-colors duration-300 hover:text-paper md:self-auto"
+            >
+              The full guide{' '}
+              <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
+            </Link>
+          }
+        />
 
         {/* ── The rail ─────────────────────────────────────────────────────────
                Horizontal on phones (four tall cards would otherwise be a

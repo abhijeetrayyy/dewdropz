@@ -21,6 +21,23 @@ export type JobType =
   | 'order.shipped'
   | 'payment.failed'
   | 'slack.alert'
+  // Rentals. Queued rather than done inline for the same reason the order ones
+  // are: none of them may be allowed to fail the thing that triggered them. A
+  // customer's payment must not be rolled back because a confirmation email
+  // bounced, and — the sharper case — `rental.invoice` SPENDS A GST SERIAL
+  // NUMBER, so it must run somewhere that retries rather than inside a request
+  // that might not.
+  | 'rental.paid'
+  | 'rental.invoice'
+  | 'rental.extended'
+  | 'rental.reminder'
+  | 'rental.dispatched'
+  | 'rental.return_booked'
+  | 'rental.deposit_settled'
+  // Trek Buddy. Queued for the same reason, with a sharper edge: a host
+  // pressing Cancel must always succeed. If the mail provider could fail it,
+  // the host would believe the trip was still on — and so would the party.
+  | 'trek.plan_cancelled'
 
 /** Longer each time, so a provider outage is waited out rather than hammered. */
 const BACKOFF_MINUTES = [1, 5, 15, 60, 240]
@@ -93,6 +110,62 @@ const HANDLERS: Record<JobType, Handler> = {
   },
   'slack.alert': async (p) => {
     await sendSlackAlert(String(p.text))
+  },
+
+  // ── Rentals ──────────────────────────────────────────────────────────────
+  //
+  // Imported lazily, like the order handlers above and for the same reason:
+  // these live in 'use server' modules that import this one, so a top-level
+  // import would be a cycle.
+
+  'rental.paid': async (p) => {
+    const { sendRentalPaidEmail } = await import('@/lib/rentalEmails')
+    await sendRentalPaidEmail(String(p.bookingId))
+  },
+
+  // Spends a GST serial number. On the queue precisely so a failure retries
+  // with backoff instead of taking a customer's payment down with it.
+  'rental.invoice': async (p) => {
+    const { issueInvoiceForRental } = await import('@/lib/invoicing')
+    const result = await issueInvoiceForRental(String(p.bookingId))
+    if ('refused' in result) {
+      // A refusal is an expected outcome — the shop has no GSTIN yet, and every
+      // call refuses until it does. Not an error, and deliberately not a retry:
+      // retrying will refuse identically until a human changes something.
+      console.info(`[rental.invoice] refused for ${p.bookingId}: ${result.refused}`)
+    }
+  },
+
+  'rental.extended': async (p) => {
+    const { sendRentalExtendedEmail } = await import('@/lib/rentalEmails')
+    await sendRentalExtendedEmail(String(p.bookingId))
+  },
+
+  'rental.reminder': async (p) => {
+    const { sendRentalReminderEmail } = await import('@/lib/rentalEmails')
+    await sendRentalReminderEmail(String(p.bookingId), p.kind as 'starting' | 'due' | 'overdue')
+  },
+
+  'rental.dispatched': async (p) => {
+    const { sendRentalDispatchEmail } = await import('@/lib/rentalEmails')
+    await sendRentalDispatchEmail(String(p.bookingId))
+  },
+
+  'rental.return_booked': async (p) => {
+    const { sendRentalReturnLegEmail } = await import('@/lib/rentalEmails')
+    await sendRentalReturnLegEmail(String(p.bookingId))
+  },
+
+  'rental.deposit_settled': async (p) => {
+    const { sendRentalDepositSettledEmail } = await import('@/lib/rentalEmails')
+    await sendRentalDepositSettledEmail(String(p.bookingId))
+  },
+
+  // ── Trek Buddy ───────────────────────────────────────────────────────────
+
+  'trek.plan_cancelled': async (p) => {
+    const { sendTrekCancellationEmails } = await import('@/lib/trekEmails')
+    await sendTrekCancellationEmails(String(p.planId))
   },
 }
 

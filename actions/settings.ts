@@ -48,6 +48,17 @@ function normalizeHomeConfig(raw: Partial<HomeConfig> | null | undefined): HomeC
     featured_category_slugs: raw.featured_category_slugs ?? [],
     stats: raw.stats ?? [],
     showcase: raw.showcase ?? DEFAULT_HOME_CONFIG.showcase,
+    // `trails` was missing from this list, and that is the whole bug: this
+    // function does not patch the row, it REBUILDS it from an explicit set of
+    // keys, so any key not named here is dropped on every read. The homepage
+    // then did `home_config.trails ?? DEFAULT_HOME_TRAILS` and got the fallback
+    // forever — so the Trails section shipped the same four hardcoded routes no
+    // matter what anybody saved at /admin/homepage. The editor wrote to the
+    // database correctly and the storefront could never see it.
+    //
+    // Anything added to HomeConfig from here on has to be added here too, or it
+    // will fail exactly this way: silently, with the admin UI still working.
+    trails: raw.trails ?? undefined,
   }
 }
 
@@ -60,11 +71,49 @@ function normalizeHomeConfig(raw: Partial<HomeConfig> | null | undefined): HomeC
 // /products/[slug], / and /about could not be cached, which on production
 // measured a 5.35s product page against 0.88s for a static one.
 //
-// RLS already publishes it: "Anyone can read store settings" USING (true),
-// verified against the live database with the anon key.
+// AN EXPLICIT COLUMN LIST, AND WHY IT IS NOT A STYLE CHOICE.
+//
+// This used to be `select('*')` against a table whose read policy is
+// USING (true) — and that table also holds `gstin`, `seller_legal_name` and the
+// shop's full registered address. Those columns are null today, which is the
+// only reason it has not already been a live leak, and they CANNOT STAY NULL:
+// a GST-compliant invoice cannot be issued without them, so the day the shop
+// can invoice is the day its registration details ship in every page load.
+//
+// RLS cannot fix that. RLS is row-level and has nothing to say about columns,
+// so the fix is a column-level GRANT (migration 102) — and a column grant turns
+// `select('*')` on the anon client into a permission error, which the fallback
+// below would silently swallow. The failure mode would not be a crash; it would
+// be every configured setting quietly disappearing and the homepage reverting
+// to defaults.
+//
+// So the list comes first, the grant follows it, and the two are kept in step
+// by 102 naming exactly these columns.
+const STOREFRONT_COLUMNS = [
+  'id',
+  'store_name',
+  'support_email',
+  'flat_shipping_rate',
+  'free_shipping_threshold',
+  'enable_tax',
+  'gst_percentage',
+  // A state name, not a registration detail — and the storefront genuinely
+  // needs it, because it is what decides CGST+SGST against IGST on a quote.
+  'origin_state',
+  'shipping_is_taxable',
+  'currency',
+  'timezone',
+  'home_config',
+  'updated_at',
+].join(',')
+
 export async function getStoreSettings() {
   const supabase = createPublicSupabaseClient()
-  const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single()
+  const { data, error } = await supabase
+    .from('store_settings')
+    .select(STOREFRONT_COLUMNS)
+    .eq('id', 1)
+    .single()
 
   if (error) {
     // If it doesn't exist, we fallback to defaults so UI doesn't crash before migration runs
@@ -81,6 +130,36 @@ export async function getStoreSettings() {
       timezone: 'Asia/Kolkata',
       home_config: DEFAULT_HOME_CONFIG,
     } as StoreSettings
+  }
+
+  const row = data as unknown as Partial<StoreSettings>
+  return { ...row, home_config: normalizeHomeConfig(row.home_config) } as StoreSettings
+}
+
+/**
+ * Every column, including the ones the storefront may not see.
+ *
+ * The counterpart to the list above. `getStoreSettings` deliberately cannot
+ * return the GSTIN or the registered address any more, so the admin screens
+ * that EDIT those fields need a way in that is gated on being an admin rather
+ * than on a table policy — and reads through the service-role client, because
+ * migration 102 revokes the columns from `authenticated` as well as `anon`.
+ *
+ * Revoking from `authenticated` too is deliberate: an ordinary signed-in
+ * customer is not a member of staff, and "logged in" has never been the same
+ * thing as "may read the company's tax registration".
+ */
+export async function getAdminStoreSettings(): Promise<StoreSettings> {
+  await requireAdmin()
+  const supabase = createAdminSupabaseClient()
+  const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single()
+
+  // No silent fallback here, unlike the public read. A storefront that loses its
+  // settings should still render; an admin screen that cannot read them must not
+  // present empty fields as though they were the saved values and invite
+  // somebody to overwrite a GSTIN with a blank.
+  if (error || !data) {
+    throw new Error(`Could not read store settings: ${error?.message ?? 'no row'}`)
   }
 
   return { ...data, home_config: normalizeHomeConfig(data.home_config) } as StoreSettings

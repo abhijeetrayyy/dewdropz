@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, Plus, PackageCheck, PackageOpen, Ban, Pencil } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, Plus, PackageCheck, PackageOpen, Ban, Pencil, CalendarDays, BarChart3, Sun } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ import {
   addRentalUnit, setUnitCondition, handOverBooking, returnBooking, cancelRentalBooking,
 } from '@/actions/rentals'
 import { RentalItemEditor } from '@/components/admin/RentalItemEditor'
+import RentalBookingOps from '@/components/admin/RentalBookingOps'
 import type { RentalItem, RentalUnit, RentalBooking, RentalReservation } from '@/types/database'
 
 type ItemWithUnits = RentalItem & { units: RentalUnit[] }
@@ -35,7 +37,7 @@ const STATUS_TONE: Record<string, string> = {
  * Running the gear locker.
  *
  * Two jobs that look similar and are not: keeping the catalogue (what can be
- * hired, and which physical units exist), and moving bookings through their
+ * rented, and which physical units exist), and moving bookings through their
  * lifecycle (out, back, inspected, deposit settled). They are separate tabs
  * because the second one is done standing at a counter with somebody waiting.
  */
@@ -76,11 +78,36 @@ export function RentalsClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-medium text-gray-900">Rentals</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Gear for rent, the units behind it, and every booking in flight.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-medium text-gray-900">Rentals</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Gear for rent, the units behind it, and every booking in flight.
+          </p>
+        </div>
+        {/* The three screens that answer questions this one cannot: "what am I
+            doing today?", "when is that tent free?" and "which gear earns its
+            shelf space?" */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/rentals/today"
+            className="inline-flex items-center gap-1.5 rounded-md border border-forest bg-forest px-3 py-1.5 text-xs font-medium text-paper hover:bg-forest-mid"
+          >
+            <Sun className="h-3.5 w-3.5" aria-hidden="true" /> Today
+          </Link>
+          <Link
+            href="/admin/rentals/calendar"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs text-gray-700 hover:border-gray-400"
+          >
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Calendar
+          </Link>
+          <Link
+            href="/admin/rentals/reports"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs text-gray-700 hover:border-gray-400"
+          >
+            <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" /> Utilisation
+          </Link>
+        </div>
       </div>
 
       <Tabs defaultValue="bookings">
@@ -138,6 +165,16 @@ export function RentalsClient({
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+                      <RentalBookingOps
+                        bookingId={b.id}
+                        fulfilment={b.fulfilment}
+                        status={b.status}
+                        depositAmount={b.deposit_amount}
+                        depositState={b.deposit_state}
+                        depositRefunded={b.deposit_refunded ?? 0}
+                        outTracking={b.out_tracking ?? null}
+                        returnTracking={b.return_tracking ?? null}
+                      />
                       {b.status === 'reserved' && (
                         <>
                           <Button

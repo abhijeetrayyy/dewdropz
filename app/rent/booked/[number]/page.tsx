@@ -2,16 +2,16 @@ import Link from 'next/link'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 
-/** Deliberately says what happens NEXT, not just "thanks". A hire has a
+/** Deliberately says what happens NEXT, not just "thanks". A rental has a
  *  handover, a deposit and a return date — none of which have happened yet. */
 export default async function RentBookedPage({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params
   return (
     <>
       <NavBar />
-      <main className="bg-paper">
+      <main id="main" className="bg-paper">
         <div className="mx-auto max-w-2xl px-6 pb-24 pt-32">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-sage">Reserved</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-forest">Reserved</p>
           <h1 className="mt-3 font-display text-4xl leading-tight text-ink">The gear is held for you.</h1>
           <p className="mt-3 font-mono text-sm text-ink">{number}</p>
 

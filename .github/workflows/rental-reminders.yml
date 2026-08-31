@@ -1,0 +1,76 @@
+name: Rental reminders
+
+# THE FEATURE THAT HAD NEVER RUN.
+#
+# `/api/cron/rental-reminders` has existed with a correct Bearer gate, a working
+# handler and eight written email templates, and NOTHING anywhere called it —
+# no vercel.json (there isn't one in this repo), no workflow, nothing. So the
+# "your rental starts tomorrow" and "due back tomorrow" mails had never been
+# sent, and the overdue chase had never fired. The late fee they exist to warn
+# about was accruing in the silence.
+#
+# This is the second time: run-jobs.yml next door was written for exactly the
+# same omission on the job queue, and its header says so. RESEND_API_KEY being
+# unset hid both — "no email arrived" had an innocent explanation that was not
+# the real one.
+#
+# ── WHY THIS SHIPS ONLY NOW ────────────────────────────────────────────────
+#
+# The sweep stamps `reminder_due_at` BEFORE the send, so the claim is spent
+# whether or not the mail leaves. Until `lib/email.ts` was made to throw on
+# Resend's error return, a rejected send was recorded as a delivery — so the
+# first scheduled run against a rate-limited or misconfigured Resend would have
+# burned every pending reminder marker in the database, mailed nobody, logged
+# nothing, and written `reminder_sent` rows asserting the opposite. Those
+# reminders are one-shot; there would have been no second chance.
+#
+# `lib/email.ts` throws now. That is the precondition, and it is met.
+#
+# ── WHY 03:30 UTC ──────────────────────────────────────────────────────────
+#
+# 09:00 IST. The shop is UTC+05:30 and the sweep asks the shop's question
+# ("what starts tomorrow", "what is due back tomorrow") — `lib/shopTime.ts`
+# makes the date arithmetic timezone-correct, so the hour is no longer
+# load-bearing for correctness. It is still chosen so the mail lands when
+# somebody can act on it.
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  # So the shop can send the day's reminders by hand if a run is missed.
+  workflow_dispatch:
+
+# A slow run should delay the next one, never race it: the claim is what makes
+# the sweep exactly-once, and two concurrent runs would contend on it.
+concurrency:
+  group: rental-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sweep rental reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://dewdropz.vercel.app' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET repository secret is not set." >&2
+            exit 1
+          fi
+
+          status=$(curl -sS --fail-with-body \
+            -o response.json -w '%{http_code}' \
+            --retry 3 --retry-delay 5 --retry-connrefused --max-time 120 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/cron/rental-reminders") || {
+              echo "::error::Request failed (HTTP ${status:-000})." >&2
+              cat response.json >&2 || true
+              exit 1
+            }
+
+          echo "HTTP ${status}"
+          cat response.json

@@ -15,15 +15,69 @@ type SendEmailParams = {
   subject: string
   html: string
   from?: string
+  /** A plain-text part. HTML-only mail is a measurable spam-score penalty and is
+   *  unreadable on a watch or a screen reader — for messages whose entire job is
+   *  arriving and being understood. */
+  text?: string
+  /** Several templates sign off "reply to this email". The default sender is a
+   *  no-reply address, so those replies were going nowhere. */
+  replyTo?: string
+  /** Resend de-duplicates on this for 24h. The job queue is explicitly
+   *  at-least-once (`lib/jobs.ts`), so a retry after a timeout genuinely does
+   *  send twice; keying on `${subjectId}:${kind}` makes that free to prevent. */
+  idempotencyKey?: string
 }
 
-export async function sendEmail({ to, subject, html, from }: SendEmailParams) {
-  return getResend().emails.send({
-    from: from ?? process.env.EMAIL_FROM ?? 'DEWDROPZ <noreply@dewdropz.com>',
-    to: Array.isArray(to) ? to : [to],
-    subject,
-    html,
-  })
+/**
+ * Send, and FAIL LOUDLY.
+ *
+ * THE BUG THIS ENDS
+ *
+ * This used to `return getResend().emails.send({...})` and nobody ever read the
+ * result — not here, and not at any of the eight rental call sites. Resend does
+ * not throw on an API error: it RESOLVES with `{ data: null, error: {...} }`
+ * (see its `fetchRequest`, which catches `!response.ok` and returns the parsed
+ * body). It throws only on a missing API key or a dead socket.
+ *
+ * So a 429 rate-limit, a 403 unverified-domain, a validation error or a
+ * suppressed recipient all resolved normally. The caller then wrote a
+ * `reminder_sent` row into `rental_events` and `lib/jobs.ts` marked the job
+ * `done` — because nothing threw. No retry, no backoff, no `last_error`, no
+ * Slack alert, and a positive audit row asserting the customer had been told.
+ *
+ * That defeated the entire queue. `lib/jobs.ts` exists because "a failed
+ * order-confirmation email vanished with no record and no retry" — and with
+ * Resend's return-don't-throw contract it still did.
+ *
+ * Rate limiting is the concrete case: Resend's default is 2 requests/second and
+ * `runDueJobs` drains 20 in a tight loop. On a busy morning the first two send
+ * and the next eighteen are 429'd, marked done, and logged as delivered.
+ *
+ * Three lines. They reconnect every template in this file — and every rental
+ * template in `lib/rentalEmails.ts` — to the retry, backoff, `last_error` and
+ * `/admin/jobs` machinery that already exist and are already correct.
+ */
+export async function sendEmail({
+  to, subject, html, from, text, replyTo, idempotencyKey,
+}: SendEmailParams) {
+  const res = await getResend().emails.send(
+    {
+      from: from ?? process.env.EMAIL_FROM ?? 'DEWDROPZ <noreply@dewdropz.com>',
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      ...(text ? { text } : {}),
+      ...(replyTo ? { replyTo } : {}),
+    },
+    idempotencyKey ? { idempotencyKey } : undefined
+  )
+
+  if (res.error) {
+    // The message carries the provider's own name and reason, so /admin/jobs
+    // shows "Resend rate_limit_exceeded: Too many requests" rather than "failed".
+    throw new Error(`Resend ${res.error.name}: ${res.error.message}`)
+  }
+  return res
 }
 
 export async function sendOrderConfirmationEmail(params: {
@@ -297,7 +351,14 @@ export async function sendRentalConfirmationEmail(params: {
             ? 'We pack it and post it to arrive on the first day of your booking. The return label is in the box.'
             : 'Collect from the Dehradun shop on the first day of your booking. Bring this number and some ID.'
         }
-        Nothing is charged now — you pay the rental and hand over the deposit when you collect.
+        ${
+          params.fulfilment === 'ship'
+            // Posted rentals are paid online BEFORE dispatch. Telling a posted
+            // customer they pay "when you collect" describes a counter they
+            // will never stand at, and it was sent to every one of them.
+            ? 'We’ll send you a payment link before it goes out — the rental and the refundable deposit together.'
+            : 'Nothing is charged now — you pay the rental and hand over the deposit when you collect.'
+        }
         The deposit comes back when the gear does, less anything owed for a late return or damage, itemised.
       </p>
     </div>`,

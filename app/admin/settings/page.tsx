@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2, Save } from 'lucide-react'
-import { getStoreSettings, updateStoreSettings } from '@/actions/settings'
+import { getAdminStoreSettings, updateStoreSettings } from '@/actions/settings'
 import type { StoreSettings } from '@/types/database'
 
 // Settings is now only the things that are genuinely settings.
@@ -25,7 +25,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function load() {
       try {
-        setSettings(await getStoreSettings())
+        setSettings(await getAdminStoreSettings())
       } catch {
         toast.error('Failed to load settings')
       } finally {

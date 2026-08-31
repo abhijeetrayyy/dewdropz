@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/actions/auth'
 import { createAdminSupabaseClient } from '@/lib/supabase'
-import { getStoreSettings } from '@/actions/settings'
+import { getAdminStoreSettings } from '@/actions/settings'
 import { renderPackingSlip, type PackingSlipItem } from '@/lib/invoice/renderPackingSlip'
 
 // The packing slip for one parcel.
@@ -62,7 +62,7 @@ export async function GET(
         .eq('order_id', shipment.order_id)
         .order('created_at'),
       supabase.from('invoices').select('serial').eq('order_id', shipment.order_id).maybeSingle(),
-      getStoreSettings(),
+      getAdminStoreSettings(),
     ])
 
   if (!order) {

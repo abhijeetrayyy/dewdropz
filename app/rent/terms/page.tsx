@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { MapPin, Clock, ShieldCheck, ReceiptText } from 'lucide-react'
+import { MapPin, Clock, ShieldCheck, ReceiptText, CalendarX } from 'lucide-react'
 import NavBar from '@/components/layout/NavBar'
 import FooterSection from '@/components/layout/FooterSection'
 import { getRentalItems } from '@/actions/rentals'
 import { SITE } from '@/lib/constants'
+import { RENTAL_POLICY } from '@/lib/rentalPolicy'
 import { formatPrice } from '@/lib/utils'
 
 export const metadata: Metadata = {
@@ -34,7 +35,7 @@ export default async function RentalTermsPage() {
   return (
     <>
       <NavBar />
-      <main className="bg-paper">
+      <main id="main" className="bg-paper">
         <div className="mx-auto max-w-3xl px-6 pb-24 pt-28 sm:pt-32">
           <Link href="/rent" className="font-mono text-[11px] uppercase tracking-[0.14em] text-mid hover:text-forest">
             ← The gear locker
@@ -108,11 +109,43 @@ export default async function RentalTermsPage() {
                 Every piece rests between rentals so it can be dried, checked and re-lofted — wet
                 canvas is the reason this exists. Depending on the item that is{' '}
                 {buffers.filter((b) => b > 0).join(' or ')} day
-                {buffers.filter((b) => b > 0).some((b) => b > 1) ? 's' : ''}, and the calendar
-                already accounts for it: if a date shows as free, it is free.
+                {buffers.filter((b) => b > 0).some((b) => b > 1) ? 's' : ''}. We hold that rest
+                period against the item when you book, so a range we accept is a range you can
+                have.
               </p>
             </section>
           )}
+
+          {/* ── Cancelling ────────────────────────────────────────────────
+              Rendered from `RENTAL_POLICY`, which is the same object
+              `cancellationRefund` uses to decide what actually goes back. The
+              page and the refund cannot drift apart, which is the failure mode
+              this shop has already had once: TRUST_POINTS printed a shipping
+              promise beside the live setting that governed it, and they agreed
+              only by coincidence. */}
+          <section className="mt-8 rounded-[var(--r-panel)] border border-rule bg-surface p-6">
+            <div className="flex items-center gap-2">
+              <CalendarX className="h-4 w-4 text-clay" aria-hidden="true" />
+              <h2 className="font-display text-xl text-ink">If you change your mind</h2>
+            </div>
+            <p className="mt-3 max-w-prose font-body text-[15px] leading-relaxed text-mid">
+              You can cancel a booking yourself, from your rentals, right up until the gear leaves
+              the shop. What comes back depends on how much notice we have:
+            </p>
+            <ul className="mt-4 space-y-2 font-body text-[15px] leading-relaxed text-mid">
+              {RENTAL_POLICY.cancellation.map((band) => (
+                <li key={band.daysBefore} className="flex gap-3">
+                  <span aria-hidden="true" className="mt-2 h-1 w-1 shrink-0 rounded-full bg-forest" />
+                  <span>{band.label}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 max-w-prose font-body text-[15px] leading-relaxed text-mid">
+              <strong className="text-ink">The deposit always comes back in full.</strong> It is
+              your money held against the gear, not payment for anything — so a cancellation
+              returns every rupee of it, whatever the notice.
+            </p>
+          </section>
 
           {/* ── Where ─────────────────────────────────────────────────────── */}
           <section className="mt-8 rounded-[var(--r-panel)] border border-rule bg-surface p-6">

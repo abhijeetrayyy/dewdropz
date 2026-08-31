@@ -1,5 +1,7 @@
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { sendSlackAlert } from '@/lib/slack'
+// One gateway client, shared with rentals. See lib/razorpay.ts.
+import { razorpayCall } from '@/lib/razorpay'
 import type { Order } from '@/types/database'
 
 // System-trusted only. This file deliberately has no 'use server' directive —
@@ -143,33 +145,6 @@ export async function releaseAllStaleOrders() {
 // order can trigger the same gateway call — cancelling an order used to only
 // restore stock and never touch payment_status at all, leaving a captured
 // charge with nothing anywhere flagging that it still needed refunding.
-/** Razorpay's REST API, with the response actually checked.
- *  Every call here used to be `.then(r => r.json())` — a 404 or a 401 parsed
- *  happily into an object with no `items`, which then read as "no captured
- *  payment" and let the caller report success. */
-async function razorpayCall(
-  path: string,
-  init?: { method?: string; body?: string }
-): Promise<{ body: Record<string, unknown> } | { error: string }> {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
-  if (!keyId || !keySecret) {
-    return { error: 'Razorpay credentials are not configured on this deployment' }
-  }
-  const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64')
-  const res = await fetch(`https://api.razorpay.com/v1${path}`, {
-    method: init?.method ?? 'GET',
-    headers: { 'Content-Type': 'application/json', Authorization: `Basic ${auth}` },
-    body: init?.body,
-  })
-  const body = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    const described = (body as { error?: { description?: string } }).error?.description
-    return { error: `Razorpay ${res.status}: ${described ?? res.statusText}` }
-  }
-  return { body: body as Record<string, unknown> }
-}
-
 /** Find the captured payment to refund against.
  *
  *  Handles all three shapes an order can be in, including the legacy rows the

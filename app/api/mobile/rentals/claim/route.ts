@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { claimGuestRentalBookings } from '@/actions/rentals'
+import { claimGuestRentalBookingsFor } from '@/lib/rentalClaim'
 
 /**
  * The app's version of the same claim the web sign-in form makes.
@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'That session has expired.' }, { status: 401 })
   }
 
-  const { claimed } = await claimGuestRentalBookings(data.user.id, data.user.email)
+  // Straight to the server-only helper. These values came off a token this
+  // route verified against the auth server two lines up, and the action form
+  // now derives identity from a cookie session this request does not carry.
+  const { claimed } = await claimGuestRentalBookingsFor(data.user.id, data.user.email)
   return NextResponse.json({ claimed })
 }

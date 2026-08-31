@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import SectionHeader from '@/components/SectionHeader'
 import Image from 'next/image'
 import { BLUR_DATA_URL, DAY_ARC } from '@/lib/constants'
 import { getTrekKinds } from '@/actions/trekBuddy'
@@ -99,19 +100,28 @@ export default async function TrekBuddyBand() {
         }}
       />
 
-      <div className="relative mx-auto max-w-6xl px-6 py-24 md:px-10 md:py-32">
+      <div className="relative mx-auto max-w-measure px-6 py-24 md:px-10 md:py-32">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-16">
           <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-sage">
-              Trek Buddy · Dehradun and around
-            </p>
-
-            <h2 className="mt-5 max-w-xl font-display text-[clamp(30px,4.4vw,52px)] font-light leading-[1.02] text-paper">
-              {/* NOT "Never go alone." — that is the hero's third act, a few
-                  thousand pixels up the same page, and a page that lands the
-                  same headline twice reads as a page that lost its place. */}
-              The hills are better with <span className="italic text-sage">someone else.</span>
-            </h2>
+            {/* STAMP — a label over a heading. Its eyebrow was already this
+                shape and already 0.28em rather than the 0.2em five other
+                sections used, for no reason anybody could name; the species
+                owns the measurement now. */}
+            <SectionHeader
+              species="stamp"
+              ground="ink"
+              eyebrow="Trek Buddy · Dehradun and around"
+              title={
+                <>
+                  {/* NOT "Never go alone." — that is the hero's third act, a
+                      few thousand pixels up the same page, and a page that
+                      lands the same headline twice reads as a page that lost
+                      its place. */}
+                  The hills are better with <span className="italic text-sage-lit">someone else.</span>
+                </>
+              }
+              className="mb-8 max-w-xl"
+            />
 
             {/* THE CORE CONCEPT, in the brief's own words — and a wider
                 product than the line that used to sit here. Not "a board for

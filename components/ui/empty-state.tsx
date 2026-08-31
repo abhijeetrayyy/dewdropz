@@ -49,7 +49,18 @@ export default function EmptyState({
         </div>
       )}
 
-      <p className="mx-auto max-w-md font-display text-[clamp(20px,2.4vw,26px)] leading-tight text-text">
+      {/* A heading, not a paragraph. An empty state is a change of screen and
+          it is what a screen-reader user is navigating by when a filter has
+          just emptied the grid — with no heading, the shop's whole result
+          region became unreachable by heading navigation at exactly the moment
+          it needed explaining. `role`/`aria-level` rather than an <h2> tag
+          because ten other routes render this and none of them agree on what
+          level they are at. */}
+      <p
+        role="heading"
+        aria-level={2}
+        className="mx-auto max-w-md font-display text-[clamp(20px,2.4vw,26px)] leading-tight text-text"
+      >
         {title}
       </p>
       {body && (

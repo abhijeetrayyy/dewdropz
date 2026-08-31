@@ -7,7 +7,7 @@ import { C, F, R, S } from "@/lib/theme";
 import { MONTHS, daysBetween, monthCells, prettyDate, stepMonth, todayLocal } from "@/lib/rent/dates";
 
 /**
- * Picking the days a hire runs for.
+ * Picking the days a rental runs for.
  *
  * WHY THIS IS HAND-BUILT. The obvious answer is
  * `@react-native-community/datetimepicker`, and it is the wrong one twice
@@ -32,7 +32,7 @@ type Props = {
   from: string | null;
   to: string | null;
   onChange: (from: string | null, to: string | null) => void;
-  /** Longest hire this item allows, so the grid can refuse an over-long range. */
+  /** Longest rental this item allows, so the grid can refuse an over-long range. */
   maxDays: number;
 };
 

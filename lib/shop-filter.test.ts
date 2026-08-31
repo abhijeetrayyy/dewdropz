@@ -2,7 +2,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   applyFilters, priceBands, bandMatches, filtersToParams, filtersFromParams,
-  groupCategories, catalogueSizes, inStock, toggle, countActive, facetCount,
+  groupCategories, catalogueSizes, inStock, toggle, countActive, facetCount, sortProducts,
   EMPTY_FILTERS, type ShopFilters,
 } from './shop-filter.ts'
 import type { ProductWithCollection, Category } from '../types/database.ts'
@@ -147,7 +147,50 @@ describe('sizes', () => {
 
   test('filtering by size matches a product with that variant', () => {
     const out = applyFilters(ALL, withFilters({ sizes: ['S'] }), CTX)
-    assert.deepEqual(out.map((p) => p.id), ['tee'])
+    assert.ok(out.map((p) => p.id).includes('tee'))
+  })
+
+  test('a product with no variants is NOT returned by a size filter', () => {
+    // This is the strict behaviour, and it is deliberate — see the long note on
+    // the predicate in shop-filter.ts. The council filed the opposite as a bug,
+    // the relaxed version was built, and `?size=L` then returned all ten
+    // products including a four-person tent, because six of ten products in
+    // this catalogue are equipment with no sizes. "Declares no sizes" is not
+    // "comes in every size".
+    //
+    // The finding underneath it is real and is a DATA defect: an apparel
+    // product with no size variants is correctly excluded by a size filter, and
+    // the fix is to give it variants. The shopper is protected today by the
+    // Size facet not rendering unless its values partition the catalogue.
+    const out = applyFilters(ALL, withFilters({ sizes: ['S'] }), CTX)
+    assert.ok(!out.map((p) => p.id).includes('bottle'))
+  })
+
+  test('a product that declares sizes is still excluded by one it lacks', () => {
+    // SHELL has only L.
+    const out = applyFilters(ALL, withFilters({ sizes: ['S'] }), CTX)
+    assert.ok(!out.map((p) => p.id).includes('shell'))
+  })
+})
+
+// ── Sort ────────────────────────────────────────────────────────────────────
+describe('sort', () => {
+  test('featured lifts flagged products and is otherwise stable', () => {
+    // `featured` had no branch at all, so it was the identity function over
+    // `created_at desc` — which made it byte-identical to `newest`, and made
+    // the shop's default order "most recently seeded first".
+    const flagged = product({ id: 'flagged', price: 100, is_featured: true } as never)
+    const out = sortProducts([...ALL, flagged], 'featured')
+    assert.equal(out[0].id, 'flagged')
+    // Everything unflagged keeps the order it arrived in.
+    assert.deepEqual(out.slice(1).map((p) => p.id), ALL.map((p) => p.id))
+  })
+
+  test('featured no longer equals newest', () => {
+    const featured = sortProducts(ALL, 'featured').map((p) => p.id)
+    const newest = sortProducts(ALL, 'newest').map((p) => p.id)
+    // HOODIE is the newest fixture but is not flagged, so the two orders differ.
+    assert.notDeepEqual(featured, newest)
   })
 })
 

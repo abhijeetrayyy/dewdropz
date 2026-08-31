@@ -24,7 +24,7 @@ export default async function RentItemPage({ params }: { params: Promise<{ slug:
   return (
     <>
       <NavBar />
-      <main className="bg-paper">
+      <main id="main" className="bg-paper">
         <div className="mx-auto max-w-6xl px-6 pb-24 pt-28 sm:pt-32">
           <Link href="/rent" className="font-mono text-[11px] uppercase tracking-[0.14em] text-mid hover:text-forest">
             ← The gear locker

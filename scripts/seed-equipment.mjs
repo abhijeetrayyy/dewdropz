@@ -10,7 +10,7 @@
  * WHAT IS DELIBERATELY NOT SHARED: the counts. `inventory_quantity` here is how
  * many we can SELL. The rental locker's supply is `rental_units` and its
  * availability comes from the no-double-booking constraint. Selling the last
- * sellable tent must not empty the locker; a tent coming back from hire must
+ * sellable tent must not empty the locker; a tent coming back from rent must
  * not become sellable stock. See the header of 098.
  *
  * Photographs are reused from the rental rows — same gear, same pictures,
@@ -29,12 +29,12 @@ const env = Object.fromEntries(
 const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
 
 // HSN codes are the goods equivalent of the rental SAC — a sale is a supply of
-// GOODS, a hire is a supply of SERVICE, and they are not interchangeable.
+// GOODS, a rental is a supply of SERVICE, and they are not interchangeable.
 // These are the usual chapter headings for camping equipment; the shop's
 // accountant should confirm them before this goes live.
 const GEAR = [
   { rental: 'four-season-tent',      name: 'Four-Season Tent (2P)',   price: 1200000, hsn: '6306', stock: 4,
-    blurb: 'The same double-wall tent we hire out, to own.' },
+    blurb: 'The same double-wall tent we rent out, to own.' },
   { rental: 'basecamp-dome-tent-4p', name: 'Basecamp Dome Tent (4P)', price: 1600000, hsn: '6306', stock: 3,
     blurb: 'Four-person freestanding dome, colour-coded poles.' },
   { rental: 'down-sleeping-bag',     name: 'Down Sleeping Bag (−10°C)', price: 850000, hsn: '9404', stock: 6,

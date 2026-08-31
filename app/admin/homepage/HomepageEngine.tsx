@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2, Save, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
-import { getStoreSettings, updateStoreSettings } from '@/actions/settings'
+import { getAdminStoreSettings, updateStoreSettings } from '@/actions/settings'
 import { getProducts, getCollections } from '@/actions/products'
 import { getCategories } from '@/actions/categories'
 import type {
@@ -46,7 +46,7 @@ export function HomepageEngine() {
     async function load() {
       try {
         const [settings, productList, collectionList, categoryList] = await Promise.all([
-          getStoreSettings(),
+          getAdminStoreSettings(),
           getProducts(),
           getCollections(),
           // Every category, NOT { parentId: null }. That returned only the two

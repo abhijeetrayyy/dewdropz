@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Design documentation is not source. Tailwind v4 auto-detects every file in
+   the repo that .gitignore does not exclude, markdown included — so a class
+   name quoted in a design doc becomes a candidate utility, and one that parses
+   to invalid CSS takes down every page importing this file. The council docs
+   under design/ quote class names constantly: they are prose ABOUT the system,
+   never a use of it. Verified: a probe .md containing `bg-[#abc123]` compiled
+   that utility into the output before this line existed. */
+@source not "../**/*.md";
+
 /* ─────────────────────────────────────────────────────────────────────────────
    The palette is a day's light on a mountain.
    ─────────────────────────────────────────────────────────────────────────────
@@ -55,7 +64,21 @@
   --ink:         #0C100D; /* night */
   --text:        #15150F;
   --mid:         #52504A;
-  --light:       #94917F;
+  /* Raised from #94917F, which was carrying real text and failing AA on every
+     ground it sat on: 3.17:1 on --surface, 2.91:1 on --paper, 2.63:1 on
+     --paper-warm, all at 10–11px. The shop council counted 42 affected sites
+     across 24 files and found 41 of them were text and exactly one was a dot.
+     So the token was wrong, not the call sites.
+
+     This is 5.44:1 on --surface, 5.00:1 on --paper, 4.50:1 on --paper-warm —
+     the lightest value on the same hue ray that clears AA on the worst ground
+     it carries text on, and still two clear steps below --mid (8.06:1), so the
+     hierarchy it was bought for survives. NOT licensed on --paper-deep (3.91:1).
+
+     Trek Buddy made this exact change to its own --light for the same reason;
+     see the note above .trek-scope's --faint. The storefront is the unfixed
+     twin, and the standing decision is that the two palettes get one standard. */
+  --light:       #6C6A5D;
   --rule:        #DDD7C6;
   --rule-warm:   #D2C4A4; /* rules that sit on paper-warm / paper-deep */
   --rule-soft:   #EFEADB; /* the hairline INSIDE a card, quieter than the one
@@ -63,16 +86,98 @@
                              shout as loudly as its edge */
   --surface:     #FFFFFF; /* a card lifted off the paper. Named, so components
                              stop reaching for a literal white. */
-  /* Defaults for the Trek Buddy scope's extra steps. The storefront never
-     references these; they exist so Tailwind has something to generate the
-     utilities from, and `.trek-scope` overrides all of them. */
-  --faint:       #B4B8B2;
+  /* Defaults for the Trek Buddy scope's extra steps, which override all of
+     them. Two are no longer only that: `--sage-soft` is used by the shop's
+     sort menu and its active filter chips, and `--faint` is now the
+     storefront's retired grey — see below. The old comment claimed the
+     storefront never references these, and it does. */
+  /* What --light used to be. It is a perfectly good grey for a dot, a rule or
+     a disabled edge; it was never a good grey for a word. Decoration only —
+     if it is carrying text, it is the wrong token. */
+  --faint:       #94917F;
   --ink-raised:  #191D1A;
   --sage-soft:   #E7EFE8;
   --amber-wash:  #F7F0E2;
   --clay-wash:   #F5EDE8;
   --slate:       #47597A;
   --slate-soft:  #B9C4D8;
+
+  /* ── The value ladders ───────────────────────────────────────────────────
+     MEASURED off the rendered homepage, not designed in the abstract.
+
+     The paper ladder was already right and is the model for everything here:
+     96.6 / 92.5 / 87.2 in L*, hue held at 40–44 degrees, saturation RISING
+     4 -> 11 -> 18 as value falls. One hue, a value descent, saturation
+     compensating for the loss of light. Textbook, and it reads.
+
+     The dark half was not a ladder at all. Six dark bands measured hue 150,
+     135, 104, 210, 104 and 210 — three unrelated families, with blue (210) and
+     yellow-green (104) alternating, which are near-complementary — and their
+     values were flat: four of them within 0.3 L* of each other. So the page had
+     no mid-tones anywhere, and crossed 80 L* points six times. That is what
+     reads as cheap: not the individual colours, the strobe between them.
+
+     Two additions and one reservation fix it:
+
+       --paper-sand  extends the paper ladder to a fourth, mid step, so a band
+                     between two dark ones is a step rather than a flash.
+       --dusk        gives the dark half its own ladder: dusk -> forest-deep ->
+                     ink is a real descent, in one hue family.
+       --blue-hour   the ONE blue on the page, spent where the day's story says
+                     the light goes blue, and nowhere else. `--altitude` stays
+                     defined for Trek Buddy and the journal, which are not this
+                     page. */
+  /* OPEN, not warm-heavy. The page was two beiges and six dark slabs, and it
+     read closed. `--snow` is the default ground now: an all-but-white that is
+     barely warm, so the page breathes and the green has something to contrast
+     against. `--mist` is the same white with the brand's green folded into it —
+     the lightest possible statement of the house colour, used to separate one
+     open band from the next without going back to a heavy fill.
+
+     Two light grounds and a hairline replace what used to be done with value
+     slabs. Dark is now reserved for the bands that carry a photograph, where it
+     is the picture talking rather than a painted rectangle. */
+  --snow:       #FCFCFA; /* L* 99, hue 60,  sat 1  — the open ground          */
+  --mist:       #EDF2EA; /* L* 94, hue 98,  sat 5  — white with green in it   */
+  --paper-sand: #A88C63; /* L* 60 — retired from the homepage, kept for /about */
+  --dusk:       #1B3320; /* L* 19, hue 130 — evening, the lightest dark        */
+  --blue-hour:  #0F1D2B; /* L* 10, hue 209 — used once, at the end of the day  */
+
+  /* ── The measure ─────────────────────────────────────────────────────────
+     One number per role. The homepage ran five widths — 896 / 1024 / 1152 /
+     1280 / 1400 — across its bands, so the content edge moved by up to 248px
+     between one section and the next for no reason a visitor could name. Six of
+     the thirteen section councils filed it independently.
+
+     1280 because `max-w-7xl` already is 1280 and is already the most-used width
+     in the repo: fifteen call sites become correct by definition instead of
+     being edited sideways for no reader benefit. A four-up product grid and a
+     paragraph cannot share a width, which is why this is four names and not one
+     number. */
+  --measure:           1280px; /* the page band — most sections                 */
+  --measure-catalogue: 1536px; /* a shop grid beside its rail — see below       */
+  --measure-prose:       68ch; /* long-form copy                                */
+  --measure-form:       720px; /* checkout, consent, auth — a form column       */
+  --measure-display:    960px; /* centred display type                          */
+
+  /* ── Why a fifth role, and why it is not a raw utility ────────────────────
+     The reasoning above already contains this: "A four-up product grid and a
+     paragraph cannot share a width, which is why this is four names and not one
+     number." The shop is the case that argument was describing and the number
+     was never declared, so the shop carried `max-w-[1400px]` at four call sites
+     instead — the last raw page-band width in the repo.
+
+     1280 is right for a page of prose and wrong for a catalogue: after the
+     280px rail and its gutter, a 1280 band leaves 888px of grid, which is three
+     columns and cannot be four at any card size a garment photograph can
+     survive. 1536 leaves 1048px, which is four.
+
+     It is for the shop's own bands — masthead, collections, grid. The dark CTA
+     band at the foot stays on `--measure`, because it sits directly on top of
+     the footer and two adjacent dark bands with a 128px step between their
+     content edges is exactly the misalignment Law 04 exists to prevent. The one
+     width change on the page happens where the ground changes too, so it reads
+     as a change of register rather than a mistake. */
 
   /* ── The radius ladder ───────────────────────────────────────────────────
      Monotonic with surface size, and the only legal values. A board where a
@@ -97,6 +202,16 @@
 
   --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.87, 0, 0.13, 1);
+
+  /* A letter tipping over is a thing falling: it hesitates, commits, and
+     arrives. `--ease-out` is wrong for it — it spends 80% of its travel in the
+     first quarter of its time, which on a lean reads as a snap. */
+  --ease-turn:   cubic-bezier(0.32, 0, 0.16, 1);
+
+  /* The hero's rise duration, named once. Each letter begins to turn at the
+     instant its own rise ends, and the only way to keep that true is for both
+     to be the same number rather than two copies of 620. */
+  --hero-rise:   620ms;
 
   /* shadcn/ui theme tokens — components.json declares cssVariables:true and
      baseColor "slate", but these were never actually defined here. Every shadcn
@@ -168,6 +283,18 @@
   --color-mid:        var(--mid);
   --color-light:      var(--light);
   --color-rule:       var(--rule);
+  --color-paper-sand: var(--paper-sand);
+  --color-snow:       var(--snow);
+  --color-mist:       var(--mist);
+  --color-dusk:       var(--dusk);
+  --color-blue-hour:  var(--blue-hour);
+
+  /* The measure, as utilities: max-w-measure and friends. */
+  --spacing-measure:           var(--measure);
+  --spacing-measure-catalogue: var(--measure-catalogue);
+  --spacing-measure-prose:     var(--measure-prose);
+  --spacing-measure-form:    var(--measure-form);
+  --spacing-measure-display: var(--measure-display);
 
   --color-background:             var(--background);
   --color-foreground:              var(--foreground);
@@ -200,6 +327,14 @@
 
   --font-display: var(--font-display), Georgia, serif;
   --font-body:    var(--font-body), system-ui, sans-serif;
+  /* The same bug as --font-mono below, one level up and much larger. Tailwind
+     sets `--default-font-family: var(--font-sans)` and `html { font-family:
+     var(--default-font-family) }`, and --font-sans was never defined here — so
+     the INHERITED face of the whole site was the OS UI stack, and Archivo only
+     appeared where somebody typed `font-body`. Anything that forgot rendered in
+     SF Pro on a Mac, Segoe UI on Windows, Roboto on Android. Verified in the
+     compiled stylesheet before this line existed. */
+  --font-sans:    var(--font-body), system-ui, sans-serif;
   /* Without this, the 41 `font-mono` elements in the storefront — the day-arc
      clock times, altitudes, coordinates, ratings and section indices — fell
      through to Tailwind's default system stack and rendered in a different
@@ -393,6 +528,196 @@
   @media (prefers-reduced-motion: no-preference) {
     [data-hero-reveal] {
       animation: hero-in 620ms var(--ease-out) backwards;
+    }
+  }
+
+  /* ── The headline, one letter at a time ──────────────────────────────────
+     Same keyframe, same reasoning, staggered: each character rises 38ms after
+     the one before it, so the line assembles left to right rather than
+     arriving as a slab. The per-character delay is set inline by
+     components/AliveHeadline.tsx, which is the only thing that knows how many
+     letters there are.
+
+     `backwards` holds the start frame through the delay, which for a transform
+     means the letter is 14px low and completely legible — the whole point of
+     the rule that this hero animates transform and never opacity. A letter
+     waiting its turn is readable; a letter waiting at `opacity: 0` is a hole in
+     the headline for as long as the animation is stalled, and a background tab
+     stalls it indefinitely. */
+  [data-alive-char] {
+    opacity: 1;
+  }
+
+  /* ── The preloader is animated IN, never removed by script ───────────────
+     Its resting state is absent. `<Preloader/>` is server-rendered with
+     `visible` starting true, so the SSR HTML has ALWAYS contained an opaque
+     `fixed inset-0 bg-ink` panel over a fully written page, and a `useEffect`
+     was the only thing that ever took it away. Script disabled, a dropped
+     chunk, or a throw before that effect ran left a black rectangle over the
+     whole site, permanently — the exact failure this hero rewrote its own
+     entrance in CSS to escape, still shipping one layer above it.
+
+     So the panel now has to be animated onto the screen. Everything that can go
+     wrong — no CSS, no JavaScript, a stalled animation, reduced motion — lands
+     on the finished state, which is a page with nothing over it.
+
+     This is the one place in this file where animating `opacity` is right, and
+     it is right for the same reason it is banned everywhere else: what matters
+     is where a stall leaves you. A stalled fade on the words leaves a hole in
+     the sentence; a stalled fade on a curtain leaves the curtain down. */
+  [data-preloader] {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  @keyframes preloader-hold {
+    0%,
+    66% {
+      visibility: visible;
+      opacity: 1;
+    }
+    100% {
+      visibility: hidden;
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-preloader] {
+      animation: preloader-hold 1000ms both;
+    }
+  }
+
+  /* ── The turn ────────────────────────────────────────────────────────────
+     The line arrives as one flat cream statement — FEEL ALIVE. entirely in
+     roman — and then the same wave comes back through it: letter by letter,
+     ALIVE. leans out of roman, catches first light, and settles into italic
+     green. The sentence stops stating and starts feeling, and it does it to
+     itself.
+
+     THE MECHANISM, because it is not obvious and it is exact.
+
+     app/layout.tsx declares Fraunces with no `style`, so next/font never
+     fetches Fraunces Italic and `font-style: italic` on the ALIVE. run is a
+     SYNTHESIZED oblique — the browser shearing the roman outline about the
+     baseline. An equal and opposite CSS skew cancels that shear exactly. So at
+     0% the letter is not a roman lookalike: it IS the roman outline, at the
+     italic's advance width, which synthetic oblique leaves unchanged. The
+     keyframe walks the cancellation back to zero and the letter arrives as the
+     italic it was declared to be all along.
+
+     ONE GLYPH. No second copy, no crossfade — so there is no double image to
+     hide, no advance-width mismatch to centre, and no opacity anywhere near
+     this headline.
+
+     WHAT A STALL LEAVES: an opaque letter somewhere between upright and
+     italic, somewhere between cream and green, at exactly the right size in
+     exactly the right place. Legible in every frame, by construction — the
+     same rule the entrance above obeys, for the same reason. */
+  @keyframes alive-lean {
+    from {
+      transform: skewX(var(--turn-lean));
+    }
+    to {
+      transform: skewX(0deg);
+    }
+  }
+
+  /* First light crosses the word. `--dawn` is the brand's one warm accent and
+     this is where the light arrives — about a hundred milliseconds per letter,
+     once, and nowhere else on the page. */
+  @keyframes alive-light {
+    from {
+      color: var(--turn-from);
+    }
+    55% {
+      color: var(--turn-via);
+    }
+    to {
+      color: var(--turn-to);
+    }
+  }
+
+  /* The resting state, OUTSIDE every media query: nothing. No transform and no
+     colour of its own — the letter is whatever its segment's className says it
+     is: italic, sage-lit, opaque, still. No stylesheet, no JavaScript, a
+     stalled animation and reduced motion all land here, on the finished line,
+     by construction rather than by argument. */
+  [data-alive-turn] {
+    --turn-lean: 14deg;
+    --turn-from: var(--paper);
+    --turn-via: color-mix(in oklab, var(--dawn) 80%, var(--paper));
+    --turn-to: var(--sage-lit);
+
+    /* MEASURED, not guessed — 89.2% at the 132px desktop size and 89.7% at the
+       52px phone size, taken off the rendered hero with a zero-height
+       inline-block probe whose bottom edge sits on the alphabetic baseline.
+       That the two sizes agree is itself the check that the number is
+       metric-derived rather than a coincidence of one viewport.
+
+       It has to pivot where the font's own synthetic shear pivots. Miss the
+       baseline by dy and the cancellation is off by 0.25 * dy horizontally — a
+       constant, identical on every letter, so the whole word starts sideways
+       and slides back into place. That reads as a slide rather than a turn, and
+       it is the one way this looks cheap for a reason nobody in the room can
+       name. Verified by rendering the de-skewed italic beside the true roman at
+       132px: indistinguishable. */
+    transform-origin: 50% 89.2%;
+  }
+
+  /* ── When the choreography is allowed to begin ────────────────────────────
+     Gated on `data-intro-done`, which providers/IntroProvider.tsx puts on <html>
+     when the page is actually on screen.
+
+     Without the gate these animations start at first paint — and on the first
+     load of a session first paint is underneath the preloader's panel, which
+     does not finish fading until about a second in. The arrival ran 0-962ms and
+     the turn 772-1382ms behind a curtain that lifted at 1000ms, so a first-time
+     visitor saw the last third of the gesture and never saw the cream roman
+     statement it turns away from. The one moment on this page played to nobody,
+     on the only visit where it was the first thing you saw.
+
+     Gating on an attribute rather than on React state keeps the failure mode
+     right: if the signal never arrives — JavaScript off, a dropped chunk — no
+     animation binds and the line is simply its finished self. A missing signal
+     costs the motion and never the words. */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Longhand, deliberately: the `animation` shorthand resets every property
+       it does not name, `animation-duration` to 0s among them.
+
+       The per-letter delay is computed here rather than written inline by the
+       component, because each letter's turn has to begin exactly when its own
+       rise ends. Two hard-coded copies of 620 in two files drift apart; one
+       variable cannot. */
+    [data-intro-done] [data-alive-char] {
+      animation-name: hero-in;
+      animation-duration: var(--hero-rise);
+      animation-timing-function: var(--ease-out);
+      animation-fill-mode: backwards;
+      animation-delay: calc(var(--i) * var(--stagger));
+    }
+
+    /* Two animation names and not one keyframe doing both: Chromium runs an
+       animation on the compositor only if EVERY property it touches is
+       compositable, so putting `color` in with `transform` would drag the lean
+       onto the main thread with it. Split, the lean composites and only the
+       repaint costs anything.
+
+       `backwards`, not `forwards`. The 100% frame is identical to the element's
+       own resting style — skew 0, colour inherited from the word's className —
+       so when the animation ends it simply stops applying, and a finished
+       letter carries no animated style at all. */
+    [data-intro-done] [data-alive-turn] {
+      animation-name: alive-lean, alive-light;
+      animation-duration: 420ms, 420ms;
+      /* The lean is the gesture and takes the character curve; the light is a
+         wash passing over it, and easing that too makes the gold arrive with a
+         lurch. */
+      animation-timing-function: var(--ease-turn), linear;
+      animation-fill-mode: backwards, backwards;
+      animation-delay:
+        calc(var(--hero-rise) + var(--i) * var(--stagger)),
+        calc(var(--hero-rise) + var(--i) * var(--stagger));
     }
   }
 
@@ -893,6 +1218,37 @@
     .tb-rise { animation: none; }
 
     .trek-liftable:hover { transform: none; }
+  }
+
+  /* ── The shop's motion, under a reduced-motion request ────────────────────
+     The storefront had no reduced-motion gate anywhere: the council grepped
+     the whole web app for `useReducedMotion`, `MotionConfig`, `motion-reduce:`
+     and `prefers-reduced-motion` and found the media query used five times,
+     every one of them the hero, the preloader or Trek Buddy. So a visitor who
+     had asked for less got the full 500ms image crossfades, the 700ms tile
+     zoom and a pointer-tracked spring on every card.
+
+     This is scoped, not a global `*` blanket with `!important` — a blanket
+     would also flatten the one transition that must survive, which is the
+     filter grid's pending dim: that is a state change on content that is
+     already on screen, not an entrance, and taking it away leaves a shopper
+     with no answer to "did that register".
+
+     Scale and translate are what actually move; colour and shadow may still
+     resolve, because a hover that changes nothing reads as a dead control. */
+  @media (prefers-reduced-motion: reduce) {
+    .product-card .product-image img,
+    .product-card:hover .product-image img,
+    .shop-tile img,
+    .shop-tile:hover img {
+      transform: none !important;
+      transition: none !important;
+    }
+
+    .shop-sheet,
+    .shop-sheet-scrim {
+      transition: none !important;
+    }
   }
 
   /* ── Scroll rails ────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 'use client'
 
+import SectionHeader from '@/components/SectionHeader'
 import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
@@ -57,18 +58,20 @@ export default function Community({
     // Late afternoon on the page's clock — the warmest paper of the day, before
     // the final sections go to night.
     <section className="bg-paper-warm px-6 md:px-10 py-24 md:py-32 overflow-hidden">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-14 md:mb-16 flex items-end justify-between">
-          <div>
-            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
-            <h2 className="mt-3 font-display font-light text-[clamp(30px,4.5vw,48px)] text-text leading-[1.1]">
-              Worn. Tested. Reported back.
-            </h2>
-          </div>
-          <p className="hidden md:block font-body text-sm text-mid max-w-[240px] text-right leading-relaxed">
-            Every word here was written by someone who bought the piece and used it.
-          </p>
-        </div>
+      <div className="max-w-measure mx-auto">
+        {/* STAMP — a list of things: the people who bought a piece and came
+            back to say so. Follows an index, precedes a statement. */}
+        <SectionHeader
+          species="stamp"
+          eyebrow={stopEyebrow(stop)}
+          title="Worn. Tested. Reported back."
+          className="mb-14 md:mb-16"
+          aside={
+            <p className="max-w-[240px] font-body text-sm leading-relaxed text-mid sm:text-right">
+              Every word here was written by someone who bought the piece and used it.
+            </p>
+          }
+        />
 
         <div
           className="grid grid-cols-1 lg:grid-cols-[1fr_0.85fr] gap-10 lg:gap-16 items-center"
@@ -77,7 +80,12 @@ export default function Community({
         >
           {/* The report */}
           <div className="order-2 lg:order-1 flex flex-col min-h-[320px]">
-            <AnimatePresence mode="wait">
+            {/* `initial={false}`: the crossfade between reviews is a real
+                state transition and opacity is the right mechanism for it — but
+                the FIRST review must not mount invisible, or the section's whole
+                argument waits on JavaScript. The first one renders finished;
+                only the ones after it fade. */}
+            <AnimatePresence mode="wait" initial={false}>
               <motion.blockquote
                 key={report.id}
                 initial={{ opacity: 0, y: 16 }}
@@ -157,7 +165,8 @@ export default function Community({
               borrowing a stock trek shot to stand in for it. */}
           <div className="order-1 lg:order-2 relative">
             <div className="relative aspect-[4/5] max-h-[520px] w-full rounded-[var(--r-card)] overflow-hidden bg-paper-deep">
-              <AnimatePresence mode="popLayout">
+              {/* Same: the first photograph is present, the rest crossfade. */}
+              <AnimatePresence mode="popLayout" initial={false}>
                 <motion.div
                   key={report.id}
                   initial={{ opacity: 0, scale: 1.04 }}

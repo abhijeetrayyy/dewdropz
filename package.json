@@ -8,6 +8,7 @@
     "start": "next start --port 3010",
     "lint": "eslint",
     "test": "node --test --test-reporter=spec \"lib/**/*.test.ts\" \"mobile/lib/**/*.test.ts\"",
+    "check:moderation": "node scripts/check-trek-word-rules.mjs",
     "test:watch": "node --test --watch \"lib/**/*.test.ts\" \"mobile/lib/**/*.test.ts\""
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-import { stopEyebrow, type TrailStop } from '@/lib/trail'
+import SectionHeader from '@/components/SectionHeader'
 import Link from 'next/link'
 import DesignYourOwnConfigurator from '@/components/customize/DesignYourOwnConfigurator'
 import { ContourLines } from '@/components/ui/ContourLines'
@@ -12,17 +12,25 @@ import type { ProductWithCollection } from '@/types/database'
 // The interactive part lives in DesignYourOwnConfigurator (a client component)
 // so this section stays a server component and the homepage only ships client
 // JS for the one piece that actually needs it.
+// It takes no chapter: a statement carries no eyebrow, so there is nothing here
+// for one to name. The stop still exists in lib/trail.ts and still wraps this
+// section in app/page.tsx — this component simply stopped printing it.
 export default function DesignYourOwn({
   products,
-  stop,
 }: {
   products: ProductWithCollection[]
   /** Agreed with its wrapper already; takes the prop anyway so it cannot
    *  start disagreeing later. That is the whole point of one source. */
-  stop: TrailStop
 }) {
   const blanks = products.filter((p) => p.is_customizable && (p.customization_config?.colors?.length ?? 0) > 0)
   if (blanks.length === 0) return null
+  // `--paper-deep`, the third step of the ladder, for two reasons. The run
+  // reads paper → paper-warm → paper-deep as a descent instead of paper,
+  // warm, paper as a stutter. And ShopByCategory above renders NOTHING when
+  // no category has stock — which is its live state — so on the real site
+  // CollectionsRow's `--paper` met this band's `--paper` at 1.00:1 with no
+  // seam at all. A ground that only obeys the law while its neighbour
+  // happens to exist is not obeying it.
 
   return (
     // 14:30 on the page's clock — strong afternoon light. The section stays
@@ -31,7 +39,7 @@ export default function DesignYourOwn({
     // a warm gradient, a low sun-glow, and the brand's topographic contours.
     // The contrast people actually notice comes from the dark workbench panel
     // sitting on top of it.
-    <section className="relative overflow-hidden bg-paper border-t border-rule px-6 py-20 md:px-10 md:py-28">
+    <section className="relative overflow-hidden bg-snow border-t border-rule px-6 py-20 md:px-10 md:py-28">
       {/* Low warm glow, as if the light is coming across the bench. */}
       <div
         aria-hidden
@@ -39,7 +47,7 @@ export default function DesignYourOwn({
       />
       <ContourLines className="opacity-[0.13]" />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto max-w-measure">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
             {/* "CUSTOM STUDIO (Make the Font a bit bigger)". The words come
@@ -47,13 +55,17 @@ export default function DesignYourOwn({
                 lib/trail.ts so the trail HUD and this eyebrow cannot drift
                 apart — and the size goes 10px → 13px, the same +30% the hero's
                 own THE STUDIO eyebrow was given. */}
-            <div className="font-mono text-[13px] uppercase tracking-[0.2em] text-forest">{stopEyebrow(stop)}</div>
-            <h2 className="mt-3 font-display text-[clamp(32px,5vw,54px)] leading-[1.03] text-text">
-              Go on — make it yours.
-            </h2>
-            <p className="mt-5 max-w-xl font-body text-sm leading-relaxed text-mid md:text-[15px]">
-              Build every detail before it goes to print.
-            </p>
+            {/* STATEMENT — the heading IS the argument here, so it runs at
+                roughly twice the stamp's scale and carries no eyebrow. The mono
+                label that used to sit above it said the same words the section
+                below already says, at 13px, for the third time on the page. A
+                statement that needs announcing is not a statement. */}
+            <SectionHeader
+              species="statement"
+              title={<>Go on — make it yours.</>}
+              lede="Build every detail before it goes to print."
+              className="mb-0 md:mb-0"
+            />
 
             {/* THE TWO DOORS.
                 Per the brief, the section has to say that there are two ways
@@ -62,7 +74,7 @@ export default function DesignYourOwn({
                 everybody without a design that this part of the shop was not
                 for them. Each is a real link: the library goes to the studio
                 with its design picker already open. */}
-            <dl className="mt-7 grid gap-5 sm:grid-cols-2">
+            <dl className="mt-8 grid gap-5 sm:grid-cols-2">
               <div>
                 <dt className="font-body text-[11px] uppercase tracking-[0.14em] text-forest">
                   <Link href="/customize?start=library" className="border-b border-forest/30 pb-0.5 transition-colors duration-300 hover:border-forest">

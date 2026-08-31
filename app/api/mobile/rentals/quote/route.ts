@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { quoteRental, getRentalAvailability } from '@/actions/rentals'
 
 /**
- * What a hire costs, and whether the gear is actually free — both answered here.
+ * What a rental costs, and whether the gear is actually free — both answered here.
  *
  * The phone asks; it never works either out. This is the same rule the cart
  * quote endpoint next door was written to restore after the app spent months
  * quoting `subtotal + FLAT_SHIPPING_RATE` and a courier turned up asking for
  * ₹178 more than the screen had shown. Rentals have more moving parts than a
- * cart — inclusive day counting, a long-hire discount, return postage charged
+ * cart — inclusive day counting, a long-rental discount, return postage charged
  * both ways, and a deposit that must stay outside the taxable base — so the
  * chance of two implementations drifting is higher, not lower.
  *
@@ -24,7 +24,7 @@ import { quoteRental, getRentalAvailability } from '@/actions/rentals'
  * booking and show a price for gear that is no longer there.
  *
  * Unauthenticated by design, like the rest of the mobile read surface: someone
- * deciding whether to hire a tent should see the real figure before signing in.
+ * deciding whether to rent a tent should see the real figure before signing in.
  * Nothing is written, and no rupee in the response comes from the request.
  */
 export async function POST(request: NextRequest) {

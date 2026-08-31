@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminSupabaseClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/actions/auth'
+import { auditLog } from '@/lib/audit'
 
 // The moderation desk.
 //
@@ -133,6 +134,16 @@ export async function resolveTrekReport(
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
   revalidatePath('/trek-buddy')
+
+  // The moderation desk leaves a trail. `auditLog` is append-only at the table
+  // level — admins can SELECT it and there is no INSERT, UPDATE or DELETE policy
+  // — and it never throws, so a failed log line cannot roll back the suspension
+  // it was describing.
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email, action: 'trek.report_resolved',
+    entityType: 'trek_report', entityId: reportId,
+    after: { resolution, note: note?.trim() || null },
+  })
   return { success: true as const }
 }
 
@@ -171,7 +182,7 @@ export async function saveWordRule(input: {
   hint?: string
   active?: boolean
 }) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const db = createAdminSupabaseClient()
   const row = {
     pattern: input.pattern.trim(),
@@ -190,17 +201,31 @@ export async function saveWordRule(input: {
     : await db.from('trek_word_rules').insert(row)
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email,
+    action: input.id ? 'trek.word_rule_updated' : 'trek.word_rule_created',
+    entityType: 'trek_word_rule', entityId: input.id ?? null,
+    after: row,
+    note: 'Word rules gate every free-text field on the board.',
+  })
   return { success: true as const }
 }
 
 export async function deleteWordRule(id: string) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const { error } = await createAdminSupabaseClient()
     .from('trek_word_rules')
     .delete()
     .eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email, action: 'trek.word_rule_deleted',
+    entityType: 'trek_word_rule', entityId: id,
+    note: 'Word rules gate every free-text field on the board.',
+  })
   return { success: true as const }
 }
 
@@ -255,7 +280,7 @@ export async function getActivityKindsAdmin() {
 }
 
 export async function saveActivityKind(input: Partial<ActivityKind> & { key: string }) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const db = createAdminSupabaseClient()
   const { key, ...rest } = input
   const { data: existing } = await db
@@ -270,6 +295,12 @@ export async function saveActivityKind(input: Partial<ActivityKind> & { key: str
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
   revalidatePath('/trek-buddy/new')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email,
+    action: existing ? 'trek.activity_kind_updated' : 'trek.activity_kind_created',
+    entityType: 'trek_activity_kind', entityId: key, after: rest,
+  })
   return { success: true as const }
 }
 
@@ -297,7 +328,7 @@ export async function getGuidanceAdmin() {
 }
 
 export async function saveGuidance(input: Partial<GuidanceNote> & { title: string; body: string }) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const db = createAdminSupabaseClient()
   const row = {
     activity: input.activity ?? 'general',
@@ -313,14 +344,25 @@ export async function saveGuidance(input: Partial<GuidanceNote> & { title: strin
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
   revalidatePath('/trek-buddy')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email,
+    action: input.id ? 'trek.guidance_updated' : 'trek.guidance_created',
+    entityType: 'trek_guidance', entityId: input.id ?? null, after: row,
+  })
   return { success: true as const }
 }
 
 export async function deleteGuidance(id: string) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const { error } = await createAdminSupabaseClient().from('trek_guidance').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email, action: 'trek.guidance_deleted',
+    entityType: 'trek_guidance', entityId: id,
+  })
   return { success: true as const }
 }
 
@@ -365,7 +407,20 @@ export async function setTrekMember(input: {
   reason?: string
 }) {
   const admin = await requireAdmin()
-  const { error } = await createAdminSupabaseClient().rpc('trek_admin_set_member', {
+  const db = createAdminSupabaseClient()
+
+  // Read the state we are about to change, before we change it. This is the
+  // only one of the nine admin actions where the previous value is not
+  // recoverable from the row afterwards — suspending someone who was already
+  // suspended, and suspending someone for the first time, leave the same row —
+  // and it is the action most likely to be argued about later.
+  const { data: was } = await db
+    .from('profiles')
+    .select('trek_can_host, trek_suspended_at, trek_suspended_reason')
+    .eq('id', input.userId)
+    .maybeSingle()
+
+  const { error } = await db.rpc('trek_admin_set_member', {
     p_user: input.userId,
     p_can_host: input.canHost ?? null,
     p_suspended: input.suspended ?? null,
@@ -375,6 +430,17 @@ export async function setTrekMember(input: {
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
   revalidatePath('/trek-buddy')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email, action: 'trek.member_updated',
+    entityType: 'trek_member', entityId: input.userId,
+    before: was ?? null,
+    after: {
+      can_host: input.canHost ?? null,
+      suspended: input.suspended ?? null,
+      reason: input.reason?.trim() || null,
+    },
+  })
   return { success: true as const }
 }
 
@@ -389,6 +455,12 @@ export async function setTrekMentor(userId: string, mentor: boolean, bio?: strin
   if (error) return { error: error.message }
   revalidatePath('/admin/trek-buddy')
   revalidatePath(`/trek-buddy/people/${userId}`)
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email, action: 'trek.mentor_set',
+    entityType: 'trek_member', entityId: userId,
+    after: { mentor, bio: bio?.trim() || null },
+  })
   return { success: true as const }
 }
 
@@ -436,5 +508,11 @@ export async function decideHostRequest(requestId: string, grant: boolean) {
   revalidatePath('/admin/trek-buddy')
   revalidatePath('/trek-buddy')
   revalidatePath('/trek-buddy/discover')
+
+  await auditLog({
+    actorId: admin.id, actorEmail: admin.email, action: 'trek.host_request_decided',
+    entityType: 'trek_host_request', entityId: requestId,
+    after: { granted: grant },
+  })
   return { success: true as const }
 }

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { trekLimit } from '@/lib/trekLimits'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { getUser } from '@/actions/auth'
 
@@ -25,6 +26,10 @@ export async function followPerson(personId: string): Promise<SocialResult> {
   const user = await getUser()
   if (!user) return { ok: false, error: 'Sign in first.' }
   if (user.id === personId) return { ok: false, error: 'You cannot follow yourself.' }
+
+  // Follow-spam is a notification vector, so it is throttled per member.
+  const gate = await trekLimit('follow', user.id)
+  if ('error' in gate) return { ok: false, error: gate.error }
 
   const { error } = await createAdminSupabaseClient()
     .from('trek_follows')

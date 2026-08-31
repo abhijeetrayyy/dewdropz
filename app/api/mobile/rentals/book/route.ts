@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // 409, not 400, when somebody else took the last one between the quote and
     // the tap — the request was well formed, the world moved. The action says
     // so with a `code`; an earlier version of this line matched the message
-    // text instead and got it wrong, answering 400 for a sold-out hire because
+    // text instead and got it wrong, answering 400 for a sold-out rental because
     // the real sentence ("… is not free between …") matched none of its
     // patterns. Prose is for people, not for control flow.
     const status = res.code === 'unavailable' ? 409 : 400

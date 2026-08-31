@@ -70,7 +70,7 @@ export default function LoginForm() {
           // Any rental booked as a guest under this address becomes theirs, so
           // it appears on "your rentals" instead of being reachable only
           // through the lookup form.
-          if (result.userId) await claimGuestRentalBookings(result.userId, email)
+          await claimGuestRentalBookings()
         } catch {
           // Keep the guest cart as-is and carry on.
         }

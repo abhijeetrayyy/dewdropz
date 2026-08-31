@@ -129,13 +129,28 @@ export default function Preloader() {
       0.15
     )
 
-    // The hold, cut from 1.55s to 0.62s. The hero's copy is released by
-    // `finishIntro`, so every millisecond here is a millisecond the headline
-    // and the price are not on screen — that is how the first call to action
-    // came to land at 3.79s. The bar and counter still complete; they just do
-    // it in the time a loading screen is actually worth.
-    tl.add(() => finishIntro(), 0.62)
-    tl.to(panelRef.current, { autoAlpha: 0, duration: 0.34, ease: 'power2.inOut' }, 0.66)
+    // The hold, cut from 1.55s to 0.62s, and the panel is gone by 1.0s. The bar
+    // and counter still complete; they just do it in the time a loading screen
+    // is actually worth.
+    //
+    // `finishIntro` USED TO FIRE HERE, at 0.62s, because the hero's copy was
+    // JavaScript-gated and every millisecond of hold was a millisecond the
+    // headline and the price were not on screen — that is how the first call to
+    // action came to land at 3.79s. The copy is CSS now and is in the server
+    // HTML from the first frame, so releasing early buys nothing.
+    //
+    // What waits on the signal today is the hero headline's choreography, and
+    // that wants the opposite: it should begin when this panel is GONE, not
+    // when it starts fading, or its opening plays through a dissolving curtain.
+    // So the announcement moved to `hide()`, which the timeline's own
+    // onComplete calls — the intro is done when the intro is done.
+    //
+    // The fade itself is no longer here. It used to be a GSAP `autoAlpha` tween
+    // on the panel, which meant JavaScript owned whether the panel was on the
+    // screen — the whole defect. CSS owns it now (`preloader-hold`), and this
+    // empty tween is left in its place purely to hold the timeline's length at
+    // 1.0s so `onComplete` still fires when the panel has finished going.
+    tl.to({}, { duration: 0.34 }, 0.66)
 
     return () => {
       clearTimeout(safety)
@@ -156,6 +171,15 @@ export default function Preloader() {
     <div
       ref={panelRef}
       onClick={skip}
+      // Its resting state is ABSENT, and it is CSS that says so — see
+      // `[data-preloader]` in globals.css. This div is in the server HTML with
+      // `visible` starting true, so until now JavaScript was the only thing
+      // that could ever take it off the screen: script disabled, a dropped
+      // chunk or a throw before that effect left an opaque black rectangle
+      // over a fully written page, permanently. Now the panel has to be
+      // animated INTO view, and everything that can go wrong lands on a page
+      // with no panel over it.
+      data-preloader
       className="fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center gap-7 bg-ink"
       aria-label="Loading DEWDROPZ"
     >

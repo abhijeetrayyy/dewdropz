@@ -80,7 +80,7 @@ export default function LookupClient() {
         <div className="mt-8 rounded-[var(--r-panel)] border border-rule bg-surface p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-rule pb-4">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-sage">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-forest">
                 {STATUS[found.status] ?? found.status}
               </p>
               <p className="mt-1 font-mono text-lg text-ink">{found.booking_number}</p>

@@ -74,8 +74,22 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
   const color = colors.find((c) => c.name === colorName) ?? colors[0]
 
   const variants = product.variants ?? []
-  const [variantId, setVariantId] = useState(variants[0]?.id)
-  const variant = variants.find((v) => v.id === variantId) ?? variants[0]
+  // The first IN-STOCK size, not simply the first size.
+  //
+  // This was `variants[0]?.id`, and combined with the chip styling below it was
+  // a correctness bug rather than a polish item: when the first variant was sold
+  // out it was pre-selected, rendered in sage AS THE CHOSEN ONE, and `disabled`
+  // — so it could not be clicked and therefore could not be changed away from —
+  // and its id was written into the studio link. The studio accepts a variant id
+  // verbatim, and nothing between this chip and a paid order checks stock again.
+  const [variantId, setVariantId] = useState(
+    variants.find((v) => (v.inventory_quantity ?? 0) > 0)?.id
+  )
+  // No `?? variants[0]` fallback: if nothing is selected, nothing is selected.
+  // The fallback is what let a sold-out variant become the effective choice.
+  const variant = variants.find((v) => v.id === variantId)
+  // Every size gone is a real state, and it is not the same as "no sizes".
+  const allSoldOut = variants.length > 0 && !variant
 
   const [side, setSide] = useState<'front' | 'back'>('front')
   const shownZone = color?.[side] ?? color?.front ?? color?.back
@@ -84,7 +98,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
 
   const params = new URLSearchParams()
   if (color?.name) params.set('color', color.name)
-  if (variant?.id) params.set('variant', variant.id)
+  if (variant?.id && (variant.inventory_quantity ?? 0) > 0) params.set('variant', variant.id)
   const studioHref = `/products/${product.slug}/customize${params.toString() ? `?${params}` : ''}`
 
   return (
@@ -103,6 +117,33 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
               placeholder="blur"
               blurDataURL={BLUR_DATA_URL}
               className="object-cover"
+            />
+          )}
+
+          {/* WHERE THE PRINT GOES, drawn on the garment.
+              This section is the shop's only real instrument and it showed
+              nothing printed: a photograph of a blank, a colour swatch, and a
+              button. Every number needed to draw the area was already in the
+              database and none of it reached the screen.
+
+              `CustomizationZone` carries x / y / widthPx / heightPx in the
+              canonical space CanvasStage uses, whose width is 800; the stage box
+              is aspect-[4/5], so the canonical height it already assumes is
+              1000, and the mockups are 4:5 — which makes `object-cover` a no-op
+              crop here and lets these percentages land exactly.
+
+              A dashed hairline, no fill, no animation. It moves when the image
+              moves and it never draws itself on. */}
+          {shownZone && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute rounded-[var(--r-bar)] border border-dashed border-dawn/70"
+              style={{
+                left: `${(shownZone.x / 800) * 100}%`,
+                top: `${(shownZone.y / 1000) * 100}%`,
+                width: `${(shownZone.widthPx / 800) * 100}%`,
+                height: `${(shownZone.heightPx / 1000) * 100}%`,
+              }}
             />
           )}
         </div>
@@ -127,9 +168,21 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
           </div>
         )}
 
-        <span className="absolute right-3 top-3 rounded-[var(--r-input)] bg-ink/70 px-2.5 py-1 font-body text-[9px] tracking-[0.15em] uppercase text-paper backdrop-blur-sm">
-          Your canvas
-        </span>
+        {/* The real measurement, not a slogan. "Your canvas" was
+            unconditional, so it announced a canvas even when there was no
+            printable zone to have one — and it said nothing a visitor could
+            act on. The figures are the same ones the studio itself prints, and
+            they are in Space Mono because they are figures. Moved to the foot
+            so it sits under the rectangle instead of arguing with the
+            front/back toggle in the opposite corner. */}
+        {shownZone && (
+          <span className="absolute bottom-3 right-3 flex items-baseline gap-2 rounded-[var(--r-input)] bg-ink/70 px-2.5 py-1.5 text-paper backdrop-blur-sm">
+            <span className="font-body text-[9px] uppercase tracking-[0.15em] text-paper/70">Print area</span>
+            <span className="font-mono text-[11px] tabular-nums">
+              {shownZone.widthIn} × {shownZone.heightIn} in
+            </span>
+          </span>
+        )}
       </div>
 
       {/* Options */}
@@ -183,7 +236,7 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
 
         {variants.length > 0 && (
           <div className="mt-7">
-            <Step n="02" label="Pick your size" value={variant?.name} />
+            <Step n="02" label="Pick your size" value={variant?.name ?? (allSoldOut ? 'Sold out' : undefined)} />
             <div className="mt-3 flex flex-wrap gap-2">
               {variants.map((v) => {
                 const oos = (v.inventory_quantity ?? 0) <= 0
@@ -193,11 +246,15 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
                     type="button"
                     disabled={oos}
                     onClick={() => setVariantId(v.id)}
+                    aria-pressed={variant?.id === v.id}
+                    // `oos` is tested BEFORE the selected branch. The other way
+                    // round, a sold-out size that happened to be selected drew
+                    // itself in sage as available while being unclickable.
                     className={`min-w-[46px] rounded-[var(--r-input)] border px-3 py-2 font-body text-xs uppercase tracking-[0.06em] transition-colors duration-300 ${
-                      variant?.id === v.id
-                        ? 'border-sage bg-sage/15 text-paper'
-                        : oos
+                      oos
                         ? 'cursor-not-allowed border-paper/10 text-paper/20 line-through'
+                        : variant?.id === v.id
+                        ? 'border-sage bg-sage/15 text-paper'
                         : 'border-paper/20 text-paper/60 hover:border-paper/50 hover:text-paper'
                     }`}
                   >
@@ -226,15 +283,24 @@ function ProductPanel({ product }: { product: ProductWithCollection }) {
         </div>
 
         <div className="mt-auto pt-7">
+          {/* A blank with every size gone does not offer a door into the studio.
+              It used to: the button was always live, and it carried a sold-out
+              variant with it. */}
           <Link
             href={studioHref}
-            className="group flex w-full items-center justify-center gap-2.5 rounded-[var(--r-input)] bg-sage px-6 py-4 font-body text-[11px] uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-paper"
+            aria-disabled={allSoldOut || undefined}
+            tabIndex={allSoldOut ? -1 : undefined}
+            className={`group flex w-full items-center justify-center gap-2.5 rounded-[var(--r-input)] bg-sage px-6 py-4 font-body text-[11px] uppercase tracking-[0.16em] text-ink transition-colors duration-300 hover:bg-paper ${
+              allSoldOut ? 'pointer-events-none opacity-50' : ''
+            }`}
           >
             Customize
             <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
           </Link>
           <p className="mt-3 text-center font-body text-[10px] leading-relaxed text-paper/35">
-            Opens the studio with this blank, colour and size already loaded.
+            {allSoldOut
+              ? 'Every size is sold out — try another blank above.'
+              : 'Opens the studio with this blank, colour and size already loaded.'}
           </p>
         </div>
       </div>

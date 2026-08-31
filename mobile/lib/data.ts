@@ -800,7 +800,7 @@ export async function getCustomRangeContext(product: {
 
 // ─── Rentals ─────────────────────────────────────────────────────────────────
 //
-// Gear for hire, read straight from the device.
+// Gear for rent, read straight from the device.
 //
 // The catalogue and the availability count are safe to read here because both
 // are public by design: `rental_items` has a "Public read active rental items"
@@ -811,7 +811,7 @@ export async function getCustomRangeContext(product: {
 // stays private.
 //
 // PRICE IS NOT READ HERE, and cannot be. Nothing on this screen multiplies a
-// daily rate by a number of days — inclusive day counting, the long-hire
+// daily rate by a number of days — inclusive day counting, the long-rental
 // discount, return postage charged both ways and a deposit that must stay
 // outside the taxable base all live in `lib/rentalPricing.ts` on the server.
 // The quote and the booking both go through /api/mobile/rentals/*. `daily_rate`

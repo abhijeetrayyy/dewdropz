@@ -1,10 +1,9 @@
 'use client'
 
-import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useEffect, useRef } from 'react'
+import SectionHeader from '@/components/SectionHeader'
 import Image from 'next/image'
 import Link from 'next/link'
-import { motion } from 'motion/react'
 import { gsap } from '@/lib/gsap'
 import { BLUR_DATA_URL, STATS_BG_IMAGE } from '@/lib/constants'
 import type { HomeStat } from '@/types/database'
@@ -18,13 +17,8 @@ import type { HomeStat } from '@/types/database'
 // to be four hardcoded claims ("12,000+ trekkers geared up") that nobody had
 // measured; a storefront should not publish invented numbers, so the band now
 // renders only what an owner actually entered in /admin/settings.
-export default function BrandPulse({
-  stats = [],
-  stop,
-}: {
-  stats?: HomeStat[]
-  stop: TrailStop
-}) {
+// No chapter prop: the band opens on a statement, which carries no eyebrow.
+export default function BrandPulse({ stats = [] }: { stats?: HomeStat[] }) {
   const sectionRef = useRef<HTMLElement>(null)
   const numberRefs = useRef<(HTMLSpanElement | null)[]>([])
 
@@ -70,36 +64,36 @@ export default function BrandPulse({
       <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/70 to-ink pointer-events-none" />
 
       <div className="relative max-w-3xl mx-auto text-center">
-        <div className="font-mono text-[10px] tracking-[0.24em] text-sage uppercase">{stopEyebrow(stop)}</div>
-        <motion.h2
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="mt-4 font-display font-light text-[clamp(30px,4.6vw,52px)] text-paper leading-tight"
-        >
-          For those still searching. <br className="hidden sm:block" />
-          <span className="italic text-sage">More than a destination.</span>
-        </motion.h2>
-        {/* Replaced wholesale per the 23 August mark-up. The line that stood
-            here was a supplier's origin story — three guides, monsoon, tested
-            above five thousand metres — for a shop that does not actually make
-            technical gear. This is the brand's own paragraph, and it is set in
-            `font-display` rather than `font-body`: at this length, centred and
-            alone under a serif headline, the grotesque read as a caption. */}
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.8, delay: 0.15, ease: 'easeOut' }}
-          className="mx-auto mt-8 max-w-2xl font-display text-[15px] leading-[1.85] text-paper/75 md:text-[17px]"
-        >
-          We didn&apos;t start with a product. We started with a feeling — the quiet after
-          heartbreak, the hope that follows a difficult season, the solitude of an empty
-          trail, and the wonder of standing beneath a sky larger than yourself. Somewhere
-          between mountains, campfires, long walks, and unfamiliar paths, we rediscover who
-          we are. DEWDROPZ is an invitation to spend more time in those places.
-        </motion.p>
+        {/* STATEMENT — the page's one brand statement, opening the way a
+            statement opens: alone, at scale, with no label above it announcing
+            that a statement is coming.
+
+            Both entry animations are gone rather than merely de-faded. They
+            existed to stagger a headline and a paragraph that are the first
+            thing in the band anyway, and the words now ship finished in the
+            server HTML — which is the only property that mattered about them.
+            `--sage-lit`, not `--sage`: 7.6:1 against this ground where sage
+            measured 4.8:1, on the largest italic on the page. */}
+        <SectionHeader
+          species="statement"
+          ground="ink"
+          title={
+            <>
+              For those still searching. <br className="hidden sm:block" />
+              <span className="italic text-sage-lit">More than a destination.</span>
+            </>
+          }
+          lede={
+            <>
+              We didn&apos;t start with a product. We started with a feeling — the quiet after
+              heartbreak, the hope that follows a difficult season, the solitude of an empty
+              trail, and the wonder of standing beneath a sky larger than yourself. Somewhere
+              between mountains, campfires, long walks, and unfamiliar paths, we rediscover who
+              we are. DEWDROPZ is an invitation to spend more time in those places.
+            </>
+          }
+          className="mx-auto max-w-2xl text-center [&>h2]:mx-auto [&>p]:mx-auto"
+        />
       </div>
 
       {stats.length > 0 && (

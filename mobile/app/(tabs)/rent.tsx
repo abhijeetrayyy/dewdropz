@@ -18,7 +18,7 @@ import { C, R, S } from "@/lib/theme";
 
 // The gear locker.
 //
-// Presented as a ruled index rather than a shop grid, because hiring is not
+// Presented as a ruled index rather than a shop grid, because renting is not
 // shopping: the thing being compared is a day rate against a deposit against
 // how the gear gets to you, not a photograph. Each row leads with the rate,
 // says the deposit comes back, and states plainly whether the item can be

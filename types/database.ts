@@ -453,6 +453,10 @@ export interface Coupon {
   starts_at: string | null
   expires_at: string | null
   is_active: boolean
+  /** Whether the code may be spent on the shop, on the gear locker, or both.
+   *  Defaults to 'sale', so no existing code silently became spendable on a
+   *  rental the day rentals arrived. Migration 100. */
+  applies_to: 'sale' | 'rental' | 'both'
   created_at: string
   updated_at: string
 }
@@ -461,7 +465,9 @@ export interface CouponUsage {
   id: string
   coupon_id: string
   user_id: string | null
+  /** Exactly one of these two is set — a usage belongs to a sale or a rental. */
   order_id: string | null
+  rental_booking_id?: string | null
   discount_amount: number
   created_at: string
 }
@@ -823,7 +829,10 @@ export interface InvoiceTaxSummaryRow {
  */
 export interface Invoice {
   id: string
-  order_id: string
+  /** Exactly one of order_id and rental_booking_id is set — a document is about
+   *  one supply. Enforced by a CHECK, migration 101. */
+  order_id: string | null
+  rental_booking_id: string | null
   document_type: 'tax_invoice' | 'bill_of_supply'
   /** Financial-year label, e.g. '2627' for 2026-27. */
   fy: string
@@ -888,9 +897,12 @@ export interface InvoiceLine {
   order_item_id: string | null
   line_no: number
   description: string
+  /** An HSN for goods, an SAC for a service. `code_type` says which — printing
+   *  an SAC under a heading that says HSN is a defect a reader cannot detect. */
   hsn_code: string
+  code_type: 'HSN' | 'SAC'
   quantity: number
-  /** Unit Quantity Code — 'PCS' for garments. */
+  /** Unit Quantity Code — 'PCS' for garments, 'DAY' for a rental. */
   uqc: string
   unit_price: number
   gross_value: number
@@ -995,7 +1007,7 @@ export interface RentalItem {
   daily_rate: number
   /** Refundable security, in paise. Never taxed — it is not consideration. */
   deposit: number
-  /** Applied to hires of 7 days or more, so one rate stays the only rate. */
+  /** Applied to rentals of 7 days or more, so one rate stays the only rate. */
   weekly_discount_pct: number
   min_days: number
   max_days: number
@@ -1050,6 +1062,45 @@ export interface RentalBooking {
   admin_notes: string | null
   created_at: string
   updated_at: string
+
+  // ── Phase two (migration 100) ────────────────────────────────────────────
+
+  /** The rent, not the deposit. The two move independently. */
+  payment_method: 'razorpay' | 'cod' | null
+  payment_status: 'unpaid' | 'pending' | 'paid' | 'refunded' | 'failed'
+  gateway_order_id: string | null
+  gateway_payment_id: string | null
+  amount_paid: number
+  paid_at: string | null
+
+  /** How the deposit is held. Cash at a counter, a captured payment, or nothing. */
+  deposit_method: 'cash' | 'gateway' | 'waived'
+  deposit_payment_id: string | null
+  deposit_refund_id: string | null
+  deposit_refunded: number
+  deposit_settled_at: string | null
+
+  /** Already inside rent_amount as priced; recorded so the breakdown adds up. */
+  long_rental_discount: number
+  coupon_id: string | null
+  coupon_code: string | null
+  coupon_discount: number
+
+  out_carrier: string | null
+  out_tracking: string | null
+  dispatched_at: string | null
+  delivered_at: string | null
+  return_carrier: string | null
+  return_tracking: string | null
+  return_label_url: string | null
+  return_booked_at: string | null
+  returned_at: string | null
+
+  /** When a reminder was SENT, not when it is due — and the idempotency key
+   *  that stops a retried cron sending twice. */
+  reminder_starts_at: string | null
+  reminder_due_at: string | null
+  reminder_overdue_at: string | null
 }
 
 export interface RentalReservation {
@@ -1067,6 +1118,18 @@ export interface RentalReservation {
   returned_at: string | null
   created_at: string
   updated_at: string
+
+  /** Frozen at booking, like daily_rate beside it: rental_items is editable and
+   *  an invoice must not be able to restate the rate a rental was taxed at. */
+  sac_code: string | null
+  gst_rate: number
+  /** This line's share of every discount, apportioned. Printed on the invoice,
+   *  because s.15(3)(a) only excludes a discount from value if it is recorded. */
+  discount_amount: number
+  /** Rent after every discount — the value of supply. */
+  taxable_value: number
+  tax_amount: number
+
   item?: Pick<RentalItem, 'name' | 'slug' | 'images'>
   unit?: Pick<RentalUnit, 'code'>
 }
@@ -1079,7 +1142,50 @@ export interface RentalEvent {
     | 'created' | 'deposit_held' | 'handed_over' | 'returned' | 'inspected'
     | 'late_fee' | 'damage_fee' | 'deposit_refunded' | 'deposit_forfeited'
     | 'cancelled' | 'note'
+    // Migration 100
+    | 'payment_received' | 'payment_failed' | 'refunded'
+    | 'coupon_applied'
+    | 'extension_requested' | 'extension_confirmed' | 'extension_declined'
+    | 'photo_added' | 'reminder_sent'
+    | 'dispatched' | 'delivered' | 'return_booked'
   amount: number | null
+  note: string | null
+  actor_id: string | null
+  created_at: string
+}
+
+export interface RentalExtension {
+  id: string
+  booking_id: string
+  previous_end: string
+  new_end: string
+  days_added: number
+  /** The added days only, at the rate frozen on the reservation — never a
+   *  re-quote of the whole rental. See lib/rentalMath.extensionCharge. */
+  rent_amount: number
+  tax_amount: number
+  total_amount: number
+  status: 'pending' | 'confirmed' | 'declined' | 'cancelled'
+  payment_status: 'unpaid' | 'pending' | 'paid' | 'failed'
+  gateway_order_id: string | null
+  gateway_payment_id: string | null
+  requested_by: string | null
+  approved_by: string | null
+  decline_reason: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RentalDamagePhoto {
+  id: string
+  booking_id: string
+  reservation_id: string | null
+  /** Which end of the rental. A photograph with no stage proves nothing about
+   *  who caused what. */
+  stage: 'handover' | 'return'
+  /** A storage PATH, not a URL — the evidence bucket is private, so links are
+   *  signed on demand and expire. */
+  url: string
   note: string | null
   actor_id: string | null
   created_at: string

@@ -1,4 +1,5 @@
 import { TRUST_POINTS } from '@/lib/constants'
+import { formatPrice } from '@/lib/utils'
 
 // 05:50 — first light, and the page's first light ground.
 //
@@ -14,9 +15,36 @@ import { TRUST_POINTS } from '@/lib/constants'
 // value in a four-up band, so the eye gets hierarchy instead of a hedge of small
 // caps — and on phones it is a 2x2 grid where everything is visible at once
 // rather than something you have to discover by swiping.
-export default function TrustBand() {
+export default function TrustBand({ freeShippingThreshold }: { freeShippingThreshold?: number }) {
+  // The shipping promise comes from the setting that actually governs it.
+  //
+  // "Free over ₹2,000" was a string in lib/constants sitting beside
+  // `free_shipping_threshold`, which is live, owner-editable, and what
+  // actions/shipping.ts really charges against. They agree today by
+  // coincidence. Change the threshold in settings and this band keeps
+  // advertising the old number; set it to 0 to switch free shipping off and the
+  // homepage still promises it. A storefront may not print a price rule the
+  // checkout will not honour.
+  const points = TRUST_POINTS.map((point) =>
+    point.label === 'Shipping'
+      ? {
+          ...point,
+          value:
+            freeShippingThreshold && freeShippingThreshold > 0
+              ? `Free over ${formatPrice(freeShippingThreshold)}`
+              : // The honest zero branch: no threshold means no promise.
+                'Calculated at checkout',
+        }
+      : point
+  )
+  // `--paper-sand`, the ladder's fourth step. This strip sat at L* 92.5
+  // between Trails at 14.3 and the kit at 14.0 — a 100px band causing a +78
+  // and a −78 L* swing back to back, the sharpest thing on the page. At L* 60
+  // those become +45 and −41. Same warm hue family, saturation up as value
+  // falls, exactly as the three steps above it do.
+
   return (
-    <section className="relative bg-paper-warm">
+    <section className="relative bg-mist">
       {/* First light, as an edge rather than a fill. */}
       <div
         aria-hidden
@@ -27,8 +55,8 @@ export default function TrustBand() {
         }}
       />
 
-      <ul className="mx-auto grid max-w-6xl grid-cols-2 px-6 md:grid-cols-4 md:px-10">
-        {TRUST_POINTS.map((point, i) => (
+      <ul className="mx-auto grid max-w-measure grid-cols-2 px-6 md:grid-cols-4 md:px-10">
+        {points.map((point, i) => (
           <li
             key={point.label}
             className={`border-rule-warm px-1 py-6 md:px-6 md:py-7 ${
@@ -37,10 +65,10 @@ export default function TrustBand() {
               i === 0 ? 'md:border-l-0' : 'md:border-l'
             } ${i % 2 === 1 ? 'pl-5 md:pl-6' : ''}`}
           >
-            <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-ember">
+            <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-forest-deep">
               {point.label}
             </div>
-            <div className="mt-2 font-body text-[13px] leading-snug text-forest-deep md:text-sm">
+            <div className="mt-2 font-body text-[13px] leading-snug text-ink md:text-sm">
               {point.value}
             </div>
           </li>

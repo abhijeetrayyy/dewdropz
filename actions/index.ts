@@ -88,6 +88,7 @@ export {
 
 export {
   getStoreSettings,
+  getAdminStoreSettings,
   updateStoreSettings,
 } from './settings'
 

@@ -19,9 +19,9 @@ export default async function RentPage() {
   return (
     <>
       <NavBar />
-      <main className="bg-paper">
+      <main id="main" className="bg-paper">
         <section className="mx-auto max-w-6xl px-6 pb-6 pt-28 sm:pt-32">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sage">The gear locker</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-forest">The gear locker</p>
           <h1 className="mt-3 max-w-[18ch] font-display text-4xl leading-[1.05] text-ink sm:text-5xl">
             Borrow the heavy things.
           </h1>
@@ -105,7 +105,7 @@ export default async function RentPage() {
             costs one band and removes the main reason to abandon the page. */}
         <section className="border-t border-rule bg-paper-deep/40">
           <div className="mx-auto max-w-6xl px-6 py-16">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sage">How it works</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-forest">How it works</p>
             <ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 ['Pick your dates', 'Both days count. We show what is free before you commit to anything.'],
@@ -114,7 +114,7 @@ export default async function RentPage() {
                 ['Bring it back', 'The deposit returns once it is checked. A late return is charged at the day rate, capped at the deposit.'],
               ].map(([title, body], i) => (
                 <li key={title}>
-                  <span className="font-mono text-[11px] text-sage">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="font-mono text-[11px] text-forest">{String(i + 1).padStart(2, '0')}</span>
                   <h3 className="mt-2 font-display text-lg text-ink">{title}</h3>
                   <p className="mt-1 font-body text-[13px] leading-relaxed text-mid">{body}</p>
                 </li>

@@ -5,6 +5,8 @@ import { SocialLink } from '@/components/layout/SocialLink'
 import { SITE } from '@/lib/constants'
 import { getCollections } from '@/actions/products'
 import { getCategories } from '@/actions/categories'
+import { getStoreSettings } from '@/actions/settings'
+import { formatPrice } from '@/lib/utils'
 
 /**
  * Whether a contact route is real enough to publish.
@@ -43,9 +45,10 @@ function isRealProfile(value: string): boolean {
 }
 
 export default async function FooterSection() {
-  const [collections, categories] = await Promise.all([
+  const [collections, categories, settings] = await Promise.all([
     getCollections(),
     getCategories({ parentId: null }),
+    getStoreSettings(),
   ])
 
   const footerColumns = [
@@ -94,7 +97,7 @@ export default async function FooterSection() {
   return (
     <footer className="bg-ink text-white/60 pt-20 px-6 md:px-10 overflow-hidden">
       {/* Brand + sitemap */}
-      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-x-6 gap-y-12">
+      <div className="max-w-measure mx-auto grid grid-cols-2 md:grid-cols-6 gap-x-6 gap-y-12">
         <div className="col-span-2">
           <Logo
             markHeight={34}
@@ -176,15 +179,22 @@ export default async function FooterSection() {
       </div>
 
       {/* Logistics reassurance, one quiet line */}
-      <div className="max-w-7xl mx-auto border-t border-white/10 mt-14 pt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-body text-[11px] tracking-[0.08em] uppercase text-white/35">
+      <div className="max-w-measure mx-auto border-t border-white/10 mt-14 pt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-body text-[11px] tracking-[0.08em] uppercase text-white/35">
         <span>COD · UPI · Cards</span>
-        <span>Free shipping over ₹2,000</span>
+        {/* From the setting, not from a string. The same figure was hardcoded
+            here AND in `TRUST_POINTS`, beside a live `free_shipping_threshold`
+            that is what checkout actually charges against — so an owner raising
+            the threshold left two places on every page still promising the old
+            one, and switching free shipping off left both still promising it. */}
+        {settings.free_shipping_threshold > 0 && (
+          <span>Free shipping over {formatPrice(settings.free_shipping_threshold)}</span>
+        )}
         <span>7-day returns</span>
         <span>Fast dispatch across India</span>
       </div>
 
       {/* The sign-off — oversized wordmark, like a summit marker */}
-      <div className="max-w-7xl mx-auto mt-12 select-none" aria-hidden="true">
+      <div className="max-w-measure mx-auto mt-12 select-none" aria-hidden="true">
         <div
           className="font-display font-light uppercase leading-[0.8] tracking-[-0.03em] text-transparent text-[clamp(64px,12.5vw,190px)] whitespace-nowrap"
           style={{ WebkitTextStroke: '1px rgba(246,243,230,0.14)' }}
@@ -194,7 +204,7 @@ export default async function FooterSection() {
       </div>
 
       {/* Legal row */}
-      <div className="max-w-7xl mx-auto border-t border-white/10 mt-4 py-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="max-w-measure mx-auto border-t border-white/10 mt-4 py-6 flex flex-wrap items-center justify-between gap-3">
         <span className="font-body text-xs text-white/30">© 2026 DEWDROPZ</span>
         <span className="font-mono text-[10px] tracking-[0.1em] text-white/25">30.3165° N, 78.0322° E</span>
         <span className="font-body text-xs text-white/30">Made by DoonDzn</span>

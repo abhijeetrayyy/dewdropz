@@ -22,7 +22,7 @@ type Tone = 'neutral' | 'live' | 'moving' | 'done' | 'stopped' | 'warn'
 
 const TONE: Record<Tone, { chip: string; dot: string }> = {
   // Waiting on someone. Deliberately quiet — this is not news.
-  neutral: { chip: 'bg-paper-warm text-mid border-rule-warm',          dot: 'bg-light' },
+  neutral: { chip: 'bg-paper-warm text-mid border-rule-warm',          dot: 'bg-faint' },
   // Accepted, in our hands, not yet moving. Dawn is the arrival colour.
   live:    { chip: 'bg-dawn-soft text-ember border-dawn/40',            dot: 'bg-dawn' },
   // Physically in transit.

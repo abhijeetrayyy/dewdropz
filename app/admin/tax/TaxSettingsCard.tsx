@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getStoreSettings, updateStoreSettings } from '@/actions/settings'
+import { getAdminStoreSettings, updateStoreSettings } from '@/actions/settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +19,7 @@ export default function TaxSettingsCard() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    getStoreSettings().then(setSettings).catch(() => toast.error('Failed to load tax settings'))
+    getAdminStoreSettings().then(setSettings).catch(() => toast.error('Failed to load tax settings'))
   }, [])
 
   // Set when the server rejects the GSTIN on its check character alone. Holds

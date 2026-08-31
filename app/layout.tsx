@@ -37,6 +37,15 @@ import './globals.css'
 //     Windows. The brand's most distinctive texture was unbranded and
 //     different on every device. Space Mono's slightly mechanical, retro cut
 //     is exactly the "instrument readout" the design was reaching for.
+// axes: ['opsz'], and deliberately NO `style`. The hero headline's turn
+// (globals.css, `alive-lean`) cancels the browser's SYNTHESIZED oblique with an
+// equal CSS skew in order to produce the roman. Adding a real italic face
+// breaks that cancellation and back-slants ALIVE. on the largest word on the
+// page. A second font file with `display: swap` would also re-set the green
+// half of a CENTRED line mid-load, shifting the whole headline sideways. If the
+// true italic is ever wanted — and it is better typography — it is its own
+// change, judged on stills, and the turn has to be rebuilt as a two-layer
+// crossfade first.
 const fraunces = Fraunces({
   subsets: ['latin'],
   axes: ['opsz'],

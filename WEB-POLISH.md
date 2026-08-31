@@ -112,6 +112,8 @@ A **two-tier control**, replacing the single scrolling strip:
 
 - **Tier 1 is a row of dimension buttons**, not values. It fits any viewport at any catalogue size, because it grows with the number of *dimensions* (5, fixed) rather than the number of *values* (unbounded). This is the structural fix for 2.1.
 - **Tier 2 is a disclosure panel** on `bg-surface` with `--shadow-panel`, opening under the pressed dimension. Department headings become real headings in a panel that holds still (2.4). Counts move to full-contrast `text-mid` (2.5).
+
+> **CORRECTION — 2026-08-30, shop council.** The counts did **not** move to `text-mid`. The rebuild took them off `opacity-50` and put them on `text-light`, which measures **3.17:1** on `--surface` — still under AA, at 10px, on the number this document calls "the single most useful thing on a filter chip". This item was recorded as closed for a fix that never landed. It has now shipped, along with a raise of the `--light` token itself (`#94917F` → `#6C6A5D`), because the same token was carrying 42 text sites across 24 files. See `design/15-shop.md`.
 - **Multi-select within a dimension, AND across dimensions** (2.3). Chips get checkbox semantics and `aria-pressed`.
 - **Every change writes to the URL** via `router.replace(..., { scroll: false })` (2.2). Shareable, bookmarkable, back-button-correct.
 - **Collections gain a dimension button** so the photographic grid and the bar agree on state (2.6), while the grid itself stays — it earns its place as the one control that can sell.
@@ -330,6 +332,14 @@ The two-tier disclosure bar solved the original defects (horizontal scroll, off-
 
 The filtering logic did not change: `lib/shop-filter.ts` and its tests carried over untouched, which is the whole point of having split it out.
 
+> **CORRECTION — 2026-08-30, shop council.** Two things here are stale.
+>
+> **The shallow plate did not fix the fold.** The claim above (§"The shop: a left rail") is that the portrait tiles were what "pushed the actual catalogue a full screen down the page". The plate got shorter and the masthead above it was never touched, so at 1440×900 the first product photograph still began at **≈760px** — 140px of a 430px image visible, with no name, no price and no add-to-cart above the fold. The plate is now gated on whether the collection dimension can actually partition the catalogue; on the current data it does not render and the grid starts at ≈485px.
+>
+> **A colour dimension did not ship.** §2.7 promised "size and colour dimensions derived from live variant data" and Appendix E reads as though both landed. Size shipped; colour did not — and the three hexes in `customization_config` are the customiser's palette, not stock colourways, so it should not ship from that source.
+>
+> **And the filtering logic was not defect-free.** `matches()` excluded any product with no variants from a size filter, so `/shop?size=L` removed `garhwal-ridgeline-tee` — a stocked, ready-made tee — from an apparel shop. Twenty lines above it, `inStock()` reasons the opposite way about the identical absence of variant data, and says why in a comment. Fixed, with two tests.
+
 **One bug this surfaced.** The rail rendered `APPAREL` as a heading *and* `Apparel` as a loose checkbox below it — two controls with the same name. Cause: the live catalogue assigns products directly to departments as well as to their children, and `groupCategories()` dropped a stocked parent into the ungrouped bucket. It now attaches to its own group as `self` and renders as the group's head row, with its children indented under a rule. Fixed in the tested module, with a test that pins it.
 
 ### The collections index
@@ -362,7 +372,7 @@ Confirmed visually at 1200–1440px: the two-tier filter bar fits with no horizo
 | Undefined colour tokens (`sand`, `rust`) | 17 | **0** |
 | Raw Tailwind palette in account | 5 | **0** |
 | Invisible form fields (`bg-paper` on paper) | 16 | **0** |
-| Shop filter tests | 0 | **29** |
+| Shop filter tests | 0 | **29** | <!-- 2026-08-30: now 34. ShopContent's header comment said 37 and was wrong at the time it was written; it said 29 in this table and 37 in the code. -->
 | Design-system lint rules | 0 | **4** |
 
 ### Bugs found and fixed along the way

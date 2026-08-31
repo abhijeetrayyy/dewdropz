@@ -7,6 +7,11 @@ const STORAGE_BUCKETS = {
   COLLECTIONS: 'collections',
   DESIGNS: 'design-uploads',
   TREK_COVERS: 'trek-covers',
+  // Handover and return photographs on a rental. Private, unlike every other
+  // bucket here: this is evidence in a dispute the shop may be having with the
+  // person it would be showing it to, and a return set can have other people's
+  // gear in frame. Served through a signed URL by an admin, never by public URL.
+  RENTAL_EVIDENCE: 'rental-evidence',
 } as const
 
 // Per-bucket overrides for ensureBucketsExist — everything defaults to the
@@ -86,12 +91,30 @@ export async function ensureBucketsExist() {
     const { data: existing } = await supabase.storage.getBucket(bucket)
     if (!existing) {
       await supabase.storage.createBucket(bucket, {
-        public: true,
+        // Everything here is a shop window except the rental evidence, which is
+        // a private record. A public bucket means a guessable URL is the whole
+        // access control, and that is the wrong answer for a photograph taken
+        // to settle an argument about money.
+        public: bucket !== STORAGE_BUCKETS.RENTAL_EVIDENCE,
         fileSizeLimit: BUCKET_OVERRIDES[bucket]?.fileSizeLimit ?? 5242880, // 5MB
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'],
       })
     }
   }
+}
+
+/**
+ * A time-limited URL for an object in a private bucket.
+ *
+ * Rental evidence lives in the one bucket here that is not public, so there is
+ * no `getPublicUrl` for it — by design. The caller is responsible for having
+ * checked that whoever is about to see this is allowed to.
+ */
+export async function getSignedUrl(bucket: BucketName, path: string, expiresInSeconds = 600) {
+  const supabase = createAdminSupabaseClient()
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresInSeconds)
+  if (error || !data) return null
+  return data.signedUrl
 }
 
 export { STORAGE_BUCKETS }

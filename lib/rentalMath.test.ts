@@ -2,6 +2,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   rentalDays, longRentalDiscount, lateFee, taxableBase, gstOn, daysToBreakEven,
+  couponDiscountOnRent, extensionCharge, settleDeposit, daysLate,
 } from './rentalMath.ts'
 
 // Money rules. These are the numbers a customer is charged and a shop is
@@ -152,5 +153,155 @@ describe('a whole rental, end to end', () => {
     assert.equal(discount, 54000)
     assert.equal(rent, 306000)
     assert.equal(gstOn(taxableBase(rent, 0), 18), 55080)
+  })
+})
+
+describe('couponDiscountOnRent — the rent, and only the rent', () => {
+  test('a percentage comes off the net rent', () => {
+    assert.equal(couponDiscountOnRent(200000, { type: 'percentage', value: 10 }), 20000)
+  })
+
+  test('a percentage cap binds', () => {
+    assert.equal(
+      couponDiscountOnRent(200000, { type: 'percentage', value: 50, maxDiscount: 30000 }),
+      30000,
+    )
+  })
+
+  test('a fixed amount comes off whole', () => {
+    assert.equal(couponDiscountOnRent(200000, { type: 'fixed', value: 50000 }), 50000)
+  })
+
+  test('THE RULE: a discount can never exceed the rent', () => {
+    // ₹500 off a ₹300 rental takes ₹300. A negative line would turn a discount
+    // into the shop paying the customer to borrow a tent.
+    assert.equal(couponDiscountOnRent(30000, { type: 'fixed', value: 50000 }), 30000)
+  })
+
+  test('nothing to discount is nothing discounted, not a negative', () => {
+    assert.equal(couponDiscountOnRent(0, { type: 'percentage', value: 25 }), 0)
+    assert.equal(couponDiscountOnRent(-100, { type: 'fixed', value: 5000 }), 0)
+  })
+
+  test('THE RULE: the caller passes rent, so the deposit can never be discounted', () => {
+    // Stated as a test because it is the mistake that costs real money: a 20%
+    // code applied to rent + deposit on a ₹9,000 deposit gives away ₹1,800 of
+    // security the shop is only holding, and then refunds it again at return.
+    const rent = 135000
+    const deposit = 900000
+    const onRent = couponDiscountOnRent(rent, { type: 'percentage', value: 20 })
+    const onEverything = couponDiscountOnRent(rent + deposit, { type: 'percentage', value: 20 })
+    assert.equal(onRent, 27000)
+    assert.equal(onEverything, 207000)
+    assert.ok(onEverything - onRent === 180000, 'the deposit share is what a wrong call would give away')
+  })
+})
+
+describe('extensionCharge — a delta, never a re-quote', () => {
+  test('three more days at the frozen rate', () => {
+    assert.deepEqual(
+      extensionCharge({ dailyRate: 45000, daysAdded: 3, quantity: 1 }),
+      { rent: 135000, discount: 0, net: 135000 },
+    )
+  })
+
+  test('quantity multiplies', () => {
+    assert.equal(extensionCharge({ dailyRate: 45000, daysAdded: 2, quantity: 3 }).net, 270000)
+  })
+
+  test('no days added is no charge', () => {
+    assert.equal(extensionCharge({ dailyRate: 45000, daysAdded: 0, quantity: 1 }).net, 0)
+  })
+
+  test('the long-rental discount applies only when the shop asks for it', () => {
+    const without = extensionCharge({ dailyRate: 45000, daysAdded: 8, quantity: 1 })
+    const with15 = extensionCharge({ dailyRate: 45000, daysAdded: 8, quantity: 1, discountPct: 15 })
+    assert.equal(without.discount, 0)
+    assert.ok(with15.discount > 0)
+    // And it is still clamped, so eight discounted days cannot undercut six.
+    assert.ok(with15.net >= 45000 * 6)
+  })
+
+  test('THE BUG THIS PREVENTS: a re-quote can charge less than was already paid', () => {
+    // A 5-day rental of a ₹450/day tent at 15%: 5 days is under the threshold,
+    // so ₹2,250 was charged. Extending to 8 days and RE-QUOTING the whole thing
+    // gives 8 × 450 = 3,600 less the clamped discount — and the delta between
+    // that and what was paid is what the customer would owe. Compare against
+    // pricing only the days added.
+    const rate = 45000
+    const alreadyPaid = rate * 5
+    const requoted = rate * 8 - longRentalDiscount(rate * 8, 8, 15)
+    const requoteDelta = requoted - alreadyPaid
+    const honestDelta = extensionCharge({ dailyRate: rate, daysAdded: 3, quantity: 1 }).net
+
+    assert.equal(honestDelta, 135000)
+    assert.ok(
+      requoteDelta < honestDelta,
+      'a re-quote undercharges for the extra days, which is why extensions price the delta',
+    )
+  })
+})
+
+describe('settleDeposit — three numbers that must add up', () => {
+  test('nothing owed, everything back', () => {
+    assert.deepEqual(settleDeposit({ deposit: 900000, lateFee: 0, damageFee: 0 }), {
+      applied: 0, refund: 900000, unrecovered: 0, state: 'refunded',
+    })
+  })
+
+  test('a partial deduction is still a refund, not a forfeiture', () => {
+    const s = settleDeposit({ deposit: 900000, lateFee: 90000, damageFee: 30000 })
+    assert.equal(s.applied, 120000)
+    assert.equal(s.refund, 780000)
+    assert.equal(s.state, 'refunded')
+  })
+
+  test('THE INVARIANT: applied + refund is always exactly the deposit', () => {
+    for (const deposit of [0, 1, 50000, 900000, 1500000]) {
+      for (const late of [0, 1, 45000, 900000, 5000000]) {
+        for (const damage of [0, 25000, 2000000]) {
+          const s = settleDeposit({ deposit, lateFee: late, damageFee: damage })
+          assert.equal(s.applied + s.refund, deposit,
+            `deposit ${deposit}, late ${late}, damage ${damage}`)
+        }
+      }
+    }
+  })
+
+  test('THE CAP: what is owed beyond the deposit is reported, never charged', () => {
+    const s = settleDeposit({ deposit: 900000, lateFee: 1200000, damageFee: 300000 })
+    assert.equal(s.applied, 900000)
+    assert.equal(s.refund, 0)
+    assert.equal(s.state, 'forfeited')
+    // ₹15,000 owed against a ₹9,000 deposit leaves ₹6,000 the shop may pursue —
+    // as a conversation, not as an automatic charge.
+    assert.equal(s.unrecovered, 600000)
+  })
+
+  test('a waived deposit settles to nothing rather than a negative', () => {
+    const s = settleDeposit({ deposit: 0, lateFee: 45000, damageFee: 0 })
+    assert.equal(s.applied, 0)
+    assert.equal(s.refund, 0)
+    assert.equal(s.unrecovered, 45000)
+  })
+})
+
+describe('daysLate — inclusive spans turned into an overrun', () => {
+  test('returned on the day it was due is not late', () => {
+    assert.equal(daysLate('2026-09-14', '2026-09-14'), 0)
+  })
+
+  test('returned early is not late, and never a credit', () => {
+    assert.equal(daysLate('2026-09-14', '2026-09-11'), 0)
+  })
+
+  test('two days over is two days late', () => {
+    assert.equal(daysLate('2026-09-14', '2026-09-16'), 2)
+  })
+
+  test('it agrees with lateFee across a month boundary', () => {
+    const late = daysLate('2026-08-30', '2026-09-02')
+    assert.equal(late, 3)
+    assert.equal(lateFee(45000, late, 900000), 135000)
   })
 })

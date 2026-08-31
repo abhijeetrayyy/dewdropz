@@ -5,6 +5,8 @@ import { requireAuth, getUser } from '@/actions/auth'
 import { askStateOf, isCurrent } from '@/lib/trek-lifecycle'
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase'
 import { sendSlackAlert } from '@/lib/slack'
+import { trekLimit } from '@/lib/trekLimits'
+import { enqueue } from '@/lib/jobs'
 
 // Trek Buddy.
 //
@@ -189,6 +191,12 @@ export async function saveTrekProfile(input: {
   if (dob > eighteen) {
     return { error: 'Trek Buddy is for adults only. You need to be 18 or over to use it.' }
   }
+
+  // Throttled per member, and deliberately AFTER the validation above: this
+  // is the door, and a new member fumbling their date of birth must not be
+  // able to spend their allowance on submissions that were never written.
+  const gate = await trekLimit('profile', user.id)
+  if ('error' in gate) return gate
 
   const { error } = await createAdminSupabaseClient()
     .from('profiles')
@@ -711,6 +719,11 @@ export async function createTrekPlan(input: {
   activityOther?: string
 }) {
   const user = await requireAuth()
+
+  // Throttled per member — see lib/trekLimits.ts for why the key is the
+  // account and not the address.
+  const gate = await trekLimit('createPlan', user.id)
+  if ('error' in gate) return gate
   const result = await callTrek('trek_create_plan', {
     p_activity: input.activity,
     p_place: input.place,
@@ -754,6 +767,11 @@ export async function createTrekPlan(input: {
 
 export async function requestToJoin(planId: string, message?: string) {
   const user = await requireAuth()
+
+  // Throttled per member — see lib/trekLimits.ts for why the key is the
+  // account and not the address.
+  const gate = await trekLimit('join', user.id)
+  if ('error' in gate) return gate
   const result = await callTrek('trek_request_join', {
     p_plan_id: planId, p_message: message || null, p_actor: user.id,
   }, ['/trek-buddy', `/trek-buddy/${planId}`])
@@ -783,6 +801,11 @@ export async function cancelPlan(planId: string, reason?: string) {
     p_plan_id: planId, p_reason: reason || null, p_actor: user.id,
   }, ['/trek-buddy', `/trek-buddy/${planId}`])
   if ('success' in result) {
+    // 052 calls this "the one message that must never be missed", and until now
+    // it was only ever an unread count on a site the person had to open. The
+    // queue, not an inline send: `enqueue` never throws, so a mail outage cannot
+    // turn a successful cancellation into a failed one.
+    await enqueue('trek.plan_cancelled', { planId })
     await sendSlackAlert(`:x: Trek Buddy plan cancelled: ${planId}${reason ? ` — ${reason}` : ''}`).catch(() => {})
   }
   return result
@@ -1153,6 +1176,12 @@ export async function saveTrekPerson(input: {
     return { error: 'Your name needs to be between 2 and 40 characters.' }
   }
 
+  // Throttled per member, and deliberately AFTER the validation above: this
+  // is the door, and a new member fumbling their date of birth must not be
+  // able to spend their allowance on submissions that were never written.
+  const gate = await trekLimit('profile', user.id)
+  if ('error' in gate) return gate
+
   const { error } = await createAdminSupabaseClient()
     .from('profiles')
     .update({
@@ -1239,6 +1268,11 @@ export async function getVouchable() {
 
 export async function vouchFor(planId: string, forUserId: string) {
   const user = await requireAuth()
+
+  // Throttled per member — see lib/trekLimits.ts for why the key is the
+  // account and not the address.
+  const gate = await trekLimit('vouch', user.id)
+  if ('error' in gate) return gate
   return callTrek('trek_vouch', {
     p_plan_id: planId, p_for: forUserId, p_actor: user.id,
   }, ['/trek-buddy/profile', `/trek-buddy/people/${forUserId}`])
@@ -1253,6 +1287,11 @@ export async function reportTrek(input: {
   subjectId?: string
 }) {
   const user = await requireAuth()
+
+  // Throttled per member — see lib/trekLimits.ts for why the key is the
+  // account and not the address.
+  const gate = await trekLimit('report', user.id)
+  if ('error' in gate) return gate
   const result = await callTrek('trek_report', {
     p_reason: input.reason,
     p_detail: input.detail || null,
@@ -1367,6 +1406,11 @@ export async function getMyHostRequest(): Promise<HostRequestState> {
 
 export async function requestHostAccess(note?: string) {
   const user = await requireAuth()
+
+  // Throttled per member — see lib/trekLimits.ts for why the key is the
+  // account and not the address.
+  const gate = await trekLimit('hostRequest', user.id)
+  if ('error' in gate) return gate
   const result = await callTrek(
     'trek_request_host',
     { p_note: note?.trim() || null, p_actor: user.id },

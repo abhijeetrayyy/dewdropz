@@ -1,5 +1,5 @@
 /**
- * Calendar arithmetic for hires, kept apart from the component that draws it.
+ * Calendar arithmetic for rentals, kept apart from the component that draws it.
  *
  * Separated so it can be tested without a renderer. A month grid that puts the
  * 1st on the wrong weekday, or a "next month" that loses December, is invisible
@@ -7,7 +7,7 @@
  *
  * Every date in and out is a plain YYYY-MM-DD string. That is what Postgres
  * `daterange` stores and what the server's `rentalDays` counts, so no timezone
- * ever travels with a hire.
+ * ever travels with a rental.
  */
 
 /** The LOCAL calendar's today. `toISOString()` is UTC and reports yesterday

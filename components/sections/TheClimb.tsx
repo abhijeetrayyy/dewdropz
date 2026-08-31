@@ -1,5 +1,6 @@
 'use client'
 
+import SectionHeader from '@/components/SectionHeader'
 import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -58,11 +59,23 @@ function StationRow({ station, index }: { station: Station; index: number }) {
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }
-
+  // OPEN GROUND. This band went cream -> sand -> `--snow`. The sand step was
+  // measured and defensible and the client did not like it: too heavy, and the
+  // page it sat in was already two beiges and six dark slabs. The direction now
+  // is an open white page where green is the CONTRAST rather than the fill, so
+  // this is near-white with forest-green labels and prices on it.
   return (
     <motion.li
-      initial={{ opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      // The rise stays; the fade is gone. This shipped `opacity: 0` in the
+      // server HTML, so every station — a product, its price and its
+      // add-to-cart — was not dimmed without JavaScript, it was absent. A
+      // stalled transform leaves the row legible and 28px low; a stalled
+      // opacity leaves a hole where the product was, and a background tab
+      // stalls animations as a matter of course. This is the rule the hero's
+      // entrance was rewritten in CSS to obey — see THE HERO ENTRANCE in
+      // globals.css — arriving one section later.
+      initial={{ y: 28 }}
+      whileInView={{ y: 0 }}
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       className="relative grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-14 items-center"
@@ -97,7 +110,7 @@ function StationRow({ station, index }: { station: Station; index: number }) {
           {station.label && station.label.trim() !== stationNo ? ` · ${station.label}` : ''}
         </div>
         <h3 className="mt-2 font-display text-[clamp(24px,3vw,36px)] text-text leading-tight">
-          <Link href={`/products/${p.slug}`} className="hover:text-forest transition-colors duration-300">
+          <Link href={`/products/${p.slug}`} className="hover:text-forest-deep transition-colors duration-300">
             {p.name}
           </Link>
         </h3>
@@ -111,13 +124,13 @@ function StationRow({ station, index }: { station: Station; index: number }) {
             onClick={handleAdd}
             disabled={soldOut}
             data-cursor="magnetic"
-            className="font-body text-[10px] tracking-[0.14em] uppercase text-text border-b border-forest/40 pb-0.5 hover:text-forest hover:border-forest transition-colors duration-300"
+            className="font-body text-[10px] tracking-[0.14em] uppercase text-text border-b border-forest/40 pb-0.5 hover:text-forest-deep hover:border-forest-deep transition-colors duration-300"
           >
             {soldOut ? 'Sold out' : added ? `Added${variant ? ` · ${variant.name}` : ''} ✓` : 'Add to cart'}
           </button>
           <Link
             href={`/products/${p.slug}`}
-            className="font-body text-[10px] tracking-[0.14em] uppercase text-mid hover:text-text transition-colors duration-300"
+            className="font-body text-[10px] tracking-[0.14em] uppercase text-forest hover:text-text transition-colors duration-300"
           >
             View →
           </Link>
@@ -151,15 +164,19 @@ export default function TheClimb({
     .filter((s) => Boolean(s.product))
 
   return (
-    <section className="bg-paper px-6 md:px-10 py-24 md:py-32">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-16 md:mb-20 max-w-2xl">
-          <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
-          <h2 className="mt-3 font-display font-light text-[clamp(32px,5vw,54px)] text-text leading-[1.05]">
-            {config.headline}
-          </h2>
-          <p className="mt-4 font-body text-sm md:text-base text-mid leading-relaxed max-w-lg">{config.intro}</p>
-        </div>
+    <section className="bg-mist border-t border-rule px-6 md:px-10 py-24 md:py-32">
+      <div className="max-w-measure mx-auto">
+        {/* INDEX — this section is a numbered list of stations, so the
+            numbered rule is not a costume, it is what the content already is.
+            It follows a statement and is followed by a stamp. */}
+        <SectionHeader
+          species="index"
+          no="09"
+          eyebrow={stopEyebrow(stop)}
+          title={config.headline}
+          lede={config.intro}
+          className="mb-16 md:mb-20"
+        />
 
         {stations.length === 0 ? (
           <div className="rounded-[var(--r-panel)] border border-dashed border-rule p-14 text-center">

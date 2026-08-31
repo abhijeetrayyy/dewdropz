@@ -26,10 +26,10 @@ import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
 
 /**
- * Hiring one thing: pick the days, see the real figure, reserve it.
+ * Renting one thing: pick the days, see the real figure, reserve it.
  *
  * NOTHING ON THIS SCREEN DOES ARITHMETIC ON MONEY. Every rupee — the rent, the
- * long-hire discount, return postage, GST, and the deposit held outside the
+ * long-rental discount, return postage, GST, and the deposit held outside the
  * taxable base — arrives from `/api/mobile/rentals/quote`, which calls the same
  * `priceRental` the booking write bills against. The one number computed here
  * is the day count, and only to label the calendar; the server counts its own.
@@ -411,7 +411,13 @@ export default function RentItemScreen() {
           <Meta style={{ marginTop: 6, fontSize: 11 }} color={blockedBecause && terms ? C.clayDeep : C.textMuted}>
             {blockedBecause && terms
               ? blockedBecause
-              : "Nothing is charged now. You pay when you collect, and the deposit comes back with the gear."}
+              : mode === "ship"
+                // A POSTED rental has no counter to pay at. It is paid before it
+                // ships — createRentalBooking stamps deposit_method 'gateway'
+                // for every ship booking — and this line told every customer
+                // the opposite.
+                ? "Nothing is charged now. We'll send a payment link before we post it, and the deposit comes back with the gear."
+                : "Nothing is charged now. You pay when you collect, and the deposit comes back with the gear."}
           </Meta>
         </View>
       </KeyboardAvoidingView>

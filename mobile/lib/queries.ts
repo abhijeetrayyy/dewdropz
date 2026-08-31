@@ -25,8 +25,21 @@ export const qk = {
   notificationPreferences: (userId: string) => ["notifications", "preferences", userId] as const,
   rentals: ["rentals"] as const,
   rentalItem: (slug: string) => ["rentals", slug] as const,
-  rentalQuote: (slug: string, from: string, to: string, qty: number, ful: string) =>
-    ["rentals", "quote", slug, from, to, qty, ful] as const,
+  // `where` is in this key because the PRICE DEPENDS ON IT: priceRental resolves
+  // delivery through calculateShippingCost, which matches a shipping zone by
+  // state, and then doubles it for the return leg. React Query refetches on a
+  // key change, not on a queryFn closure change — so with the address outside
+  // the key, typing a Maharashtra address never re-quoted and the screen kept
+  // showing the no-address fallback price. Measured: ₹7,168.20 on the button,
+  // ₹7,073.80 written to the booking.
+  //
+  // The file's own header says "NOTHING ON THIS SCREEN DOES ARITHMETIC ON
+  // MONEY", and it doesn't. It cached the wrong answer instead. The rule was
+  // written as "the client must not do arithmetic"; it needed to be "the figure
+  // on screen must be for the terms on screen".
+  rentalQuote: (
+    slug: string, from: string, to: string, qty: number, ful: string, where: string,
+  ) => ["rentals", "quote", slug, from, to, qty, ful, where] as const,
   rentalBookings: (userId: string) => ["rentals", "bookings", userId] as const,
   rentalBooking: (number: string) => ["rentals", "booking", number] as const,
 };
@@ -527,10 +540,10 @@ export type RentalTerms = {
 };
 
 /**
- * The price of a hire and the state of the shelf, both from the server.
+ * The price of a rental and the state of the shelf, both from the server.
  *
  * Neither figure may be computed on the device. Rentals have more places to
- * drift than a cart does — days are counted inclusively, a long hire earns a
+ * drift than a cart does — days are counted inclusively, a long rental earns a
  * discount, posting is charged both ways, and the deposit is deliberately NOT
  * taxed — and `lib/rentalPricing.ts` is the only implementation of any of it.
  * The lesson is the one `useCartQuoteQuery` above exists to remember: the app
@@ -552,7 +565,19 @@ export function useRentalForProductQuery(productId: string | undefined) {
 export function useRentalQuoteQuery(terms: RentalTerms | null) {
   return useQuery({
     queryKey: terms
-      ? qk.rentalQuote(terms.slug, terms.startsOn, terms.endsOn, terms.quantity, terms.fulfilment)
+      ? qk.rentalQuote(
+          terms.slug,
+          terms.startsOn,
+          terms.endsOn,
+          terms.quantity,
+          terms.fulfilment,
+          // Only the two fields the price actually turns on. Keying on the whole
+          // address would refetch on every keystroke of a street name that
+          // cannot change a single paisa.
+          terms.fulfilment === "ship"
+            ? `${terms.address?.state ?? ""}|${terms.address?.postal_code ?? ""}`
+            : "pickup",
+        )
       : ["rentals", "quote", "idle"],
     enabled: !!terms,
     // A quote is a claim about a shelf other people are also booking from, so
@@ -568,7 +593,7 @@ export function useRentalQuoteQuery(terms: RentalTerms | null) {
         body: JSON.stringify({
           lines: [{ slug: t.slug, startsOn: t.startsOn, endsOn: t.endsOn, quantity: t.quantity }],
           fulfilment: t.fulfilment,
-          // The schema wants an address for a posted hire because tax depends
+          // The schema wants an address for a posted rental because tax depends
           // on the destination state. Before one is entered we still want a
           // price, so a quote for "ship" with no address prices as Uttarakhand
           // and the total is refreshed the moment a pincode is typed.
@@ -589,9 +614,9 @@ export function useRentalBookingMutation() {
     mutationFn: async (
       input: RentalTerms & { email: string; phone?: string },
     ): Promise<{ bookingId: string; bookingNumber: string }> => {
-      // Signing in is optional — a guest can hire with an email, as on the web.
+      // Signing in is optional — a guest can rent with an email, as on the web.
       // The token, when there is one, attaches the booking to the account so it
-      // shows under "Your hires" and RLS lets that person read it back.
+      // shows under "Your rentals" and RLS lets that person read it back.
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${ENV.apiUrl}/api/mobile/rentals/book`, {
         method: "POST",

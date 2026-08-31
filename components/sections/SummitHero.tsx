@@ -9,6 +9,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { gsap } from '@/lib/gsap'
 import { BLUR_DATA_URL } from '@/lib/constants'
+import AliveHeadline from '@/components/AliveHeadline'
 import type { Collection, Product } from '@/types/database'
 // From `lib/season`, NOT `./HeroWeather` — that module imports three.js and
 // @react-three/fiber at module scope, so pulling one pure helper out of it put
@@ -286,70 +287,6 @@ const SEASONS = ['clear', 'fog', 'rain', 'snow'] as const
 //
 // So the previews are gone and the type does the work instead. Bigger, plainly
 // set, with the live condition marked and named.
-//
-// There used to be a line under the four names describing what the range looks
-// like in the live condition — "The whole range in view." and three siblings.
-// The 23 August mark-up strikes it, and it was the weakest thing in the frame
-// anyway: it described, in a caption, the picture filling the screen behind it.
-// The switch stays exactly as it was; clear / fog / rain / snow still drive the
-// scene, which is the part the brief asks us to keep.
-function WeatherRail({
-  season,
-  onPick,
-}: {
-  season: Season
-  onPick: (s: Season) => void
-}) {
-  return (
-    <div data-hero-reveal data-summit-reveal role="group" aria-label="Weather on the range">
-      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/50">
-        Change the weather
-      </p>
-
-      {/* One vertical hairline down the side, not a rule under every row.
-          This was `border-t` on the group plus `border-b` on each of the four
-          buttons: five stacked horizontal lines in the top-left corner of the
-          frame, which is the drawing of a table. Next to a 132px display
-          headline it read as a debug panel someone had left switched on.
-
-          A single left rule groups the four just as well and costs one line
-          instead of five, and the live condition now marks itself by lighting
-          its own segment of that rule — so the control looks like a reading off
-          the scene it is driving rather than a form. */}
-      <div className="mt-3 flex flex-col gap-0.5 border-l border-paper/15 pl-3">
-        {SEASONS.map((s) => {
-          const live = season === s
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => onPick(s)}
-              aria-pressed={live}
-              className="group relative flex items-center py-1.5 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-sage"
-            >
-              {/* The lit segment of the left rule. Sits on the rule itself
-                  (-left-3 = the pl-3 above), so nothing shifts as it moves. */}
-              <span
-                aria-hidden="true"
-                className={`absolute -left-3 top-1/2 h-4 w-px -translate-y-1/2 transition-all duration-300 ${
-                  live ? 'bg-sage-lit' : 'bg-transparent group-hover:bg-paper/35'
-                }`}
-              />
-              <span
-                className={`font-body text-[15px] capitalize leading-none transition-colors duration-300 ${
-                  live ? 'text-paper' : 'text-paper/45 group-hover:text-paper/80'
-                }`}
-              >
-                {s}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 export default function SummitHero({
   products = [],
   collections = [],
@@ -584,7 +521,16 @@ export default function SummitHero({
   // actually changes; the timeline effect below depends on the result.
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px), (hover: none) and (pointer: coarse)')
-    const onChange = () => setAmbientMobile(isTouchConsumption())
+    // `weather` is re-sampled alongside the consumption mode, not only on mount.
+    // Both describe the same thing — whether the scene this control drives is
+    // actually running — and sampling one of them once meant the control could
+    // outlive the scene: narrow a desktop window past the breakpoint and four
+    // buttons stayed on screen wired to a WebGL canvas that had unmounted.
+    const onChange = () => {
+      const mobile = isTouchConsumption()
+      setAmbientMobile(mobile)
+      setWeather(!mobile)
+    }
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])
@@ -994,13 +940,28 @@ export default function SummitHero({
       onPointerLeave={handlePointerUp}
       className="on-dark relative h-[100svh] overflow-hidden bg-[#101E17] select-none"
     >
-      {/* Poster behind the canvas — first paint is instant regardless of GPU. */}
+      {/* Poster behind the canvas — first paint is instant regardless of GPU.
+          On a phone and for every reduced-motion visitor it is not a poster at
+          all: it is the whole background, because the WebGL scene never mounts.
+
+          It contained no warm pixel. A brand whose hero is first light on a
+          mountain rendered, for most of its visitors, as a cold blue wash on
+          near-black — and on desktop the arrival of the scene was a cut from
+          cold to warm rather than a resolve. The dawn ellipse below is
+          rgba(227,155,63) = `--dawn` #E39B3F, written out because this is an
+          inline style outside Tailwind's reach; globals.css is the source of
+          truth for the value. Its position is taken from the render rather than
+          invented — DawnGlow sits to the right of frame and the sky shader's
+          horizon at first light is #D19A5C — and it is held at 0.20 alpha
+          because above roughly 0.22 it stops reading as a horizon and starts
+          reading as a lens flare. The peak sits at 74% x so it stays clear of
+          the centred column. */}
       <div
         aria-hidden="true"
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 90% 60% at 72% 26%, rgba(185,211,240,0.13), transparent 60%), radial-gradient(ellipse 70% 45% at 26% 82%, rgba(123,164,111,0.09), transparent 65%), #101E17',
+            'radial-gradient(ellipse 62% 34% at 74% 47%, rgba(227,155,63,0.20), rgba(227,155,63,0.05) 45%, transparent 72%), radial-gradient(ellipse 90% 60% at 72% 20%, rgba(185,211,240,0.10), transparent 60%), radial-gradient(ellipse 70% 45% at 26% 82%, rgba(123,164,111,0.09), transparent 65%), #101E17',
         }}
       />
 
@@ -1043,10 +1004,26 @@ export default function SummitHero({
         )}
       </div>
 
-      {/* Two scrims doing two jobs: the horizontal one buys the copy column a
-          legible ground on the left without flattening the ridgeline on the
-          right; the vertical one seats the garments against the valley floor. */}
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#101E17] via-[#101E17]/45 to-transparent md:via-[#101E17]/15" />
+      {/* Two scrims doing two jobs: this one buys the copy a legible ground, the
+          vertical one below seats the garments against the valley floor.
+
+          This was a LEFT-TO-RIGHT gradient, and its own comment said it bought
+          the copy column a legible ground "on the left" — which stopped being
+          true when the column was centred. It has been flattening the left
+          third of the mountain to protect an empty gutter, while the type it
+          was meant to protect sits in the middle over the brightest part of the
+          range: --sage-lit measured 2.18:1 there, under AA, on the largest word
+          on the page.
+
+          A centred clearing instead. Measured: 0.55-alpha #101E17 over the worst
+          background the range produces (#918059) gives #45392C, where sage-lit
+          reads 5.6:1. The ridgeline stays open on both sides. */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[1]"
+        style={{
+          background: 'radial-gradient(ellipse 72% 130% at 50% 44%, rgba(16,30,23,0.55), transparent 74%)',
+        }}
+      />
 
       {/* Bottom-up, so the valley floor seats into the frame edge and the
           ridgeline stays open. (A hand-cut multi-stop version of this was tried
@@ -1078,15 +1055,15 @@ export default function SummitHero({
             mountain. The client's reference is the original centred frame, and
             it is the better call: the products get their own act moments later,
             and a hero that already sells is a hero nobody reads. */}
-        {/* Three columns so the headline stays optically centred while the rail
-            sits hard against the frame's left edge. Equal-width side columns are
-            what guarantee that — a rail absolutely positioned over a centred
-            column collides with it the moment the window narrows.
-            `items-start` puts the rail high rather than beside the headline:
-            level with the eyebrow, in the upper-left quiet of the frame, where
-            it reads as an instrument on the scene instead of a caption on the
-            type. */}
-        <div className="flex w-full items-start">
+        {/* One centred column, and nothing beside it.
+            What stood here was three: the copy in the middle, a 176px rail on
+            the left, and a 176px `aria-hidden` spacer on the right whose only
+            declared job was to cancel the left one. They switched on at exactly
+            1024px, so the headline's measure COLLAPSED from 943px to 544px as
+            the window got WIDER — which is why the line flipped between one and
+            two across a single pixel of resize. 352px of the frame's widest
+            dimension, spent at the width where the type is largest, to balance
+            a control that has moved to a corner. */}
           <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center lg:-mt-2">
             <div className="flex flex-col items-center">
               {/* THE LINE, per the client mark-up of 23 August.
@@ -1107,13 +1084,45 @@ export default function SummitHero({
                   so this is literally the requested fallback rather than a
                   new licence and a fourth webfont in the payload.
 
-                  It also grows: at one line instead of two there is room, and
-                  the ceiling goes 80px → 132px so the frame reads like the
-                  sample rather than like a subheading with air around it. */}
-              <h1 className="font-display text-[clamp(52px,10vw,132px)] font-light uppercase leading-[0.9] tracking-[-0.03em] text-paper">
-                <span data-hero-reveal data-summit-reveal className="inline">Feel </span>
-                <span data-hero-reveal data-summit-reveal className="inline italic text-sage-lit">Alive.</span>
-              </h1>
+                  TWO LINES, ON PURPOSE, AT EVERY WIDTH. The comment that
+                  stood here claimed one line, and the frame never delivered
+                  one: two empty 176px side columns switch on at exactly
+                  1024px, so the measure COLLAPSES from 943px to 544px as the
+                  window gets wider and the line silently flipped between one
+                  and two across a single pixel of resize. Rather than chase a
+                  single line the column cannot hold, the break is now the
+                  design — AliveHeadline emits one nowrap box per word, so the
+                  line can break once, between the words, and never twice.
+
+                  That frees the type to fill the frame: 52px on a 390px phone
+                  was a subheading. The floor goes 52 → 76px and the ceiling
+                  132 → 156px. `max-w-[5.6em]` is currently redundant against
+                  the 768px column, and is kept as the guarantee if anyone ever
+                  widens it. */}
+              {/* Set one character at a time so the line can turn. It arrives
+                  as one flat cream statement, and then the same wave comes back
+                  through it: letter by letter ALIVE. leans out of roman,
+                  catches first light, and settles into italic green.
+
+                  It happens once and then this headline is still for the rest
+                  of the session. All of it is CSS, so the words are in the
+                  server HTML, no dropped chunk can leave the hero wordless, and
+                  the lean composites without waking the main thread the pinned
+                  timeline is already using. `data-hero-reveal` comes off these
+                  two spans because the characters inside carry it now. The
+                  mechanism — why one glyph can be roman and italic without a
+                  second copy — is documented in globals.css under "The turn". */}
+              <AliveHeadline
+                label="Feel Alive."
+                className="mx-auto max-w-[min(100%,5.6em)] font-display text-[clamp(76px,17vw,156px)] font-light uppercase leading-[0.9] tracking-[-0.03em] text-paper"
+                segments={[
+                  { text: 'Feel' },
+                  // `turns`: this is the run that leans out of roman and washes
+                  // through first light into green. FEEL does not turn — it is
+                  // the fact, and it is already in its final state.
+                  { text: 'Alive.', className: 'italic text-sage-lit', turns: true },
+                ]}
+              />
 
               {/* Repositioned per the client brief: the shop is not an expedition
                   outfitter. The line that stood here talked about heavyweight
@@ -1122,14 +1131,23 @@ export default function SummitHero({
                   happen to be mountain-inspired. The second sentence — "Apparel
                   and drinkware, printed one at a time with your design on it" —
                   was struck out in the 23 August mark-up. */}
-              {/* 16px sitting under a 132px headline is an eight-to-one drop,
+              {/* The client's line, kept. The hero council proposed replacing it
+                  with "Apparel and drinkware, made in Dehradun." on the grounds
+                  that no noun in this frame says what is sold — a fair finding,
+                  and the client's answer was to keep the line as written. Do
+                  not re-propose it; if the frame is to name the goods, it will
+                  have to be somewhere other than this sentence.
+
+                  `text-balance` stays: it evens the two lines and says nothing.
+
+                  16px sitting under a 132px headline is an eight-to-one drop,
                   and it made the one line of copy in the frame read as a caption
                   on the type above it rather than as the second voice in a
                   two-voice frame. At 19px it holds its own; `max-w-xl` is wide
                   enough that it still sets on ONE line at that size, which
                   matters because the whole point of this act is that it holds
                   exactly one thought. */}
-              <p data-hero-reveal data-summit-reveal className="mt-7 max-w-xl font-body text-[17px] leading-relaxed tracking-[0.01em] text-paper/75 md:text-[19px]">
+              <p data-hero-reveal data-summit-reveal className="mt-7 max-w-xl text-balance font-body text-[17px] leading-relaxed tracking-[0.01em] text-paper/75 md:text-[19px]">
                 Inspired by mountains. Made for everyday journeys.
               </p>
 
@@ -1165,52 +1183,69 @@ export default function SummitHero({
                   Design yours <span aria-hidden="true">↗</span>
                 </Link>
               </div>
-
-              {/* Between 768px and the rail's breakpoint the frame is too narrow
-                  for a side column, so the picker folds back into the stack —
-                  below the call to action, where it cannot push the headline
-                  down. Same ticks, laid on their side. */}
-              {weather && (
-                <div
-                  data-hero-reveal data-summit-reveal
-                  className="mt-10 flex items-center gap-4 lg:hidden"
-                  role="group"
-                  aria-label="Weather on the range"
-                >
-                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/40">
-                    Change the weather
-                  </span>
-                  {SEASONS.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSeason(s)}
-                      aria-pressed={season === s}
-                      className={`font-mono text-[10px] uppercase tracking-[0.18em] transition-colors duration-300 ${
-                        season === s
-                          ? 'border-b border-sage pb-0.5 text-sage'
-                          : 'border-b border-transparent pb-0.5 text-paper/45 hover:text-paper/85'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Balances the rail so the column above stays centred in the frame. */}
-          <div aria-hidden="true" className="hidden w-[176px] shrink-0 lg:block" />
+        {/* ── The weather, once ────────────────────────────────────────────
+            There were TWO of these. A 15px Archivo rail in the left column
+            above 1024px, and a 10px Space Mono row under the buttons below it
+            — different type, different size, different case, different accent,
+            different label colour. Not one instrument at two sizes: two
+            designs of one instrument, and a visitor who resized past 1024px
+            watched the brand's only control turn into a different object. The
+            small one also sat BELOW the calls to action, which is the last
+            place in the frame that should hold a scene toy.
 
-          {/* Last in the DOM, first in the layout. The intro staggers on document
-              order, so putting the rail here lets the headline lead and the
-              control arrive after it — while `order-first` keeps it on the left. */}
-          <div className="order-first hidden w-[176px] shrink-0 lg:block">
-            {weather && <WeatherRail season={season} onPick={setSeason} />}
+            One control now, in the corner the scene is emptiest, at the size
+            the frame's other instruments use.
+
+            Inside `copyRef` deliberately: that element is `absolute inset-0`,
+            so this inherits act 1's fade and the `pointerEvents: 'none'` set
+            when the act leaves. On the <section> it would survive into acts
+            2, 3 and 4.
+
+            Gated on exactly what mounts the scene it drives. It used to render
+            on `weather` alone, so every reduced-motion desktop visitor got four
+            buttons wired to nothing, and the rail stayed on screen after a
+            desktop window was narrowed past the scene's own breakpoint. */}
+        {weather && mounted && !ambientMobile && !reduceMotion && (
+          <div
+            data-hero-reveal
+            className="pointer-events-auto absolute bottom-8 right-6 z-20 flex items-center gap-4 md:right-10"
+            role="group"
+            aria-label="Weather on the range"
+          >
+            {/* One word, not three. "Change the weather" narrated a control
+                whose four labels name themselves, next to a rendered mountain.
+                The imperative was never the affordance. */}
+            <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-paper/60">
+              Weather
+            </span>
+            {SEASONS.map((sn) => {
+              const live = season === sn
+              return (
+                <button
+                  key={sn}
+                  type="button"
+                  onClick={() => setSeason(sn)}
+                  aria-pressed={live}
+                  className={`inline-flex min-h-[44px] items-center border-b-2 px-1 pb-0.5 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors duration-300 ${
+                    live
+                      ? // --dawn, 7.40:1 on this ground, and the frame's one
+                        // warm accent doing the job it is for: marking where
+                        // the light is.
+                        'border-dawn text-paper'
+                      : // Was text-paper/45 — 4.11:1, under AA for a 10px
+                        // label. This is 7.95:1.
+                        'border-transparent text-paper/70 hover:text-paper'
+                  }`}
+                >
+                  {sn}
+                </button>
+              )
+            })}
           </div>
-        </div>
-
+        )}
       </div>
 
       {/* ── ACT 2 — the collections ───────────────────────────────────────────

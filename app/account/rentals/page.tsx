@@ -3,6 +3,8 @@ import { requireAuth } from '@/actions/auth'
 import { getMyRentalBookings } from '@/actions/rentals'
 import { formatPrice } from '@/lib/utils'
 import CancelRentalButton from '@/components/account/CancelRentalButton'
+import ExtendRental from '@/components/account/ExtendRental'
+import RentalPayButton from '@/components/account/RentalPayButton'
 import { Surface } from '@/components/ui/surface'
 import StatusBadge from '@/components/ui/status-badge'
 import EmptyState from '@/components/ui/empty-state'
@@ -70,6 +72,13 @@ export default async function AccountRentalsPage() {
         <ul className="space-y-4">
           {bookings.map((b) => {
             const owed = (b.late_fee ?? 0) + (b.damage_fee ?? 0)
+            // The last end date on the booking: the rental is not over until
+            // the last thing on it is due back, so that is what an extension
+            // moves from.
+            const live = (b.reservations ?? []).filter((r) => r.status !== 'cancelled')
+            const endsOn = live.length
+              ? live.reduce((a, r) => (r.ends_on > a ? r.ends_on : a), live[0].ends_on)
+              : null
             return (
               <Surface as="li" key={b.id} className="p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -115,15 +124,43 @@ export default async function AccountRentalsPage() {
                   <p className="font-body text-[13px] text-mid">
                     {b.status === 'reserved'
                       ? b.fulfilment === 'ship'
-                        ? 'We post it to arrive on the first day. Nothing is charged yet.'
+                        ? b.payment_status === 'paid'
+                          ? 'Paid. We post it to arrive on the first day.'
+                          // "Nothing is charged yet" was rendered in the same
+                          // flex row as a Pay button for the amount due.
+                          : 'We post it to arrive on the first day — pay below and we’ll get it packed.'
                         : 'Collect from the Dehradun shop on the first day. Bring this number and some ID.'
                       : b.status === 'out'
                         ? 'Bring it back by the end date — a late return is charged at the day rate, capped at the deposit.'
                         : 'Nothing left to do on this one.'}
                   </p>
-                  {b.status === 'reserved' && (
-                    <CancelRentalButton bookingId={b.id} number={b.booking_number} />
-                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Unpaid rentals get a way to pay before anything else —
+                        it is the only action on the card that is blocking. */}
+                    {b.payment_status !== 'paid' && b.status !== 'cancelled' && b.total_amount > 0 && (
+                      <RentalPayButton
+                        bookingId={b.id}
+                        bookingNumber={b.booking_number}
+                        amount={b.total_amount}
+                        depositAmount={b.deposit_amount}
+                        depositState={b.deposit_state}
+                        fulfilment={b.fulfilment}
+                      />
+                    )}
+                    {/* Extending is offered while the gear is reserved or out —
+                        the two states where more days are a thing that can be
+                        had. Once it is back, a new booking is the honest answer. */}
+                    {(b.status === 'reserved' || b.status === 'out') && endsOn && (
+                      <ExtendRental
+                        bookingId={b.id}
+                        bookingNumber={b.booking_number}
+                        currentEnd={endsOn}
+                      />
+                    )}
+                    {b.status === 'reserved' && (
+                      <CancelRentalButton bookingId={b.id} number={b.booking_number} />
+                    )}
+                  </div>
                 </div>
               </Surface>
             )

@@ -161,3 +161,73 @@ export async function getInvoiceForOrder(orderId: string): Promise<Invoice | nul
     .maybeSingle()
   return (data as Invoice) ?? null
 }
+
+/**
+ * Issue the tax invoice for a rental booking.
+ *
+ * Same contract as the sale path, same series, same counter, and the same
+ * promise: it never throws, and a refusal is an expected outcome rather than a
+ * failure — the shop has no GSTIN today, so every call refuses until somebody
+ * fills that in, and a payment must not fail because a document could not be
+ * produced.
+ *
+ * WHEN. At payment rather than at dispatch, which is the opposite of the sale
+ * rule and deliberately so. For goods, s.31(1)(a) ties the invoice to removal.
+ * For a service, s.31(2) ties it to the provision of the service, and the
+ * proviso allows it within thirty days — a rental collected in person is never
+ * "removed" by the shop at all, so dispatch is not a trigger that exists on
+ * half of these. Payment is the moment that happens for every rental, however
+ * it is fulfilled.
+ */
+export async function issueInvoiceForRental(
+  bookingId: string,
+  opts?: { supplyAt?: string; actorId?: string }
+): Promise<IssueResult> {
+  const supabase = createAdminSupabaseClient()
+
+  const { data: existing } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('rental_booking_id', bookingId)
+    .maybeSingle()
+  if (existing) return { issued: existing as Invoice, alreadyExisted: true }
+
+  const { data, error } = await supabase.rpc('issue_rental_invoice', {
+    p_booking_id: bookingId,
+    p_supply_at: opts?.supplyAt ?? null,
+  })
+
+  if (error) return { refused: error.message.replace(/^cannot issue:?\s*/i, '') }
+
+  const invoice = (Array.isArray(data) ? data[0] : data) as Invoice | null
+  if (!invoice) return { refused: 'the database returned no invoice' }
+
+  await auditLog({
+    action: 'invoice.issued',
+    entityType: 'rental_booking',
+    entityId: bookingId,
+    actorId: opts?.actorId,
+    after: {
+      serial: invoice.serial,
+      issued_at: invoice.issued_at,
+      grand_total: invoice.grand_total,
+      taxable_total: invoice.taxable_total,
+      cgst: invoice.cgst_total,
+      sgst: invoice.sgst_total,
+      igst: invoice.igst_total,
+      place_of_supply: invoice.place_of_supply_code,
+    },
+  })
+
+  return { issued: invoice, alreadyExisted: false }
+}
+
+/** The invoice for a rental, if one was ever issued. */
+export async function getInvoiceForRental(bookingId: string): Promise<Invoice | null> {
+  const { data } = await createAdminSupabaseClient()
+    .from('invoices')
+    .select('*')
+    .eq('rental_booking_id', bookingId)
+    .maybeSingle()
+  return (data as Invoice) ?? null
+}

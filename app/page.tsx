@@ -104,7 +104,7 @@ export default async function Home() {
 
         {/* 4 — The Custom Studio. */}
         <div data-trail-time={TRAIL_STOPS.workbench.time} data-trail-alt={TRAIL_STOPS.workbench.alt} data-trail-label={TRAIL_STOPS.workbench.label}>
-          <DesignYourOwn products={products} stop={TRAIL_STOPS.workbench} />
+          <DesignYourOwn products={products} />
         </div>
 
         {/* 5 — Trek Buddy. The hero's third act carries it as a picture; this
@@ -121,7 +121,7 @@ export default async function Home() {
         {/* ── Everything the brief does not sequence, in the order it already
                ran in, now below the six it does. ─────────────────────────── */}
         <div data-trail-time={TRAIL_STOPS.trust.time} data-trail-alt={TRAIL_STOPS.trust.alt} data-trail-label={TRAIL_STOPS.trust.label}>
-          <TrustBand />
+          <TrustBand freeShippingThreshold={settings.free_shipping_threshold} />
         </div>
         <div data-trail-time={TRAIL_STOPS.kit.time} data-trail-alt={TRAIL_STOPS.kit.alt} data-trail-label={TRAIL_STOPS.kit.label}>
           <SeasonKit config={season_kit} allProducts={products} collections={collections} />
@@ -146,7 +146,7 @@ export default async function Home() {
           </div>
         )}
         <div data-trail-time={TRAIL_STOPS.basecamp.time} data-trail-alt={TRAIL_STOPS.basecamp.alt} data-trail-label={TRAIL_STOPS.basecamp.label}>
-          <BrandPulse stats={stats} stop={TRAIL_STOPS.basecamp} />
+          <BrandPulse stats={stats} />
         </div>
         <div data-trail-time={TRAIL_STOPS.dispatch.time} data-trail-alt={TRAIL_STOPS.dispatch.alt} data-trail-label={TRAIL_STOPS.dispatch.label}>
           <NewsletterBar stop={TRAIL_STOPS.dispatch} />

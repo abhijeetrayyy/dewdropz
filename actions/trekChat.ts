@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase'
 import { getUser } from '@/actions/auth'
+import { trekLimit } from '@/lib/trekLimits'
 
 /**
  * The group chat on a walk.
@@ -55,6 +56,11 @@ export async function postMessage(planId: string, body: string): Promise<ChatRes
   const text = body.trim()
   if (!text) return { ok: false, error: 'Say something first.' }
   if (text.length > 1000) return { ok: false, error: 'That is longer than a message wants to be.' }
+
+  // Throttled per member. This shape is {ok,error}, not {success,error},
+  // so the gate is translated rather than returned straight through.
+  const gate = await trekLimit('message', user.id)
+  if ('error' in gate) return { ok: false, error: gate.error }
 
   // The display name is frozen onto the message, so it has to be read now.
   const { data: profile } = await createAdminSupabaseClient()

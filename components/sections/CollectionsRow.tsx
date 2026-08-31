@@ -1,3 +1,4 @@
+import SectionHeader from '@/components/SectionHeader'
 import { stopEyebrow, type TrailStop } from '@/lib/trail'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -51,22 +52,24 @@ export default function CollectionsRow({
     // value read as one long block with a heading dropped in the middle of it.
     // The deeper ground also suits the collection photography, which is the
     // heaviest imagery in the light half of the page.
-    <section className="bg-paper border-t border-rule px-6 md:px-10 py-20 md:py-24">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-10 flex items-end justify-between">
-          <div>
-            <div className="font-mono text-[10px] tracking-[0.2em] text-forest uppercase">{stopEyebrow(stop)}</div>
-            <h2 className="font-display text-[clamp(30px,4.4vw,46px)] text-text mt-2">
-              Three collections. One philosophy.
-            </h2>
-          </div>
-          <Link
-            href="/collections"
-            className="hidden md:inline-block font-body text-xs tracking-[0.1em] text-forest uppercase hover:text-text transition-colors duration-300"
-          >
-            View All →
-          </Link>
-        </div>
+    <section className="bg-snow border-t border-rule px-6 md:px-10 py-20 md:py-24">
+      <div className="max-w-measure mx-auto">
+        {/* STAMP — a label over a heading, hard left. This section is a list of
+            three things, which is exactly what the species is for. Chapter 02 of
+            the rotation documented in components/SectionHeader.tsx. */}
+        <SectionHeader
+          species="stamp"
+          eyebrow={stopEyebrow(stop)}
+          title="Three collections. One philosophy."
+          aside={
+            <Link
+              href="/collections"
+              className="font-body text-xs uppercase tracking-[0.1em] text-forest transition-colors duration-300 hover:text-text"
+            >
+              View All →
+            </Link>
+          }
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {shown.map((c) => (
