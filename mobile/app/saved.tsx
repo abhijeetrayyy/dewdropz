@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import Animated, { FadeInDown, useAnimatedRef, useScrollOffset } from "react-native-reanimated";
@@ -33,6 +33,10 @@ export default function SavedScreen() {
   // reads its offset, so the back button cannot scroll out of reach.
   const listRef = useAnimatedRef<Animated.FlatList<unknown>>();
   const scrollY = useScrollOffset(listRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const { slugs } = useWishlistStore();
   const { data: products = [], isLoading, isError, refetch } = useProductsBySlugsQuery(slugs);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -81,6 +85,7 @@ export default function SavedScreen() {
             : undefined
         }
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
       {/* VIRTUALIZED. Saved is a list that only ever grows — there is no
@@ -95,9 +100,9 @@ export default function SavedScreen() {
         keyExtractor={(p) => p.id}
         numColumns={2}
         columnWrapperStyle={products.length > 0 ? s.row : undefined}
-        contentContainerStyle={{ paddingBottom: S.section }}
+        contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ink} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={headerH} tintColor={C.ink} />}
         renderItem={({ item: p, index: i }) => (
           <Animated.View
             entering={FadeInDown.delay(Math.min(i, 6) * 45).duration(380)}

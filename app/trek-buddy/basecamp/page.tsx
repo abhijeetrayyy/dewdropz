@@ -297,7 +297,12 @@ export default async function BasecampPage() {
                     </span>
                   )}
                 </h2>
-                <MoreLink href="/trek-buddy">On the board</MoreLink>
+                {/* Basecamp ends at `ends_at` by design — it answers "what is
+                    still ahead of me". That left finished trips with no door at
+                    all, which is what /past is. Placed on this heading rather
+                    than in the rail because this list is exactly the thing it
+                    is the other half of. */}
+                <MoreLink href="/trek-buddy/past">What you have done</MoreLink>
               </div>
 
               {/* This screen was already the only one telling the truth about
@@ -313,14 +318,14 @@ export default async function BasecampPage() {
                   body={
                     <>
                       {membership.canHost
-                        ? 'You have not posted a walk. The board fills up when people who are already going say so.'
+                        ? 'You have not posted a trip. The board fills up when people who are already going say so.'
                         : 'Hosting is invite-only while this is new.'}{' '}
                       Nothing is confirmed either — ask to come on something from the board.
                     </>
                   }
                   action={
                     membership.canHost
-                      ? { label: 'Post a walk', href: '/trek-buddy/new' }
+                      ? { label: 'Post a trip', href: '/trek-buddy/new' }
                       : { label: 'See what is on', href: '/trek-buddy' }
                   }
                   secondary={membership.canHost ? { label: 'See what is on', href: '/trek-buddy' } : undefined}

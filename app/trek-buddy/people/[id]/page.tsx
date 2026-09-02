@@ -450,12 +450,12 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   title="Nothing on the log yet."
                   body={
                     isMe
-                      ? 'Post a walk or ask to come on one. This log is written by what happens, which is why it cannot be filled in from the profile page.'
+                      ? 'Post a trip or ask to come on one. This log is written by what happens, which is why it cannot be filled in from the profile page.'
                       : 'They have not hosted anything that is still open, and the board does not list walks that are over. Nothing here is a judgement — most people join before they host.'
                   }
                   action={
                     isMe && membership.canHost
-                      ? { label: 'Post a walk', href: '/trek-buddy/new' }
+                      ? { label: 'Post a trip', href: '/trek-buddy/new' }
                       : { label: 'See what is on', href: '/trek-buddy' }
                   }
                 />

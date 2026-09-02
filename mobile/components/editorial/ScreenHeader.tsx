@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View, ViewStyle, useWindowDimensions } from "react-native";
 import { goBack } from "@/lib/nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -106,6 +106,14 @@ type Props = {
   stats?: Stat[];
   /** Drives the large→compact cross-fade and the height collapse. */
   scrollY?: SharedValue<number>;
+  /**
+   * The panel's full expanded height, reported whenever it changes.
+   *
+   * Only meaningful in collapsing mode, where the panel is lifted out of the
+   * layout and floats over the list — so the list has to be told how much room
+   * to leave at the top of its content. See the note on `collapsing` below.
+   */
+  onHeight?: (h: number) => void;
   onBack?: () => void;
   /** Rendered at the right of the control row. */
   right?: ReactNode;
@@ -119,7 +127,7 @@ type Props = {
 /** Scroll distance over which the large title hands off to the bar title. */
 const HANDOFF = 90;
 
-export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onBack, right, style, tone = "ink", showBack = true }: Props) {
+export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onHeight, onBack, right, style, tone = "ink", showBack = true }: Props) {
   const t = TONES[tone];
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -137,15 +145,117 @@ export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onBack, rig
   // very element being measured would feed back into itself and oscillate.
   const [naturalH, setNaturalH] = useState(0);
 
+  // ── WHY THE PANEL FLOATS INSTEAD OF SITTING IN THE COLUMN ─────────────────
+  //
+  // This is the fix for the Android report: "wherever there is a header that
+  // needs to be scrolled and it became small, it is flickering and also not
+  // able to scroll very easily."
+  //
+  // The panel was a SIBLING ABOVE the list, and its collapse animated `height`.
+  // `height` is a LAYOUT property, and this app runs Reanimated 4 on the New
+  // Architecture — so every frame of the collapse committed a new layout to the
+  // shadow tree, the list below was resized to match, and that happened WHILE
+  // the finger was still dragging it. A list being resized mid-gesture is
+  // exactly the two symptoms reported: the frame tears against the scroll
+  // (flicker) and the scroller keeps having its viewport moved under it
+  // (fighting back). Android feels it far more than iOS because its commit is
+  // more expensive and is not synchronised with the scroll frame.
+  //
+  // Lifting the panel out of the flow breaks the link completely. It floats
+  // over the list, the list's own frame never changes size, and the height
+  // animation now costs nothing but the panel's own pixels. The list is told
+  // how much room to leave at the top via `onHeight`.
+  const collapsing = !!scrollY;
+
+  // Everything above the collapsing block: the status-bar inset, the panel's
+  // own top padding, and the 44pt control row. Constant, and the height the
+  // panel settles at once collapsed.
+  const chromeH = insets.top + 6 + 44;
+
+  useEffect(() => {
+    if (!collapsing) return;
+    // `S.block` is the gap the panel owns below itself (see `marginBottom` in
+    // the stylesheet). A floating panel has no margin anybody can see, so the
+    // gap has to be handed to the list as padding instead or the first row
+    // would sit hard against the panel's rounded edge.
+    onHeight?.(chromeH + naturalH + S.lg + S.block);
+  }, [collapsing, chromeH, naturalH, onHeight]);
+
+  // Accept a measurement only when the content GREW.
+  //
+  // The measured view lives inside the block whose height is being animated, so
+  // during a collapse Yoga re-lays it out at every intermediate size. Feeding
+  // those back through `setState` re-rendered the header mid-scroll and
+  // re-attached the animated style — a second, independent source of the
+  // flicker, and one that got worse the faster you scrolled.
+  //
+  // Growth is the only direction that matters. The case this exists for is a
+  // panel that renders before its data arrives and then gains a stats row —
+  // the locker's "8 IN THE LOCKER" — which is always taller. Shrinking is
+  // either the collapse itself (must be ignored) or content genuinely being
+  // removed, which re-mounts the screen anyway.
+  const measure = useCallback((h: number) => {
+    if (h > 0) setNaturalH((prev) => (h > prev + 1 ? h : prev));
+  }, []);
+
+  // ── THE COLLAPSE IS TRANSFORMS ONLY. NO LAYOUT, EVER. ────────────────────
+  //
+  // The first version of this animated `height`, which is a layout property:
+  // every frame committed a new layout to the shadow tree. On Reanimated 4 +
+  // the New Architecture that is a commit per frame, and on Android it is not
+  // synchronised with the scroll frame — so the panel tore against the scroll
+  // (the flicker) and, while the panel still sat in the column, resized the
+  // list under the finger (the fighting).
+  //
+  // Floating the panel fixed the second half. This fixes the first: nothing
+  // here touches layout at all. `transform` and `opacity` are the two
+  // properties Reanimated can drive entirely on the UI thread without asking
+  // Yoga anything, so the collapse now costs a matrix multiply per frame.
+  //
+  // HOW IT LOOKS LIKE A COLLAPSE WITHOUT BEING ONE
+  //
+  // The panel keeps its full height for ever and simply SLIDES UP by exactly
+  // the part that should disappear — the large block plus the padding under it.
+  // What is left overlapping the screen is `chromeH`: the status inset and the
+  // 44pt control row, which is precisely the collapsed bar. The control row is
+  // then translated back DOWN by the same amount so it stays pinned at the top
+  // while everything around it leaves. The rounded bottom edge rides up with
+  // the panel and lands under the bar, which is what it did before.
+  const collapsible = naturalH + S.lg;
+
+  // The interpolation is written out in both worklets rather than shared
+  // through a helper. A plain function declared in the component body lives on
+  // the JS runtime, and calling it from inside `useAnimatedStyle` — which runs
+  // on the UI runtime — throws "[Worklets] Tried to synchronously call a Remote
+  // Function". Two identical lines is the cost of staying on one thread.
+  const panelStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    return {
+      transform: [
+        { translateY: -interpolate(scrollY.value, [0, HANDOFF], [0, collapsible], Extrapolation.CLAMP) },
+      ],
+    };
+  }, [collapsible]);
+
+  const controlsStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    // Equal and opposite, so the back button and the bar title do not move.
+    return {
+      transform: [
+        { translateY: interpolate(scrollY.value, [0, HANDOFF], [0, collapsible], Extrapolation.CLAMP) },
+      ],
+    };
+  }, [collapsible]);
+
   const largeStyle = useAnimatedStyle(() => {
     if (!scrollY) return {};
-    const t = interpolate(scrollY.value, [0, HANDOFF], [1, 0], Extrapolation.CLAMP);
+    // The fade finishes well before the block has finished travelling, so the
+    // text is gone by the time it passes under the control row rather than
+    // sliding visibly behind it.
     return {
-      opacity: t,
-      transform: [{ translateY: (1 - t) * -12 }],
-      ...(naturalH ? { height: naturalH * t } : null),
+      opacity: interpolate(scrollY.value, [0, HANDOFF * 0.55], [1, 0], Extrapolation.CLAMP),
     };
-  }, [naturalH]);
+  }, []);
 
   const barTitleStyle = useAnimatedStyle(() => {
     if (!scrollY) return { opacity: 0 };
@@ -153,10 +263,15 @@ export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onBack, rig
   });
 
   return (
-    <View
+    <Animated.View
       style={[
         s.panel,
+        panelStyle,
         { paddingTop: insets.top + 6, backgroundColor: t.ground },
+        // Out of the column, over the list. `marginBottom` is dropped with it:
+        // the gap it used to create is handed to the list as padding instead,
+        // through `onHeight`.
+        collapsing ? s.floating : null,
         t.edge ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.edge } : null,
         style,
       ]}
@@ -175,7 +290,7 @@ export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onBack, rig
         originY={0.2}
       />
 
-      <View style={s.controls}>
+      <Animated.View style={[s.controls, controlsStyle]}>
         {showBack ? (
           <IconButton
             name="arrow_back"
@@ -192,25 +307,34 @@ export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onBack, rig
           </Text>
         </Animated.View>
         <View style={s.right}>{right}</View>
-      </View>
+      </Animated.View>
 
       <Animated.View style={[s.large, largeStyle]}>
+        {/* ── THREE VIEWS, AND EACH ONE HAS A DIFFERENT JOB ──────────────────
+            The wrapper above animates HEIGHT, which is a LAYOUT property: every
+            frame of the collapse runs a layout pass. When the content was free
+            to size itself inside that shrinking box, the pass re-flowed it —
+            captured mid-gesture, the stats row had vanished and the lede had
+            jumped to the bottom of the panel. That is the flicker.
+
+            So the content is PINNED to the height it naturally wants, and the
+            wrapper clips a rigid block instead of squeezing a flexible one.
+
+            But a pinned view cannot report that it needs to be taller, and
+            these panels render before their data arrives — pinning the measured
+            view directly would lock the locker's "8 IN THE LOCKER" figure out
+            of existence the moment it appeared, which is the exact bug the
+            re-measure below was written to fix.
+
+            Hence the split: the MIDDLE view is rigid, and the INNER view is
+            free and is what reports. If the content grows past the pin the
+            inner still lays out at its true height, reports it, and the pin
+            follows. ──────────────────────────────────────────────────────── */}
+        <View style={naturalH ? { height: naturalH } : null}>
         <View
           style={s.largeInner}
           onLayout={(e) => {
-            const h = e.nativeEvent.layout.height;
-            // Re-measure whenever the content's own height changes, not once.
-            //
-            // Measuring once looked safe and was not: these panels render
-            // before their data arrives, so the first measurement is of a
-            // header with no `stats` yet. The locker's "8 AVAILABLE" figure
-            // then appeared, the panel was still locked to the pre-data
-            // height, and the whole stats row was clipped out of existence.
-            //
-            // This is safe because the measured view is NOT the one whose
-            // height is animated — the wrapper is — so its layout height is
-            // always its true content height and cannot feed back into itself.
-            if (h > 0 && Math.abs(h - naturalH) > 1) setNaturalH(h);
+            measure(e.nativeEvent.layout.height);
           }}
         >
         {eyebrow ? <Text style={[s.eyebrow, { color: t.eyebrow }]}>{eyebrow.toUpperCase()}</Text> : null}
@@ -232,12 +356,28 @@ export function ScreenHeader({ title, eyebrow, lede, stats, scrollY, onBack, rig
           </View>
         ) : null}
         </View>
+        </View>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
 const s = StyleSheet.create({
+  floating: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    // Above the list it covers, and DELIBERATELY BELOW `StatusCap` — which is
+    // absolute at zIndex 20 and exists to keep the clock legible for the whole
+    // life of the screen, so nothing may paint over it.
+    zIndex: 10,
+    // No `elevation`. On Android elevation is not a z-order knob, it is a
+    // material shadow: setting it to lift the panel above the list would have
+    // drawn a hard drop shadow under a flat ink plate on every one of these
+    // screens. zIndex alone orders siblings correctly.
+    marginBottom: 0,
+  },
   panel: {
     overflow: "hidden",
     borderBottomLeftRadius: R.sheet,
@@ -265,7 +405,26 @@ const s = StyleSheet.create({
 
   // No padding here: it belongs to the inner measured view, or the natural
   // height would come back short by exactly the padding and clip the lede.
-  large: {},
+  // ── WHY THE WRAPPER CLIPS AND THE INNER VIEW IS ABSOLUTE ──────────────────
+  //
+  // The wrapper's HEIGHT is animated, and height is a layout property: every
+  // frame of the collapse ran a full layout pass. With the inner view in normal
+  // flow, that pass re-measured the header's own children through invalid
+  // intermediate states — captured mid-gesture, the stats row had vanished and
+  // the lede had jumped to the bottom of the panel. That is the flicker.
+  //
+  // Absolute inside a clipping wrapper breaks the link: the inner view lays out
+  // once, at its natural height, against a parent whose height it no longer
+  // depends on. The wrapper just reveals less of it. The measurement that feeds
+  // `naturalH` is still taken from this view, and is still safe for the reason
+  // above it — the measured view is not the animated one.
+  // `overflow: hidden` so the wrapper CLIPS its content as its height animates
+  // instead of letting it spill. The inner view stays in normal flow — an
+  // earlier attempt made it absolute to stop it reflowing, and that deadlocked
+  // the measurement: `naturalH` is read from that view, and a view absolutely
+  // positioned inside a wrapper whose height is zero until `naturalH` arrives
+  // reports zero forever. The panel came up 211pt instead of 308pt.
+  large: { overflow: "hidden" },
   largeInner: { paddingHorizontal: S.gutter, paddingTop: S.md },
   eyebrow: { fontFamily: F.monoBold, fontSize: 10, letterSpacing: 1.9, marginBottom: 9 },
   title: { fontFamily: F.display, fontSize: 40, lineHeight: 42, letterSpacing: -0.2 },

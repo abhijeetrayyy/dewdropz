@@ -6,7 +6,7 @@ import { MoreLink, ShelfHead } from './ui/Bits'
 
 // The quick way in.
 //
-// "Post a walk" alone is a blank form, and a blank form is where an idea dies —
+// "Post a trip" alone is a blank form, and a blank form is where an idea dies —
 // especially for the person who thought "I might go stargazing on Saturday" and
 // now has to decide eleven things. Each tile carries its own sensible hours
 // through to the composer, so the fastest path from thought to posted plan is

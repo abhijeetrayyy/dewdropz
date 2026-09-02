@@ -24,6 +24,11 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
     heading: 'Yours',
     links: [
       { label: 'Your profile', href: '/trek-buddy/profile' },
+      // The only route to a trip that has finished. It is not in the top bar
+      // because that is a five-tab thumb bar on a phone and W-01 measured it at
+      // 360px with nothing to spare — so the footer is where a member finds
+      // their own history from any screen.
+      { label: 'What you have done', href: '/trek-buddy/past' },
       { label: 'Host something', href: '/trek-buddy/new' },
       { label: 'Trail guide', href: '/treks' },
       { label: 'The shop', href: '/shop' },
@@ -75,7 +80,7 @@ export default function TrekFooter({
                 href="/trek-buddy/new"
                 className="mt-7 inline-flex rounded-full border border-paper/25 px-6 py-3 font-body text-[13px] font-medium text-paper transition-colors hover:border-paper/70"
               >
-                Post a walk
+                Post a trip
               </Link>
             )}
           </div>

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createRentalBooking } from '@/actions/rentals'
 
 /**
- * Reserving gear from the phone.
+ * Holding gear from the phone.
  *
  * The write itself is `createRentalBooking` — the same server action the web
  * booking form calls — so the exclusion constraint, the unit assignment, the
@@ -46,5 +46,22 @@ export async function POST(request: NextRequest) {
     const status = res.code === 'unavailable' ? 409 : 400
     return NextResponse.json({ error: res.error, code: res.code }, { status })
   }
-  return NextResponse.json({ bookingId: res.bookingId, bookingNumber: res.bookingNumber })
+  // ── WHAT THIS RESPONSE NOW MEANS, AND IT IS NOT WHAT IT USED TO ──────────
+  //
+  // Since migration 113 a booking is created as an unpaid HOLD: it keeps its
+  // units off the shelf and expires at `holdExpiresAt` unless the rent is paid.
+  // A 200 here is therefore "we are holding this for you", NOT "this is
+  // reserved", and a client that treats the two as the same thing will show a
+  // confirmed booking that quietly evaporates a quarter of an hour later.
+  //
+  // `requiresPayment` and `holdExpiresAt` are returned so a client cannot get
+  // that wrong by accident — an app reading only `bookingNumber`, as the Expo
+  // screen currently does, is reading a field whose meaning changed underneath
+  // it. Said here rather than left to be discovered.
+  return NextResponse.json({
+    bookingId: res.bookingId,
+    bookingNumber: res.bookingNumber,
+    requiresPayment: true,
+    holdExpiresAt: res.holdExpiresAt,
+  })
 }

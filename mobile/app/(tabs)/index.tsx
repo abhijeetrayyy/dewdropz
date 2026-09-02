@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { Img as Image } from "@/components/ui/Img";
@@ -8,11 +8,14 @@ import Animated, {
   FadeIn,
   FadeInDown,
   interpolate,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedRef,
   useAnimatedStyle,
   useReducedMotion,
   useScrollOffset,
 } from "react-native-reanimated";
+import { StatusBar } from "expo-status-bar";
 import { useCollectionsQuery, useCustomizableProductsQuery, useHomeQuery, useOrdersQuery, useProductsQuery, useRentalItemsQuery } from "@/lib/queries";
 import { usePullToRefresh } from "@/lib/hooks";
 import { useAuthStore } from "@/stores/auth";
@@ -88,6 +91,34 @@ export default function HomeScreen() {
 
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+
+  // ── The clock has to be readable ─────────────────────────────────────────
+  //
+  // This screen set no StatusBar style at all, so it inherited `dark` from
+  // `app/_layout.tsx` — whose own comment says the full-bleed dark-hero screens
+  // "mount their own light-icon override locally". This one is a full-bleed
+  // dark-hero screen and never did, so the clock, wifi and battery were drawn
+  // in near-black over a near-black photograph. Measured at 3.0:1 against the
+  // pixels behind them, and plainly illegible in a screenshot.
+  //
+  // Light is safe here rather than hopeful: the hero is `C.ink` while the image
+  // loads, and the gradient above lays `rgba(12,18,15,0.50)` across the top
+  // 22% — it exists precisely to guarantee contrast for anything landing there.
+  //
+  // `useAnimatedReaction` rather than an `onScroll` prop, because `scrollY`
+  // already comes from `useScrollOffset` on this ref and attaching a second
+  // handler to the same ScrollView is how one of them silently stops firing.
+  // The reaction only crosses back to JS on the transition, so this re-renders
+  // twice per screen rather than every frame.
+  const [heroPastTop, setHeroPastTop] = useState(false);
+  useAnimatedReaction(
+    // The moment that matters is the hero's bottom edge clearing the status
+    // bar, not the hero leaving the screen — 70pt covers the tallest inset.
+    () => scrollY.value > HERO_H - 70,
+    (past, prev) => {
+      if (past !== prev) runOnJS(setHeroPastTop)(past);
+    },
+  );
 
   // Reanimated already routes withTiming/withSpring/withRepeat and every
   // layout animation through the system Reduce Motion setting by default, so
@@ -182,6 +213,7 @@ export default function HomeScreen() {
 
   return (
     <View style={s.root}>
+      <StatusBar style={heroPastTop ? "dark" : "light"} />
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}

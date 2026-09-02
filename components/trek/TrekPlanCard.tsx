@@ -193,7 +193,19 @@ export default function TrekPlanCard({
           {/* Two lines, always. `min-h` is the reservation and `line-clamp`
               is the cap, so a one-word place and a seven-word one occupy the
               same box. 2 × 1.25 line-height at 19px ≈ 48px. */}
-          <h3 className="trek-h3 mt-2 line-clamp-2 min-h-[48px] text-text">{plan.place}</h3>
+          {/* Both ends on the card too, and clamped to the same two lines it
+              already reserved — a card that grew for point-to-point trips would
+              break the grid's rhythm for the one row that has one. */}
+          <h3 className="trek-h3 mt-2 line-clamp-2 min-h-[48px] text-text">
+            {plan.place}
+            {plan.ends_place && (
+              <>
+                <span aria-hidden="true" className="mx-1.5 text-mid">&rarr;</span>
+                <span className="sr-only"> to </span>
+                {plan.ends_place}
+              </>
+            )}
+          </h3>
 
           <p className="mt-1 truncate font-body text-[13px] text-mid">
             From {plan.meet_area}

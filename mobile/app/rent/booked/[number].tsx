@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { goBack } from "@/lib/nav";
@@ -16,12 +17,17 @@ import { formatPrice } from "@/lib/utils";
 import { C, F, R, S } from "@/lib/theme";
 
 /**
- * The gear is held.
+ * Paid, and reserved.
  *
- * Deliberately not a receipt: nothing has been paid. What this screen owes the
- * reader is the three things they will need at the counter — the booking
- * number, the dates the units are held for, and what to bring — so it says
- * those and stops.
+ * THIS SCREEN USED TO OPEN "deliberately not a receipt: nothing has been paid",
+ * which was true when a rental was settled at a counter and became the most
+ * misleading sentence in the app the moment paying became how a reservation is
+ * made. It is now reached only after the payment has been confirmed against the
+ * database — the item screen re-reads the booking before pushing here rather
+ * than trusting the browser sheet — so it can say "paid" and mean it.
+ *
+ * What the reader still needs is the deposit, which is NOT paid here, and what
+ * to bring. Those it says, and stops.
  *
  * A guest booking is readable here only because it was just made; the RLS
  * policy on `rental_bookings` is "own bookings", so signing in is what makes
@@ -34,6 +40,10 @@ export default function RentalBookedScreen() {
   // all — scrolled away and left no way back.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const { number } = useLocalSearchParams<{ number: string }>();
   const { data: booking, isLoading } = useRentalBookingQuery(number);
 
@@ -46,9 +56,10 @@ export default function RentalBookedScreen() {
         title="Your gear is booked"
         onBack={() => goBack("/rent")}
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
-      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
+      <Animated.ScrollView contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Animated.View entering={FadeInDown.duration(320)} style={s.badge}>
@@ -97,20 +108,25 @@ export default function RentalBookedScreen() {
 
               <Rule style={{ marginVertical: S.lg }} />
 
-              <View style={s.row}>
-                <Body color={C.textMid}>Rental, with GST</Body>
-                <Numeric>{formatPrice(booking.total_amount)}</Numeric>
-              </View>
-              <View style={s.row}>
-                <Body color={C.textMid}>Deposit, refundable</Body>
-                <Numeric>{formatPrice(booking.deposit_amount)}</Numeric>
-              </View>
+              {/* The two amounts are NOT summed. They are due in two places at
+                  two times, and a single "to hand over at the counter" total —
+                  which is what stood here — tells somebody who has just paid
+                  the rental that they still owe all of it. */}
               <View style={[s.row, s.total]}>
-                <Body style={{ fontFamily: F.bodyMedium }}>To hand over at the counter</Body>
-                <Numeric style={{ fontSize: 17 }}>
-                  {formatPrice(booking.total_amount + booking.deposit_amount)}
-                </Numeric>
+                <Body style={{ fontFamily: F.bodyMedium }}>
+                  {booking.payment_status === "paid" ? "Paid" : "Rental, with GST"}
+                </Body>
+                <Numeric style={{ fontSize: 17 }}>{formatPrice(booking.total_amount)}</Numeric>
               </View>
+              {booking.deposit_amount > 0 && (
+                <View style={s.row}>
+                  <Body color={C.textMid}>
+                    {booking.fulfilment === "ship" ? "Deposit, before we post it" : "Deposit, at the counter"}
+                  </Body>
+                  <Numeric color={C.textMid}>{formatPrice(booking.deposit_amount)}</Numeric>
+                </View>
+              )}
+              <Meta style={{ marginTop: 4 }}>Refundable, and not part of what you have paid.</Meta>
 
               <View style={s.note}>
                 <Body color={C.textMid} style={{ lineHeight: 22 }}>
@@ -118,6 +134,8 @@ export default function RentalBookedScreen() {
                     ? "We'll pack it and post it so it reaches you the day the rental starts. The return label is in the box."
                     : "Collect from the Dehradun shop on the first day of the rental. Bring some ID."}
                   {" "}The deposit comes back when the gear does, less anything owed for damage or a late return.
+                  {" "}Changed your mind? Cancel from your rentals — the exact refund is shown before you
+                  confirm, and the deposit always comes back in full.
                 </Body>
               </View>
 

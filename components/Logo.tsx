@@ -1,11 +1,15 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-// Source PNG (public/logo/mountain.png) is a 2000×2000 canvas where the actual
-// mark occupies a ~1346×741 region — rendering it untrimmed at a fixed height
-// would leave huge invisible padding and make the glyph look tiny next to the
-// wordmark. public/logo/mountain-mark.png is a tight crop of that same mark
-// (1425×820, regenerated with a small margin), used everywhere instead.
+// The master is a 2000×2000 canvas where the actual mark occupies a ~1346×741
+// region — rendering it untrimmed at a fixed height would leave huge invisible
+// padding and make the glyph look tiny next to the wordmark. So this is a tight
+// crop of that mark with a small margin, at 712×410: over 4x the largest place
+// it is ever drawn (168px wide, in the preloader), which covers 3x-DPR screens.
+// The master itself is no longer in the repo — it is private, in the
+// `brand-masters` bucket at logo/mountain-master-2000x2000.png; re-crop from
+// there via scripts/archive-brand-masters.mjs if this ever needs regenerating.
+// MARK_ASPECT stays the original 1425/820, which the 712×410 crop preserves.
 const MARK_ASPECT = 1425 / 820
 
 export function Logo({
@@ -32,7 +36,7 @@ export function Logo({
       {/* alt="" — decorative next to the adjacent DEWDROPZ text, which already
           carries the accessible name; avoids a double "Dewdropz, Dewdropz" read. */}
       <Image
-        src="/logo/mountain-mark.png"
+        src="/logo/mountain-mark.webp"
         alt=""
         width={markWidth}
         height={markHeight}

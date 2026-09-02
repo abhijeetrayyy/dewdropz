@@ -16,19 +16,47 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: `Rent the ${item.name} — DEWDROPZ`, description: item.summary ?? undefined }
 }
 
-export default async function RentItemPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function RentItemPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ from?: string; to?: string }>
+}) {
   const { slug } = await params
+  const sp = await searchParams
   const item = await getRentalItem(slug)
   if (!item) notFound()
+
+  // The locker asks for dates once, at the top of the page, and hands them to
+  // every card. Anything malformed is dropped here rather than seeded into the
+  // picker — `RentBooking` floors them at the shop's today as well.
+  const isDay = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '')
+  const from = isDay(sp.from)
+  const to = isDay(sp.to)
+  const backToLocker = from && to ? `/rent?from=${from}&to=${to}` : '/rent'
 
   return (
     <>
       <NavBar />
       <main id="main" className="bg-paper">
         <div className="mx-auto max-w-6xl px-6 pb-24 pt-28 sm:pt-32">
-          <Link href="/rent" className="font-mono text-[11px] uppercase tracking-[0.14em] text-mid hover:text-forest">
-            ← The gear locker
-          </Link>
+          {/* The dates ride back with them, so returning to the locker does
+              not throw away the weekend they were planning. */}
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-mid">
+            <Link href={backToLocker} className="hover:text-forest">← The gear locker</Link>
+            {item.category && (
+              <>
+                <span aria-hidden="true" className="text-light">/</span>
+                <Link
+                  href={`/rent?shelf=${item.category.slug}${from && to ? `&from=${from}&to=${to}` : ''}`}
+                  className="hover:text-forest"
+                >
+                  {item.category.name}
+                </Link>
+              </>
+            )}
+          </nav>
 
           <div className="mt-6 grid gap-10 lg:grid-cols-2">
             <div>
@@ -64,7 +92,22 @@ export default async function RentItemPage({ params }: { params: Promise<{ slug:
                 </Link>
               )}
 
+              {/* Every fact worth comparing one piece of gear against another
+                  by. The specifications the shop has actually recorded come
+                  first — they are what somebody is deciding on — and the
+                  commercial terms follow. Anything unrecorded is OMITTED rather
+                  than shown as an em-dash: a blank row advertises a gap, and an
+                  invented figure is worse than either. */}
               <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-rule pt-5 font-body text-sm">
+                {item.capacity != null && (
+                  <Spec k="Sleeps" v={item.capacity === 1 ? 'One' : `${item.capacity} people`} />
+                )}
+                {item.weight_grams != null && (
+                  <Spec k="Packed weight" v={`${(item.weight_grams / 1000).toFixed(1)} kg`} />
+                )}
+                {Object.entries(item.specs ?? {}).map(([k, v]) => (
+                  <Spec key={k} k={k} v={String(v)} />
+                ))}
                 <Spec k="Deposit" v={`${formatPrice(item.deposit)}, refunded`} />
                 <Spec k="Rental period" v={`${item.min_days}–${item.max_days} days`} />
                 <Spec k="Between rentals" v={item.buffer_days === 0 ? 'Same-day turnaround' : `${item.buffer_days} day${item.buffer_days === 1 ? '' : 's'} to clean and dry`} />
@@ -79,7 +122,7 @@ export default async function RentItemPage({ params }: { params: Promise<{ slug:
             </div>
 
             <div className="lg:sticky lg:top-24 lg:self-start">
-              <RentBooking item={item} />
+              <RentBooking item={item} initialFrom={from} initialTo={to} />
             </div>
           </div>
         </div>

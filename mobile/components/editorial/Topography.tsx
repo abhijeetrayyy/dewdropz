@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
@@ -89,7 +89,17 @@ type Props = {
   style?: ViewStyle;
 };
 
-export function Topography({
+/**
+ * Memoised on its props.
+ *
+ * The path data was already memoised, but the component was not — so every
+ * re-render of a header re-created ten `<Path>` elements for react-native-svg
+ * to reconcile, for a texture that had not changed. Headers re-render whenever
+ * their measured height settles, which on Android was often enough to matter
+ * while scrolling. All props here are primitives, so the default shallow
+ * comparison is exactly right.
+ */
+export const Topography = memo(function Topography({
   width,
   height,
   color,
@@ -144,4 +154,4 @@ export function Topography({
       </Svg>
     </View>
   );
-}
+});

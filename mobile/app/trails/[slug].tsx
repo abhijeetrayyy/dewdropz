@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useWindowDimensions, ScrollView, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { goBack } from "@/lib/nav";
@@ -24,6 +25,18 @@ import { C, R, S } from "@/lib/theme";
 export default function TrailDetailScreen() {
   const { height: SCREEN_H } = useWindowDimensions();
   const HERO_H = Math.round(SCREEN_H * 0.46);
+
+  // ── The clock has to stay readable past the photograph ───────────────────
+  //
+  // This screen asked for light glyphs and never asked for anything else, so
+  // they stayed white for the whole scroll — including over `C.paper`, which is
+  // the cream this entire app is built on. White on #FBF7EF is not a low
+  // contrast ratio, it is an invisible clock.
+  //
+  // The hero is only 46% of the screen, so that state is reached almost
+  // immediately. A plain threshold flip, like every other hero screen here —
+  // it re-renders twice per screen rather than every frame.
+  const [scrolled, setScrolled] = useState(false);
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const trail = TRAILS.find((t) => t.slug === slug);
@@ -45,8 +58,18 @@ export default function TrailDetailScreen() {
 
   return (
     <View style={s.root}>
-      <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: S.section }}>
+      <StatusBar style={scrolled ? "dark" : "light"} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: S.section }}
+        scrollEventThrottle={32}
+        onScroll={(e) => {
+          // The moment the hero's bottom edge clears the status bar, not the
+          // moment it leaves the screen — 70pt covers the tallest inset.
+          const past = e.nativeEvent.contentOffset.y > HERO_H - 70;
+          if (past !== scrolled) setScrolled(past);
+        }}
+      >
         {/* Hero */}
         <View style={[s.hero, { height: HERO_H }]}>
           <Image source={{ uri: trail.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} alt="" />

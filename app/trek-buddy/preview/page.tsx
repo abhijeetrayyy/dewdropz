@@ -257,7 +257,7 @@ export default async function TrekPreviewPage() {
               <EmptyState
                 title="Nothing matches that yet."
                 body="The board is small and honest about it. Widen the hour, or post the one you were going on anyway."
-                action={{ label: 'Post a walk', href: '/trek-buddy/new' }}
+                action={{ label: 'Post a trip', href: '/trek-buddy/new' }}
                 secondary={{ label: 'Clear the filters', href: '/trek-buddy' }}
               />
               <div className="space-y-3">

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createAdminSupabaseClient } from '@/lib/supabase'
+import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase'
 import { requireAdmin } from './auth'
 import { uploadFileAdmin, deleteFile, getSignedUrl, STORAGE_BUCKETS } from '@/lib/supabase/storage'
 import { enqueue } from '@/lib/jobs'
@@ -441,4 +441,118 @@ export async function getRentalDaySheet(day?: string) {
     .eq('status', 'out')
 
   return { day: on, going: going ?? [], coming: coming ?? [], overdue: overdue ?? [] }
+}
+
+// ── The history that nothing read ───────────────────────────────────────────
+//
+// `rental_events` has had twenty-eight write sites since the rental system
+// shipped and, until this function, ZERO readers. Every handover, payment,
+// reminder, refund and deposit settlement has been recorded faithfully into a
+// table no screen has ever opened.
+//
+// That is not a missing report. It is the difference between "why was I
+// charged ₹400?" having an answer that is a row and having an answer that is
+// whoever was on the counter trying to remember. Migration 112 made the table
+// genuinely append-only for the same reason.
+//
+// ONE READER, NOT THREE. The rental council found this artefact independently
+// four times and proposed three different screens for it. It is one query with
+// two audiences, so it is one function with one authorisation rule — and
+// `components/rent/RentalHistory.tsx` is the one component that draws it, for
+// the operator and for the customer.
+
+export type RentalHistoryEntry = {
+  id: string
+  kind: string
+  amount: number | null
+  note: string | null
+  createdAt: string
+  /** Who did it, when a person did. NULL for anything the system did to
+   *  itself — a reminder, an automatic settlement — and rendered as such
+   *  rather than as an empty name. */
+  actor: string | null
+}
+
+/**
+ * One booking's history, oldest first.
+ *
+ * Readable by an admin for any booking, and by a customer for their own. The
+ * two are one function because they are one question, and splitting them is how
+ * a permission check ends up written twice and drifting once.
+ *
+ * The customer path deliberately does NOT use the admin client: it selects
+ * through RLS, where "Own booking events" (migration 096) already expresses
+ * exactly this rule. A second copy of that predicate in TypeScript is a second
+ * thing to get wrong.
+ */
+export async function getRentalHistory(bookingId: string): Promise<RentalHistoryEntry[]> {
+  // NOT `requireAdmin()`. That helper redirects a non-admin, which is right for
+  // an admin-only action and wrong for one with two audiences — a customer
+  // opening their own booking would be bounced to the homepage. So the role is
+  // read directly, from the caller's own profile row through RLS ("Users can
+  // view own profile"), and an anonymous caller simply gets nothing.
+  const rls = await createServerSupabaseClient()
+  const { data: { user } } = await rls.auth.getUser()
+  if (!user) return []
+
+  const { data: profile } = await rls
+    .from('profiles').select('role').eq('id', user.id).single()
+
+  // An admin reads any booking's history through the service-role client. A
+  // customer reads their own through RLS, where "Own booking events" (migration
+  // 096) ALREADY expresses exactly this rule — restating that predicate in
+  // TypeScript would be a second copy to get wrong.
+  const supabase = profile?.role === 'admin' ? createAdminSupabaseClient() : rls
+
+  const { data, error } = await supabase
+    .from('rental_events')
+    .select('id, kind, amount, note, created_at, actor:profiles(full_name, email)')
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: true })
+    .limit(200)
+
+  if (error || !data) return []
+
+  return data.map((e) => {
+    // The generated types call an embedded to-one relation an ARRAY, because
+    // PostgREST cannot tell a to-one from a to-many at the type level. It comes
+    // back as an object here; normalising both shapes is cheaper than being
+    // wrong the day that inference changes.
+    const raw = e.actor as unknown
+    const a = (Array.isArray(raw) ? raw[0] : raw) as
+      { full_name: string | null; email: string | null } | null | undefined
+    return {
+      id: e.id as string,
+      kind: e.kind as string,
+      amount: (e.amount as number | null) ?? null,
+      note: (e.note as string | null) ?? null,
+      createdAt: e.created_at as string,
+      actor: a?.full_name || a?.email || null,
+    }
+  })
+}
+
+/**
+ * Release unpaid holds whose deadline has passed.
+ *
+ * THE MECHANISM THAT ACTUALLY MATTERS IS NOT THIS ONE. `createRentalBooking`
+ * calls the same database function before it reads the shelf, so a customer can
+ * never lose the last tent to somebody else's abandoned payment sheet — by the
+ * time availability is checked, every dead hold has already let go.
+ *
+ * This exists for the case that leaves behind: a hold that expires on a day
+ * nobody books. Nothing is BLOCKED by it, because the next booking attempt
+ * would clear it anyway — but it sits in the admin list looking like a live
+ * booking, and a rental system whose list contains rows that are not real is a
+ * list people stop trusting.
+ *
+ * So it is tidying, on the daily sweep, rather than the guarantee. Saying which
+ * is which matters: a future reader must not conclude that holds are only
+ * released once a day and shorten the window to compensate.
+ */
+export async function releaseExpiredRentalHolds(): Promise<{ released: number }> {
+  const supabase = createAdminSupabaseClient()
+  const { data, error } = await supabase.rpc('release_expired_rental_holds', { p_limit: 200 })
+  if (error) return { released: 0 }
+  return { released: (data as number) ?? 0 }
 }

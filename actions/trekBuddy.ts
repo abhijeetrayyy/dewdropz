@@ -2,9 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAuth, getUser } from '@/actions/auth'
-import { askStateOf, isCurrent } from '@/lib/trek-lifecycle'
+import { askStateOf, isCurrent, isFinished } from '@/lib/trek-lifecycle'
 import { createAdminSupabaseClient, createServerSupabaseClient } from '@/lib/supabase'
-import { sendSlackAlert } from '@/lib/slack'
 import { trekLimit } from '@/lib/trekLimits'
 import { enqueue } from '@/lib/jobs'
 
@@ -41,6 +40,10 @@ export type TrekPlanRow = {
   /** The kind's label, or the host's own name for an 'other' outing. */
   activity_label: string
   place: string
+  /** Where a point-to-point trip finishes. NULL on every loop, which is most. */
+  ends_place: string | null
+  /** The line between the two ends, in the host's own words. */
+  route_note: string | null
   meet_area: string
   starts_on: string
   ends_on: string
@@ -415,6 +418,103 @@ export async function getMyTreks() {
   }
 }
 
+/** One finished trip, with the viewer's own part in it. */
+export type PastTrek = {
+  plan: TrekPlanRow
+  /** Did the viewer run it, or go on it? */
+  role: 'hosted' | 'went'
+  /** True once a recap exists, so the page can prompt for the missing ones. */
+  hasRecap: boolean
+}
+
+/**
+ * What you have already done.
+ *
+ * A finished trip was simply absent from the product. `getMyTreks` ends at
+ * `ends_at > now()`, the board only carries what is current, and a person's
+ * profile counts their outings without ever letting them open one — so the day
+ * after a walk, the walk was gone: the roster, the chat, the meeting point and
+ * the announcements all still in the database and unreachable by anybody who
+ * was there.
+ *
+ * 052 is explicit that this is not what the data is for. It keeps a plan for
+ * ever rather than deleting it — hidden at most — because the roster is the
+ * answer to "who was supposed to be there", and that question is asked after
+ * the fact or not at all.
+ *
+ * WHO CAN SEE IT
+ *
+ * The host and the confirmed party, and nobody else. That is the same boundary
+ * `trek_plans`' own "Participants read their own plans" policy draws, restated
+ * here because these actions run on the service-role client where RLS does not
+ * apply — so the filter has to be in the query, not relied on underneath it.
+ *
+ * Deliberately NOT public. Whether a finished trip becomes a browsable record
+ * for non-participants is an open question with a real privacy cost — it would
+ * publish, retrospectively, who went into the hills with whom — and it is not
+ * a question a list view should answer by accident. Council §7 Q4.
+ *
+ * Waitlisted and declined asks are excluded: they describe a trip the person
+ * did not go on, and a history that lists them is a record of rejections.
+ */
+export async function getMyPastTreks(limit = 30): Promise<PastTrek[]> {
+  const user = await getUser()
+  if (!user) return []
+
+  const admin = createAdminSupabaseClient()
+  const now = new Date().toISOString()
+
+  const [{ data: hosted }, { data: joined }] = await Promise.all([
+    admin.from('trek_plans').select('*')
+      .eq('host_id', user.id)
+      .lt('ends_at', now)
+      .order('ends_at', { ascending: false })
+      .limit(limit),
+    admin.from('trek_plan_requests').select('plan:trek_plans(*)')
+      .eq('user_id', user.id)
+      .eq('status', 'confirmed')
+      .limit(limit * 2),
+  ])
+
+  const rows: { plan: TrekPlanRow; role: 'hosted' | 'went' }[] = [
+    ...((hosted ?? []) as TrekPlanRow[]).map((plan) => ({ plan, role: 'hosted' as const })),
+    ...((joined ?? []) as unknown as { plan: TrekPlanRow | null }[])
+      .map((r) => r.plan)
+      .filter((p): p is TrekPlanRow => !!p)
+      // The date filter is in JS for the joined half because the constraint is
+      // on the embedded row, not the one being selected. isFinished is the same
+      // predicate the rest of the surface uses, so a cancelled trip is excluded
+      // here by lifecycleOf rather than by a second, drifting `.neq`.
+      .filter((p) => isFinished(p))
+      .map((plan) => ({ plan, role: 'went' as const })),
+  ]
+
+  // A co-host appears in both halves. Hosting wins — it is the stronger claim
+  // and it is what the console link on the row should reflect.
+  const seen = new Set<string>()
+  const unique = rows
+    .sort((a, b) => (a.role === 'hosted' ? -1 : 1) - (b.role === 'hosted' ? -1 : 1))
+    .filter((r) => (seen.has(r.plan.id) ? false : (seen.add(r.plan.id), true)))
+    .sort((a, b) => b.plan.ends_at.localeCompare(a.plan.ends_at))
+    .slice(0, limit)
+
+  if (unique.length === 0) return []
+
+  // One query for every recap rather than one per row.
+  const { data: recaps } = await admin
+    .from('trek_recaps')
+    .select('plan_id')
+    .in('plan_id', unique.map((r) => r.plan.id))
+  const withRecap = new Set((recaps ?? []).map((r) => r.plan_id as string))
+
+  const labelled = await withKindLabels(unique.map((r) => r.plan))
+  return unique.map((r, i) => ({
+    plan: labelled[i] as TrekPlanRow,
+    role: r.role,
+    hasRecap: withRecap.has(r.plan.id),
+  }))
+}
+
 /**
  * The public shape of another member.
  *
@@ -629,6 +729,16 @@ export type TrekKind = {
   minParty: number
   needsNightNote: boolean
   isOpenEnded: boolean
+  /**
+   * Whether this kind of outing has two ends.
+   *
+   * `loop` returns to where it started, so the composer never asks for a
+   * destination — which is every kind seeded before 109 and every day walk on
+   * this board. `point_to_point` must have one. `either` offers the field
+   * without requiring it, which is cycling and expeditions: a Sunday loop out
+   * of Dehradun and Manali-to-Leh are the same kind of outing.
+   */
+  routeShape: 'loop' | 'point_to_point' | 'either'
 }
 
 export async function getTrekKinds(): Promise<TrekKind[]> {
@@ -651,6 +761,10 @@ export async function getTrekKinds(): Promise<TrekKind[]> {
     minParty: k.min_party,
     needsNightNote: k.needs_night_note,
     isOpenEnded: k.is_open_ended,
+    // `?? 'loop'` so a database that has not had 109 applied yet still renders
+    // a composer, rather than every kind arriving with an undefined shape and
+    // the destination field appearing on a morning walk.
+    routeShape: (k.route_shape as 'loop' | 'point_to_point' | 'either') ?? 'loop',
   }))
 }
 
@@ -694,6 +808,10 @@ export async function createTrekPlan(input: {
   /** A kind key. The database owns the list (057), so this is not a union. */
   activity: string
   place: string
+  /** Only for a kind whose `routeShape` is not `loop`. */
+  endsPlace?: string
+  /** Free text: "via Manali, Sarchu, Tanglang La". */
+  routeNote?: string
   meetArea: string
   startsOn: string
   endsOn?: string
@@ -727,6 +845,10 @@ export async function createTrekPlan(input: {
   const result = await callTrek('trek_create_plan', {
     p_activity: input.activity,
     p_place: input.place,
+    // The other end, and the line between. Both NULL for a loop, which is every
+    // kind seeded before 109.
+    p_ends_place: input.endsPlace?.trim() || null,
+    p_route_note: input.routeNote?.trim() || null,
     p_meet_area: input.meetArea,
     p_starts_on: input.startsOn,
     p_ends_on: input.endsOn || input.startsOn,
@@ -754,14 +876,14 @@ export async function createTrekPlan(input: {
     p_actor: user.id,
   }, ['/trek-buddy'])
 
-  if ('success' in result) {
-    // The owner's moderation presence, at zero build cost. Nobody is on report
-    // duty, so the least this can do is tell them a walk was posted.
-    await sendSlackAlert(
-      `:mountain: Trek Buddy plan posted — ${input.activity} at ${input.place}, ` +
-      `${input.startsOn} ${input.startTime}, capacity ${input.capacity}`
-    ).catch(() => {})
-  }
+  // No alert on a successful post. This used to fire a Slack message on every
+  // trip anybody posted — "the owner's moderation presence, at zero build cost"
+  // — to a webhook that has never been configured, so it was zero presence at
+  // zero cost. It would be the wrong thing even if it worked: a notification
+  // that arrives for every ordinary event trains its reader to dismiss the
+  // channel, and the channel is the one that also has to carry a harassment
+  // report. Anything worth an admin's attention here is caught by the scan and
+  // opens a report (108); everything else belongs on the board, not in a mailbox.
   return result
 }
 
@@ -775,9 +897,8 @@ export async function requestToJoin(planId: string, message?: string) {
   const result = await callTrek('trek_request_join', {
     p_plan_id: planId, p_message: message || null, p_actor: user.id,
   }, ['/trek-buddy', `/trek-buddy/${planId}`])
-  if ('success' in result) {
-    await sendSlackAlert(`:raising_hand: Trek Buddy: someone asked to join plan ${planId}`).catch(() => {})
-  }
+  // The host is told by `trek_requests_notify` (060), which is the person who
+  // actually has to do something about it. An admin does not.
   return result
 }
 
@@ -806,7 +927,6 @@ export async function cancelPlan(planId: string, reason?: string) {
     // queue, not an inline send: `enqueue` never throws, so a mail outage cannot
     // turn a successful cancellation into a failed one.
     await enqueue('trek.plan_cancelled', { planId })
-    await sendSlackAlert(`:x: Trek Buddy plan cancelled: ${planId}${reason ? ` — ${reason}` : ''}`).catch(() => {})
   }
   return result
 }
@@ -986,17 +1106,93 @@ export async function getNotifications(limit = 30) {
       .is('read_at', null),
   ])
 
-  return {
-    items: (data ?? []).map((n): TrekNotification => ({
-      id: n.id as string,
-      kind: n.kind as string,
-      body: n.body as string,
-      planId: (n.plan_id as string) ?? null,
-      createdAt: n.created_at as string,
-      read: Boolean(n.read_at),
-    })),
-    unread: count ?? 0,
+  const stored = (data ?? []).map((n): TrekNotification => ({
+    id: n.id as string,
+    kind: n.kind as string,
+    body: n.body as string,
+    planId: (n.plan_id as string) ?? null,
+    createdAt: n.created_at as string,
+    read: Boolean(n.read_at),
+  }))
+
+  // ── The one thing that happens to you here that nobody tells you ──────────
+  //
+  // 060's `kind` CHECK permits seven notifications and every one of them is
+  // caused by A PERSON DOING SOMETHING: request_received, request_confirmed,
+  // request_declined, request_withdrawn, plan_cancelled, point_released,
+  // vouched. There is no kind for time passing, so the commonest bad outcome on
+  // this board — you asked to come, the host never decided, and the trip left
+  // without you — produced silence and then absence. The row stays `requested`
+  // for ever, the trigger refuses to let it become anything else, and nothing
+  // is ever sent.
+  //
+  // These are DERIVED AND NOT WRITTEN. Three reasons, in order of weight:
+  //
+  //   1. Writing rows from inside a read is how a feed acquires duplicates the
+  //      first time two tabs load it at once.
+  //   2. Migration 055's rule — "a boolean a cron has to maintain is a boolean
+  //      that is wrong whenever the cron is late" — applies just as well to a
+  //      row a read path has to remember to write. The fact is already implied
+  //      by the request's status and the trip's dates.
+  //   3. It needs no migration, so it is live the moment it deploys rather than
+  //      waiting on a hand-applied file.
+  //
+  // The cost is honest and worth stating: a derived entry cannot be marked
+  // read, so it does not join the unread badge — `unread` below still counts
+  // only real rows. This makes the thing VISIBLE where a member already looks
+  // for what happened to them. Making it ARRIVE is a notification kind and a
+  // delivery channel, and that is a migration plus email.
+  const lapsed = await getLapsedAskNotices(user.id, limit)
+
+  const items = [...stored, ...lapsed]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+
+  return { items, unread: count ?? 0 }
+}
+
+/**
+ * Asks that the clock answered instead of the host.
+ *
+ * Synthesised from rows the member already owns — their own requests, and the
+ * trips those requests point at. Reads nothing they cannot see.
+ */
+async function getLapsedAskNotices(userId: string, limit: number): Promise<TrekNotification[]> {
+  const { data } = await createAdminSupabaseClient()
+    .from('trek_plan_requests')
+    .select('plan_id, created_at, plan:trek_plans(id, place, host_name, starts_at, ends_at, status, hidden_at)')
+    .eq('user_id', userId)
+    .eq('status', 'requested')
+    .limit(limit)
+
+  type Row = {
+    plan_id: string
+    created_at: string
+    plan: {
+      id: string; place: string; host_name: string
+      starts_at: string; ends_at: string; status: string; hidden_at: string | null
+    } | null
   }
+
+  return ((data ?? []) as unknown as Row[])
+    .filter((r) => r.plan && askStateOf('requested', r.plan) === 'lapsed')
+    .map((r) => ({
+      // Stable and prefixed, so it cannot collide with a real notification id
+      // and a client keying a list on it stays keyed correctly across reloads.
+      id: `lapsed:${r.plan_id}`,
+      kind: 'request_lapsed',
+      // Says what happened and, deliberately, does not blame the host. 052 is
+      // explicit that hosts are under no obligation to answer, and a line that
+      // implies otherwise turns a quiet disappointment into a grievance.
+      body: `${r.plan!.host_name} did not answer before ${r.plan!.place} set off. Hosts are not obliged to decide, and you are free to ask on something else.`,
+      planId: r.plan_id,
+      // Dated to the departure, not the ask: this is the moment the answer
+      // stopped being possible, which is the moment being reported.
+      createdAt: r.plan!.starts_at,
+      // Not markable, so it renders as already-read rather than as a badge the
+      // member can never clear.
+      read: true,
+    }))
 }
 
 /** Just the badge. Cheap enough to run in the header of every page. */
@@ -1300,15 +1496,18 @@ export async function reportTrek(input: {
     p_actor: user.id,
   }, ['/trek-buddy'])
 
-  if ('success' in result) {
-    // Until somebody is named to own the queue, Slack IS the queue.
-    await sendSlackAlert(
-      `:rotating_light: Trek Buddy report — ${input.reason}` +
-      (input.planId ? ` on plan ${input.planId}` : '') +
-      (input.subjectId ? ` about member ${input.subjectId}` : '') +
-      (input.detail ? `\n${input.detail}` : '')
-    ).catch(() => {})
-  }
+  // The alert is not sent from here, and that is the point of 108.
+  //
+  // This used to fire a Slack message with the report's own free text in it,
+  // under the comment "until somebody is named to own the queue, Slack IS the
+  // queue" — to a webhook that was never configured. It covered the Report
+  // button and missed the scanner entirely, and the scanner is what catches a
+  // grooming pattern or an acid threat.
+  //
+  // A trigger on `trek_reports` now enqueues the alert for EVERY report however
+  // it arrives, and the email carries a category and a link rather than the
+  // reported text. The queue in the admin area is the record; the mail is a
+  // nudge toward it.
   return result
 }
 
@@ -1417,12 +1616,9 @@ export async function requestHostAccess(note?: string) {
     ['/trek-buddy', '/trek-buddy/basecamp', '/trek-buddy/discover']
   )
 
-  if ('success' in result) {
-    // Same as reports: until somebody is named to own the queue, Slack IS the
-    // queue. A request nobody sees is worse than no request button.
-    await sendSlackAlert(
-      `:tent: Trek Buddy — ${user.id} asked to host` + (note?.trim() ? `\n${note.trim()}` : '')
-    ).catch(() => {})
-  }
+  // Not alerted. A hosting request is not urgent and not a safety matter, and
+  // it has its own tab in the admin area with a count on it. Reserving email
+  // for the things that actually cannot wait is what keeps those emails worth
+  // opening.
   return result
 }

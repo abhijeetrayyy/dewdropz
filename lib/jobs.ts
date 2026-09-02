@@ -38,6 +38,10 @@ export type JobType =
   // pressing Cancel must always succeed. If the mail provider could fail it,
   // the host would believe the trip was still on — and so would the party.
   | 'trek.plan_cancelled'
+  // Enqueued by a trigger on trek_reports (108), not by an action, so it covers
+  // the scanner's own reports as well as the Report button — and those are the
+  // ones that most need somebody to look.
+  | 'trek.report_opened'
 
 /** Longer each time, so a provider outage is waited out rather than hammered. */
 const BACKOFF_MINUTES = [1, 5, 15, 60, 240]
@@ -166,6 +170,17 @@ const HANDLERS: Record<JobType, Handler> = {
   'trek.plan_cancelled': async (p) => {
     const { sendTrekCancellationEmails } = await import('@/lib/trekEmails')
     await sendTrekCancellationEmails(String(p.planId))
+  },
+
+  // Returns without sending when RESEND_API_KEY is unset, and says so on the
+  // console. Deliberately not a throw: a missing key is a configuration fact,
+  // not a transient failure, and retrying it five times with backoff would fill
+  // /admin/jobs with identical errors until somebody stopped reading it. The
+  // report is safe in the queue either way — the email is a nudge toward it,
+  // never the record of it.
+  'trek.report_opened': async (p) => {
+    const { sendTrekReportAlert } = await import('@/lib/trekEmails')
+    await sendTrekReportAlert(String(p.reportId))
   },
 }
 

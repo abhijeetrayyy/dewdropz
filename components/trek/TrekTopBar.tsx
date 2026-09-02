@@ -150,7 +150,7 @@ export default function TrekTopBar({
                     href="/trek-buddy/new"
                     className="hidden rounded-full border border-paper/25 px-4 py-2 font-body text-[13px] font-medium text-paper transition-colors duration-200 hover:border-paper/70 hover:bg-paper/[0.06] sm:inline-flex"
                   >
-                    Post a walk
+                    Post a trip
                   </Link>
                 )}
                 <Link

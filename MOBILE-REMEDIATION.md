@@ -488,3 +488,251 @@ person the app was hiding it from.
 exist, so none of the six money-touching branches in §3 P1 have run. The RN half
 of the multipart upload (W-15) still needs one real image pick; the emulator has
 an empty photo library.
+
+---
+
+## M-24 · The collapsing header fought the scroll on Android
+
+**Reported 1 Sep 2026:** *"wherever there is a header that need to be scrolled
+and it became small, while scrolling, it is flickering and also not able to
+scroll very easily."*
+
+### Cause
+
+`ScreenHeader` collapsed by animating its **`height`** from `useAnimatedStyle`,
+and it sat in the layout column as a **sibling directly above** the list.
+
+`height` is a layout property. This app runs **Reanimated 4.5 on the New
+Architecture**, so every frame of the collapse committed a fresh layout to the
+shadow tree — and because the panel was in flow, that commit **resized the list
+underneath it while the finger was still dragging**. Both reported symptoms fall
+straight out of that:
+
+* **flicker** — the layout commit races the scroll's own frame, and the panel's
+  children are re-measured through invalid intermediate states;
+* **hard to scroll** — the scroller's viewport is being moved under it mid-gesture,
+  so momentum and offset are computed against a frame that keeps changing.
+
+Android feels it far more than iOS: its commit is more expensive and is not
+synchronised to the scroll frame.
+
+A second, independent flicker source sat on top of it. The measured view lives
+inside the block being animated, so the collapse re-triggered its `onLayout`;
+the old guard (`Math.abs(h - naturalH) > 1`) let those intermediate heights
+through to `setState`, re-rendering the header mid-scroll and re-attaching its
+animated style.
+
+### Fix
+
+| | |
+|---|---|
+| **The panel floats** | `position: absolute` whenever it is collapsing, so its height animation cannot touch the list's frame. The list is told how much room to leave via a new `onHeight` callback → `contentContainerStyle.paddingTop`. 17 collapsing headers across 14 screens. |
+| **Measurement only grows** | `setNaturalH` accepts a height only when the content got *taller*. That keeps the case it was written for — a panel that renders before its data and then gains a stats row — and rejects every height produced by the collapse itself. |
+| **`Topography` is memoised** | Its path data was memoised; the component was not, so each header re-render handed react-native-svg ten fresh `<Path>` elements to reconcile for an unchanged texture. |
+| **No `elevation`** | The floating panel orders with `zIndex` only. On Android `elevation` is a material shadow, not a z-order knob — it would have drawn a hard drop shadow under a flat ink plate on every one of these screens. |
+| **`zIndex: 10`, under `StatusCap`** | The cap is absolute at 20 and exists to keep the clock legible for the whole life of the screen. Nothing may paint over it. |
+| **`progressViewOffset={headerH}`** | On 8 screens with pull-to-refresh. A floating header would otherwise hide the spinner. |
+
+### Verified on the emulator, and measured
+
+**Why it was "still happening".** The APK on `emulator-5554` was a RELEASE build
+installed at 13:32; the fix was written at 18:12. A release build has the JS
+bundle compiled into it (`flags=0x0`, no `DEBUGGABLE`), so it cannot load
+anything from Metro — the app under test could not have contained the change,
+and no amount of reloading would have made it. It was replaced with a debug
+build (`./gradlew assembleDebug`) served by Metro on 8081.
+
+**A crash in the first version of the fix, caught only on the device.** The
+collapse was factored through a `shift()` helper declared in the component body.
+That function lives on the JS runtime and `useAnimatedStyle` runs on the UI
+runtime, so the first scroll threw *"[Worklets] Tried to synchronously call a
+Remote Function"*. The interpolation is now written out inside each worklet.
+`tsc` cannot see this class of bug; only running it can.
+
+**The structural fix, proved.** The scrollable node's bounds, dumped with
+`uiautomator` before and after a scroll:
+
+| | at rest | after scrolling |
+|---|---|---|
+| before | `[0,663][1080,2211]` | resized by the collapse |
+| after | `[0,0][1080,2400]` | `[0,0][1080,2400]` — **unchanged** |
+
+The list now spans the whole screen with the panel floating over it, and its
+frame does not move while the header collapses. That is the fighting-the-scroll
+symptom gone at the root.
+
+**Frame timing, same screen, same device, same build** — `dumpsys gfxinfo`
+around six full scroll cycles on `/rent`:
+
+| | before | after | after (repeat) |
+|---|---|---|---|
+| Janky frames | **91.4 %** | 45.7 % | **42.2 %** |
+| 50th percentile frame | **150 ms** | 40 ms | **38 ms** |
+| 90th percentile frame | 300 ms | 69 ms | **65 ms** |
+| Missed Vsync | 37 | 27 | **16** |
+| Frames delivered | 58 | 175 | 166 |
+
+Median frame time is **~4× faster** and the app delivers roughly **three times
+as many frames** through the same gesture.
+
+**Context for the numbers that remain.** 42 % janky still looks high, and it is
+not the header: a screen with NO collapsing header at all (`/shop`) measured
+**78.6 % janky, 69 ms median** on the same run. The collapsing screen is now
+*better* than a plain one. What is left is the debug build and the emulator —
+neither is a fair proxy for a release build on real hardware.
+
+### Still worth doing
+
+Re-measure on a physical device against a release build before calling the
+number good. The structural result — a list whose frame never changes during
+the collapse, and a collapse that touches no layout property — holds regardless
+of what hardware it runs on.
+
+---
+
+## M-25 · "Errors on every action" is a backend URL, not a bug in the app
+
+**Reported 1 Sep 2026:** *"it was showing all kind of errors while adding to the
+cart and all kind of issues with this supabase or any kind of vercel API… it is
+showing error while doing any kind of action."*
+
+### The app is fine. Verified on the emulator, end to end.
+
+Against a debug build with the local Next server running: the shop lists real
+products from Supabase, a product page opens, **Add to pack works** (two taps →
+2 pieces, ₹5,600, GST ₹280, checkout ₹5,880), and **Checkout works** — it
+correctly stops at "Sign in to check out" carrying the cart. No error, no
+redbox, nothing in the JS console.
+
+### What actually breaks, and only in a release build
+
+`mobile/lib/env.ts` refuses a loopback API base outside `__DEV__` and falls back
+to `extra.siteUrl`:
+
+```
+const apiUrl = !__DEV__ && LOOPBACK.test(configuredApiUrl) ? siteUrl : forEmulator(configuredApiUrl)
+```
+
+`app.json` sets `apiUrl` to `http://localhost:3010` and `siteUrl` to
+`https://dewdropz.shop`. So every release build points its API calls at
+`https://dewdropz.shop`.
+
+**That domain does not resolve.** `nslookup dewdropz.shop` → *"Can't find
+dewdropz.shop: No answer"*. There is no deployment behind it.
+
+So in the release APK, everything that goes through `/api/mobile/*` fails:
+checkout, the price quote, rental quote, rental booking, rental cancellation,
+design save and image upload. Everything that talks to Supabase **directly** —
+browsing, product pages, the cart, wishlists, auth — keeps working, which is
+exactly why the app looks healthy right up until you try to do something.
+
+### Why a LAN IP is not a workaround for a release build
+
+`usesCleartextTraffic="true"` is set **only** in
+`android/app/src/debug/AndroidManifest.xml`. The release manifest does not set
+it, so Android 9+ blocks plain HTTP. A release build cannot talk to
+`http://192.168.1.13:3010` even with the address configured.
+
+### What is needed
+
+**A deployed HTTPS backend.** The `/api/mobile/*` routes are served by the same
+Next app as the storefront, so one deployment fixes all of it; then set
+`extra.siteUrl` (and `extra.apiUrl` for a device) to that origin and rebuild.
+
+Until then:
+
+| build | API target | works? |
+|---|---|---|
+| debug + Metro, emulator | `10.0.2.2:3010` → the dev machine | **yes**, verified |
+| debug + Metro, phone on the same wifi | needs `extra.apiUrl` = `http://192.168.1.13:3010` | yes, while `npm run dev` runs |
+| release, standalone | `https://dewdropz.shop` | **no — domain does not resolve** |
+
+### RESOLVED — 1 Sep 2026
+
+`https://dewdropz.vercel.app` is live and serving the mobile API. Verified
+before changing anything: `/` and `/shop` return 200, and a real
+`POST /api/mobile/quote` priced a live product correctly — ₹1,899 subtotal,
+₹120 delivery, 12% GST, ₹2,246.88 total.
+
+**One line changed:** `extra.siteUrl` in `mobile/app.json`, from the
+non-resolving `https://dewdropz.shop` to `https://dewdropz.vercel.app`.
+
+`extra.apiUrl` is deliberately left at `http://localhost:3010`. That is the
+correct development default — `forEmulator` rewrites it to `10.0.2.2` on the
+emulator — and `env.ts` already refuses a loopback base outside `__DEV__` and
+falls through to `siteUrl`. So one value fixes every release build without
+disturbing local development.
+
+**Verified on the emulator with a standalone release APK** (`assembleRelease`,
+no Metro, no DEBUGGABLE flag):
+
+* the embedded `assets/app.config` carries `siteUrl: https://dewdropz.vercel.app`;
+* the app launches and loads the storefront;
+* **Add to pack works**, and the cart shows 1 × Microspikes ₹2,800, delivery
+  free, **GST ₹140**, checkout ₹2,940.
+
+Those tax and delivery figures are computed by `priceCheckout` on the server,
+not on the device — the app has not done pricing arithmetic since the drift bug
+in `/api/mobile/quote`'s header. Their presence is proof the release build
+reached the deployment and got a real answer, which is exactly what failed
+before.
+
+The APK is at `mobile/android/app/build/outputs/apk/release/app-release.apk`.
+It is signed with the **debug keystore** (`build.gradle:115`), which is fine for
+sideloading and not acceptable for Play — that needs a real keystore.
+
+---
+
+## M-26 · Release builds — where they are, and what iOS still needs
+
+Both built 2 Sep 2026 from `app.json` v0.2.0 with
+`siteUrl = https://dewdropz.vercel.app`, and both carry a bundled JS payload —
+neither needs Metro or a dev server.
+
+```
+mobile/dist/DewDropz-0.2.0-android-release.apk        111 MB
+mobile/dist/DewDropz-0.2.0-ios-simulator.app.zip       31 MB
+```
+
+`mobile/.gitignore` already ignores `dist/`, so neither is committed.
+
+### Android — installable, verified
+
+`assembleRelease`. Embedded `assets/app.config` confirmed to carry the Vercel
+origin. Installed on `emulator-5554` and driven through the flow that was
+failing: **Add to pack works**, cart shows 1 × Microspikes ₹2,800, delivery
+free, **GST ₹140**, checkout ₹2,940 — server-computed figures, so the release
+build reached the deployment.
+
+**Signed with the debug keystore** (`android/app/build.gradle:115`, which says
+so itself: *"Caution! In production, you need to generate your own keystore"*).
+Fine for sideloading, rejected by Play.
+
+### iOS — builds and runs, but cannot be installed on a phone
+
+`xcodebuild -configuration Release -sdk iphonesimulator` → **BUILD SUCCEEDED**.
+Installed on the iPhone 17 Pro simulator: launches, loads the storefront and the
+gear room from Supabase, no crash reports. `EXConstants.bundle/app.config`
+carries the Vercel origin, and `main.jsbundle` is embedded.
+
+**It is a simulator binary and cannot run on an iPhone.** The blocker is not
+this repo:
+
+```
+security find-identity -v -p codesigning  →  0 valid identities found
+```
+
+An iPhone-installable build (`.ipa`, ad-hoc, TestFlight or App Store) needs an
+Apple Developer Program membership, a distribution certificate and a
+provisioning profile for `com.dewdropz.app`. None of those exist on this
+machine, and none can be created without the account.
+
+Once that account exists, the build itself is unchanged — only signing is
+added.
+
+### The two remaining signing gaps, in one place
+
+| | needs | blocks |
+|---|---|---|
+| Android | a real upload keystore | Play Store submission (sideloading works today) |
+| iOS | Apple Developer account + certificate + profile | **any install on a physical iPhone**, TestFlight, App Store |

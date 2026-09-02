@@ -12,13 +12,47 @@ const STORAGE_BUCKETS = {
   // person it would be showing it to, and a return set can have other people's
   // gear in frame. Served through a signed URL by an admin, never by public URL.
   RENTAL_EVIDENCE: 'rental-evidence',
+  // Original camera and design files — the 4K grade behind the hero loop, the
+  // untrimmed logo canvas. Nothing here is ever served to a browser: these are
+  // the sources you re-export FROM when a derived asset needs regenerating at a
+  // different size or crop. They lived in `public/` until they were 35MB of a
+  // 42MB folder, which meant every deploy shipped them and Vercel's CDN served
+  // a 29MB file to anyone who guessed the filename. Private, and large.
+  BRAND_MASTERS: 'brand-masters',
 } as const
+
+// Buckets whose objects are never public. A public bucket makes a guessable URL
+// the whole of the access control, which is the wrong answer for a photograph
+// taken to settle an argument about money — and pointless bandwidth for masters
+// no browser should ever request.
+const PRIVATE_BUCKETS: readonly string[] = [
+  STORAGE_BUCKETS.RENTAL_EVIDENCE,
+  STORAGE_BUCKETS.BRAND_MASTERS,
+]
 
 // Per-bucket overrides for ensureBucketsExist — everything defaults to the
 // 5MB/raster-image policy below except where noted (customer design uploads
 // are often large photos, so they get more headroom).
-const BUCKET_OVERRIDES: Partial<Record<(typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS], { fileSizeLimit: number }>> = {
+const BUCKET_OVERRIDES: Partial<
+  Record<
+    (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS],
+    { fileSizeLimit: number; allowedMimeTypes?: string[] }
+  >
+> = {
   [STORAGE_BUCKETS.DESIGNS]: { fileSizeLimit: 10485760 }, // 10MB
+  // Masters are camera-original video and full-size artwork, so the raster-only
+  // MIME list and the 5MB cap both have to go. 50MB is not a preference — it is
+  // the project's global per-object ceiling, and createBucket rejects anything
+  // above it outright ("The object exceeded the maximum allowed size"). The 29MB
+  // 4K grade fits; a longer or higher-bitrate master would not, and would need
+  // the ceiling raised on the Supabase plan first.
+  [STORAGE_BUCKETS.BRAND_MASTERS]: {
+    fileSizeLimit: 52428800, // 50MB — the project ceiling
+    allowedMimeTypes: [
+      'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/svg+xml',
+      'video/mp4', 'video/webm', 'video/quicktime',
+    ],
+  },
 }
 
 type BucketName = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS]
@@ -91,13 +125,12 @@ export async function ensureBucketsExist() {
     const { data: existing } = await supabase.storage.getBucket(bucket)
     if (!existing) {
       await supabase.storage.createBucket(bucket, {
-        // Everything here is a shop window except the rental evidence, which is
-        // a private record. A public bucket means a guessable URL is the whole
-        // access control, and that is the wrong answer for a photograph taken
-        // to settle an argument about money.
-        public: bucket !== STORAGE_BUCKETS.RENTAL_EVIDENCE,
+        // Everything here is a shop window except the buckets named above.
+        public: !PRIVATE_BUCKETS.includes(bucket),
         fileSizeLimit: BUCKET_OVERRIDES[bucket]?.fileSizeLimit ?? 5242880, // 5MB
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'],
+        allowedMimeTypes: BUCKET_OVERRIDES[bucket]?.allowedMimeTypes ?? [
+          'image/jpeg', 'image/png', 'image/webp', 'image/avif',
+        ],
       })
     }
   }

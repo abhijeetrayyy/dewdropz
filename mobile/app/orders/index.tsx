@@ -31,6 +31,10 @@ export default function OrdersScreen() {
   // all — scrolled away and left no way back.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const { user } = useAuthStore();
   const { data: orders = [], isLoading, isError, refetch } = useOrdersQuery(user?.id);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -61,13 +65,14 @@ export default function OrdersScreen() {
             : undefined
         }
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
       <Animated.ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ paddingBottom: S.section }}
+        contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ink} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={headerH} tintColor={C.ink} />}
       >
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>

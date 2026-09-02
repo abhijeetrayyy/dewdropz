@@ -19,6 +19,24 @@ type Props = {
 export function Icon({ name, size = 24, color = C.ink, filled = false, style }: Props) {
   return (
     <Text
+      // ── AN ICON IS NOT TEXT ───────────────────────────────────────────────
+      //
+      // Material Symbols is a ligature font, so every icon in this app is a
+      // <Text> node — and Text scales with the reader's Dynamic Type setting.
+      // At `accessibility-extra-large` a 23px tab icon renders at roughly 40px
+      // inside a pill whose height is a layout constant, so the icons were
+      // clipped through the middle on all five tabs and the labels ellipsised
+      // to "SH…" and "STU…". Every IconButton, chip and inline glyph elsewhere
+      // had the same problem for the same reason.
+      //
+      // The `size` prop IS the intended dimension; it is passed by the caller
+      // to fit a container the caller has already sized. Scaling it is not an
+      // accessibility win — the text beside it still scales, which is the
+      // channel that carries the meaning — it is a layout break that hides the
+      // control. Apple's own tab bar stops scaling for the same reason, and
+      // `TabBar.tsx` already clamps its labels on that argument; the icons were
+      // simply never covered by it.
+      allowFontScaling={false}
       style={[
         {
           fontFamily: filled ? F.iconFill : F.icon,

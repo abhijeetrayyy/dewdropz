@@ -17,7 +17,7 @@ import { Datum } from './ui/Bits'
 // WHAT THIS PAGE USED TO BE, AND WHY IT CHANGED.
 //
 // All four of those people are asking CAN I TRUST THIS, so the page answered
-// them: what it is, what it is NOT, who it is for, how a walk works, six rules
+// them: what it is, what it is NOT, who it is for, how a trip works, six rules
 // the database enforces, four places it stops, how a reputation is built, six
 // things that are your job and not ours, and the questions people actually ask.
 //
@@ -33,7 +33,7 @@ import { Datum } from './ui/Bits'
 // and this page skipped straight to the weighing.
 //
 // NOTHING WAS DELETED. Every removed sentence is at /trek-buddy/safety, whole,
-// in its original words, linked from here, from onboarding and from every walk
+// in its original words, linked from here, from onboarding and from every trip
 // — and that page is the only thing under /trek-buddy a search engine is
 // allowed to read, which is a better position than being the fifth section of a
 // page nobody finished. The honesty is this product's best asset. It was
@@ -44,12 +44,12 @@ import { Datum } from './ui/Bits'
 const PATHWAYS: { who: string; line: string; proof: string }[] = [
   {
     who: 'Never done this before',
-    line: 'Every walk states its distance, its climb and how hard it is before you ask.',
-    proof: 'No walk may be vague about it',
+    line: 'Every trip states its distance, its climb and how hard it is before you ask.',
+    proof: 'No trip may be vague about it',
   },
   {
     who: 'A woman weighing it up',
-    line: 'Women-only walks are enforced in the database, and the meeting point is never public.',
+    line: 'Women-only trips are enforced in the database, and the meeting point is never public.',
     proof: 'Checked on write, not on render',
   },
   {
@@ -59,7 +59,7 @@ const PATHWAYS: { who: string; line: string; proof: string }[] = [
   },
   {
     who: 'Years of this already',
-    line: 'Every figure is counted from walks that happened. None of it can be typed in.',
+    line: 'Every figure is counted from trips that happened. None of it can be typed in.',
     proof: 'Hosts get a real console',
   },
 ]
@@ -74,7 +74,7 @@ export default function TrekLanding({
   openCount: number
   weekendCount: number
   peopleCount: number
-  /** Walks whose day has been and gone. The only evidence this page may offer. */
+  /** Trips whose day has been and gone. The only evidence this page may offer. */
   completedCount: number
   activityCounts: Record<string, number>
 }) {
@@ -97,7 +97,7 @@ export default function TrekLanding({
               </h1>
 
               <p className="mt-6 max-w-xl font-body text-[16.5px] leading-[1.7] text-paper/75">
-                TrekBuddy is where DEWDROPZ members post the walk they are already going on — the
+                TrekBuddy is where DEWDROPZ members post the trip they are already going on — the
                 place, the hour they leave, how hard it is — and other members ask to come. The
                 host decides who joins them. Nobody pays for a place.
               </p>
@@ -110,7 +110,7 @@ export default function TrekLanding({
                   See what is on
                 </Link>
                 <a href="#how" className="trek-pill trek-pill-lg trek-pill-onink font-body">
-                  How a walk works
+                  How a trip works
                 </a>
               </div>
             </div>
@@ -149,14 +149,14 @@ export default function TrekLanding({
               consent to appear on a front page. A count is a counted fact. */}
           <dl className="mt-14 grid grid-cols-2 gap-x-8 gap-y-7 border-t border-paper/15 pt-8 sm:grid-cols-4">
             <Datum
-              k={openCount === 1 ? 'walk on the board' : 'walks on the board'}
+              k={openCount === 1 ? 'trip on the board' : 'trips on the board'}
               v={openCount}
               tone="dark"
             />
             <Datum k="leaving this weekend" v={weekendCount} tone="dark" />
             <Datum k={peopleCount === 1 ? 'member' : 'members'} v={peopleCount} tone="dark" />
             <Datum
-              k={completedCount === 1 ? 'walk already happened' : 'walks already happened'}
+              k={completedCount === 1 ? 'trip already happened' : 'trips already happened'}
               v={completedCount}
               tone="dark"
             />
@@ -189,7 +189,7 @@ export default function TrekLanding({
         </div>
       </section>
 
-      {/* ── 3 · How a walk works ─────────────────────────────────────────── */}
+      {/* ── 3 · How a trip works ─────────────────────────────────────────── */}
       {/* The rail carries the sequence and its own notes, so the three
           paragraphs that used to sit under it are gone: they spent 120 words
           explaining what five labelled nodes already show. */}
@@ -200,7 +200,7 @@ export default function TrekLanding({
         <div className="trek-measure">
           <p className="trek-eyebrow text-forest">End to end</p>
           <h2 className="trek-h2 mt-4 max-w-2xl text-text">
-            One walk, from the moment you see it to the moment you vouch for the people you did it
+            One trip, from the moment you see it to the moment you vouch for the people you did it
             with.
           </h2>
 
@@ -209,7 +209,7 @@ export default function TrekLanding({
           </div>
 
           <p className="mt-6 max-w-2xl font-body text-[14.5px] leading-relaxed text-mid">
-            You ask; you are not added. The exact meeting point reaches confirmed walkers only,
+            You ask; you are not added. The exact meeting point reaches confirmed members only,
             once enough people are going. Afterwards the group vouches for each other, which is the
             only way a record here is ever written.
           </p>
@@ -231,7 +231,7 @@ export default function TrekLanding({
 
           <ol className="lg:pt-2">
             {[
-              ['A completed walk', 'the host confirmed you were on it'],
+              ['A completed trip', 'the host confirmed you were on it'],
               ['A vouch', 'written afterwards, by somebody who was there'],
               ['A rung', 'what those add up to — and a host can require one'],
             ].map(([t, d], i) => (
@@ -261,7 +261,7 @@ export default function TrekLanding({
               </h2>
             </div>
             <p className="max-w-xs font-body text-[13.5px] leading-relaxed text-mid">
-              Every walk carries the colour of the hour it leaves at, so a board reads as a day
+              Every trip carries the colour of the hour it leaves at, so a board reads as a day
               passing.
             </p>
           </div>
@@ -315,9 +315,9 @@ export default function TrekLanding({
           <p className="trek-eyebrow text-clay-deep">Before you decide</p>
           <h2 className="trek-h2 mt-4 text-text">Nobody here has been checked by anybody.</h2>
           <p className="mt-5 font-body text-[16px] leading-[1.75] text-text">
-            DEWDROPZ does not organise, lead, vet or supervise these walks, and it cannot verify a
+            DEWDROPZ does not organise, lead, vet or supervise these trips, and it cannot verify a
             name, an age or anybody’s fitness. What it does verify is actions: that a phone number
-            is held, that a walk was completed, that a vouch came from somebody who was there. Six
+            is held, that a trip was completed, that a vouch came from somebody who was there. Six
             rules are enforced in the database, and there are four places that enforcement stops.
             All of it is written out in full — both halves, same width, same weight.
           </p>
@@ -336,11 +336,11 @@ export default function TrekLanding({
           <div>
             <h2 className="trek-h2 max-w-xl text-paper">
               {openCount === 0
-                ? 'The board is empty today. The first walk on it is the one that makes it a board.'
-                : `${openCount} walk${openCount === 1 ? ' is' : 's are'} on the board right now.`}
+                ? 'The board is empty today. The first trip on it is the one that makes it a board.'
+                : `${openCount} trip${openCount === 1 ? ' is' : 's are'} on the board right now.`}
             </h2>
             <p className="mt-4 max-w-lg font-body text-[15px] leading-relaxed text-paper/65">
-              You need an account to see who is going where — walks are visible to signed-in
+              You need an account to see who is going where — trips are visible to signed-in
               members only, and that is the reason this page is not a list.
             </p>
           </div>

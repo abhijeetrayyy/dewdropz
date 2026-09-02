@@ -5,6 +5,7 @@ import { formatPrice } from '@/lib/utils'
 import CancelRentalButton from '@/components/account/CancelRentalButton'
 import ExtendRental from '@/components/account/ExtendRental'
 import RentalPayButton from '@/components/account/RentalPayButton'
+import RentalHistoryPanel from '@/components/admin/RentalHistoryPanel'
 import { Surface } from '@/components/ui/surface'
 import StatusBadge from '@/components/ui/status-badge'
 import EmptyState from '@/components/ui/empty-state'
@@ -24,6 +25,9 @@ import { Tent } from 'lucide-react'
 // neither name is defined in the theme, so in Tailwind v4 both compiled to
 // nothing and those pills rendered with no background at all.
 const RENTAL_STATUS = {
+  // An unpaid hold is NOT a reservation and must not be dressed as one. This is
+  // the one state on this screen that is asking the customer to do something.
+  pending_payment: { label: 'Awaiting payment', tone: 'stopped' },
   reserved:  { label: 'Held for you', tone: 'live' },
   out:       { label: 'With you',     tone: 'moving' },
   returned:  { label: 'Returned',     tone: 'done' },
@@ -37,6 +41,22 @@ const DEPOSIT_NOTE: Record<string, string> = {
   refunded: 'Deposit returned',
   forfeited: 'Deposit kept',
   waived: 'Deposit waived',
+}
+
+/** What happened to the money on a cancelled booking, in one sentence.
+ *
+ *  A cancelled card used to say nothing at all about the refund, so a customer
+ *  whose booking was called off by the SHOP — always refunded in full — saw the
+ *  same blank card as somebody who cancelled the night before and got a quarter
+ *  back. */
+function cancelledLine(b: { cancelled_by?: string | null; rent_refunded?: number; deposit_state?: string }): string {
+  const back = b.rent_refunded ?? 0
+  if (b.cancelled_by === 'expired') return 'The payment was not completed in time, so the gear went back on the shelf. Nothing was charged.'
+  if (b.cancelled_by === 'shop') return back > 0
+    ? 'We cancelled this one, so everything you paid has been refunded in full.'
+    : 'We cancelled this one. Nothing was charged.'
+  if (back > 0) return 'Cancelled. The refund is on its way back to the account you paid from.'
+  return 'Cancelled.'
 }
 
 function pretty(iso: string) {
@@ -122,21 +142,30 @@ export default async function AccountRentalsPage() {
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-rule-soft pt-3">
                   <p className="font-body text-[13px] text-mid">
-                    {b.status === 'reserved'
-                      ? b.fulfilment === 'ship'
-                        ? b.payment_status === 'paid'
-                          ? 'Paid. We post it to arrive on the first day.'
-                          // "Nothing is charged yet" was rendered in the same
-                          // flex row as a Pay button for the amount due.
-                          : 'We post it to arrive on the first day — pay below and we’ll get it packed.'
-                        : 'Collect from the Dehradun shop on the first day. Bring this number and some ID.'
-                      : b.status === 'out'
-                        ? 'Bring it back by the end date — a late return is charged at the day rate, capped at the deposit.'
-                        : 'Nothing left to do on this one.'}
+                    {b.status === 'pending_payment'
+                      // The only state on this page with a deadline attached.
+                      // Said first and said plainly: the gear is set aside, and
+                      // it will not stay that way.
+                      ? 'This gear is held while you pay. Finish paying to reserve it — nothing has been charged yet.'
+                      : b.status === 'reserved'
+                        ? b.fulfilment === 'ship'
+                          ? b.deposit_state === 'held'
+                            ? 'Paid. We post it to arrive on the first day.'
+                            : 'Paid. The refundable deposit is the last step before we post it.'
+                          : 'Paid. Collect from the Dehradun shop on the first day — bring this number, some ID, and the refundable deposit.'
+                        : b.status === 'out'
+                          ? 'Bring it back by the end date — a late return is charged at the day rate, capped at the deposit.'
+                          : b.status === 'cancelled'
+                            ? cancelledLine(b)
+                            : 'Nothing left to do on this one.'}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Unpaid rentals get a way to pay before anything else —
                         it is the only action on the card that is blocking. */}
+                    {/* Offered on a hold as well as an unpaid reservation: the
+                        hold is precisely the state where paying is the whole
+                        remaining job, and the old condition covered every state
+                        except that one. */}
                     {b.payment_status !== 'paid' && b.status !== 'cancelled' && b.total_amount > 0 && (
                       <RentalPayButton
                         bookingId={b.id}
@@ -157,9 +186,20 @@ export default async function AccountRentalsPage() {
                         currentEnd={endsOn}
                       />
                     )}
-                    {b.status === 'reserved' && (
+                    {(b.status === 'reserved' || b.status === 'pending_payment') && (
                       <CancelRentalButton bookingId={b.id} number={b.booking_number} />
                     )}
+                    {/* Every deduction, itemised — which is what the item page
+                        has always promised and nothing has ever shown. The
+                        booking's own history has been written faithfully since
+                        the system shipped and had no reader at all; this is the
+                        customer's half of it, reading the same log the operator
+                        does through the RLS policy that was already there. */}
+                    <RentalHistoryPanel
+                      bookingId={b.id}
+                      audience="customer"
+                      label="What happened"
+                    />
                   </div>
                 </div>
               </Surface>

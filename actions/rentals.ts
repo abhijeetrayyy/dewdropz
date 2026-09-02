@@ -6,16 +6,16 @@ import { createAdminSupabaseClient, createPublicSupabaseClient } from '@/lib/sup
 import { getUser, requireAdmin } from './auth'
 import { rateLimit } from '@/lib/rateLimit'
 import { shopToday, shopAddDays, isPastShopDay } from '@/lib/shopTime'
-import { cancellationRefund } from '@/lib/rentalPolicy'
-import { sendSlackAlert } from '@/lib/slack'
+import { RENTAL_POLICY } from '@/lib/rentalPolicy'
+import { cancellationQuoteFor, cancelBookingFor, refundCancelledBooking } from '@/lib/rentalCancel'
 import { claimGuestRentalBookingsFor } from '@/lib/rentalClaim'
-import { sendRentalConfirmationEmail } from '@/lib/email'
 import {
   priceRental, rentalDays, lateFee, settleDeposit, daysLate,
   type RentalPrice, type RentalPricedLine, type CouponRule,
 } from '@/lib/rentalPricing'
 import { couponDiscountOnRent } from '@/lib/rentalMath'
-import type { RentalItem, RentalUnit, RentalBooking, RentalReservation } from '@/types/database'
+import { expandUnitCodes } from '@/lib/unitCodes'
+import type { RentalItem, RentalCategory, RentalUnit, RentalBooking, RentalReservation } from '@/types/database'
 
 /**
  * Renting gear.
@@ -89,7 +89,10 @@ export async function getRentalItems(): Promise<RentalItem[]> {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('rental_items')
-    .select('*')
+    // The shelf rides along. One join rather than a second round trip, because
+    // the locker grid groups by it, the rail filters on it and the search reads
+    // its name — every consumer of this list needs it.
+    .select('*, category:rental_categories(slug,name)')
     .eq('is_active', true)
     .order('sort', { ascending: true })
     .order('name', { ascending: true })
@@ -124,7 +127,7 @@ export async function getRentalItem(slug: string): Promise<RentalItem | null> {
     .from('rental_items')
     // The sellable product rides along, so the page can offer "own it instead"
     // without a second round trip.
-    .select('*, product:products(slug,name,price,inventory_quantity)')
+    .select('*, product:products(slug,name,price,inventory_quantity), category:rental_categories(slug,name)')
     .eq('slug', slug)
     .eq('is_active', true)
     .maybeSingle()
@@ -153,6 +156,93 @@ export async function getRentalAvailability(
   if (error) return { available: 0, unitIds: [] }
   const rows = (data ?? []) as { unit_id: string }[]
   return { available: rows.length, unitIds: rows.map((r) => r.unit_id) }
+}
+
+/**
+ * The shelves in the locker.
+ *
+ * Active only, in their own order. Separate from the shop's `getCategories` on
+ * purpose — see migration 109 for why the two vocabularies do not share a
+ * table.
+ */
+export async function getRentalCategories(): Promise<RentalCategory[]> {
+  const supabase = createPublicSupabaseClient()
+  const { data, error } = await supabase
+    .from('rental_categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort', { ascending: true })
+    .order('name', { ascending: true })
+  if (error) return []
+  return (data ?? []) as RentalCategory[]
+}
+
+/**
+ * Every item's shelf, for one date range, in ONE call.
+ *
+ * This is what makes the locker grid able to say "4 free" on a card instead of
+ * making a person open the item to find out. Doing it with the existing
+ * `rental_available_units` would be one round trip per item — eight today, and
+ * worse every time the shop buys something.
+ *
+ * Returns `{}` rather than throwing on a bad range: a storefront whose date
+ * inputs are half-filled must render the locker, not an error. The caller reads
+ * a missing entry as "unknown", which is the truth.
+ */
+export async function getRentalItemsAvailability(
+  startsOn: string,
+  endsOn: string,
+): Promise<Record<string, { free: number; total: number }>> {
+  // Validated here rather than trusted, because these come from a query string
+  // a person can type. `DATE` is the same schema every other rental date uses.
+  const range = z.object({ startsOn: DATE, endsOn: DATE }).safeParse({ startsOn, endsOn })
+  if (!range.success || endsOn < startsOn) return {}
+
+  const supabase = createPublicSupabaseClient()
+  const { data, error } = await supabase.rpc('rental_items_availability', {
+    p_start: startsOn,
+    p_end: endsOn,
+  })
+  if (error) return {}
+  const out: Record<string, { free: number; total: number }> = {}
+  for (const r of (data ?? []) as { item_id: string; free_units: number; total_units: number }[]) {
+    out[r.item_id] = { free: r.free_units, total: r.total_units }
+  }
+  return out
+}
+
+/**
+ * One item, day by day — what the date picker draws.
+ *
+ * The window is clamped to 120 days here as well as in the function, because
+ * the parameters come from a URL and the cheapest place to refuse an absurd
+ * request is before it becomes a database round trip.
+ */
+export async function getRentalItemDays(
+  itemId: string,
+  from: string,
+  to: string,
+): Promise<{ day: string; free: number; total: number }[]> {
+  const range = z.object({ from: DATE, to: DATE }).safeParse({ from, to })
+  if (!range.success || to < from) return []
+  const capped = to > shopAddDays(from, 120) ? shopAddDays(from, 120) : to
+
+  const supabase = createPublicSupabaseClient()
+  const { data, error } = await supabase.rpc('rental_item_day_availability', {
+    p_item_id: itemId,
+    p_from: from,
+    p_to: capped,
+  })
+  if (error) return []
+  return ((data ?? []) as { day: string; free_units: number; total_units: number }[]).map((r) => ({
+    // Postgres hands back a DATE; the storefront compares these as plain
+    // `YYYY-MM-DD` strings, so anything longer is trimmed rather than parsed —
+    // parsing is what put the whole rental system on a UTC clock in the first
+    // place. See lib/shopTime.ts.
+    day: String(r.day).slice(0, 10),
+    free: r.free_units,
+    total: r.total_units,
+  }))
 }
 
 /** What a rental would cost. Public — a shopper deserves the real figure while deciding. */
@@ -380,7 +470,7 @@ function bookingNumber(): string {
 export async function createRentalBooking(
   input: RentalQuoteInput & { userId?: string | null },
 ): Promise<
-  | { ok: true; bookingId: string; bookingNumber: string }
+  | { ok: true; bookingId: string; bookingNumber: string; holdExpiresAt: string }
   // `code` exists so callers can tell "the world moved" from "you sent
   // nonsense" WITHOUT pattern-matching the prose. The mobile route needs that
   // distinction to answer 409 rather than 400, and matching on wording is a
@@ -419,6 +509,19 @@ export async function createRentalBooking(
   if (!priced.ok) return { ok: false, error: priced.error }
 
   const supabase = createAdminSupabaseClient()
+
+  // ── Clear the tombstones before reading the shelf ─────────────────────────
+  //
+  // An abandoned checkout holds real units through the exclusion constraint,
+  // and that constraint reads the TABLE — not the view of it the availability
+  // functions take. So although the storefront correctly stops counting a hold
+  // the moment it dies (migration 113), the rows must actually be cancelled
+  // before Postgres will let anybody else book those units.
+  //
+  // Doing it here, inline, is what stops a customer losing the last tent to
+  // somebody else's dead payment sheet. The cron does the same thing on a
+  // timer, for the quiet days when nobody is booking to trigger this.
+  await supabase.rpc('release_expired_rental_holds', { p_limit: 200 })
 
   // Pick actual units, and refuse early with a sentence that says what is short.
   const assignments: { line: (typeof priced.lines)[number]; unitIds: string[] }[] = []
@@ -461,6 +564,11 @@ export async function createRentalBooking(
   // Retry on a duplicate number. Entropy makes a collision unlikely; the retry
   // makes it harmless. Anything that is NOT a unique violation breaks out
   // immediately — retrying a real error just fails three times more slowly.
+  // Computed once, so the row and the value handed back to the browser cannot
+  // be a few milliseconds apart — the countdown a customer watches must not
+  // outlive the deadline the sweep enforces.
+  const holdExpiresAt = new Date(Date.now() + RENTAL_POLICY.payment.holdMinutes * 60_000).toISOString()
+
   let booking: { id: string; booking_number: string } | null = null
   let bookingErr: { code?: string; message?: string } | null = null
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -483,10 +591,24 @@ export async function createRentalBooking(
       coupon_id: coupon && coupon.ok ? coupon.id : null,
       coupon_code: price.couponCode,
       coupon_discount: price.couponDiscount,
-      // Pickup is paid at the counter unless the customer chooses to pay now;
-      // a posted rental has no counter, so the payment screen is where it goes
-      // next. Either way the booking starts unpaid and the money moves later.
-      payment_method: parsed.data.fulfilment === 'pickup' ? 'cod' : null,
+      // ── A HOLD, NOT A RESERVATION ────────────────────────────────────
+      //
+      // The rent is now paid before any gear is held, so this row starts in
+      // `pending_payment` with a deadline. It holds its units through the same
+      // exclusion constraint everything else uses — which is the point: the
+      // thirty seconds to two minutes between opening a payment sheet and a
+      // bank OTP arriving is exactly when two people would otherwise pay for
+      // the same last tent.
+      //
+      // It becomes a reservation in `verifyRentalPayment`, and nowhere else.
+      status: 'pending_payment',
+      hold_expires_at: holdExpiresAt,
+      payment_method: 'razorpay',
+      // The DEPOSIT is unchanged and deliberately so. Collected gear has a
+      // counter, and a counter can take cash — which is cheaper for the shop
+      // and several thousand rupees less out of the customer's account while
+      // they are on a mountain. A posted rental has no counter, so its deposit
+      // goes through the gateway before dispatch.
       deposit_method: parsed.data.fulfilment === 'pickup' ? 'cash' : 'gateway',
       notes: parsed.data.notes ?? null,
     })
@@ -565,58 +687,33 @@ export async function createRentalBooking(
     booking_id: booking.id,
     kind: 'created',
     amount: price.totalAmount,
-    note: `${rows.length} unit(s), ${parsed.data.fulfilment}`,
+    note: `${rows.length} unit(s), ${parsed.data.fulfilment} — held for ${RENTAL_POLICY.payment.holdLabel} pending payment`,
   })
 
-  // Coupon usage, recorded after the booking exists so a failed booking cannot
-  // burn a single-use code. `increment_coupon_usage` is the same RPC the sale
-  // path uses, so a code capped at 100 is capped across both.
-  if (coupon && coupon.ok && price.couponDiscount > 0) {
-    await supabase.from('coupon_usages').insert({
-      coupon_id: coupon.id,
-      user_id: input.userId ?? null,
-      order_id: null,
-      rental_booking_id: booking.id,
-      discount_amount: price.couponDiscount,
-    })
-    await supabase.rpc('increment_coupon_usage', { coupon_id: coupon.id })
-    await supabase.from('rental_events').insert({
-      booking_id: booking.id,
-      kind: 'coupon_applied',
-      amount: price.couponDiscount,
-      note: coupon.code,
-    })
-  }
-
-  // The confirmation both storefronts have always promised.
+  // ── WHAT DELIBERATELY DOES NOT HAPPEN HERE ANY MORE ──────────────────────
   //
-  // NEVER blocking. The booking is already written and the gear is already
-  // held; if the mail provider is unconfigured or down, the customer still has
-  // a booking and the confirmation screen still shows the number. Letting a
-  // failed email throw here would roll a successful booking into an error
-  // message — the worst possible trade for a message we can resend.
-  try {
-    await sendRentalConfirmationEmail({
-      email: parsed.data.email,
-      bookingNumber: booking.booking_number as string,
-      fulfilment: parsed.data.fulfilment,
-      lines: price.lines.map((l) => ({
-        name: l.name, startsOn: priced.lines.find((p) => p.itemId === l.itemId)?.startsOn ?? '',
-        endsOn: priced.lines.find((p) => p.itemId === l.itemId)?.endsOn ?? '',
-        days: l.days, quantity: l.quantity,
-      })),
-      rentAmount: price.rentAmount,
-      deliveryAmount: price.deliveryAmount,
-      taxAmount: price.taxAmount,
-      totalAmount: price.totalAmount,
-      depositAmount: price.depositAmount,
-    })
-  } catch (e) {
-    console.error('[rentals] confirmation email failed for', booking.booking_number, e)
-  }
+  // THE COUPON IS NOT BURNT YET. It used to be spent the moment a booking row
+  // existed, which under pay-to-reserve would mean an abandoned payment sheet
+  // permanently consumes a single-use code — the customer gets no rental AND no
+  // code back. A coupon is consideration against money taken, so it is spent
+  // where the money is taken: `verifyRentalPayment`. The code, the id and the
+  // discount are all on the booking row, so nothing has to be carried.
+  //
+  // AND NO CONFIRMATION EMAIL. Nothing is confirmed. Telling somebody "your
+  // gear is booked" about a hold that will evaporate in fifteen minutes unless
+  // they pay is the single most misleading message this system could send, and
+  // it would arrive most often for exactly the people whose payment failed.
+  // The confirmation goes out from the `rental.paid` job, once the money is in.
 
   revalidatePath('/admin/rentals')
-  return { ok: true, bookingId: booking.id, bookingNumber: booking.booking_number as string }
+  return {
+    ok: true,
+    bookingId: booking.id,
+    bookingNumber: booking.booking_number as string,
+    /** When this hold dies if it is not paid for. The storefront counts down
+     *  against it rather than against a duration it assumed. */
+    holdExpiresAt: holdExpiresAt,
+  }
 }
 
 function addDays(iso: string, days: number): string {
@@ -670,65 +767,40 @@ export async function getMyRentalBookings() {
  *     deposit is held and a return, not a cancellation, is what happens next —
  *     and a cancelled row would free dates for a tent somebody is holding.
  */
+/**
+ * What a customer would get back if they cancelled this booking right now.
+ *
+ * SAID BEFORE IT HAPPENS, WHICH IS THE ENTIRE POINT. The cancel button used to
+ * open a confirm dialog that named no figure, and the refund was computed
+ * afterwards by code the customer could not see. A person pressing Cancel is
+ * making a financial decision, and they are entitled to make it with the number
+ * in front of them — not to discover it on a statement four days later.
+ *
+ * It is the same `cancellationQuote` the refund itself runs, with the same
+ * inputs, so the figure shown and the figure paid cannot differ. That is the
+ * property this function exists to guarantee; anything that recomputed it a
+ * second way would be a second opinion about somebody's money.
+ */
+export async function getMyCancellationQuote(bookingId: string) {
+  const user = await getUser()
+  if (!user) return null
+  return cancellationQuoteFor(bookingId, user.id)
+}
+
 export async function cancelMyRentalBooking(bookingId: string) {
   const user = await getUser()
   if (!user) return { ok: false as const, error: 'Sign in to manage your bookings.' }
 
-  const supabase = createAdminSupabaseClient()
-  const { data: booking } = await supabase
-    .from('rental_bookings')
-    .select('id, user_id, status')
-    .eq('id', bookingId)
-    .maybeSingle()
+  // The body lives in `lib/rentalCancel.ts` because the phone needs the same
+  // behaviour through a REST route, and a refund written twice is a second
+  // opinion about somebody's money. Identity is derived HERE, from the session,
+  // and handed down — never taken from a caller.
+  const res = await cancelBookingFor(bookingId, user.id)
+  if (!res.ok) return res
 
-  if (!booking || booking.user_id !== user.id) {
-    // Same answer either way: an attacker must not learn that a booking exists.
-    return { ok: false as const, error: 'That booking could not be found.' }
-  }
-  if (booking.status !== 'reserved') {
-    return {
-      ok: false as const,
-      error:
-        booking.status === 'cancelled'
-          ? 'That booking is already cancelled.'
-          : 'This one is already under way — call the shop and we will sort it out.',
-    }
-  }
-
-  // Claim the booking BEFORE freeing the dates — the other order leaves a live
-  // booking whose units are already back on the shelf if the claim fails.
-  const { data: claimed, error } = await supabase
-    .from('rental_bookings')
-    .update({ status: 'cancelled' })
-    .eq('id', bookingId)
-    .eq('status', 'reserved')
-    .select('id')
-  if (error) return { ok: false as const, error: 'That did not go through. Try again.' }
-  if (!claimed?.length) {
-    return { ok: false as const, error: 'That booking changed a moment ago. Reload the page.' }
-  }
-
-  // Cancelling the reservations is what frees the dates: the exclusion
-  // constraint ignores cancelled rows, so the units are bookable again at once.
-  await supabase.from('rental_reservations').update({ status: 'cancelled' }).eq('booking_id', bookingId)
-
-  await supabase.from('rental_events').insert({
-    booking_id: bookingId, kind: 'cancelled', note: 'Cancelled by the customer',
-  })
-
-  // AND THE MONEY GOES BACK.
-  //
-  // This used to end here: two status flips, one event, and a toast reading
-  // "cancelled — the dates are free again". A posted rental is paid before it
-  // ships and stays `reserved` until handover, so the self-cancel window was
-  // exactly the paid window — the rent was not refunded, the deposit was not
-  // released, `payment_status` stayed 'paid', and no email was sent. The schema
-  // has had a 'refunded' payment status and a 'refunded' event kind since
-  // migration 100 and nothing in the codebase could reach either.
-  await refundCancelledBooking(bookingId, 'the customer cancelled')
   revalidatePath('/account/rentals')
   revalidatePath('/admin/rentals')
-  return { ok: true as const }
+  return { ok: true as const, refunded: res.refunded }
 }
 
 /**
@@ -811,7 +883,9 @@ export async function getRentalItemsAdmin() {
   const supabase = createAdminSupabaseClient()
   const { data } = await supabase
     .from('rental_items')
-    .select('*, units:rental_units(*)')
+    // The shelf and the units, so the catalogue tab can show both without a
+    // second crossing to a database in another region.
+    .select('*, units:rental_units(*), category:rental_categories(slug,name)')
     .order('sort')
   return (data ?? []) as (RentalItem & { units: RentalUnit[] })[]
 }
@@ -853,6 +927,46 @@ export async function addRentalUnit(itemId: string, code: string) {
   return { ok: true as const }
 }
 
+/**
+ * Several units at once.
+ *
+ * The shop buys gear in batches and the admin made it feel like it buys gear
+ * one at a time: six identical tents meant six trips through a one-field form,
+ * each with a round trip and a refresh. `expandUnitCodes` understands what a
+ * person writes on a delivery note — a list, or `FST-001..006` — and the
+ * arithmetic behind the range is tested, because being off by one here means a
+ * physical tent the system does not know exists.
+ *
+ * PARTIAL SUCCESS IS REPORTED, NOT HIDDEN. `(item_id, code)` is UNIQUE, so a
+ * paste that overlaps units already on the shelf would fail as one statement
+ * and lose the new ones with it. They go in with `ignoreDuplicates`, and the
+ * caller is told how many were actually created — "6 added" and "4 added, 2
+ * were already there" are different facts about a shelf, and a shopkeeper
+ * counting tents needs the second one.
+ */
+export async function addRentalUnits(itemId: string, input: string) {
+  await requireAdmin()
+  const parsed = expandUnitCodes(input)
+  if (!parsed.ok) return { ok: false as const, error: parsed.error }
+
+  const supabase = createAdminSupabaseClient()
+  const { data, error } = await supabase
+    .from('rental_units')
+    .upsert(
+      parsed.codes.map((code) => ({ item_id: itemId, code, condition: 'good' })),
+      { onConflict: 'item_id,code', ignoreDuplicates: true },
+    )
+    .select('id')
+
+  if (error) return { ok: false as const, error: mapRentalError(error.message) }
+
+  const added = data?.length ?? 0
+  const skipped = parsed.codes.length - added
+  revalidatePath('/admin/rentals')
+  revalidatePath('/rent')
+  return { ok: true as const, added, skipped, codes: parsed.codes }
+}
+
 export async function setUnitCondition(
   unitId: string,
   condition: 'good' | 'fair' | 'repair' | 'retired',
@@ -874,17 +988,86 @@ export async function setUnitCondition(
 
 // ── Admin: the lifecycle ────────────────────────────────────────────────────
 
-export async function getRentalBookings(status?: string) {
+export type RentalBookingFilter = {
+  /** A lifecycle value, 'all', or the synthetic 'overdue' — see below. */
+  status?: string
+  /** Booking number, email or phone. */
+  q?: string
+  page?: number
+  perPage?: number
+}
+
+/**
+ * The bookings list, in a form somebody can actually work.
+ *
+ * WHAT THIS REPLACES: `.limit(100)`, newest first, with no filter and no count.
+ * The `status` parameter existed and no screen ever passed one. On a list
+ * sorted by when a booking was TAKEN, a rental three days late sits below forty
+ * newer ones — and a hire business does not lose money on the booking it took,
+ * it loses money on the tent nobody remembered was due back on Tuesday.
+ *
+ * 'OVERDUE' IS NOT A COLUMN, AND DELIBERATELY SO. The rental council killed
+ * adding it to the status CHECK: a stored flag is a function of dates that
+ * needs one sweep to set and another to un-set, and it is wrong in between.
+ * It is resolved here instead, by asking `rental_reservations` which bookings
+ * still have gear out past its end date — the same question the day sheet asks.
+ *
+ * Paginated with an exact count, because a page that silently shows the first
+ * hundred of an unknown number is a page that lies quietly.
+ */
+export async function getRentalBookings(filter: RentalBookingFilter = {}) {
   await requireAdmin()
   const supabase = createAdminSupabaseClient()
+
+  const perPage = Math.min(Math.max(filter.perPage ?? 25, 5), 100)
+  const page = Math.max(filter.page ?? 1, 1)
+  const status = filter.status ?? 'all'
+
+  // Resolved first, because it narrows to a set of ids the main query then
+  // filters on. An empty set is an answer — return it rather than falling
+  // through to "no filter", which would show every booking under a heading
+  // that said Overdue.
+  let overdueIds: string[] | null = null
+  if (status === 'overdue') {
+    const { data } = await supabase
+      .from('rental_reservations')
+      .select('booking_id')
+      .lt('ends_on', shopToday())
+      .eq('status', 'out')
+    overdueIds = [...new Set((data ?? []).map((r) => r.booking_id as string))]
+    if (!overdueIds.length) return { rows: [], total: 0, page, perPage }
+  }
+
   let q = supabase
     .from('rental_bookings')
-    .select('*, reservations:rental_reservations(*, item:rental_items(name,slug), unit:rental_units(code))')
+    .select(
+      '*, reservations:rental_reservations(*, item:rental_items(name,slug), unit:rental_units(code))',
+      { count: 'exact' },
+    )
     .order('created_at', { ascending: false })
-    .limit(100)
-  if (status && status !== 'all') q = q.eq('status', status)
-  const { data } = await q
-  return (data ?? []) as (RentalBooking & { reservations: RentalReservation[] })[]
+    .range((page - 1) * perPage, page * perPage - 1)
+
+  if (overdueIds) q = q.in('id', overdueIds)
+  else if (status !== 'all') q = q.eq('status', status)
+
+  const term = (filter.q ?? '').trim()
+  if (term) {
+    // `%` and `_` are wildcards in LIKE, and a comma ends a value inside
+    // PostgREST's `or` list — all three are escaped rather than passed through.
+    // An unescaped `%` here would make the search box match every booking in
+    // the database, which is the shape of the flaw migration 105 was written
+    // after.
+    const safe = term.replace(/[%_,\\]/g, (c) => `\\${c}`)
+    q = q.or(`booking_number.ilike.%${safe}%,email.ilike.%${safe}%,phone.ilike.%${safe}%`)
+  }
+
+  const { data, count } = await q
+  return {
+    rows: (data ?? []) as (RentalBooking & { reservations: RentalReservation[] })[],
+    total: count ?? 0,
+    page,
+    perPage,
+  }
 }
 
 /** Gear leaves the shop. The deposit is recorded here because it is taken here. */
@@ -1181,7 +1364,7 @@ export async function cancelRentalBooking(bookingId: string, reason?: string) {
     .from('rental_bookings').select('status').eq('id', bookingId).maybeSingle()
   if (!current) return { ok: false as const, error: 'That booking no longer exists.' }
   if (current.status === 'cancelled') return { ok: true as const }
-  if (current.status !== 'reserved') {
+  if (!RENTAL_POLICY.cancellableWhile.includes(current.status as 'reserved')) {
     return {
       ok: false as const,
       error:
@@ -1196,9 +1379,20 @@ export async function cancelRentalBooking(bookingId: string, reason?: string) {
   // the exclusion constraint ignores cancelled rows.
   const { data: claimed, error } = await supabase
     .from('rental_bookings')
-    .update({ status: 'cancelled' })
+    .update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      // THE SHOP IS CANCELLING. This one word is worth the whole column: it
+      // routes the refund past the notice bands and returns everything. Before
+      // it existed, an admin calling off a booking the night before — because a
+      // tent came back damaged — silently applied the CUSTOMER's band and the
+      // shop kept three quarters of their money.
+      cancelled_by: 'shop',
+      cancellation_reason: reason ?? 'Cancelled by the shop',
+      hold_expires_at: null,
+    })
     .eq('id', bookingId)
-    .eq('status', 'reserved')
+    .eq('status', current.status)
     .select('id')
   if (error) return { ok: false as const, error: error.message }
   if (!claimed?.length) {
@@ -1208,103 +1402,9 @@ export async function cancelRentalBooking(bookingId: string, reason?: string) {
   await supabase.from('rental_events').insert({
     booking_id: bookingId, kind: 'cancelled', note: reason ?? null, actor_id: actor.id,
   })
-  await refundCancelledBooking(bookingId, reason ?? 'cancelled by the shop', actor.id)
+  await refundCancelledBooking(bookingId, reason ?? 'cancelled by the shop', 'shop', actor.id)
   revalidatePath('/admin/rentals')
   return { ok: true as const }
-}
-
-/**
- * Give back what the policy says, and record it.
- *
- * Money first, then the row — the discipline `refundRentalDeposit` already
- * follows and states: "a row saying 'refunded' with no gateway refund behind it
- * is worse than no row at all — it is the state where everybody believes the
- * customer has been paid and nobody has."
- *
- * Never throws. A cancellation that half-succeeds must still leave the dates
- * free; a refund that fails leaves a loud event and a Slack alert for a human,
- * not an exception that rolls the cancellation back.
- */
-async function refundCancelledBooking(bookingId: string, why: string, actorId?: string) {
-  const supabase = createAdminSupabaseClient()
-  const { data: b } = await supabase
-    .from('rental_bookings')
-    .select('id, amount_paid, payment_status, gateway_payment_id, deposit_state, deposit_taken, deposit_amount, deposit_payment_id, deposit_refunded')
-    .eq('id', bookingId)
-    .maybeSingle()
-  if (!b) return
-
-  const rentPaid = (b.amount_paid as number) ?? 0
-  const depositHeld =
-    b.deposit_state === 'held' ? ((b.deposit_taken as number | null) ?? (b.deposit_amount as number) ?? 0) : 0
-  if (rentPaid <= 0 && depositHeld <= 0) return
-
-  const firstDay = await firstDayOf(bookingId)
-  const plan = cancellationRefund({
-    rentPaid,
-    depositHeld,
-    startsOn: firstDay ?? shopToday(),
-    today: shopToday(),
-  })
-
-  const { refundGatewayPayment } = await import('@/lib/razorpay')
-  const notes: string[] = [plan.band.label]
-
-  // The rent, per the published bands.
-  if (plan.rentRefund > 0 && b.gateway_payment_id) {
-    const res = await refundGatewayPayment(b.gateway_payment_id as string, plan.rentRefund)
-    if ('error' in res) {
-      await supabase.from('rental_events').insert({
-        booking_id: bookingId, kind: 'note', actor_id: actorId ?? null,
-        note: `REFUND FAILED — ₹${Math.round(plan.rentRefund / 100)} of rent is still owed to the customer (${res.error}).`,
-      })
-      await sendSlackAlert(`Rental refund failed for ${bookingId}: ${res.error}`)
-    } else {
-      await supabase.from('rental_bookings')
-        .update({ payment_status: 'refunded', amount_paid: Math.max(0, rentPaid - plan.rentRefund) })
-        .eq('id', bookingId)
-      await supabase.from('rental_events').insert({
-        booking_id: bookingId, kind: 'refunded', amount: plan.rentRefund, actor_id: actorId ?? null,
-        note: `Rent refunded because ${why}. ${plan.band.label}`,
-      })
-    }
-  } else if (rentPaid > 0 && plan.rentRefund === 0) {
-    // Nothing comes back, and that is a decision the customer is entitled to
-    // see written down rather than infer from their bank statement.
-    await supabase.from('rental_events').insert({
-      booking_id: bookingId, kind: 'note', actor_id: actorId ?? null,
-      note: `No rent refunded — ${plan.band.label}`,
-    })
-  }
-
-  // The deposit is the customer's money. It always comes back.
-  if (depositHeld > 0) {
-    if (b.deposit_payment_id) {
-      const { refundRentalDeposit } = await import('./rentalPayments')
-      await refundRentalDeposit({ bookingId, lateFee: 0, damageFee: 0 })
-    } else {
-      // Taken in cash: there is nothing to reverse at a gateway, so record that
-      // the counter owes it back rather than pretending it moved.
-      await supabase.from('rental_bookings').update({ deposit_state: 'refunded' }).eq('id', bookingId)
-      await supabase.from('rental_events').insert({
-        booking_id: bookingId, kind: 'deposit_refunded', amount: depositHeld, actor_id: actorId ?? null,
-        note: 'Cash deposit — hand it back at the counter.',
-      })
-    }
-    notes.push('deposit returned in full')
-  }
-}
-
-/** The first day of a booking, for the cancellation bands. */
-async function firstDayOf(bookingId: string): Promise<string | null> {
-  const supabase = createAdminSupabaseClient()
-  const { data } = await supabase
-    .from('rental_reservations')
-    .select('starts_on')
-    .eq('booking_id', bookingId)
-    .order('starts_on', { ascending: true })
-    .limit(1)
-  return (data?.[0]?.starts_on as string | undefined) ?? null
 }
 
 function mapRentalError(message: string): string {

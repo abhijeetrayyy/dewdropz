@@ -47,10 +47,13 @@ export default function AdminLayoutClient({
   children,
   adminEmail,
   adminName,
+  trekQueueCount = 0,
 }: {
   children: React.ReactNode
   adminEmail: string
   adminName: string | null
+  /** Unresolved TrekBuddy reports. Badged in the sidebar on every admin screen. */
+  trekQueueCount?: number
 }) {
   async function handleLogout() {
     await logout()
@@ -60,7 +63,7 @@ export default function AdminLayoutClient({
 
   return (
     <div className="fixed inset-0 bg-gray-50 overflow-auto" data-lenis-prevent="true">
-      <Sidebar />
+      <Sidebar trekQueueCount={trekQueueCount} />
       <div className="pl-56 min-h-full">
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200 px-6 py-3 flex items-center justify-between">
           <Breadcrumb />

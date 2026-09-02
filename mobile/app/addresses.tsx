@@ -38,6 +38,10 @@ export default function AddressesScreen() {
   // all — scrolled away and left no way back.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const { user } = useAuthStore();
   const { data: addresses = [], isLoading, refetch } = useAddressesQuery(user?.id);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -94,9 +98,10 @@ export default function AddressesScreen() {
         <ScreenHeader
         tone="warm" eyebrow="Delivery" title="Your addresses"
           scrollY={scrollY}
+        onHeight={setHeaderH}
         />
 
-        <Animated.ScrollView contentContainerStyle={s.pad} ref={scrollRef}>
+        <Animated.ScrollView contentContainerStyle={[s.pad, { paddingTop: headerH }]} ref={scrollRef}>
           <EmptyState
               tone="warm"
             icon="location_on"
@@ -118,12 +123,13 @@ export default function AddressesScreen() {
         title="Your addresses"
         tone="warm"
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
       <Animated.ScrollView
         ref={scrollRef}
-        contentContainerStyle={s.pad}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.forest} />}
+        contentContainerStyle={[s.pad, { paddingTop: headerH }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={headerH} tintColor={C.forest} />}
         showsVerticalScrollIndicator={false}
       >
 

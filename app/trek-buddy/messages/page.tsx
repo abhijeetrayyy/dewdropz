@@ -131,14 +131,14 @@ export default async function MessagesPage({
               <h1 className="trek-h2 text-text">Messages</h1>
               {/* The most load-bearing sentence on this screen, and it was set
                   at 12px grey where it read as boilerplate. There is no way to
-                  message a person on this product except inside a walk you are
+                  message a person on this product except inside a trip you are
                   both on — that is the rule a woman deciding whether to be here
                   most needs to know, so it is stated at reading size and given
                   the second half that explains what it buys her. */}
               <p className="mt-2 font-body text-[13px] leading-relaxed text-text">
-                Every conversation belongs to a walk. There are no cold DMs on this board — nobody
+                Every conversation belongs to a trip. There are no cold DMs on this board — nobody
                 can open a thread with you off the back of seeing your name, and what is said stays
-                on the walk&rsquo;s own page where it can be reviewed.
+                on the trip&rsquo;s own page where it can be reviewed.
               </p>
             </header>
 
@@ -239,7 +239,7 @@ export default async function MessagesPage({
                   title="No conversations yet."
                   body={
                     <>
-                      A thread appears once somebody says something on a walk you are confirmed
+                      A thread appears once somebody says something on a trip you are confirmed
                       for. Until then there is nothing to read.
                     </>
                   }

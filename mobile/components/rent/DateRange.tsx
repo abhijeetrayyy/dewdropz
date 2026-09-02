@@ -6,6 +6,15 @@ import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
 import { MONTHS, daysBetween, monthCells, prettyDate, stepMonth, todayLocal } from "@/lib/rent/dates";
 
+/** First and last day of a {year, month}, as plain YYYY-MM-DD — the window to
+ *  ask the database for. Built from characters and UTC, never a local clock. */
+function firstDayOf(c: { year: number; month: number }): string {
+  return `${c.year}-${String(c.month + 1).padStart(2, "0")}-01`;
+}
+function lastDayOf(c: { year: number; month: number }): string {
+  return new Date(Date.UTC(c.year, c.month + 1, 0)).toISOString().slice(0, 10);
+}
+
 /**
  * Picking the days a rental runs for.
  *
@@ -34,9 +43,31 @@ type Props = {
   onChange: (from: string | null, to: string | null) => void;
   /** Longest rental this item allows, so the grid can refuse an over-long range. */
   maxDays: number;
+  /**
+   * Free units per day, from `rental_item_day_availability`. The buffer is
+   * already inside it — a tent due back on the 10th with a day's drying shows
+   * held through the 11th and free on the 12th — so this component must never
+   * widen it again.
+   *
+   * A GUIDE TO PICKING, NOT THE AUTHORITY ON BOOKING, and the difference is
+   * real. Two units can make a range look free day by day without any ONE unit
+   * being free across the whole of it. So a full DAY is untappable, and a
+   * RANGE is not refused here: the sentence a person acts on still comes from
+   * the quote, over the whole range, from the same function the booking write
+   * uses. Refusing a selection this grid cannot be certain about would block
+   * bookings that are genuinely possible.
+   */
+  days?: Record<string, { free: number; total: number }>;
+  /** True while the month's counts are still arriving. Days are offered rather
+   *  than greyed while unknown — greying the whole grid on every month step
+   *  makes the control feel broken, and a day that turns out to be full is
+   *  caught by the availability check before anything is booked. */
+  daysLoading?: boolean;
+  /** Notified when the visible month changes, so the screen can fetch it. */
+  onMonthChange?: (from: string, to: string) => void;
 };
 
-export function DateRange({ from, to, onChange, maxDays }: Props) {
+export function DateRange({ from, to, onChange, maxDays, days, daysLoading, onMonthChange }: Props) {
   const today = todayLocal();
   const [cursor, setCursor] = useState(() => {
     const base = from ?? today;
@@ -52,7 +83,14 @@ export function DateRange({ from, to, onChange, maxDays }: Props) {
 
   function step(delta: number) {
     haptics.select();
-    setCursor((c) => stepMonth(c, delta));
+    setCursor((c) => {
+      const next = stepMonth(c, delta);
+      // Told on the way out rather than through an effect on `cursor`: the
+      // month is changing because somebody tapped, which is an event, and an
+      // effect would be a second render to say what this handler already knows.
+      onMonthChange?.(firstDayOf(next), lastDayOf(next));
+      return next;
+    });
   }
 
   function pick(iso: string) {
@@ -108,8 +146,13 @@ export function DateRange({ from, to, onChange, maxDays }: Props) {
           const isTo = iso === to;
           const inRange = !!from && !!to && iso > from && iso < to;
           const tooLong = !!from && !to && iso > from && daysBetween(from, iso) > maxDays;
-          const disabled = past || tooLong;
+          const info = days?.[iso];
+          const full = info !== undefined && info.free === 0;
+          const disabled = past || tooLong || full;
           const selected = isFrom || isTo;
+          // Only where it is SCARCE. Printing "6" under every day of an empty
+          // month is noise that hides the one day saying "1".
+          const scarce = !disabled && info !== undefined && info.free > 0 && info.free <= 2;
 
           return (
             <Pressable
@@ -117,12 +160,20 @@ export function DateRange({ from, to, onChange, maxDays }: Props) {
               onPress={() => pick(iso)}
               disabled={disabled}
               accessibilityRole="button"
-              accessibilityLabel={prettyDate(iso)}
+              accessibilityLabel={
+                past
+                  ? `${prettyDate(iso)}, in the past`
+                  : full
+                    ? `${prettyDate(iso)}, none free`
+                    : info
+                      ? `${prettyDate(iso)}, ${info.free} free`
+                      : prettyDate(iso)
+              }
               accessibilityState={{ disabled, selected }}
               style={[s.cell, inRange && s.inRange, selected && s.selected]}
             >
               <Body
-                style={[s.day, disabled && s.dayOff]}
+                style={[s.day, full && s.dayFull]}
                 // `disabled` is the one token deliberately below 4.5:1 —
                 // WCAG exempts inactive controls, and a greyed day that meets
                 // contrast reads as tappable.
@@ -130,13 +181,20 @@ export function DateRange({ from, to, onChange, maxDays }: Props) {
               >
                 {Number(iso.slice(8))}
               </Body>
+              {scarce && (
+                <Mono style={s.scarce} color={selected ? C.paper : C.clayDeep}>
+                  {info!.free}
+                </Mono>
+              )}
             </Pressable>
           );
         })}
       </View>
 
       <Meta style={{ marginTop: S.sm }}>
-        {!from
+        {daysLoading && !from
+          ? "Checking the locker…"
+          : !from
           ? "Tap the day you want it from."
           : !to
             ? `From ${prettyDate(from)} — now tap the day you bring it back.`
@@ -158,5 +216,9 @@ const s = StyleSheet.create({
   inRange: { backgroundColor: C.forest12 },
   selected: { backgroundColor: C.forest, borderRadius: R.card },
   day: { fontSize: 15 },
-  dayOff: { textDecorationLine: "none" },
+  // Struck rather than merely faded: "the 14th is full" is information somebody
+  // is using to pick a different weekend, so the number stays readable and the
+  // meaning lives in the line through it.
+  dayFull: { textDecorationLine: "line-through" },
+  scarce: { fontSize: 9, lineHeight: 10, marginTop: 1 },
 });

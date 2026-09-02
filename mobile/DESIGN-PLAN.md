@@ -387,3 +387,173 @@ image tile used by designs, rentals, shop), `FigureRow` (large-number row),
 | 28 Aug | Product page | **Bug:** the new rentable hook sat below an early return — "Rendered more hooks than during the previous render" crashed the screen. Moved above, with the others | Android |
 | 28 Aug | Pack | **Bug:** `size` reached the store as `undefined`, `null` and `""` from different buttons, so `sameLine` split one line in two — two rows of qty 1, neither showing a size. Identity now normalises; 9 cases tested | Android |
 | 28 Aug | `image_url ?? cover` | **Bug:** categories hold `''` not NULL, so `??` kept the empty string and every tile rendered a bare gradient. Swept the same trap in 4 more places (design preview fallbacks, web + mobile) | Android |
+
+---
+
+## 9 · The screen-variant audit — 1 Sep 2026
+
+Driven by one question: *is the clock visible, and does this hold on the
+thousands of phones that are not this one?* Every reachable screen captured on
+the simulator and measured rather than eyeballed — a Swift tool that crops the
+status-bar band and reports the WCAG contrast between its 5th and 95th
+percentile luminance, which for that crop approximates glyph-against-background.
+
+### Four defects, all fixed
+
+**1 · The home screen's clock was near-black on a near-black photograph.**
+Measured 3.0:1. `app/(tabs)/index.tsx` declared no `StatusBar` at all, so it
+inherited `dark` from `app/_layout.tsx` — whose own comment says the full-bleed
+dark-hero screens "mount their own light-icon override locally". This is one of
+those screens and never did. Now light while the hero is showing, flipping on
+scroll via `useAnimatedReaction` (not a second `onScroll`, which would fight
+the `useScrollOffset` already on that ref). **3.0 → 9.6.**
+
+**2 · `trails/[slug]` asked for light glyphs and never asked for anything
+else.** They stayed white for the whole scroll, including over `C.paper` — the
+cream this entire app is built on. White on #FBF7EF is not a low ratio, it is
+an invisible clock. The hero is only 46% of the screen, so that state arrived
+almost immediately. Now flips on the same threshold every other hero screen
+uses.
+
+**3 · Every icon in the app grew with Dynamic Type.** Material Symbols is a
+ligature font, so an icon is a `<Text>` node — and Text scales. At
+`accessibility-extra-large` the tab bar's 23px icons rendered at roughly 40px
+inside a pill whose height is a layout constant: icons clipped through the
+middle on all five tabs, labels ellipsised to "SH…", "STU…", "Y…". `TabBar`
+already clamped its *labels* on exactly this argument and the icons were simply
+never covered by it. `Icon` now sets `allowFontScaling={false}` — the `size`
+prop **is** the intended dimension, and the text beside an icon still scales,
+which is the channel carrying the meaning.
+
+**4 · The rental item screen collapsed at accessibility sizes.** Its ScrollView
+reserved a hardcoded `paddingBottom: 260` for a bottom bar that reflows; at
+`accessibility-extra-large` the bar became ~60% of an 874pt screen, the content
+area shrank to a sliver, and the product title was clipped through the middle of
+its glyphs with the price, calendar and email fields unreachable. The bar is now
+measured with `onLayout` — a number describing something that reflows cannot be
+a constant — and its explanatory paragraph is capped at 1.6×, while the price
+lines and the button label scale freely.
+
+### Verified sound
+
+Every other screen's clock ≥ 4.5:1. `OverlayHeader` already carries a scrim
+behind the status bar and its comment documents why (product mockups are shot on
+pale grey; white on near-white). All six tab screens reserve the floating tab
+bar's footprint. Fixed bottom bars add `insets.bottom`; the cart correctly uses
+`tabSpace` instead. Portrait-locked and `userInterfaceStyle: light`, so there is
+no landscape or dark-mode surface to break. Every hardcoded width lives in a
+horizontal rail or sits beside a flex/percentage sibling — nothing overflows a
+narrow screen.
+
+**iPad** (`supportsTablet: true`, 744pt): runs, nothing clipped or broken. It is
+a phone layout stretched — body copy on the dark bands runs to ~90 characters,
+above the comfortable measure. Constraining content to a max width is a design
+decision, not a defect, and is not made here.
+
+### Two things that looked like bugs and were not
+
+A first capture pass reported **sixteen** screens failing. They were stacked
+sheet cards: the harness deep-linked 28 routes onto one stack, and after a dozen
+pushes iOS insets each screen below a dimmed backdrop with the status bar over
+the backdrop. Sixteen screens measured identically and none of it was what a
+user sees. The harness now resets to a tab root before each route.
+
+The rent tab measured 1.09:1 on the iPhone 17e — a dark clock on dark forest.
+It was a **stale bundle** captured mid-edit; a clean relaunch measures 5.2:1
+with white glyphs, and `StatusCap` had been setting the right glyphs all along.
+`memory: mobile-verification-needs-full-relaunch` says exactly this, and it cost
+an hour anyway.
+
+### Limits of this audit
+
+- **No device narrower than 390pt exists in this simulator set.** Nothing at
+  375pt (SE, 8) or 320pt (SE 1st gen) was tested. The static read says the
+  layouts are fluid, but that is an argument, not a screenshot.
+- **Screenshots are taken at scroll-top**, so scrolled states are largely
+  untested by this method — defect 2 was found by reading code, not by capture.
+- A freshly-installed app prompts **"Open in DewDropz?"** on its first
+  custom-scheme URL, which silently blocked navigation on late-installed
+  devices. Full-matrix capture on Pro Max and iPad is therefore spot-checks
+  rather than the complete sweep it looks like.
+- Android is untouched.
+
+---
+
+## 10 · The header flicker, and sizing by arithmetic — 1 Sep 2026
+
+### The flicker was real, and it was on all fourteen screens
+
+Reported on the gear locker; it belonged to `ScreenHeader`, which fourteen
+screens use and all fourteen pass `scrollY` to.
+
+**The cause.** The header animates its own `height`, and height is a LAYOUT
+property — every frame of the collapse runs a full layout pass. While the
+panel's content was free to size itself inside that shrinking box, the pass
+re-flowed it. A frame captured mid-gesture showed the stats row gone, the lede
+displaced to the bottom of the panel, and the locker's preset chips collapsed
+from a row into a vertical stack with huge gaps. Not a wobble — a tear.
+
+Measured, the header height went
+`308 · 307.7 · 306.7 · 306.3 · 305.7 · 305.3 · 304.7 · 304.3 · 372 · 353`
+— barely moving, then a 68pt excursion **above** its own resting height.
+
+**The fix, in three views.** The wrapper clips (`overflow: hidden`); a middle
+view is PINNED to the measured natural height so it is rigid and cannot reflow;
+the innermost view stays free-sized and is what reports its height. The split
+matters: pinning the measured view directly deadlocks it — it can never report
+that it needs to be taller, so the locker's "8 IN THE LOCKER" figure would be
+locked out the moment the data arrived, which is the exact bug the re-measure
+was written to fix. Two earlier attempts failed for that reason and are recorded
+in the file.
+
+The fade was then pulled ahead of the clip (finishing at 0.62 of the handoff),
+because a clip slices whatever it lands on and at the midpoint that was a
+half-height line of the lede.
+
+**After:** iOS `285 · 269 · 245 · 221 · 197 · 89`, Android
+`255 · 231 · 77 · 77 · 77`. Monotonic on both, no excursion.
+
+### Sizing is an argument, not a sample
+
+Testing every device is neither possible nor the point. The property that makes
+the layout device-independent is checkable by reading it:
+
+**Anything that must relate to the viewport is expressed as a fraction of it.**
+`HERO_H = SCREEN_H × 0.72` (home), `× 0.46` (trail), `× 0.44` (article),
+`× 0.34` (category); grid cells at `48%`; frames at `100%` with an `aspectRatio`.
+None of these has a pixel in it.
+
+**Anything absolute is a physical object, and small.** Every absolute width
+above 60pt is a thumbnail or a plate: 130 and 116 sit in horizontal rails where
+width is unconstrained by definition; the largest inside a width-constrained row
+is **96pt**. The narrowest device that has ever shipped an iPhone screen is
+320pt; minus the 20pt gutter on each side that leaves **280pt** of content
+width, so the flexible sibling beside a 96pt plate still gets 184pt. Roughly 3×
+headroom, and it degrades gracefully rather than clipping. Android's common
+360dp and this emulator's 411dp are both wider than the case that already
+passes.
+
+**Safe area is never a constant** — 25 files derive it from
+`useSafeAreaInsets`, which is what makes a notch, a Dynamic Island and a bare
+status bar all correct without a device list.
+
+**The axis that actually breaks things is not width, it is type.** Both real
+layout defects found in this audit were Dynamic Type, not screen size: icons
+scaling inside fixed pills, and a bottom bar reflowing past its reserved
+padding. Width has ~3× headroom by construction; type has none unless it is
+bounded or measured.
+
+### Android
+
+Built and run on a Pixel 8 emulator (1080×2400 @ 420dpi = **411dp**). The gear
+locker renders correctly — forest panel, white status glyphs, date band, chips
+in a row, shelves, floating tab bar — and the header collapse is monotonic. No
+Android-specific defect found on the screens exercised.
+
+### What this pass did NOT establish
+
+The fourteen screens other than the locker were not each re-checked after the
+`ScreenHeader` change; the fix is in the shared component and the two platforms
+agree, but that is an inference. No device narrower than 390pt exists in this
+simulator set, so 320pt remains an argument rather than a screenshot. And only
+the locker was exercised on Android.

@@ -643,7 +643,7 @@ export default function ProfileForm({
                 <p className="mt-3 font-body text-sm leading-relaxed text-mid">
                   {vouchable.length > 0
                     ? 'Nothing owed — you have vouched for everyone you have been out with.'
-                    : 'Nothing yet. After a walk you were confirmed on, everyone who was there appears here for you to vouch for.'}
+                    : 'Nothing yet. After a trip you were confirmed on, everyone who was there appears here for you to vouch for.'}
                 </p>
               </div>
             )}

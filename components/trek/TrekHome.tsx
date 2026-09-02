@@ -89,7 +89,7 @@ export default function TrekHome({
                   ? 'They cannot plan their day until you decide. Confirming is not a commitment to anything except their company.'
                   : next
                     ? 'Everything you need for it is on its page — the people, the chat, and the meeting point once enough are going.'
-                    : `${boardCount} ${boardCount === 1 ? 'walk is' : 'walks are'} on the board. Asking to come takes one line.`}
+                    : `${boardCount} ${boardCount === 1 ? 'trip is' : 'trips are'} on the board. Asking to come takes one line.`}
               </p>
             </div>
 
@@ -99,7 +99,7 @@ export default function TrekHome({
               </Link>
               {canHost && (
                 <Link href="/trek-buddy/new" className="trek-pill trek-pill-onink font-body">
-                  Post a walk
+                  Post a trip
                 </Link>
               )}
             </div>
@@ -155,7 +155,7 @@ export default function TrekHome({
                       )}
                       <span className="mt-1 block font-body text-[12px] text-forest">
                         <span className="font-mono tabular-nums">{r.walks}</span>{' '}
-                        {r.walks === 1 ? 'walk' : 'walks'} on the board
+                        {r.walks === 1 ? 'trip' : 'trips'} on the board
                         {r.since && (
                           <>
                             {' · member since '}
@@ -187,7 +187,7 @@ export default function TrekHome({
 
             {mine.length === 0 ? (
               <EmptyState
-                title="You are not on a walk yet."
+                title="You are not on a trip yet."
                 body="Ask to come on one and it appears here, with its chat and its meeting point."
                 action={{ label: 'See the board', href: '/trek-buddy/discover' }}
               />
@@ -259,7 +259,7 @@ export default function TrekHome({
 
               <dl className="mt-5 grid auto-rows-fr grid-cols-3 gap-2 border-t border-rule-soft pt-4">
                 {[
-                  ['Walked', (me?.walksJoined ?? 0) + (me?.walksHosted ?? 0)],
+                  ['Been on', (me?.walksJoined ?? 0) + (me?.walksHosted ?? 0)],
                   ['Hosted', me?.walksHosted ?? 0],
                   ['Vouches', me?.vouches ?? 0],
                 ].map(([k, v]) => (
@@ -328,13 +328,13 @@ export default function TrekHome({
           <ShelfHead
             title="New on the board"
             count={boardCount}
-            action={<MoreLink href="/trek-buddy/discover">All {boardCount} walks</MoreLink>}
+            action={<MoreLink href="/trek-buddy/discover">All {boardCount} trips</MoreLink>}
           />
           {fresh.length === 0 ? (
             <EmptyState
               title="Nothing new since you were last here."
-              body="The board is small and honest about it. Posting the walk you were going on anyway is how it grows."
-              action={canHost ? { label: 'Post a walk', href: '/trek-buddy/new' } : undefined}
+              body="The board is small and honest about it. Posting the trip you were going on anyway is how it grows."
+              action={canHost ? { label: 'Post a trip', href: '/trek-buddy/new' } : undefined}
               secondary={{ label: 'See everything', href: '/trek-buddy/discover' }}
             />
           ) : (

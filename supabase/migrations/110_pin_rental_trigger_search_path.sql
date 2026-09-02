@@ -1,0 +1,57 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 110 — Two trigger functions 087 never reached
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- 087 pinned `SET search_path = public` on 24 trigger functions and closed with
+-- an instruction and a query:
+--
+--   "If a new trigger function is added, it needs SET search_path = public too.
+--    The verification query at the foot of this file returns it if it does not."
+--
+-- The rental work added two after 087 ran, and neither carries the pin:
+--
+--   rental_events_are_append_only   (100)
+--   rental_reservation_period       (096)
+--
+-- Found by running 087's own query while verifying 109 — which is exactly what
+-- it was left there for.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- WHY THIS IS NOT COSMETIC
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+-- A PL/pgSQL function with no `SET search_path` inherits the CALLER'S. This
+-- codebase has already been broken three separate times by that one fact:
+--
+--   085  every account creation returned "500 Database error saving new user",
+--        because GoTrue connects with `search_path = auth` and an unqualified
+--        call inside a trigger on `profiles` resolved to nothing.
+--   087  23 more functions carrying the same hole.
+--   088  a guard that raised on its own cascade.
+--
+-- These two are on rental tables rather than on `profiles`, so they are not the
+-- signup path — but "not today's caller" is not a property worth relying on.
+-- Any connection with a different search_path that writes a rental event or a
+-- reservation hits it: a Supabase SQL-editor session, a maintenance script, a
+-- future trigger that touches rentals from inside an auth flow, or a restore.
+-- The fix costs nothing and removes the class.
+--
+-- ALTER FUNCTION rather than CREATE OR REPLACE, so not one line of either
+-- function's body is touched or retyped.
+
+ALTER FUNCTION public.rental_events_are_append_only() SET search_path = public;
+ALTER FUNCTION public.rental_reservation_period()     SET search_path = public;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- VERIFY — 087's query, which must now return ZERO rows
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+--   SELECT DISTINCT p.proname
+--     FROM pg_trigger t
+--     JOIN pg_proc p ON p.oid = t.tgfoid
+--     JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE NOT t.tgisinternal AND n.nspname = 'public'
+--      AND (p.proconfig IS NULL OR NOT (p.proconfig::text LIKE '%search_path%'));
+--
+-- Run it after adding ANY trigger function. It is the cheapest check in this
+-- repository and it has caught the same bug four times now.

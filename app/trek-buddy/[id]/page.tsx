@@ -33,7 +33,7 @@ import {
 } from '@/lib/trek'
 
 export const metadata: Metadata = {
-  title: 'A walk — DEWDROPZ',
+  title: 'A trip — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 
@@ -276,7 +276,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
     {
       k: 'Difficulty',
       v: DIFFICULTY_LABEL[plan.difficulty] ?? plan.difficulty,
-      note: 'Set by the host when they posted this. No walk on this board is allowed to leave it blank — but it is their judgement of the day, not a graded standard.',
+      note: 'Set by the host when they posted this. No trip on this board is allowed to leave it blank — but it is their judgement of the day, not a graded standard.',
     },
     // Derived from the two figures already in the masthead, and only when the
     // host stated them. "5 km · 160 m up" is the answer to a question a
@@ -303,7 +303,7 @@ export default async function TrekPlanPage({ params }: { params: Promise<{ id: s
       k: 'Who may come',
       v: plan.women_only ? 'Women only' : 'Any member may ask',
       note: plan.women_only
-        ? 'Enforced in the database, not by a note asking politely: only a woman can post this walk and only women can ask to join it.'
+        ? 'Enforced in the database, not by a note asking politely: only a woman can post this trip and only women can ask to join it.'
         : 'The host still decides every person individually, one at a time, and declining is silent.',
       wash: plan.women_only ? 'bg-clay-wash/70' : undefined,
     },

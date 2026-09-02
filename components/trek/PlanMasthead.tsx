@@ -156,7 +156,25 @@ export default function PlanMasthead({
             {cancelled && <Tag tone="clay">Called off</Tag>}
           </div>
 
-          <h1 className="trek-h1 mt-4 max-w-[820px] text-balance text-paper">{plan.place}</h1>
+          {/* A point-to-point trip is named by both of its ends. The arrow is
+              an aria-hidden glyph with the word "to" read in its place, because
+              a screen reader saying "Bangalore right arrow Leh" is worse than
+              silence, and "Bangalore to Leh" is the sentence. */}
+          <h1 className="trek-h1 mt-4 max-w-[820px] text-balance text-paper">
+            {plan.place}
+            {plan.ends_place && (
+              <>
+                <span aria-hidden="true" className="mx-2.5 text-paper/45">&rarr;</span>
+                <span className="sr-only"> to </span>
+                {plan.ends_place}
+              </>
+            )}
+          </h1>
+          {plan.route_note && (
+            <p className="mt-3.5 max-w-[640px] font-body text-[15px] leading-relaxed text-paper/70">
+              {plan.route_note}
+            </p>
+          )}
 
           <p className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 font-body text-sm text-paper/75">
             <span>{plan.meet_area} · hosted by</span>

@@ -45,6 +45,17 @@ const KIND: Record<string, { label: string; tone: 'good' | 'bad' | 'plain' }> = 
   waitlist_moved:    { label: 'A place opened',  tone: 'good' },
   point_changed:     { label: 'Point moved',     tone: 'bad' },
   announcement:      { label: 'From the host',   tone: 'plain' },
+
+  // The only entry here with no row behind it. 060's `kind` CHECK permits seven
+  // notifications and every one is caused by a person doing something — there
+  // is no kind for time passing, so the commonest bad outcome on this board
+  // (you asked, nobody decided, the trip left) was the one thing that never
+  // reached the inbox. `getNotifications` derives these and marks them read, so
+  // they appear in the feed without ever becoming a badge nobody can clear.
+  //
+  // `bad` rather than `plain`: it is not news, it is a weekend that did not
+  // happen to you.
+  request_lapsed:    { label: 'Never answered',  tone: 'bad' },
 }
 
 /** The dot, and the kicker, take the same colour — one decision, drawn twice. */
@@ -228,7 +239,7 @@ export function RequestQueue({
           }
           action={
             canHost
-              ? { label: 'Post a walk', href: '/trek-buddy/new' }
+              ? { label: 'Post a trip', href: '/trek-buddy/new' }
               : { label: 'Find a walk', href: '/trek-buddy' }
           }
         />

@@ -309,7 +309,7 @@ export default async function DiscoverPage({
                   </>
                 ) : (
                   <>
-                    Nobody has posted a walk yet. The first one on a board is the one that makes it
+                    Nobody has posted a trip yet. The first one on a board is the one that makes it
                     a board, and it is usually somebody going somewhere they were going anyway.
                   </>
                 )
@@ -320,7 +320,7 @@ export default async function DiscoverPage({
               // below, in HostAccess, and it is the one that actually moves
               // somebody.
               action={
-                membership.canHost ? { label: 'Post a walk', href: '/trek-buddy/new' } : undefined
+                membership.canHost ? { label: 'Post a trip', href: '/trek-buddy/new' } : undefined
               }
               secondary={filtered ? { label: 'Clear the filters', href: '/trek-buddy/discover' } : undefined}
             />
@@ -346,11 +346,11 @@ export default async function DiscoverPage({
               {membership.canHost && (
                 <div className="trek-provisional flex flex-wrap items-center justify-between gap-5 px-6 py-7">
                   <p className="max-w-md font-body text-sm leading-relaxed text-mid">
-                    Nothing here is the walk you had in mind? Post it — a plan with an hour on it
+                    Nothing here is the trip you had in mind? Post it — a plan with an hour on it
                     finds company far more often than a message asking whether anyone is going.
                   </p>
                   <Link href="/trek-buddy/new" className="trek-pill trek-pill-act font-body">
-                    Post a walk
+                    Post a trip
                   </Link>
                 </div>
               )}
@@ -370,7 +370,7 @@ export default async function DiscoverPage({
       </section>
 
       {/* ── Band four · what already happened ───────────────────────────
-          Everything above this line is a promise. A walk with photographs and
+          Everything above this line is a promise. A trip with photographs and
           a paragraph written after the fact is the only thing on the board
           that could not have been posted by somebody who never left the
           house — which makes it the most persuasive section here, and it was

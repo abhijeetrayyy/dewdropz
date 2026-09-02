@@ -122,7 +122,7 @@ export async function verifyRentalPayment(input: {
   const supabase = createAdminSupabaseClient()
   const { data } = await supabase
     .from('rental_bookings')
-    .select('id, booking_number, email, total_amount, gateway_order_id, payment_status')
+    .select('id, booking_number, email, user_id, total_amount, gateway_order_id, payment_status, status, cancelled_by, coupon_id, coupon_code, coupon_discount')
     .eq('id', input.bookingId)
     .maybeSingle()
 
@@ -154,6 +154,53 @@ export async function verifyRentalPayment(input: {
 
   const alreadyPaid = data.payment_status === 'paid'
 
+  // ── THE HOLD DIED WHILE THEY WERE PAYING ──────────────────────────────────
+  //
+  // The worst case in the whole pay-to-reserve design, and the one that must
+  // never be handled by shrugging. The signature is valid, so the customer HAS
+  // been charged; if the sweep cancelled the hold a moment before the bank
+  // callback landed, the money is real and the gear is not.
+  //
+  // Try to take the units back first — usually nothing else has claimed them in
+  // the intervening seconds and the booking simply resumes. If something has,
+  // the customer is refunded in full immediately and told, because the one
+  // outcome that cannot be allowed is a charge with no rental behind it.
+  if (data.status === 'cancelled' && data.cancelled_by === 'expired') {
+    const { error: reviveErr } = await supabase
+      .from('rental_reservations')
+      .update({ status: 'reserved' })
+      .eq('booking_id', input.bookingId)
+      .eq('status', 'cancelled')
+
+    if (reviveErr) {
+      // 23P01: somebody else took those units in the gap. Give the money back
+      // now, in the same request, rather than leaving it for a person to spot.
+      const { refundGatewayPayment } = await import('@/lib/razorpay')
+      const back = await refundGatewayPayment(input.gatewayPaymentId, data.total_amount)
+      await supabase.from('rental_events').insert({
+        booking_id: input.bookingId,
+        kind: 'refunded',
+        amount: 'error' in back ? 0 : data.total_amount,
+        note:
+          'error' in back
+            ? `PAYMENT TAKEN AFTER THE HOLD EXPIRED AND THE REFUND FAILED (${back.error}). This customer is owed ₹${Math.round(data.total_amount / 100)}.`
+            : 'The hold expired and the gear was taken before this payment arrived — refunded in full.',
+      })
+      if ('error' in back) {
+        await sendSlackAlert(
+          `URGENT: rental ${data.booking_number} was charged after its hold expired and the automatic refund failed. Owed: ₹${Math.round(data.total_amount / 100)}.`,
+        )
+      }
+      return {
+        ok: false,
+        error:
+          'error' in back
+            ? 'Your payment went through but the gear was taken while it was processing. We have been alerted and will refund you today — please keep this booking number.'
+            : 'Your payment went through but the gear was taken while it was processing, so we have refunded you in full. Nothing is held.',
+      }
+    }
+  }
+
   await supabase
     .from('rental_bookings')
     .update({
@@ -161,6 +208,17 @@ export async function verifyRentalPayment(input: {
       gateway_payment_id: input.gatewayPaymentId,
       amount_paid: data.total_amount,
       paid_at: new Date().toISOString(),
+      // ── THE HOLD BECOMES A RESERVATION ─────────────────────────────────
+      // This is the only place in the system that promotes `pending_payment`,
+      // and that is the point: a reservation exists because money arrived, not
+      // because a form was submitted. The deadline is cleared with it — a paid
+      // booking does not expire, and leaving a stale one would keep it in the
+      // sweep's sights.
+      status: 'reserved',
+      hold_expires_at: null,
+      cancelled_at: null,
+      cancelled_by: null,
+      cancellation_reason: null,
     })
     .eq('id', input.bookingId)
 
@@ -173,6 +231,31 @@ export async function verifyRentalPayment(input: {
       amount: data.total_amount,
       note: input.gatewayPaymentId,
     })
+
+    // ── THE COUPON IS SPENT HERE, NOT AT BOOKING ────────────────────────────
+    //
+    // It used to be burnt the moment a booking row existed. Under pay-to-
+    // reserve that would mean an abandoned payment sheet permanently consumes a
+    // single-use code — no rental AND no code back, for somebody whose bank
+    // timed out. A coupon is consideration against money taken, so it is spent
+    // where the money is taken. Guarded by `alreadyPaid` above, so a refreshed
+    // success page cannot spend it twice.
+    if (data.coupon_id && (data.coupon_discount ?? 0) > 0) {
+      await supabase.from('coupon_usages').insert({
+        coupon_id: data.coupon_id,
+        user_id: data.user_id ?? null,
+        order_id: null,
+        rental_booking_id: input.bookingId,
+        discount_amount: data.coupon_discount,
+      })
+      await supabase.rpc('increment_coupon_usage', { coupon_id: data.coupon_id })
+      await supabase.from('rental_events').insert({
+        booking_id: input.bookingId,
+        kind: 'coupon_applied',
+        amount: data.coupon_discount,
+        note: data.coupon_code,
+      })
+    }
     // The invoice is issued off the queue rather than inline: issuing spends a
     // serial number, and a serial spent inside a request that then fails is a
     // hole in a statutory series. The queue retries; the request does not.
@@ -282,7 +365,7 @@ export async function recordCounterPayment(input: {
 
   const { data: booking } = await supabase
     .from('rental_bookings')
-    .select('id, status, total_amount, amount_paid, payment_status, deposit_amount, deposit_state, deposit_method')
+    .select('id, status, total_amount, amount_paid, payment_status, deposit_amount, deposit_state, deposit_method, hold_expires_at')
     .eq('id', input.bookingId)
     .maybeSingle()
 
@@ -311,6 +394,19 @@ export async function recordCounterPayment(input: {
   // that, and the CHECK in migration 100 enforces it.
   const depositIsCash = booking.deposit_method !== 'gateway'
 
+  // ── A COUNTER PAYMENT CONFIRMS A HOLD ───────────────────────────────────
+  //
+  // Rentals are paid online to reserve, but the shop still has a door. Somebody
+  // standing at the counter whose bank app will not open, or who only carries
+  // cash, must not be turned away because the flow assumes a gateway — so cash
+  // taken against an unpaid HOLD promotes it to a reservation exactly as a
+  // gateway payment would, and clears the deadline with it.
+  //
+  // Only when the balance is actually cleared. A part payment leaves the hold a
+  // hold, deadline intact, because gear reserved against money that has not all
+  // arrived is the state this whole change exists to remove.
+  const confirmsHold = booking.status === 'pending_payment' && settled
+
   const { data: claimed, error } = await supabase
     .from('rental_bookings')
     .update({
@@ -318,6 +414,7 @@ export async function recordCounterPayment(input: {
       payment_status: settled ? 'paid' : 'pending',
       payment_method: 'cod',
       ...(settled ? { paid_at: new Date().toISOString() } : {}),
+      ...(confirmsHold ? { status: 'reserved' as const, hold_expires_at: null } : {}),
       ...(depositIsCash && deposit > 0
         ? { deposit_taken: deposit, deposit_state: 'held' as const }
         : {}),

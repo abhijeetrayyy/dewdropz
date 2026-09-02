@@ -160,3 +160,141 @@ export async function sendTrekCancellationEmails(planId: string) {
     })
   }
 }
+
+/**
+ * Is there a mailer at all?
+ *
+ * `RESEND_API_KEY` is not set in this environment yet. Everything below is
+ * written to work the moment it is, and to fail QUIETLY and VISIBLY until then
+ * rather than loudly and uselessly: a missing key is a configuration fact, not
+ * a transient error, so retrying it five times with backoff would fill
+ * /admin/jobs with identical failures and teach whoever reads that screen to
+ * ignore it.
+ *
+ * The same shape `rental.invoice` already uses for a missing GSTIN: an expected
+ * refusal, logged, deliberately not a retry.
+ */
+export const mailerConfigured = () => Boolean(process.env.RESEND_API_KEY)
+
+/** Everyone who can actually work the queue. */
+async function adminRecipients(): Promise<string[]> {
+  // Read from `profiles.role` rather than an ADMIN_EMAILS environment variable.
+  // `.env.example` declares one and nothing in the codebase has ever read it,
+  // and an env var is a second list that goes stale the day somebody is made an
+  // admin — the role is the thing the rest of the product already trusts.
+  const { data } = await createAdminSupabaseClient()
+    .from('profiles')
+    .select('email')
+    .eq('role', 'admin')
+  return (data ?? []).map((r) => (r as { email?: string }).email).filter((e): e is string => !!e)
+}
+
+const REASON_LABEL: Record<string, string> = {
+  unsafe: 'Unsafe',
+  harassment: 'Harassment',
+  spam: 'Spam',
+  impersonation: 'Impersonation',
+  not_real: 'Not a real trip',
+  other: 'Other',
+}
+
+/**
+ * Tell the admins a report is open.
+ *
+ * WHAT THIS EMAIL DELIBERATELY DOES NOT CONTAIN
+ *
+ * Not the reported text, not the reporter's name, and not the subject's name.
+ * It carries the category, the source and a link. Two reasons, and the second
+ * is the one that matters:
+ *
+ *   1. A moderation decision should be made on the screen that records it. An
+ *      admin who has already formed a view from an email arrives at the queue
+ *      to confirm it rather than to read it.
+ *   2. Email is the least controlled surface this product touches — forwarded,
+ *      synced to phones, sitting in an inbox on a shared laptop. The excerpt of
+ *      a harassment report is exactly the content this board works hardest to
+ *      contain, and copying it into a mailbox undoes that for no gain.
+ *
+ * The link does the work. The queue holds the evidence.
+ */
+export async function sendTrekReportAlert(reportId: string) {
+  if (!mailerConfigured()) {
+    console.info(
+      `[trek.report_opened] RESEND_API_KEY is not set — no alert sent for report ${reportId}. ` +
+      `The report itself is safe in the queue at ${SITE_URL}/admin/trek-buddy.`
+    )
+    return
+  }
+
+  const db = createAdminSupabaseClient()
+  const { data: report } = await db
+    .from('trek_reports')
+    .select('id, reason, source, field, plan_id, created_at, resolved_at')
+    .eq('id', reportId)
+    .maybeSingle()
+
+  if (!report) return
+  // Somebody got there first. The queue is worked by people, and an email about
+  // a report that is already dealt with trains its readers to ignore the next.
+  if (report.resolved_at) return
+
+  const to = await adminRecipients()
+  if (to.length === 0) {
+    console.warn(`[trek.report_opened] no profile has role='admin' — report ${reportId} will be seen by nobody.`)
+    return
+  }
+
+  const auto = report.source === 'auto'
+  const reason = REASON_LABEL[report.reason as string] ?? 'Report'
+  const { count } = await db
+    .from('trek_reports')
+    .select('id', { count: 'exact', head: true })
+    .is('resolved_at', null)
+
+  const subject = auto
+    ? `TrekBuddy — the scan flagged something (${reason})`
+    : `TrekBuddy — a member reported something (${reason})`
+
+  await sendEmail({
+    to,
+    subject,
+    // Idempotent on the report, so the at-least-once queue cannot send the same
+    // alert twice if a run is interrupted between sending and marking done.
+    idempotencyKey: `trek-report-${reportId}`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:40px 20px;color:#0F1210;">
+        <h1 style="font-size:24px;letter-spacing:-0.3px;margin:0 0 4px;">TrekBuddy</h1>
+        <p style="margin:0;color:#8A5A17;font-style:italic;">Something is waiting in the queue.</p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:15px;margin:0 0 6px;">
+          <strong>${esc(reason)}</strong> — ${auto ? 'caught by the content scan' : 'reported by a member'}
+        </p>
+        ${report.field ? `<p style="font-size:14px;color:#555;margin:0 0 6px;">Field: ${esc(String(report.field))}</p>` : ''}
+        <p style="font-size:14px;color:#555;margin:0 0 18px;">
+          ${count ?? 1} ${(count ?? 1) === 1 ? 'report is' : 'reports are'} open.
+        </p>
+        <p style="font-size:14px;color:#555;margin:0 0 18px;">
+          The details are not in this email on purpose. Open the queue to read it and decide.
+        </p>
+        <p style="margin:0 0 24px;">
+          <a href="${SITE_URL}/admin/trek-buddy"
+             style="display:inline-block;background:#1F4A2E;color:#FAFAF8;text-decoration:none;
+                    padding:12px 20px;border-radius:8px;font-family:Helvetica,Arial,sans-serif;
+                    font-size:14px;">Open the queue</a>
+        </p>
+        <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+        <p style="font-size:12px;color:#999;margin:0;">
+          You are getting this because your account is an admin. A report that nobody reads is
+          the one thing this board promises not to do.
+        </p>
+      </div>
+    `,
+    text:
+      `TrekBuddy — something is waiting in the queue.\n\n` +
+      `${reason} — ${auto ? 'caught by the content scan' : 'reported by a member'}\n` +
+      (report.field ? `Field: ${report.field}\n` : '') +
+      `${count ?? 1} open.\n\n` +
+      `The details are deliberately not in this email. Open the queue to read it and decide:\n` +
+      `${SITE_URL}/admin/trek-buddy\n`,
+  })
+}

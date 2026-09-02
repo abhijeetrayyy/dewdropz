@@ -836,12 +836,40 @@ export type RentalItem = {
   /** The same gear, to own. NULL for kits and bundles we assemble but do not
    *  sell. Never a stock link — see migration 098. */
   product?: { slug: string; name: string; price: number; inventory_quantity: number | null } | null;
+
+  // ── The shelf and the specifications (migration 109) ───────────────────────
+  /** Which shelf it sits on. NULL renders under "Everything else" rather than
+   *  disappearing — an unfiled tent is still a bookable tent. */
+  category_id: string | null;
+  category?: { slug: string; name: string } | null;
+  /** Packed weight of one unit. NULL means unweighed, and unweighed gear sorts
+   *  LAST under "lightest first" — never first. */
+  weight_grams: number | null;
+  /** How many people it serves. NULL where the question does not apply (poles,
+   *  spikes), and such gear is never excluded by a capacity filter. */
+  capacity: number | null;
+  /** Display-only specifications, {label: value}. */
+  specs: Record<string, string | number>;
+};
+
+/** A shelf in the gear locker. Deliberately not the shop's category — that
+ *  holds Apparel and Drinkware, a different vocabulary on a different axis. */
+export type RentalCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  blurb: string | null;
+  sort: number;
 };
 
 export type RentalBookingSummary = {
   id: string;
+  /** `pending_payment` is an unpaid HOLD, not a reservation: it keeps its units
+   *  off the shelf until `hold_expires_at` and becomes `reserved` only when the
+   *  rent is paid. A screen that treats the two as the same thing will show a
+   *  confirmed booking that quietly evaporates. Migration 113. */
+  status: "pending_payment" | "reserved" | "out" | "returned" | "closed" | "cancelled";
   booking_number: string;
-  status: "reserved" | "out" | "returned" | "closed" | "cancelled";
   fulfilment: "pickup" | "ship";
   total_amount: number;
   deposit_amount: number;
@@ -849,6 +877,13 @@ export type RentalBookingSummary = {
   late_fee: number;
   damage_fee: number;
   created_at: string;
+  payment_status: "unpaid" | "pending" | "paid" | "refunded" | "part_refunded" | "failed";
+  amount_paid: number;
+  hold_expires_at: string | null;
+  /** `shop` was refunded in full; `customer` paid the notice bands; `expired`
+   *  is a hold that timed out, where no money ever moved. */
+  cancelled_by: "customer" | "shop" | "expired" | null;
+  rent_refunded: number;
   reservations?: {
     id: string;
     starts_on: string;
@@ -860,7 +895,11 @@ export type RentalBookingSummary = {
 };
 
 const RENTAL_SELECT =
-  "id,slug,name,summary,description,images,daily_rate,deposit,weekly_discount_pct,min_days,max_days,buffer_days,gst_rate,allows_pickup,allows_shipping";
+  "id,slug,name,summary,description,images,daily_rate,deposit,weekly_discount_pct,min_days,max_days,buffer_days,gst_rate,allows_pickup,allows_shipping," +
+  // The shelf rides along on the LIST read, not just the detail one: the locker
+  // groups by it, the filter sheet counts on it and the search reads its name.
+  // Fetching it separately would be a second round trip to answer one question.
+  "category_id,weight_grams,capacity,specs,category:rental_categories(slug,name)";
 
 // The detail read also carries the sellable product, so the page can offer
 // "own it instead" without a second round trip.
@@ -933,12 +972,18 @@ export async function getRentalForProduct(
   return (data as { slug: string; daily_rate: number; deposit: number }) ?? null;
 }
 
+const BOOKING_SELECT =
+  "id,booking_number,status,fulfilment,total_amount,deposit_amount,deposit_state,late_fee,damage_fee,created_at," +
+  // Everything pay-to-reserve added. Without these the app cannot tell a hold
+  // from a reservation, or say what came back on a cancellation.
+  "payment_status,amount_paid,hold_expires_at,cancelled_by,rent_refunded," +
+  "reservations:rental_reservations(id,starts_on,ends_on,days,item:rental_items(name,images),unit:rental_units(code))";
+
 export async function getMyRentalBookings(userId: string): Promise<RentalBookingSummary[]> {
   const { data } = await supabase
     .from("rental_bookings")
     .select(
-      "id,booking_number,status,fulfilment,total_amount,deposit_amount,deposit_state,late_fee,damage_fee,created_at," +
-        "reservations:rental_reservations(id,starts_on,ends_on,days,item:rental_items(name,images),unit:rental_units(code))",
+      BOOKING_SELECT,
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
@@ -952,10 +997,110 @@ export async function getRentalBookingByNumber(
   const { data } = await supabase
     .from("rental_bookings")
     .select(
-      "id,booking_number,status,fulfilment,total_amount,deposit_amount,deposit_state,late_fee,damage_fee,created_at," +
-        "reservations:rental_reservations(id,starts_on,ends_on,days,item:rental_items(name,images),unit:rental_units(code))",
+      BOOKING_SELECT,
     )
     .eq("booking_number", bookingNumber)
     .maybeSingle();
   return (data as unknown as RentalBookingSummary) ?? null;
+}
+
+// ─── The locker's shelves, the calendar, and the log ─────────────────────────
+//
+// All three read straight from the device, and all three are safe to: the
+// shelves carry a "Public read active rental categories" policy, the two
+// availability functions are SECURITY DEFINER and return COUNTS ONLY (never who
+// booked what — see migration 110's header for why that distinction is what
+// makes them anonymous-safe), and the booking log is read under RLS with the
+// customer's own session, through the "Own booking events" policy migration 096
+// has carried since the beginning.
+//
+// PRICE IS STILL NOT READ HERE. Nothing below multiplies anything by anything.
+
+export async function getRentalCategories(): Promise<RentalCategory[]> {
+  const { data } = await supabase
+    .from("rental_categories")
+    .select("id,slug,name,blurb,sort")
+    .eq("is_active", true)
+    .order("sort", { ascending: true });
+  return (data ?? []) as unknown as RentalCategory[];
+}
+
+/**
+ * Every item's shelf for one date range, in ONE call.
+ *
+ * This is what lets the locker say "4 free" on a card instead of making
+ * somebody open each item to find out. Doing it with `rental_available_units`
+ * would be one round trip per item — eight today, and worse every time the shop
+ * buys something, on a connection that may be a phone on a mountain road.
+ *
+ * An empty map on failure, never a guess. A missing entry reads as "unknown",
+ * which is true; inventing "probably free" would advertise gear that is out.
+ */
+export async function getRentalItemsAvailability(
+  startsOn: string,
+  endsOn: string,
+): Promise<Record<string, { free: number; total: number }>> {
+  const { data, error } = await supabase.rpc("rental_items_availability", {
+    p_start: startsOn,
+    p_end: endsOn,
+  });
+  if (error) return {};
+  const out: Record<string, { free: number; total: number }> = {};
+  for (const r of (data ?? []) as { item_id: string; free_units: number; total_units: number }[]) {
+    out[r.item_id] = { free: r.free_units, total: r.total_units };
+  }
+  return out;
+}
+
+/** One item, day by day — what the date picker draws. */
+export async function getRentalItemDays(
+  itemId: string,
+  from: string,
+  to: string,
+): Promise<Record<string, { free: number; total: number }>> {
+  const { data, error } = await supabase.rpc("rental_item_day_availability", {
+    p_item_id: itemId,
+    p_from: from,
+    p_to: to,
+  });
+  if (error) return {};
+  const out: Record<string, { free: number; total: number }> = {};
+  for (const r of (data ?? []) as { day: string; free_units: number; total_units: number }[]) {
+    // Postgres hands back a DATE; everything here compares plain YYYY-MM-DD
+    // strings, so it is trimmed rather than parsed. Parsing is what put the
+    // rental system on a UTC clock in the first place.
+    out[String(r.day).slice(0, 10)] = { free: r.free_units, total: r.total_units };
+  }
+  return out;
+}
+
+export type RentalHistoryEntry = {
+  id: string;
+  kind: string;
+  amount: number | null;
+  note: string | null;
+  created_at: string;
+};
+
+/**
+ * What happened to one booking, oldest first.
+ *
+ * The answer to the only question that really matters about a deposit: *why is
+ * this figure not the figure I handed over?* The web grew a reader for this in
+ * the same pass that made the table genuinely append-only; the app had the same
+ * RLS policy available to it and no screen using it.
+ *
+ * Read under the customer's own session, so the policy does the authorisation
+ * and this function does not restate it. An unauthenticated caller gets an
+ * empty list rather than an error, because a signed-out booking lookup is a
+ * legitimate thing to do and simply has no history attached.
+ */
+export async function getRentalHistory(bookingId: string): Promise<RentalHistoryEntry[]> {
+  const { data } = await supabase
+    .from("rental_events")
+    .select("id,kind,amount,note,created_at")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  return (data ?? []) as unknown as RentalHistoryEntry[];
 }

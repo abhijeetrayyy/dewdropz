@@ -18,9 +18,14 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/components/ui/Toast";
 import { DateRange } from "@/components/rent/DateRange";
-import { prettyDate } from "@/lib/rent/dates";
+import { prettyDate, todayLocal } from "@/lib/rent/dates";
 import { useAuthStore } from "@/stores/auth";
-import { useRentalBookingMutation, useRentalItemQuery, useRentalQuoteQuery } from "@/lib/queries";
+import {
+  useRentalBookingMutation, useRentalItemQuery, useRentalQuoteQuery,
+  useRentalItemDaysQuery, rentalPayUrl,
+} from "@/lib/queries";
+import * as WebBrowser from "expo-web-browser";
+import * as Data from "@/lib/data";
 import { formatPrice } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { C, F, R, S } from "@/lib/theme";
@@ -40,7 +45,7 @@ import { C, F, R, S } from "@/lib/theme";
  * loses the race comes back as a plain sentence rather than a stack trace.
  */
 export default function RentItemScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, from: fromParam, to: toParam } = useLocalSearchParams<{ slug: string; from?: string; to?: string }>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [photo, setPhoto] = useState(0);
@@ -49,13 +54,48 @@ export default function RentItemScreen() {
   const { data: item, isLoading, isError, refetch } = useRentalItemQuery(slug);
   const book = useRentalBookingMutation();
 
-  const [from, setFrom] = useState<string | null>(null);
-  const [to, setTo] = useState<string | null>(null);
+  // Seeded from the locker's date bar, and floored at today: a screen reached
+  // from a stale back-stack entry must not open with dates that have passed.
+  // Anything malformed becomes "no dates" rather than reaching the RPC.
+  const seed = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= todayLocal() ? v : null);
+  const [from, setFrom] = useState<string | null>(() => seed(fromParam));
+  const [to, setTo] = useState<string | null>(() => (seed(fromParam) ? seed(toParam) : null));
+  // The month the picker is showing, so the day counts can be fetched for it.
+  // Seeded from today rather than from `from`, because the calendar opens on
+  // the current month before anything is chosen.
+  const [monthWindow, setMonthWindow] = useState(() => {
+    const t = seed(fromParam) ?? todayLocal();
+    const y = Number(t.slice(0, 4));
+    const m = Number(t.slice(5, 7)) - 1;
+    return {
+      from: `${y}-${String(m + 1).padStart(2, "0")}-01`,
+      to: new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10),
+    };
+  });
   const [quantity, setQuantity] = useState(1);
   const [fulfilment, setFulfilment] = useState<"pickup" | "ship" | null>(null);
   const [email, setEmail] = useState(user?.email ?? "");
   const [phone, setPhone] = useState("");
   const [addr, setAddr] = useState({ line1: "", city: "", state: "", postal_code: "" });
+  // A hold that exists and is not paid for: the sheet was dismissed, or the
+  // bank timed out. The gear is still set aside, so this screen offers to
+  // finish rather than starting over.
+  const [held, setHeld] = useState<{ id: string; number: string } | null>(null);
+  const [paying, setPaying] = useState(false);
+  // ── The bar's real height, measured ──────────────────────────────────────
+  //
+  // The ScrollView reserved a hardcoded 260pt for the bar underneath it. That
+  // was already slightly short once the cancellation note was added, and at
+  // `accessibility-extra-large` it is catastrophically short: the bar's copy
+  // reflows to five lines, the bar becomes ~500pt of an 874pt screen, and the
+  // scrollable content collapses to a sliver showing the product title clipped
+  // through the middle of its glyphs. Everything below it — price, calendar,
+  // email — is unreachable.
+  //
+  // A number that describes the height of something that reflows cannot be a
+  // constant. It is measured instead, with a floor so the first frame (before
+  // layout) is not zero.
+  const [barH, setBarH] = useState(260);
   // The header floats over the photograph and only becomes a solid bar once
   // the image has scrolled away — the same behaviour as the product screen.
   const [scrolled, setScrolled] = useState(false);
@@ -81,11 +121,29 @@ export default function RentItemScreen() {
   );
 
   const { data: quote, isFetching: quoting, error: quoteError } = useRentalQuoteQuery(terms);
+  const { data: dayCounts, isFetching: daysLoading } = useRentalItemDaysQuery(
+    item?.id, monthWindow.from, monthWindow.to,
+  );
 
   const available = item && quote ? quote.availability[item.slug] : undefined;
   const short = available !== undefined && available < quantity;
 
   const priceProblem = quote?.price.errors?.[0];
+
+  // The day the fully-refundable band actually expires, so the screen can say
+  // "cancel free until the 13th" rather than making somebody do arithmetic on
+  // "a week or more before it starts" while holding a card. Seven days is the
+  // top band in `lib/rentalPolicy.ts`; it is stated in one place on the server
+  // and this is the phone's reading of the same rule.
+  // Null once that day has GONE, and the panel then quotes the grace window
+  // instead — which is not a fallback but the applicable rule. Printing
+  // `start − 7 days` unconditionally is how both storefronts came to promise
+  // "cancel free until 29 Aug" on the first of September.
+  const refundDeadline = (() => {
+    if (!from) return null;
+    const d = new Date(Date.parse(`${from}T00:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
+    return d < todayLocal() ? null : d;
+  })();
 
   // A disabled button with no explanation is a dead end — the reader can see
   // the price and cannot work out why they may not have it. This names the one
@@ -103,18 +161,89 @@ export default function RentItemScreen() {
     !!terms && !!quote && !priceProblem && !short && !quoting && !!email.trim() &&
     (mode === "pickup" || addressComplete);
 
-  async function reserve() {
+  /**
+   * Hold the gear, then pay for it.
+   *
+   * PAYING IS WHAT RESERVES IT. This used to end at `book.mutateAsync` and push
+   * the confirmation screen — which was correct when a rental was settled at a
+   * counter, and became a lie the moment the web started requiring payment:
+   * every booking made on this screen was a fifteen-minute hold that expired,
+   * and the app cheerfully called it reserved.
+   *
+   * The payment itself is a hosted web page in a browser sheet, for the reason
+   * `rentalPayUrl` sets out. What matters here is what happens when the sheet
+   * closes, and it is deliberately NOT "assume success": `openAuthSessionAsync`
+   * resolves on a deep link, on a dismissal, and on the user swiping the sheet
+   * away, and the browser is not the authority on any of it — the sweep runs
+   * server-side and may have fired while the sheet was open.
+   *
+   * So on every exit the booking is re-read from the database and the screen
+   * says what is actually true. A flow that guessed would eventually tell
+   * somebody "reserved" about gear that had gone back on the shelf while they
+   * were typing a one-time password.
+   */
+  async function payAndReserve() {
     if (!terms || !canBook) return;
     haptics.select();
+    let held: { bookingId: string; bookingNumber: string };
     try {
-      const res = await book.mutateAsync({ ...terms, email: email.trim(), phone: phone.trim() || undefined });
-      haptics.success();
-      router.replace(`/rent/booked/${res.bookingNumber}`);
+      held = await book.mutateAsync({ ...terms, email: email.trim(), phone: phone.trim() || undefined });
     } catch (e) {
       // The interesting failure is losing the last unit between the quote and
       // the tap. The server says so in a sentence; repeating it verbatim beats
       // inventing a friendlier message that means something else.
       toast.error(e instanceof Error ? e.message : "That booking didn't go through.");
+      haptics.error();
+      return;
+    }
+
+    setPaying(true);
+    try {
+      await WebBrowser.openAuthSessionAsync(rentalPayUrl(held.bookingId), "dewdropz://rent");
+
+      // The database decides, not the sheet.
+      const booking = await Data.getRentalBookingByNumber(held.bookingNumber);
+      if (booking?.status === "reserved") {
+        haptics.success();
+        router.replace(`/rent/booked/${held.bookingNumber}`);
+        return;
+      }
+      if (booking?.status === "cancelled") {
+        toast.error(
+          booking.cancelled_by === "expired"
+            ? "The hold ran out before the payment arrived, so the gear went back on the shelf. Nothing was charged."
+            : "That booking was cancelled. Nothing was charged.",
+        );
+        return;
+      }
+      // Still a live hold: the sheet was dismissed, or the bank timed out. The
+      // gear is genuinely still set aside, so the screen offers to finish
+      // rather than making somebody re-pick their dates and race for the same
+      // tent they are already holding.
+      setHeld({ id: held.bookingId, number: held.bookingNumber });
+      toast.show("Your gear is still held. Finish paying to reserve it.");
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  /** Reopen the payment sheet for a hold that already exists. */
+  async function finishPaying() {
+    if (!held) return;
+    haptics.select();
+    setPaying(true);
+    try {
+      await WebBrowser.openAuthSessionAsync(rentalPayUrl(held.id), "dewdropz://rent");
+      const booking = await Data.getRentalBookingByNumber(held.number);
+      if (booking?.status === "reserved") {
+        haptics.success();
+        router.replace(`/rent/booked/${held.number}`);
+      } else if (booking?.status === "cancelled") {
+        setHeld(null);
+        toast.error("That hold has expired and the gear is back on the shelf. Nothing was charged.");
+      }
+    } finally {
+      setPaying(false);
     }
   }
 
@@ -155,7 +284,7 @@ export default function RentItemScreen() {
         keyboardVerticalOffset={insets.top}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 260 }}
+          contentContainerStyle={{ paddingBottom: barH + S.lg }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={32}
@@ -259,7 +388,17 @@ export default function RentItemScreen() {
             <Rule style={{ marginVertical: S.block }} />
 
             <SectionHead eyebrow="The dates" title="When do you need it?" size="d3" />
-            <DateRange from={from} to={to} onChange={(f, t) => { setFrom(f); setTo(t); }} maxDays={item.max_days} />
+            <DateRange
+              from={from}
+              to={to}
+              onChange={(f, t) => { setFrom(f); setTo(t); }}
+              maxDays={item.max_days}
+              // The shelf, day by day, so picking is reading rather than
+              // guessing and being refused afterwards.
+              days={dayCounts}
+              daysLoading={daysLoading}
+              onMonthChange={(mFrom, mTo) => setMonthWindow({ from: mFrom, to: mTo })}
+            />
             <Meta style={{ marginTop: S.xs }}>
               Minimum {item.min_days} day{item.min_days === 1 ? "" : "s"}, maximum {item.max_days}.
               {item.buffer_days > 0 && ` Each unit rests ${item.buffer_days} day${item.buffer_days === 1 ? "" : "s"} between rentals.`}
@@ -359,7 +498,15 @@ export default function RentItemScreen() {
         {/* ── The figure, and the button ──────────────────────────────────────
             Every line below is rendered from the server's quote. None of it is
             added up here. ─────────────────────────────────────────────────── */}
-        <View style={[s.bar, { paddingBottom: insets.bottom + 14 }]}>
+        <View
+          style={[s.bar, { paddingBottom: insets.bottom + 14 }]}
+          onLayout={(e) => {
+            const h = Math.round(e.nativeEvent.layout.height);
+            // Only on a real change: onLayout fires on every re-render, and
+            // setting state unconditionally here is an infinite loop.
+            if (h > 0 && h !== barH) setBarH(h);
+          }}
+        >
           {quote && !priceProblem ? (
             <View style={{ gap: 4 }}>
               <View style={s.barLine}>
@@ -386,10 +533,22 @@ export default function RentItemScreen() {
                 <Body color={C.textMid} style={{ fontSize: 13 }}>GST {quote.price.lines[0]?.gstRate}%</Body>
                 <Numeric color={C.textMid} style={{ fontSize: 13 }}>{formatPrice(quote.price.taxAmount)}</Numeric>
               </View>
-              <View style={s.barLine}>
-                <Body style={{ fontFamily: F.bodyMedium }}>Deposit, refunded</Body>
-                <Numeric>{formatPrice(quote.price.depositAmount)}</Numeric>
+              {/* SPLIT, because the two are due in two places at two times.
+                  Summing them into one figure is the most expensive kind of
+                  wrong: somebody reads the total, expects to pay it later, and
+                  is charged the rent now instead. */}
+              <View style={[s.barLine, { marginTop: 4 }]}>
+                <Body style={{ fontFamily: F.bodyMedium }}>Pay now to reserve</Body>
+                <Numeric>{formatPrice(quote.price.totalAmount)}</Numeric>
               </View>
+              {quote.price.depositAmount > 0 && (
+                <View style={s.barLine}>
+                  <Body color={C.textMid} style={{ fontSize: 13 }}>
+                    {mode === "ship" ? "Deposit, before we post it" : "Deposit, at the counter"}
+                  </Body>
+                  <Numeric color={C.textMid} style={{ fontSize: 13 }}>{formatPrice(quote.price.depositAmount)}</Numeric>
+                </View>
+              )}
             </View>
           ) : (
             <Meta>
@@ -399,16 +558,64 @@ export default function RentItemScreen() {
             </Meta>
           )}
 
+          {/* ── What happens if you change your mind ────────────────────────
+              ABOVE the button. Somebody about to send money to a shop they
+              have never visited is deciding whether the shop is trustworthy,
+              and a cancellation policy with a real date on it is the cheapest
+              trust this screen can buy. Burying it would hide the only
+              generous part of the policy at the moment it is worth something. */}
+          {quote && !priceProblem && from && (
+            <View style={s.assure}>
+              <Icon name="shield" size={14} color={C.forest} />
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontSize: 12.5, fontFamily: F.bodyMedium }} color={C.forest}>
+                  {refundDeadline
+                    ? `Cancel free until ${prettyDate(refundDeadline)}.`
+                    : "Cancel free within 24 hours of booking."}
+                </Body>
+                <Meta style={{ fontSize: 11.5, marginTop: 2 }} maxFontSizeMultiplier={1.6}>
+                  Never less than a quarter back after that — and the deposit always comes back in full.
+                </Meta>
+              </View>
+            </View>
+          )}
+
+          {/* A hold that has not been paid for. The gear IS set aside, so this
+              says so and offers the one action left. */}
+          {held && (
+            <Pressable onPress={finishPaying} style={s.heldBar} accessibilityRole="button">
+              <Body style={{ fontSize: 12.5 }} color={C.clayDeep}>
+                {held.number} is held for you — tap to finish paying. Nothing has been charged.
+              </Body>
+            </Pressable>
+          )}
+
           <Button
-            title={quote && !priceProblem ? "Reserve this gear" : "Reserve"}
-            trailing={quote && !priceProblem ? formatPrice(quote.price.payableWithDeposit) : undefined}
-            onPress={reserve}
-            disabled={!canBook}
-            loading={book.isPending}
+            /* The figure is ON the button. "Reserve this gear" was honest when
+               nothing was charged; under pay-to-reserve a button that does not
+               say what it costs is a button that takes money by surprise. And
+               it is the RENT, not rent-plus-deposit: the deposit is not paid
+               here and pricing it into this control would overstate the charge
+               by several thousand rupees. */
+            title={held ? "Finish paying" : quote && !priceProblem ? "Pay and reserve" : "Reserve"}
+            trailing={quote && !priceProblem ? formatPrice(quote.price.totalAmount) : undefined}
+            onPress={held ? finishPaying : payAndReserve}
+            disabled={!canBook || paying}
+            loading={book.isPending || paying}
             size="lg"
             style={{ marginTop: S.sm }}
           />
-          <Meta style={{ marginTop: 6, fontSize: 11 }} color={blockedBecause && terms ? C.clayDeep : C.textMuted}>
+          <Meta
+            style={{ marginTop: 6, fontSize: 11 }}
+            color={blockedBecause && terms ? C.clayDeep : C.textMuted}
+            // Bounded, because this paragraph lives in a FIXED overlay. The
+            // price lines and the button label above it scale freely — they
+            // are what somebody needs to read — but three sentences of context
+            // reflowing to five lines is what turned this bar into 60% of the
+            // screen. Measuring the bar (above) keeps the content reachable;
+            // this keeps the bar from being worth reaching past.
+            maxFontSizeMultiplier={1.6}
+          >
             {blockedBecause && terms
               ? blockedBecause
               : mode === "ship"
@@ -416,8 +623,8 @@ export default function RentItemScreen() {
                 // ships — createRentalBooking stamps deposit_method 'gateway'
                 // for every ship booking — and this line told every customer
                 // the opposite.
-                ? "Nothing is charged now. We'll send a payment link before we post it, and the deposit comes back with the gear."
-                : "Nothing is charged now. You pay when you collect, and the deposit comes back with the gear."}
+                ? "You pay the rental now; that is what reserves the gear. The refundable deposit is taken separately before we post it."
+                : "You pay the rental now; that is what reserves the gear. The refundable deposit is handed over at the counter when you collect."}
           </Meta>
         </View>
       </KeyboardAvoidingView>
@@ -460,6 +667,15 @@ const s = StyleSheet.create({
   },
   segBtnOn: { backgroundColor: C.forest, borderColor: C.forest },
   availability: { marginTop: S.md, minHeight: 20 },
+  assure: {
+    flexDirection: "row", gap: S.sm, alignItems: "flex-start",
+    backgroundColor: C.forest12, borderRadius: R.panel,
+    paddingHorizontal: S.md, paddingVertical: 10, marginTop: S.sm,
+  },
+  heldBar: {
+    backgroundColor: C.clay12, borderRadius: R.panel,
+    paddingHorizontal: S.md, paddingVertical: 10, marginTop: S.sm,
+  },
   ownIt: {
     flexDirection: "row", alignItems: "center", gap: S.md,
     backgroundColor: C.forest12, borderRadius: R.panel,

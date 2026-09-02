@@ -5,7 +5,7 @@ import { Eyebrow } from '@/components/trek/ui/Bits'
 import NewPlanForm from './NewPlanForm'
 
 export const metadata: Metadata = {
-  title: 'Post a walk — DEWDROPZ',
+  title: 'Post a trip — DEWDROPZ',
   robots: { index: false, follow: false },
 }
 

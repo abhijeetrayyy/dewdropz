@@ -211,6 +211,8 @@ export default function NewPlanForm({
     activity: initial.key,
     activityOther: '',
     place: '',
+    endsPlace: '',
+    routeNote: '',
     meetArea: '',
     startsOn: tomorrowIst(),
     endsOn: initial.endsNextDay ? nextDay(tomorrowIst()) : tomorrowIst(),
@@ -246,6 +248,8 @@ export default function NewPlanForm({
   // For anything that runs into the dark the departure hour is the whole point,
   // so it stays required however many days the trip lasts.
   const hoursMatter = spec.needsNightNote || spec.dayPart !== 'day'
+  /** Does this kind of outing have two ends? Drives the destination fields. */
+  const routed = spec.routeShape !== 'loop'
 
   /** Set the length in days, keeping the start where it is. */
   const setDays = (n: number) =>
@@ -292,7 +296,10 @@ export default function NewPlanForm({
     f.place.trim() && f.meetArea.trim() && f.meetingPoint.trim() &&
     (!spec.needsNightNote || f.nightNote.trim().length >= 10) &&
     // A host-named outing has to actually be named.
-    (!spec.isOpenEnded || f.activityOther.trim().length >= 3)
+    (!spec.isOpenEnded || f.activityOther.trim().length >= 3) &&
+    // A ride to Ladakh with no Ladakh in it is not postable. `either` kinds are
+    // not held to this — a cycling loop legitimately has no far end.
+    (spec.routeShape !== 'point_to_point' || f.endsPlace.trim().length >= 2)
   )
 
   function submit(e: React.FormEvent) {
@@ -306,6 +313,10 @@ export default function NewPlanForm({
         backBy: f.timed ? f.backBy : undefined,
         languages: f.languages.length ? f.languages : undefined,
         activityOther: spec.isOpenEnded ? f.activityOther.trim() : undefined,
+        // Sent only when the kind has two ends, so switching from a ride to a
+        // day walk cannot leave a stale destination on the post.
+        endsPlace: routed ? f.endsPlace.trim() || undefined : undefined,
+        routeNote: routed ? f.routeNote.trim() || undefined : undefined,
         nightNote: spec.needsNightNote ? f.nightNote : undefined,
         coverUrls: f.coverUrl ? [f.coverUrl] : undefined,
         // '' means "not stated", which is a different thing from zero and has
@@ -455,8 +466,63 @@ export default function NewPlanForm({
                 <span className={label}>The place</span>
                 <input value={f.place} onChange={(e) => set({ place: e.target.value })}
                   required minLength={2} maxLength={80} placeholder="Nag Tibba" className={fieldDisplay} />
-                <span className={hint}>Where you are actually going. Everyone sees this.</span>
+                <span className={hint}>
+                  {routed ? 'Where the trip starts from. Everyone sees this.'
+                          : 'Where you are actually going. Everyone sees this.'}
+                </span>
               </label>
+
+              {/* ── The other end ──────────────────────────────────────────
+                  Only for a kind that HAS two ends. A morning walk up Nag Tibba
+                  returns to where it started, and asking every host for a
+                  destination would put an empty field on ninety per cent of the
+                  board — which is how a form teaches people to ignore it.
+
+                  `route_shape` comes from the kinds table (109), so which kinds
+                  ask is an admin decision, not a hard-coded list. */}
+              {routed && (
+                <>
+                  <label className="block">
+                    <span className={label}>
+                      Where it ends{spec.routeShape === 'either' && (
+                        <span className="ml-1.5 font-normal normal-case tracking-normal text-mid">
+                          — leave blank if it loops back
+                        </span>
+                      )}
+                    </span>
+                    <input
+                      value={f.endsPlace}
+                      onChange={(e) => set({ endsPlace: e.target.value })}
+                      required={spec.routeShape === 'point_to_point'}
+                      minLength={2}
+                      maxLength={80}
+                      placeholder="Leh"
+                      className={fieldDisplay}
+                    />
+                    <span className={hint}>
+                      The far end. A trip that finishes somewhere else is a different
+                      proposition from one that comes home, and people need to know which
+                      before they ask.
+                    </span>
+                  </label>
+
+                  <label className="block">
+                    <span className={label}>The route</span>
+                    <textarea
+                      value={f.routeNote}
+                      onChange={(e) => set({ routeNote: e.target.value })}
+                      rows={2}
+                      maxLength={400}
+                      placeholder="Via Manali, Sarchu and Tanglang La. Roughly 480km over four riding days."
+                      className={`${field} resize-y leading-relaxed`}
+                    />
+                    <span className={hint}>
+                      The line between the two ends, in your own words — the passes, the
+                      overnight stops, roughly how far each day is.
+                    </span>
+                  </label>
+                </>
+              )}
 
               <label className="block">
                 <span className={label}>Anything else</span>
@@ -699,7 +765,7 @@ export default function NewPlanForm({
                   colour its tag takes on the card: sage for a slower pace, clay
                   for women-only, so the composer and the board agree. */}
               <div className="rounded-[var(--r-card)] border border-rule bg-surface p-5">
-                <h3 className="trek-h3 text-text">Who this walk suits</h3>
+                <h3 className="trek-h3 text-text">Who this trip suits</h3>
                 <p className="mt-2 max-w-prose font-body text-[13.5px] leading-relaxed text-mid">
                   Both of these are filters on the board, not notes. Somebody searching for them is
                   searching because the answer decides whether they come at all.
@@ -753,7 +819,7 @@ export default function NewPlanForm({
                     </label>
                   ) : (
                     <p className="rounded-[var(--r-card)] border border-rule px-4 py-3.5 font-body text-[13px] leading-relaxed text-mid">
-                      Women-only walks can be posted by members whose profile says women.{' '}
+                      Women-only trips can be posted by members whose profile says women.{' '}
                       <Link href="/trek-buddy/profile" className="text-forest underline underline-offset-4">
                         Set that on your profile
                       </Link>{' '}
@@ -771,7 +837,7 @@ export default function NewPlanForm({
                         className={chip(f.languages.includes(l))}>{l}</button>
                     ))}
                   </div>
-                  <span className={hint}>What the group will be speaking on the walk.</span>
+                  <span className={hint}>What the group will be speaking on the trip.</span>
                 </div>
               </div>
 
@@ -815,7 +881,7 @@ export default function NewPlanForm({
                 {f.minTrust > 0 && (
                   <p className="mt-3.5 font-body text-[13px] leading-relaxed text-mid">
                     Worth knowing: this is a young board, so a higher bar can mean nobody is able
-                    to ask yet. You can lower it later if the walk stays empty.
+                    to ask yet. You can lower it later if the trip stays empty.
                   </p>
                 )}
               </div>
@@ -966,7 +1032,7 @@ export default function NewPlanForm({
                 <p className="trek-label text-forest">Held back on purpose</p>
                 <p className="mt-2.5 font-body text-[13px] leading-relaxed text-mid">
                   The exact meeting point does not go on the public page. It reaches the people you
-                  have confirmed, and only once {spec.minParty} are going — so a walk nobody joins
+                  have confirmed, and only once {spec.minParty} are going — so a trip nobody joins
                   never hands out an address.
                 </p>
               </div>

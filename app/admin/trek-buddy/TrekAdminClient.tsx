@@ -7,7 +7,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import {
   AlertTriangle, ShieldBan, Filter, BookOpen, Users, Mountain, FlaskConical,
-  Check, Trash2, Plus, EyeOff, Ban, X, Tent,
+  Check, Trash2, Plus, EyeOff, Ban, X, Tent, Activity,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,12 +18,16 @@ import {
   getTrekReports, resolveTrekReport, getWordRules, saveWordRule, deleteWordRule,
   testModeration, getActivityKindsAdmin, saveActivityKind, getGuidanceAdmin,
   saveGuidance, deleteGuidance, getTrekMembers, setTrekMember, setTrekMentor,
-  getHostRequests, decideHostRequest,
+  getHostRequests, decideHostRequest, getTrekHealth,
   type TrekReportRow, type WordRule, type ActivityKind, type GuidanceNote, type TrekMemberRow,
-  type HostRequestRow,
+  type HostRequestRow, type TrekHealth,
 } from '@/actions/trekAdmin'
 
 const TABS = [
+  // First, and first on purpose. Everything else on this desk is a thing you
+  // came here to do; this is the one that tells you whether something needed
+  // doing that nobody has noticed.
+  { key: 'health', label: 'Health', icon: Activity },
   { key: 'queue', label: 'Queue', icon: AlertTriangle },
   { key: 'rules', label: 'Word rules', icon: Filter },
   { key: 'test', label: 'Test text', icon: FlaskConical },
@@ -55,9 +59,11 @@ export default function TrekAdminClient() {
   const [guidance, setGuidance] = useState<GuidanceNote[]>([])
   const [members, setMembers] = useState<TrekMemberRow[]>([])
   const [memberQ, setMemberQ] = useState('')
+  const [health, setHealth] = useState<TrekHealth | null>(null)
 
   async function load() {
     try {
+      if (tab === 'health') setHealth(await getTrekHealth())
       if (tab === 'queue') setReports(await getTrekReports({ resolved: showResolved }))
       if (tab === 'rules') setRules(await getWordRules())
       if (tab === 'kinds') setKinds(await getActivityKindsAdmin())
@@ -110,6 +116,8 @@ export default function TrekAdminClient() {
           )
         })}
       </div>
+
+      {tab === 'health' && <Health health={health} onOpenQueue={() => setTab('queue')} />}
 
       {tab === 'queue' && (
         <Queue
@@ -164,6 +172,132 @@ export default function TrekAdminClient() {
           onMentor={(id, m, bio) => run(() => setTrekMentor(id, m, bio), 'Mentor updated')}
         />
       )}
+    </div>
+  )
+}
+
+// ── Health ───────────────────────────────────────────────────────────────────
+//
+// Four reads, no job. Each one names somebody having a bad time on this board
+// who has no way to say so.
+
+function Stat({
+  label, value, sub, tone = 'plain',
+}: {
+  label: string
+  value: string | number
+  sub?: string
+  tone?: 'plain' | 'warn' | 'bad'
+}) {
+  const ring =
+    tone === 'bad' ? 'border-red-300 bg-red-50' :
+    tone === 'warn' ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
+  return (
+    <div className={`rounded-lg border p-4 ${ring}`}>
+      <p className="text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-1 text-sm font-medium text-gray-700">{label}</p>
+      {sub && <p className="mt-0.5 text-xs text-gray-500">{sub}</p>}
+    </div>
+  )
+}
+
+function Health({ health, onOpenQueue }: { health: TrekHealth | null; onOpenQueue: () => void }) {
+  if (!health) return <p className="text-sm text-gray-500">Reading the board…</p>
+  const { reports, unanswered, neverQuorate, atCap, cap } = health
+
+  return (
+    <div className="space-y-8">
+      <section>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-lg font-semibold">The queue</h2>
+          {reports.open > 0 && (
+            <Button size="sm" variant="outline" onClick={onOpenQueue}>Open the queue</Button>
+          )}
+        </div>
+        {/* 052, verbatim, because it is the reason this panel exists at all. */}
+        <p className="mt-1 max-w-2xl text-sm text-gray-500">
+          A queue with nobody behind it is worse than no queue, because the button implies
+          supervision. These are the numbers that tell you whether that has happened.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="Open reports" value={reports.open} tone={reports.open > 0 ? 'warn' : 'plain'} />
+          <Stat label="Waiting over 3 days" value={reports.over3d} tone={reports.over3d > 0 ? 'warn' : 'plain'} />
+          <Stat label="Waiting over 7 days" value={reports.over7d} tone={reports.over7d > 0 ? 'bad' : 'plain'} />
+          <Stat
+            label="Oldest"
+            value={reports.oldestDays === null ? '—' : `${reports.oldestDays}d`}
+            sub={reports.oldestDays === null ? 'nothing open' : 'since it was reported'}
+            tone={(reports.oldestDays ?? 0) >= 7 ? 'bad' : (reports.oldestDays ?? 0) >= 3 ? 'warn' : 'plain'}
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Hosts who never answered</h2>
+        <p className="mt-1 max-w-2xl text-sm text-gray-500">
+          Somebody asked to come and the trip left without an answer. The board can no longer
+          confirm them, no notification is ever sent about it, and the person got silence and
+          then absence. A host who does this repeatedly is a board problem, not a host problem.
+        </p>
+        {unanswered.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-500">Nobody. Every ask was answered.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-gray-100 rounded-lg border border-gray-200">
+            {unanswered.map((h) => (
+              <li key={h.hostId} className="flex items-center justify-between gap-4 px-4 py-3">
+                <span className="text-sm font-medium">{h.hostName}</span>
+                <span className="text-sm tabular-nums text-gray-500">
+                  {h.count} {h.count === 1 ? 'ask' : 'asks'} · {h.people}{' '}
+                  {h.people === 1 ? 'person' : 'people'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Trips that never made quorum</h2>
+        <p className="mt-1 max-w-2xl text-sm text-gray-500">
+          Finished without reaching their minimum party, so the meeting point was never
+          released and they quietly did not happen. Nobody is told this either.
+        </p>
+        {neverQuorate.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-500">None. Everything that finished had enough people.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-gray-100 rounded-lg border border-gray-200">
+            {neverQuorate.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                <span className="text-sm font-medium">{p.place}</span>
+                <span className="text-sm tabular-nums text-gray-500">
+                  {p.going} of {p.minParty} · ended {fmt(p.endedAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Hosts at their cap</h2>
+        <p className="mt-1 max-w-2xl text-sm text-gray-500">
+          Holding all {cap} open trips they are allowed, so their next attempt to post is
+          refused. Counted on <code className="text-xs">ends_at</code> since 107, so a host out
+          on day one of six still holds the slot.
+        </p>
+        {atCap.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-500">Nobody is blocked.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-gray-100 rounded-lg border border-gray-200">
+            {atCap.map((h) => (
+              <li key={h.hostId} className="flex items-center justify-between gap-4 px-4 py-3">
+                <span className="text-sm font-medium">{h.hostName}</span>
+                <span className="text-sm tabular-nums text-gray-500">{h.open} open</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

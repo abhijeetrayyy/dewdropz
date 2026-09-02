@@ -29,7 +29,16 @@ const ORDER: Record<string, Look> = {
 };
 
 const RENTAL: Record<string, Look> = {
-  reserved:  { label: "HELD FOR YOU", fg: C.clayDeep,   bg: C.clay12 },
+  // An unpaid HOLD is not a reservation and must never be dressed as one — it
+  // is the only rental state with a deadline running against it, so it gets the
+  // most urgent colour on the screen. Migration 113.
+  pending_payment: { label: "AWAITING PAYMENT", fg: C.clayDeep, bg: C.clay12 },
+  // `reserved` MOVED from clay to forest in the same change, and it had to.
+  // Under pay-to-reserve these two states mean opposite things — one is money
+  // received and gear confirmed, the other is a countdown — and leaving both in
+  // clay would have made the distinction invisible on the one screen where it
+  // decides whether somebody still has something to do.
+  reserved:  { label: "RESERVED",     fg: C.forestDeep, bg: C.forest12 },
   out:       { label: "WITH YOU",     fg: C.forestDeep, bg: C.forest12 },
   returned:  { label: "RETURNED",     fg: C.textMid,    bg: C.cream },
   closed:    { label: "CLOSED",       fg: C.textMuted,  bg: C.cream },

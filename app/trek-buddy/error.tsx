@@ -30,7 +30,7 @@ export default function TrekBuddyError({
         </h1>
         <p className="mt-4 font-body text-sm leading-relaxed text-paper/65">
           Nothing you did caused this and nothing you posted is lost. Try again — and if it keeps
-          happening, the walks are still where you left them.
+          happening, the trips are still where you left them.
         </p>
         <div className="mt-8 flex flex-wrap gap-4">
           {/* Was a hand-rolled amber pill in uppercase semibold. On an ink band

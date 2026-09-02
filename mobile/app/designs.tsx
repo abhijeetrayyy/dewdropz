@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { RefreshControl, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Img as Image } from "@/components/ui/Img";
 import { router } from "expo-router";
@@ -34,6 +35,10 @@ export default function DesignsScreen() {
   // all — scrolled away and left no way back.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const { user } = useAuthStore();
   const { data: designs = [], isLoading, refetch } = useMyDesignsQuery(user?.id);
   const { refreshing, onRefresh } = usePullToRefresh([refetch]);
@@ -45,9 +50,10 @@ export default function DesignsScreen() {
         <ScreenHeader
         tone="warm" eyebrow="The studio" title="Your designs"
           scrollY={scrollY}
+        onHeight={setHeaderH}
         />
 
-        <Animated.ScrollView contentContainerStyle={s.pad} ref={scrollRef}>
+        <Animated.ScrollView contentContainerStyle={[s.pad, { paddingTop: headerH }]} ref={scrollRef}>
           <EmptyState
               tone="warm"
             eyebrow="Signed out"
@@ -70,12 +76,13 @@ export default function DesignsScreen() {
         title="Your designs"
         tone="warm"
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
       <Animated.ScrollView
         ref={scrollRef}
-        contentContainerStyle={s.pad}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.forest} />}
+        contentContainerStyle={[s.pad, { paddingTop: headerH }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={headerH} tintColor={C.forest} />}
         showsVerticalScrollIndicator={false}
       >
 

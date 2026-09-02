@@ -7,7 +7,7 @@ import JourneyRail from '@/components/trek/ui/JourneyRail'
 // Everything the landing page used to say, in full, in one place.
 //
 // INDEXABLE, unlike every other page under /trek-buddy. There is no member and
-// no walk on it — it is the product's account of what it enforces and where
+// no trip on it — it is the product's account of what it enforces and where
 // that stops, which is exactly the thing a stranger should be able to find
 // without an account. `robots.ts` carries a specific `Allow` for this path that
 // beats the blanket `Disallow: /trek-buddy/`.
@@ -36,29 +36,29 @@ export const metadata: Metadata = {
 //
 // The honesty is this product's best asset and none of it is deleted. It is
 // moved one click away, complete, linked from the landing, from onboarding and
-// from every walk — and it is now the only page under /trek-buddy a search
+// from every trip — and it is now the only page under /trek-buddy a search
 // engine is allowed to read, which is a stronger position than being the fifth
 // section of a page nobody finished.
 const QUESTIONS: { q: string; a: string }[] = [
   {
     q: 'Does it cost anything?',
-    a: 'No. Nobody pays for a place and DEWDROPZ takes no cut. Some walks split real costs at face value — fuel, a permit, a shared cab — and the amount is on the card before you ask. The platform holds no money.',
+    a: 'No. Nobody pays for a place and DEWDROPZ takes no cut. Some trips split real costs at face value — fuel, a permit, a shared cab — and the amount is on the card before you ask. The platform holds no money.',
   },
   {
     q: 'Who is checking that these people are who they say they are?',
-    a: 'Nobody. The platform verifies actions, never identities — that a number is held, that a walk was completed, that a vouch came from somebody who was there. It cannot verify a name, an age, or fitness. Everyone here is a stranger until you have walked together.',
+    a: 'Nobody. The platform verifies actions, never identities — that a number is held, that a trip was completed, that a vouch came from somebody who was there. It cannot verify a name, an age, or fitness. Everyone here is a stranger until you have walked together.',
   },
   {
     q: 'What stops somebody just turning up?',
-    a: 'The exact meeting point is not on the public page. It is released to confirmed walkers only, and only once the walk has enough people going — so a walk nobody joins hands its address to nobody. A host confirms each person individually, and declining is silent.',
+    a: 'The exact meeting point is not on the public page. It is released to confirmed members only, and only once the trip has enough people going — so a trip nobody joins hands its address to nobody. A host confirms each person individually, and declining is silent.',
   },
   {
     q: 'Can I bring a friend?',
-    a: 'Yes, and there is an invite card for exactly that. Anybody can open the public page of a walk; the meeting point stays hidden until the host confirms them, the same as for anyone else.',
+    a: 'Yes, and there is an invite card for exactly that. Anybody can open the public page of a trip; the meeting point stays hidden until the host confirms them, the same as for anyone else.',
   },
   {
-    q: 'What happens if a walk is called off?',
-    a: 'Everybody confirmed is told immediately, with the host’s reason. A cancelled walk leaves the board for everyone. Better a cancelled sunrise than a group waiting at a dark bus stand.',
+    q: 'What happens if a trip is called off?',
+    a: 'Everybody confirmed is told immediately, with the host’s reason. A cancelled trip leaves the board for everyone. Better a cancelled sunrise than a group waiting at a dark bus stand.',
   },
   {
     q: 'Is DEWDROPZ organising these?',
@@ -88,14 +88,14 @@ export default function SafetyPage() {
         </div>
       </section>
 
-      {/* One walk, end to end. It sits above the rules because the rules are
+      {/* One trip, end to end. It sits above the rules because the rules are
           about the moments in it, and a reader who has not seen the sequence is
           being handed answers to questions they have not formed. */}
       <section className="trek-band border-b border-rule-warm bg-paper-warm py-14 md:py-16">
         <div className="trek-measure">
           <p className="trek-eyebrow text-forest">End to end</p>
           <h2 className="trek-h2 mt-4 max-w-2xl text-text">
-            One walk, from the moment you see it to the moment you vouch for the people you did it
+            One trip, from the moment you see it to the moment you vouch for the people you did it
             with.
           </h2>
           <div className="mt-9 rounded-[var(--r-panel)] border border-rule bg-surface p-6 md:p-9">

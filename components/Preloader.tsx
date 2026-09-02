@@ -184,7 +184,7 @@ export default function Preloader() {
       aria-label="Loading DEWDROPZ"
     >
       <div ref={markRef} className="invisible flex select-none flex-col items-center gap-3.5">
-        <Image src="/logo/mountain-mark.png" alt="" width={168} height={97} priority className="h-11 w-auto md:h-12" />
+        <Image src="/logo/mountain-mark.webp" alt="" width={168} height={97} priority className="h-11 w-auto md:h-12" />
         <span className="font-display text-base tracking-[0.32em] text-paper">DEWDROPZ</span>
       </div>
 

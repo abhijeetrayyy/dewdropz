@@ -43,7 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'TrekBuddy — walk with somebody, around Dehradun',
     description:
-      'A members’ noticeboard where DEWDROPZ members post the walk they are already going on and others ask to come. Free, hosted by members, around Dehradun.',
+      'A members’ noticeboard where DEWDROPZ members post the trip they are already going on and others ask to come. Free, hosted by members, around Dehradun.',
     alternates: { canonical: '/trek-buddy' },
     openGraph: {
       title: 'TrekBuddy — walk with somebody, around Dehradun',

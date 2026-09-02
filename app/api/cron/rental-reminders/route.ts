@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { runRentalReminders } from '@/actions/rentalOps'
+import { runRentalReminders, releaseExpiredRentalHolds } from '@/actions/rentalOps'
 
 /**
  * The daily reminder sweep.
@@ -45,6 +45,12 @@ export async function GET(request: Request) {
     )
   }
 
+  // Tidying, BEFORE the reminders and deliberately before the mail check would
+  // have mattered — it sends nothing and touches no claim, so it is safe on
+  // every run. See the function's own note on why the real release happens
+  // inline in the booking write rather than here.
+  const holds = await releaseExpiredRentalHolds()
+
   const counts = await runRentalReminders()
-  return NextResponse.json({ ok: true, ...counts })
+  return NextResponse.json({ ok: true, ...counts, holdsReleased: holds.released })
 }

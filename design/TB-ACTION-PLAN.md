@@ -7,34 +7,194 @@ Work top-down. Each package names the files, the exact change, the guardrail
 that stops it degrading something else, and the check that proves it landed.
 **Do not batch packages from different tiers into one commit.**
 
-## The finding that reorders everything
+## The finding that reorders everything — CORRECTED 31 Aug
 
-**The moderation engine is complete, wired to fifteen fields, and switched off.**
+**First reading (wrong about production):** the moderation engine is complete,
+wired to fifteen fields, and switched off, because no migration or script ever
+seeds `trek_word_rules`.
 
-`056` builds a genuinely good scanner: literal / squeezed / leetspeak-folded
-matching, `block` and `flag` actions, per-rule hints that never name the matched
-pattern *("naming the matched word teaches evasion")*, and auto-reports for
-flags. `058`, `068`, `076`, `077` and `078` hang it off the tables rather than
-the RPCs, deliberately — *"there is no way to get text into this board without
-passing it."*
+**Checked against the live database:** the table holds **125 active rules**,
+hand-entered on 17 August 2026, and they are better than the ones drafted to
+replace them. The engine is on. See the council's correction entry for the full
+account.
 
-It scans: `place`, `meet_area`, `note`, `night_note`, `activity_other`,
-`meeting_point`, `logistics`, request `message`, `trek_intro`,
-`trek_display_name`, `trek_mentor_bio`, `itinerary`, `bring`, recap `body`,
-chat `body`.
+**What survives, and it is still serious:** those 125 rules are **not in version
+control**. They exist in one database and nowhere else. No migration, no script,
+no seed. A restore from an older backup, a rebuilt environment, a fresh staging
+copy or a new developer's local database comes up with an empty table — and an
+empty `trek_word_rules` is not a degraded filter, it is no filter at all:
+`trek_scan` returns zero rows for every input and all fifteen scanned fields
+accept anything, with the board looking exactly as it does now.
 
-`trek_word_rules` has **no seed**. Not in any of the 34 migrations, not in any
-script. `trek_scan` therefore returns zero rows for every input,
-`trek_guard_text` returns `{}` every time, no `block` has ever fired and no
-auto-report has ever opened. The carefully-worded *"Phone numbers, emails and
-handles cannot go in the …"* message is unreachable code.
+So P0-1 changed shape entirely. It is no longer "seed the rules". It is
+**version the rules that exist**, plus one narrow addition for the leetspeak
+hole the live set genuinely has (`wh4tsapp` matches nothing, because 056's fold
+applies only to `word` rules and the live set is almost all `regex`).
 
-The only content rule that actually bites today is the CHECK on `trek_intro`
-(`054`), because it is a regex in the schema rather than a row in a table.
+---
 
-This changes the cost of the safety work by an order of magnitude. The prior
-documents costed it as "large — build content scanning". It is **one migration
-that inserts rows**. P0-1 below.
+## The report system — 31 Aug 2026
+
+Owner's direction: reports are the priority, the queue is worked **in
+TrekBuddy's own admin area**, **no Slack**, and Resend carries **important
+messages only** and must work the moment the API key is supplied.
+
+### What was actually wrong
+
+Every report this board has ever taken has told nobody. `reportTrek` fired
+`sendSlackAlert`, and `SLACK_WEBHOOK_URL` has never been set — `sendSlackAlert`
+returns immediately without a webhook, so the call did nothing at all. The
+comment beside it read *"until somebody is named to own the queue, Slack IS the
+queue."* That was never true for one second.
+
+It was also aimed at the wrong half. It covered the Report button and missed
+`trek_open_auto_report` entirely — the scanner's own reports, which are the ones
+that catch a grooming pattern, an acid threat or a refusal by caste, and the
+ones that most need a person quickly.
+
+**There are 3 unresolved reports in production right now, all auto-flagged, all
+12 days old.** Nobody has ever been told they exist.
+
+### What was built
+
+| | |
+|---|---|
+| **`108_trek_report_alerts.sql`** — **applied** | An AFTER INSERT trigger on `trek_reports` enqueues a `trek.report_opened` job. On the table, not in the action, for exactly 058's reason: reports arrive by two unrelated routes and only the table sees both. The enqueue is wrapped in its own exception block — a mail queue problem must never roll back the report it is about |
+| **`sendTrekReportAlert`** in `lib/trekEmails.ts` | Emails every `profiles.role = 'admin'` — read from the role, not the unused `ADMIN_EMAILS` env var, because an env var goes stale the day somebody is made an admin. Idempotent on the report id. Skips silently if the report was resolved before the job ran |
+| **The sidebar badge** | `getTrekQueueCount` had existed since 056 and was called from **nowhere**. It is now read in the admin layout, so the count sits beside "Trek Buddy" on *every* admin screen. The only badge in that nav, and the only one that earns it |
+| **Slack, removed from the trek surface** | All five calls gone. Two were pretending to be the queue; three were noise — a message on every trip posted, every join request and every cancellation. A channel that fires on ordinary events is a channel people stop reading, and it was the same channel that had to carry a harassment report |
+
+### What the alert deliberately does not contain
+
+Not the reported text, not the reporter, not the subject. Category, source, open
+count, and a link. Two reasons, the second being the one that matters: a
+moderation decision should be made on the screen that records it; and email is
+the least controlled surface this product touches — forwarded, synced, sitting
+on a shared laptop — and the excerpt of a harassment report is exactly the
+content this board works hardest to contain.
+
+### Without the API key
+
+`RESEND_API_KEY` is not set in this environment. The handler checks for it and
+returns with a console line instead of throwing — the same shape
+`rental.invoice` already uses for a missing GSTIN. A missing key is a
+configuration fact, not a transient failure, and retrying it five times with
+backoff would fill `/admin/jobs` with identical errors until whoever reads that
+screen stopped reading it.
+
+**Nothing is lost while the key is absent.** The queue is the system of record
+and the badge is always accurate; the email is a nudge toward it. The moment the
+key is set, every new report emails with no further change.
+
+⚠️ **The same key gates the cancellation email** (`trek.plan_cancelled`), which
+052 calls the one message that must never be missed. Until `RESEND_API_KEY`
+exists, a cancelled trip still reaches its party only as an in-app notification.
+
+### Proved end to end
+
+Against the live database in a rolled-back transaction: inserting an
+auto-sourced report enqueued exactly one `trek.report_opened` job carrying its
+id, the open count moved, and one admin account has an address to send to. The
+test report was rolled back and verified gone.
+
+---
+
+## Applied to the hosted database — 31 Aug 2026
+
+All five outstanding migrations are **committed to production**. Each was
+dry-run first inside a rolled-back transaction, then applied in its own
+transaction that committed only after its assertions passed.
+
+| # | What | Committed | Proof |
+|---|---|---|---|
+| **106** | `deposit_order_id`, `deposit_taken` | ✅ | both columns present; the 4 existing bookings intact |
+| **105** | `rental_bookings.email` lowercased + CHECK | ✅ | constraint present; 0 un-normalised rows |
+| **103** | the 125 live rules versioned, + 2 word rules | ✅ | its own fixture ran in-transaction — *"127 rules active. 11 pass, 7 block and 4 flag assertions held"*; `wh4tsapp` now caught, phone still blocked, squeezed itinerary and "per head" still pass |
+| **104** | `cancel_reason` + host-request notes scanned | ✅ | all five original checks kept; new trigger live; **087's guard returns 0 unpinned functions** |
+| **107** | open-plan cap counts `ends_at` | ✅ | clause replaced; `trek_create_plan` intact at 3075 chars and 26 parameters, with `p_meeting_point`, `p_min_trust`, `p_itinerary`, `p_bring`, `p_cost_paise` and `trek_require_active` all still present |
+
+**The order was deliberate: 106 first, alone.** It closes a deposit-signature
+replay where money leaves, and it has nothing to do with TrekBuddy.
+
+**Nothing outstanding.** `supabase/migrations/` and the database now agree.
+
+### One defect left in place on purpose
+
+The live `chudai` rule is a `block`, and its own note claims *"no ordinary word
+runs those six letters together."* One does: **`chudail`** (चुड़ैल, a witch) —
+ordinary Hindi, and the shape of a real Uttarakhand trail reference. So "chudail
+ka pahad" is refused, with a message about sexual content.
+
+The POSIX fix is `chudai([^l]|$)` as a `regex`, which costs the leetspeak fold
+that only `word` rules get. That is a moderation-policy trade rather than a
+typo, so it is annotated in `103` and **not changed** — it belongs to whoever
+owns the queue (council §7 Q1).
+
+---
+
+## Built after the migrations — 31 Aug 2026
+
+`tsc` clean, `next build` green, **160 tests pass** (was 140).
+
+| Package | State | Notes |
+|---|---|---|
+| **P1-3 · the Past view** | **done** | `getMyPastTreks` + `/trek-buddy/past`. A finished trip had no door at all: the board carries only what is current, Basecamp ends at `ends_at`, and a profile counted your outings without letting you open one — so the day after a trip, its roster, chat, announcements and meeting point were all still in the database and unreachable by everybody who was there. Scoped to trips you hosted or were confirmed on, which is the boundary `trek_plans`' own policy draws. Linked from Basecamp's "Your events" heading and the footer — **not** the top bar, which is a five-tab thumb bar measured at 360px with nothing spare (W-01) |
+| **P6 · tests** | **started** | `lib/trek.test.ts`, 20 cases on the cost helper, Naismith gloss and the hour system. Needed one source change: `lib/trek.ts` imported `formatPrice` through the `@/lib/utils` alias, and `node --test` knows nothing about tsconfig `paths`, so a single aliased *value* import made the whole module untestable. Now relative |
+| **P2 · vocabulary** | **object labels done, prose pass outstanding** | Every "Post a walk" is "Post a trip" — 28 replacements across 11 files, covering the CTAs, empty states, board counts and the composer's own labels. See the note below |
+
+### Second round
+
+| Package | State | Notes |
+|---|---|---|
+| **P5 · observability** | **done** | A Health tab on `/admin/trek-buddy`, placed first because it is the only tab that tells you something needed doing that nobody noticed. Four reads, no job: open reports with their age (3-day and 7-day bands, oldest), hosts who never answered an ask before the trip left, trips that finished without reaching `min_party` so the meeting point was never released, and hosts holding all 3 open slots — counted on `ends_at` since 107 |
+| **P1-4 · the lapsed ask** | **done, derived** | `request_lapsed` now appears in the inbox. Synthesised at read time from rows the member already owns, not written: writing from inside a read is how a feed gets duplicates when two tabs load at once, and 055's rule against maintained booleans applies equally to a row a read path must remember to write. Needs no migration, so it is live on deploy. Honest cost, stated in the code: a derived entry cannot be marked read, so it is not in the unread badge — this makes it **visible**, not **delivered** |
+| **P1-2 · `completed` status** | **killed, not built** | See below |
+| **P2 · vocabulary** | **substantially done** | A further 45 replacements across the signed-out landing, the safety page, messages, the plan page, the join actions, onboarding, the profile and the error and metadata strings |
+
+### P1-2 was killed on inspection
+
+The plan called for `status` to gain `completed`, written once by the host to
+mark an intentional end distinct from the clock passing — the distinction that
+matters in a dispute.
+
+**`trek_recaps` already is that.** 078 makes it one row per trip, host-only,
+writable only after the trip has finished, with an author and a timestamp. It is
+precisely "the host closed this out", already recorded, already attributable.
+
+Adding a status value would have duplicated it while touching the one column
+that dozens of queries and two RLS policies filter on — a wide blast radius for
+no new information. What was actually missing was that nothing *surfaced* the
+distinction, and the Past view now does: every finished trip shows whether it
+has a recap, and prompts the host when it does not.
+
+### A bug the tests found
+
+`lightForTime('')` returned **predawn**, not the documented dawn fallback.
+`?? '06:00'` catches null and undefined but not the empty string, and the `NaN`
+guard behind it does not catch it either, because `Number('')` is `0` rather
+than `NaN`. So a trip whose host never said when it leaves rendered in the
+deepest, most urgent-looking band on the board. Postgres returns NULL for an
+unset `time`, but a form field returns `''` — and `start_time` is nullable
+precisely because 055 said *"on a six-day trek nobody should have to invent a
+return time for day six."* Fixed in the source, not the fixture.
+
+### Why the vocabulary pass stopped where it did
+
+There are 431 occurrences of "walk" and 135 of "walks" across 69 files on this
+surface, tangled with identifiers (`walksHosted`, `walkIsOver`) and with prose
+where the word is still correct. A regex over all of it would have damaged the
+best thing in this codebase.
+
+So this pass changed only the strings that **name the thing you post** — the
+client's actual complaint, that *"it is just not a walk. People can post for
+long rides like Bangalore to Ladakh."* Sentences about walking as an activity
+— *"somebody who has never walked a hill"*, *"until you have walked
+together"* — are untouched, because they describe the act and are still true.
+
+What remains is an editorial pass over the surrounding prose (the safety page,
+the messages empty states, the landing argument), and it wants a person reading
+sentences, not a script. It is the larger half by word count and the smaller
+half by user impact.
 
 ---
 
@@ -46,7 +206,7 @@ say-so.** `npx tsc --noEmit` clean, `eslint` clean on every file touched,
 
 | Package | State | Evidence |
 |---|---|---|
-| **P0-1** seed the word rules | **written, not applied** — `103_trek_word_rules_seed.sql` | 18 rules (10 block, 8 flag). The migration verifies itself: 22 assertions inside the transaction, and it raises and rolls back if a legitimate string is blocked or a phone number gets through. Re-runnable without a database via `npm run check:moderation`, which parses the rules out of the .sql so the two cannot drift — **22/22 pass** |
+| **P0-1** version the word rules | **rewritten, not applied** — `103_trek_word_rules_seed.sql` | Faithful export of the 125 live rules, `NOT EXISTS`-guarded so it is a no-op on production and the whole filter everywhere else, plus `whatsapp` and `instagram` as `word` rules to close the leetspeak hole. Fixture rewritten against the real rule set: 11 pass, 7 block, 4 flag. **The first draft would have failed on this database** — it asserted telegram/instagram were blocked when live they are flagged |
 | **P0-2** rate limits | **done** | 9 throttles across `trekBuddy`, `trekChat`, `trekSocial`, keyed on the member and not the address (`lib/trekLimits.ts`). The two profile gates sit *after* validation so a new member fumbling their date of birth cannot spend their allowance on submissions that were never written |
 | **P0-3** scan the last fields | **written, not applied** — `104_trek_scan_the_last_fields.sql` | `cancel_reason` and `trek_host_requests.note` scanned. `trek_reports.detail` deliberately left open, reasoning in the file. Carries its own `SET search_path = public` and repeats 087's verification query |
 | **P0-4** audit trail | **done** | 9 `auditLog` calls in `actions/trekAdmin.ts`. `setTrekMember` reads the before-state first — it is the only one of the nine whose previous value is not recoverable from the row afterwards, and the one most likely to be argued about |

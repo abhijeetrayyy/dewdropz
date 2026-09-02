@@ -46,6 +46,10 @@ export default function TrailsScreen() {
   // but nothing mutates a hook's return value.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const pressed = useRef(false);
 
   // The profile always draws the full range — filtering it would change the
@@ -100,12 +104,13 @@ export default function TrailsScreen() {
           { label: "In the guide", value: String(TRAILS.length) },
         ]}
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: S.section }}
+        contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }}
       >
         <AltitudeProfile trails={byAltitude} dimmed={dimmed} onSelect={open} />
 

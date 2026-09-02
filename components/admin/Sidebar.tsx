@@ -82,7 +82,7 @@ const navGroups = [
   },
 ]
 
-export function Sidebar() {
+export function Sidebar({ trekQueueCount = 0 }: { trekQueueCount?: number }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
@@ -136,6 +136,25 @@ export function Sidebar() {
                       >
                         <item.icon className="h-4 w-4" />
                         {item.label}
+                        {/* The only badge in this nav, and it earns the
+                            exception. 052: "a queue with nobody behind it is
+                            worse than no queue, because the button implies
+                            supervision." An unread report is the one thing on
+                            this admin where nobody else is coming, and where a
+                            day's delay is the product breaking a promise it
+                            made to a member. Red rather than grey for the same
+                            reason. */}
+                        {item.href === '/admin/trek-buddy' && trekQueueCount > 0 && (
+                          <span
+                            className={cn(
+                              'ml-auto min-w-5 rounded-full px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums',
+                              active ? 'bg-white text-black' : 'bg-red-600 text-white'
+                            )}
+                            title={`${trekQueueCount} unresolved ${trekQueueCount === 1 ? 'report' : 'reports'}`}
+                          >
+                            {trekQueueCount}
+                          </span>
+                        )}
                       </Link>
                     )
                   })}

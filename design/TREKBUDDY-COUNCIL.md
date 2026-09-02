@@ -146,7 +146,15 @@ file in this directory.
 | 11 | **Logs, audit & observability** | The Logged ledger, `admin_audit_log`, Slack alerts, board-health readouts | `tb-00-ledgers.md` + `tb-11-logs.md` | **seeded** | — |
 | 12 | **Admin & operations** | `/admin/trek-buddy`, `trek_host_requests`, the report queue, takedown | `tb-12-admin.md` | — | — |
 | 13 | **Notifications & the outside world** | `trek_notifications` (7 kinds), email, invite `/e/[token]`, share `/w/[token]`, recap cards | `tb-13-notifications.md` | — | — |
-| 14 | **Cross-surface parity** | The Expo app, which has **no TrekBuddy at all** | `tb-14-mobile.md` | — | — |
+| 14 | ~~**Cross-surface parity**~~ | ~~The Expo app~~ | — | **out of scope** | — |
+
+**Domain 14 is closed, 31 Aug 2026, by the owner: TrekBuddy is not going in the
+mobile app.** That answers §7 Q2 and removes the largest single piece of
+outstanding work on the platform. It also settles a question the other domains
+kept having to hold open — every decision from here is for one surface, the web,
+and none of them needs a second implementation to stay in step with. If that
+reverses later, the work is a new build against decisions already made, not a
+redesign.
 
 ### Recommended order
 
@@ -277,6 +285,67 @@ These block specific councils. Everything else can proceed without them.
 
 Newest first. Every entry says what changed and why, so a later session does not
 undo it by accident.
+
+### 2026-08-31 · All five outstanding migrations applied to production
+`103`, `104`, `105`, `106`, `107` — dry-run in a rolled-back transaction, then
+each applied in its own transaction that committed only on passing its own
+assertions. `106` went first and alone: it closes a deposit-signature replay
+where money leaves, and it is not TrekBuddy's. `supabase/migrations/` and the
+database now agree, with nothing outstanding.
+
+The 087 guard — trigger functions carrying no `SET search_path`, the fault that
+killed signup three times — returns **0** after `104`'s `CREATE OR REPLACE`.
+That was the specific risk `104` was written to avoid, and it held.
+
+Left deliberately: the `chudai` block rule matches `chudail`, a witch. A real
+false positive, annotated in `103`, not changed — moving a block is the queue
+owner's call, not a seed file's.
+
+### 2026-08-31 · CORRECTION — the scanner is not off in production
+Checked against the live database, read-only. **`trek_word_rules` holds 125
+active rules**, every one created inside a 26-second window on 17 August 2026 —
+entered by hand, directly, and never captured by a migration or a script.
+
+The previous entry's headline was **true of the repository and false of
+production**, and the distinction matters: the repo genuinely has no seed, so
+the claim "no migration seeds this table" still holds. What does not hold is
+"the engine is switched off." It is on, and the rules are better than the ones
+this council drafted to replace them — Devanagari numerals, Hindi number words,
+`ek do teen` and `double-seven` spellings, UPI handles, `name [at] domain`
+obfuscation, wa.me / t.me / discord invites, Dehradun landline prefixes,
+grooming patterns in both languages, and refusal-by-caste-or-religion, each
+carrying a note naming the false positives it was tuned to avoid.
+
+**The real finding is that none of it is in version control.** Those rules live
+in one database and nowhere else. A restore from an older backup, a rebuilt
+environment, a fresh staging copy or a new developer's machine comes up with an
+empty table — and an empty table is not a weakened filter, it is no filter: all
+fifteen scanned fields silently accept anything, and the board looks identical.
+
+Three consequences:
+
+1. **Migration 103 was rewritten.** It is now a faithful export of the 125 live
+   rules, guarded by `NOT EXISTS` so it is a no-op on production and the
+   difference between a moderated and an unmoderated board everywhere else.
+2. **The first draft of 103 would have failed on this database**, and the check
+   is what found it. Its fixture asserted that `add me on telegram` and `find me
+   on instagram` are blocked. Live, both are `flag`, and the `NOT EXISTS` guard
+   would have skipped re-inserting them — so the fixture would have raised and
+   rolled the whole migration back. Caught before it ran, not after.
+3. **The council's proposed policy was worse than the live one.** The live set
+   blocks an actual number, email, UPI handle or wa.me link, and only *flags*
+   naming a platform. That is the better line: *"there is no signal up there so
+   WhatsApp will not work"* is a true and useful sentence on a trekking board.
+   103 no longer moves it — changing a flag to a block belongs to whoever owns
+   the queue (§7 Q1).
+
+**One genuine gap, found and closed.** 056 folds leetspeak, but `trek_scan`
+applies the fold only to `word` rules — correctly, since "a pattern hunting
+digits would find letters" in folded text. The live set is almost entirely
+`regex`, so the hole sits exactly where an evader pushes. Verified live:
+`wh4tsapp me for the details` matches **nothing at all**, not even a flag, while
+`message me on whatsapp` flags. 103 adds `whatsapp` and `instagram` as `word`
+rules at `flag`, closing it without moving the line.
 
 ### 2026-08-31 · P0 built — and the finding that reordered the plan
 **`trek_word_rules` has never been seeded.** 056 builds a complete content

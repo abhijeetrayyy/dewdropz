@@ -8,7 +8,14 @@
 //
 // If the two ever drift, the database wins and the form shows its message.
 
-import { formatPrice } from '@/lib/utils'
+// Relative, with the extension, rather than the `@/lib/utils` alias — and that
+// is the only reason it is written this way. `node --test` resolves imports
+// itself and knows nothing about tsconfig `paths`, so a single aliased VALUE
+// import made this whole module unloadable by a test, which is why the hour
+// system and the cost helper went untested while the rest of the pure layer
+// did not. `lib/shop-filter.ts` keeps its alias because its only import is
+// `import type`, and those are erased before node ever sees them.
+import { formatPrice } from './utils.ts'
 
 export type TrekActivity =
   | 'trekking' | 'bird_watching' | 'cycling' | 'running' | 'stargazing' | 'camping'
@@ -386,7 +393,16 @@ const LIGHTS: Record<HourLight['key'], HourLight> = {
 export function lightForTime(time: string | null | undefined): HourLight {
   // A walk with no stated hour is almost always a multi-day one, and those
   // leave in the morning. 06:00 puts it in `dawn`, which is honest.
-  const h = Number((time ?? '06:00').slice(0, 2))
+  //
+  // `?? '06:00'` catches null and undefined and NOT the empty string, and the
+  // NaN guard below does not catch it either, because `Number('')` is 0 rather
+  // than NaN — so a blank came out as hour zero and rendered `predawn`: the
+  // deepest, most urgent-looking band on the board, on a trip whose host never
+  // said when it leaves. Postgres returns NULL for an unset `time`, but a form
+  // field returns '', and `start_time` is nullable precisely because 055 said
+  // "on a six-day trek nobody should have to invent a return time for day six."
+  const raw = (time ?? '').trim()
+  const h = raw === '' ? NaN : Number(raw.slice(0, 2))
   if (Number.isNaN(h)) return LIGHTS.dawn
   if (h < 5) return LIGHTS.predawn
   if (h < 8) return LIGHTS.dawn

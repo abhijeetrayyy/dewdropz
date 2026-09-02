@@ -516,3 +516,124 @@ export async function decideHostRequest(requestId: string, grant: boolean) {
   })
   return { success: true as const }
 }
+
+// ── Board health ─────────────────────────────────────────────────────────────
+//
+// TREKBUDDY-PHASE-1.md item 5: "nothing observes the health of the board." Four
+// questions were named there, and every one of them is a read over tables that
+// already exist — no job, no new column, nothing swept. They live here because
+// /admin/trek-buddy is the only screen that already has the right audience.
+//
+// The point of putting them on one panel is that each names a person who is
+// having a bad time on this board and cannot tell anybody:
+//
+//   * a report nobody has looked at — 052 says outright that "a queue with
+//     nobody behind it is worse than no queue, because the button implies
+//     supervision", and until this panel existed there was no way to know
+//     whether that had become true;
+//   * somebody who asked to come and was never answered, which is the exact
+//     silence-then-absence TREKBUDDY-TIME-AUDIT.md §2 describes;
+//   * a host whose trip never reached its minimum party, so the meeting point
+//     was never released and it quietly did not happen;
+//   * a host holding every slot they are allowed, who is now invisibly blocked
+//     from posting.
+
+export type TrekHealth = {
+  reports: { open: number; over3d: number; over7d: number; oldestDays: number | null }
+  /** Hosts who left an ask unanswered until the trip left without it. */
+  unanswered: { hostId: string; hostName: string; count: number; people: number }[]
+  /** Finished trips that never reached `min_party`, newest first. */
+  neverQuorate: { id: string; place: string; going: number; minParty: number; endedAt: string }[]
+  /** Hosts holding the maximum open trips, who cannot post another. */
+  atCap: { hostId: string; hostName: string; open: number }[]
+  cap: number
+}
+
+/** The cap in 052:797, restated. If the migration changes, change it here too —
+ *  there is no way to read a literal out of a PL/pgSQL body worth the coupling. */
+const OPEN_PLAN_CAP = 3
+
+export async function getTrekHealth(): Promise<TrekHealth> {
+  await requireAdmin()
+  const db = createAdminSupabaseClient()
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const days = (iso: string) => Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000)
+
+  const [openReports, staleAsks, finished, openPlans] = await Promise.all([
+    db.from('trek_reports').select('created_at').is('resolved_at', null),
+
+    // An ask is lapsed once the trip has set off: the row trigger refuses any
+    // transition into confirmed from that moment, so `requested` can never
+    // become anything else. Derived, exactly as lib/trek-lifecycle.ts derives
+    // it — nothing is stored and nothing is swept.
+    db.from('trek_plan_requests')
+      .select('user_id, plan_host_id, plan:trek_plans(id, host_name, starts_at, status)')
+      .eq('status', 'requested'),
+
+    db.from('trek_plans')
+      .select('id, place, going_count, min_party, ends_at')
+      .eq('status', 'open')
+      .is('hidden_at', null)
+      .lt('ends_at', nowIso)
+      .order('ends_at', { ascending: false })
+      .limit(40),
+
+    // `ends_at`, not `starts_at` — 107. A host out on day one of six is still
+    // holding the slot, and the cap now agrees.
+    db.from('trek_plans')
+      .select('host_id, host_name')
+      .eq('status', 'open')
+      .is('hidden_at', null)
+      .gt('ends_at', nowIso),
+  ])
+
+  const reportAges = (openReports.data ?? []).map((r) => days(r.created_at as string))
+  const reports = {
+    open: reportAges.length,
+    over3d: reportAges.filter((d) => d >= 3).length,
+    over7d: reportAges.filter((d) => d >= 7).length,
+    oldestDays: reportAges.length ? Math.max(...reportAges) : null,
+  }
+
+  type AskRow = {
+    user_id: string
+    plan_host_id: string
+    plan: { id: string; host_name: string; starts_at: string; status: string } | null
+  }
+  const byHost = new Map<string, { hostName: string; count: number; people: Set<string> }>()
+  for (const a of (staleAsks.data ?? []) as unknown as AskRow[]) {
+    // A cancelled trip is not a host ignoring somebody — it is a host telling
+    // everybody at once, which is the one message that always gets sent.
+    if (!a.plan || a.plan.status === 'cancelled') continue
+    if (new Date(a.plan.starts_at) > now) continue
+    const e = byHost.get(a.plan_host_id) ?? { hostName: a.plan.host_name, count: 0, people: new Set<string>() }
+    e.count += 1
+    e.people.add(a.user_id)
+    byHost.set(a.plan_host_id, e)
+  }
+  const unanswered = [...byHost.entries()]
+    .map(([hostId, v]) => ({ hostId, hostName: v.hostName, count: v.count, people: v.people.size }))
+    .sort((a, b) => b.count - a.count)
+
+  const neverQuorate = ((finished.data ?? []) as {
+    id: string; place: string; going_count: number; min_party: number; ends_at: string
+  }[])
+    .filter((p) => (p.going_count ?? 0) < (p.min_party ?? 0))
+    .map((p) => ({
+      id: p.id, place: p.place, going: p.going_count, minParty: p.min_party, endedAt: p.ends_at,
+    }))
+
+  const capCount = new Map<string, { hostName: string; open: number }>()
+  for (const p of (openPlans.data ?? []) as { host_id: string; host_name: string }[]) {
+    const e = capCount.get(p.host_id) ?? { hostName: p.host_name, open: 0 }
+    e.open += 1
+    capCount.set(p.host_id, e)
+  }
+  const atCap = [...capCount.entries()]
+    .filter(([, v]) => v.open >= OPEN_PLAN_CAP)
+    .map(([hostId, v]) => ({ hostId, hostName: v.hostName, open: v.open }))
+    .sort((a, b) => b.open - a.open)
+
+  return { reports, unanswered, neverQuorate, atCap, cap: OPEN_PLAN_CAP }
+}

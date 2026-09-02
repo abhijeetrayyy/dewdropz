@@ -30,6 +30,10 @@ export default function SettingsScreen() {
   // all — scrolled away and left no way back.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   const { user, deleteAccount } = useAuthStore();
   const [deleting, setDeleting] = useState(false);
   const { data: prefs, isLoading } = useNotificationPreferencesQuery(user?.id);
@@ -101,9 +105,10 @@ export default function SettingsScreen() {
         <ScreenHeader
         tone="altitude" eyebrow="Preferences" title="Settings"
           scrollY={scrollY}
+        onHeight={setHeaderH}
         />
 
-        <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
+        <Animated.ScrollView contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
           <View style={{ paddingHorizontal: S.gutter }}>
             <EmptyState
               tone="altitude"
@@ -143,9 +148,10 @@ export default function SettingsScreen() {
         title="Settings"
         tone="altitude"
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
-      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
+      <Animated.ScrollView contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Group eyebrow="Email & inbox">

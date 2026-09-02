@@ -178,7 +178,7 @@ export default function PlanActions({
     const queued = roster.filter((r) => r.status === 'waitlisted')
     return (
       <div>
-        <Head>Your walk</Head>
+        <Head>Your trip</Head>
 
         {waiting.length > 0 && (
           <div className="mt-4">
@@ -199,7 +199,7 @@ export default function PlanActions({
                       type="button"
                       disabled={pending || full}
                       onClick={() => run(() => decideRequest(planId, r.user_id, 'confirmed'))}
-                      title={full ? 'This walk is full' : undefined}
+                      title={full ? 'This trip is full' : undefined}
                       aria-label={`Confirm ${r.display_name}`}
                       className="trek-pill trek-pill-act trek-pill-sm font-body disabled:opacity-40"
                     >
@@ -319,7 +319,7 @@ export default function PlanActions({
     return (
       <div>
         <p className="font-body text-sm leading-relaxed text-paper">
-          <span className="text-sage">✓</span> You&apos;re confirmed for this walk.
+          <span className="text-sage">✓</span> You&apos;re confirmed for this trip.
         </p>
         <Problem error={error} />
         <div className="mt-3.5">
@@ -390,7 +390,7 @@ export default function PlanActions({
   return (
     <div>
       {full ? (
-        <p className="font-body text-sm leading-relaxed text-paper/70">This walk is full.</p>
+        <p className="font-body text-sm leading-relaxed text-paper/70">This trip is full.</p>
       ) : (
         <>
           <label className="block">

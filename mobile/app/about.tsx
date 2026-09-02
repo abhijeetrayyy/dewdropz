@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { useAnimatedRef, useScrollOffset } from "react-native-reanimated";
 import { router } from "expo-router";
@@ -29,6 +30,10 @@ export default function AboutScreen() {
   // all — scrolled away and left no way back.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
+  // How much room the floating header needs at the top of the scroll
+  // content. The panel is out of the layout so its collapse cannot resize
+  // this list mid-drag — see ScreenHeader. It reports its height here.
+  const [headerH, setHeaderH] = useState(0);
   return (
     <View style={s.root}>
       <StatusCap />
@@ -41,9 +46,10 @@ export default function AboutScreen() {
         title="Built on a foggy ridgeline."
         lede="DEWDROPZ started as three trekking guides fixing the gear that kept failing their clients. Seven years later, the philosophy hasn't moved an inch."
         scrollY={scrollY}
+        onHeight={setHeaderH}
       />
 
-      <Animated.ScrollView contentContainerStyle={{ paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
+      <Animated.ScrollView contentContainerStyle={{ paddingTop: headerH, paddingBottom: S.section }} showsVerticalScrollIndicator={false} ref={scrollRef}>
 
         <View style={{ paddingHorizontal: S.gutter }}>
           <Figure

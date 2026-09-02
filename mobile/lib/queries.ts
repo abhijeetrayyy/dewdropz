@@ -41,6 +41,11 @@ export const qk = {
     slug: string, from: string, to: string, qty: number, ful: string, where: string,
   ) => ["rentals", "quote", slug, from, to, qty, ful, where] as const,
   rentalBookings: (userId: string) => ["rentals", "bookings", userId] as const,
+  rentalCategories: ["rentals", "categories"] as const,
+  rentalAvailability: (from: string, to: string) => ["rentals", "availability", from, to] as const,
+  rentalDays: (itemId: string, from: string, to: string) => ["rentals", "days", itemId, from, to] as const,
+  rentalHistory: (bookingId: string) => ["rentals", "history", bookingId] as const,
+  rentalCancelQuote: (bookingId: string) => ["rentals", "cancel-quote", bookingId] as const,
   rentalBooking: (number: string) => ["rentals", "booking", number] as const,
 };
 
@@ -613,7 +618,7 @@ export function useRentalBookingMutation() {
   return useMutation({
     mutationFn: async (
       input: RentalTerms & { email: string; phone?: string },
-    ): Promise<{ bookingId: string; bookingNumber: string }> => {
+    ): Promise<{ bookingId: string; bookingNumber: string; requiresPayment: boolean; holdExpiresAt: string }> => {
       // Signing in is optional — a guest can rent with an email, as on the web.
       // The token, when there is one, attaches the booking to the account so it
       // shows under "Your rentals" and RLS lets that person read it back.
@@ -638,7 +643,13 @@ export function useRentalBookingMutation() {
       if (!res.ok) {
         throw new Error(typeof data.error === "string" ? data.error : "That booking didn't go through.");
       }
-      return data as { bookingId: string; bookingNumber: string };
+      // A 200 here means "we are HOLDING this for you", not "reserved" — the
+      // booking keeps its units off the shelf and expires at `holdExpiresAt`
+      // unless the rent is paid. The route returns `requiresPayment` precisely
+      // so a screen cannot get that wrong by reading only `bookingNumber`,
+      // which is what this app used to do and what quietly changed meaning
+      // underneath it when pay-to-reserve shipped.
+      return data as { bookingId: string; bookingNumber: string; requiresPayment: boolean; holdExpiresAt: string };
     },
     onSuccess: () => {
       // Every quote in the cache is now a statement about a shelf that has
@@ -663,4 +674,141 @@ export function useRentalBookingQuery(bookingNumber: string | undefined) {
     queryFn: () => Data.getRentalBookingByNumber(bookingNumber!),
     enabled: !!bookingNumber,
   });
+}
+
+// ─── The locker: shelves, the shelf itself, and the calendar ─────────────────
+
+export function useRentalCategoriesQuery() {
+  return useQuery({
+    queryKey: qk.rentalCategories,
+    queryFn: Data.getRentalCategories,
+    // Shelves change when the shop reorganises the locker, which is roughly
+    // never. An hour is generous and still self-correcting.
+    staleTime: 60 * 60_000,
+  });
+}
+
+/**
+ * Every item's shelf for one date range.
+ *
+ * `staleTime: 0` and no cache, for the same reason the quote has neither: this
+ * is a claim about a shelf other people are booking from, and a cached "4 free"
+ * is a promise the shop may no longer be able to keep. It is one call for the
+ * whole grid, so refetching it is cheap.
+ */
+export function useRentalAvailabilityQuery(from: string, to: string) {
+  return useQuery({
+    queryKey: qk.rentalAvailability(from, to),
+    queryFn: () => Data.getRentalItemsAvailability(from, to),
+    enabled: !!from && !!to && to >= from,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+/** One item, day by day — what the picker draws. Keyed on the month window, so
+ *  stepping back to a month already seen is instant. */
+export function useRentalItemDaysQuery(itemId: string | undefined, from: string, to: string) {
+  return useQuery({
+    queryKey: qk.rentalDays(itemId ?? "", from, to),
+    queryFn: () => Data.getRentalItemDays(itemId!, from, to),
+    enabled: !!itemId && !!from && !!to,
+    // Longer than the range availability above, deliberately: this drives which
+    // days are TAPPABLE, not what is promised. The authoritative check still
+    // happens on the quote for the exact range, so a minute of staleness here
+    // costs a refused selection at worst, never an overbooking.
+    staleTime: 60_000,
+  });
+}
+
+// ─── One booking: its history, and calling it off ────────────────────────────
+
+export function useRentalHistoryQuery(bookingId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.rentalHistory(bookingId ?? ""),
+    queryFn: () => Data.getRentalHistory(bookingId!),
+    enabled: !!bookingId && enabled,
+    staleTime: 30_000,
+  });
+}
+
+export type CancellationQuote = {
+  rentRefund: number;
+  rentRetained: number;
+  depositRefund: number;
+  total: number;
+  daysUntilStart: number;
+  band: { daysBefore: number; refundShare: number; label: string; short: string };
+  underGrace: boolean;
+  shopCancelled: boolean;
+  summary: string;
+  startsOn: string | null;
+  cancellable: boolean;
+};
+
+/**
+ * What cancelling would give back — asked BEFORE the button is offered.
+ *
+ * The same `cancellationQuote` the refund itself runs, reached through
+ * `/api/mobile/rentals/[id]/cancel`. Not a second implementation on the device:
+ * a person pressing cancel has paid, the notice bands decide how much returns,
+ * and finding that out from a bank statement four days later is how a
+ * cancellation becomes a chargeback.
+ */
+export function useCancellationQuoteQuery(bookingId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.rentalCancelQuote(bookingId ?? ""),
+    queryFn: async (): Promise<CancellationQuote> => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sign in to manage your bookings.");
+      const res = await fetch(`${ENV.apiUrl}/api/mobile/rentals/${bookingId}/cancel`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Couldn't price that.");
+      return data as CancellationQuote;
+    },
+    enabled: !!bookingId && enabled,
+    // The bands turn on how many days remain, so a quote cached across midnight
+    // would quote yesterday's band. Never stale.
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+}
+
+export function useCancelRentalMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (bookingId: string): Promise<{ refunded: number }> => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sign in to manage your bookings.");
+      const res = await fetch(`${ENV.apiUrl}/api/mobile/rentals/${bookingId}/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "That didn't go through.");
+      return data as { refunded: number };
+    },
+    onSuccess: () => {
+      // The bookings list, and every cached statement about a shelf that just
+      // gained its units back.
+      client.invalidateQueries({ queryKey: ["rentals"] });
+    },
+  });
+}
+
+/**
+ * Where the app sends somebody to pay.
+ *
+ * A hosted web page rather than a native SDK: `react-native-razorpay` means a
+ * native module to maintain, a store rebuild to adopt it, and the publishable
+ * key inside the app bundle. Razorpay's checkout IS a web widget, so the app
+ * opens this in a browser sheet and is returned by deep link. Same reasoning as
+ * the shop's `/pay/[orderId]`, and the page is shared with the web's own
+ * "finish paying" link.
+ */
+export function rentalPayUrl(bookingId: string): string {
+  return `${ENV.siteUrl}/rent/pay/${bookingId}`;
 }

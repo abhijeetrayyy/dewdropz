@@ -996,6 +996,21 @@ export interface ShippingZoneWithRates extends ShippingZone {
 // SERVICE under SAC — taxed at its own rate — rather than goods under HSN.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** A shelf in the gear locker. Deliberately not the shop's `Category` — that
+ *  holds Apparel and Drinkware, which is a different vocabulary on a different
+ *  axis. See migration 109. */
+export interface RentalCategory {
+  id: string
+  slug: string
+  name: string
+  /** One sentence, shown on the category tile. */
+  blurb: string | null
+  sort: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface RentalItem {
   id: string
   slug: string
@@ -1025,6 +1040,19 @@ export interface RentalItem {
    *  sell. Never a stock link — selling is governed by inventory_quantity,
    *  lending by rental_units. See migration 098. */
   product?: { slug: string; name: string; price: number; inventory_quantity: number | null } | null
+  /** Which shelf it sits on. NULL renders under "Everything else" rather than
+   *  disappearing — migration 109. */
+  category_id: string | null
+  category?: Pick<RentalCategory, 'slug' | 'name'> | null
+  /** Packed weight of one unit. NULL means unweighed, which sorts LAST under
+   *  "lightest first" — never first. */
+  weight_grams: number | null
+  /** How many people it serves. NULL where the question does not apply (poles,
+   *  spikes), and such gear is never excluded by a capacity filter. */
+  capacity: number | null
+  /** Display-only specifications, {label: value}. Anything filterable is a real
+   *  column instead — see the migration's note on why. */
+  specs: Record<string, string | number>
 }
 
 export interface RentalUnit {
@@ -1049,7 +1077,10 @@ export interface RentalBooking {
   fulfilment: 'pickup' | 'ship'
   address: Json | null
   pickup_slot: string | null
-  status: 'reserved' | 'out' | 'returned' | 'closed' | 'cancelled'
+  /** `pending_payment` is an unpaid HOLD, not a reservation: it keeps its units
+   *  off the shelf through the exclusion constraint until `hold_expires_at`,
+   *  and becomes `reserved` only when the rent is paid. Migration 113. */
+  status: 'pending_payment' | 'reserved' | 'out' | 'returned' | 'closed' | 'cancelled'
   rent_amount: number
   delivery_amount: number
   tax_amount: number
@@ -1067,7 +1098,10 @@ export interface RentalBooking {
 
   /** The rent, not the deposit. The two move independently. */
   payment_method: 'razorpay' | 'cod' | null
-  payment_status: 'unpaid' | 'pending' | 'paid' | 'refunded' | 'failed'
+  /** `part_refunded` is a cancellation where a notice band returned some of the
+   *  rent and the shop kept the rest — writing 'refunded' for that made a whole
+   *  refund and a partial one indistinguishable on a statement. */
+  payment_status: 'unpaid' | 'pending' | 'paid' | 'refunded' | 'part_refunded' | 'failed'
   gateway_order_id: string | null
   gateway_payment_id: string | null
   amount_paid: number
@@ -1079,6 +1113,21 @@ export interface RentalBooking {
   deposit_refund_id: string | null
   deposit_refunded: number
   deposit_settled_at: string | null
+
+  // ── Paid to reserve (migration 113) ──────────────────────────────────────
+
+  /** When an unpaid hold stops holding. NULL once paid — a reservation that has
+   *  been paid for does not expire. */
+  hold_expires_at: string | null
+  cancelled_at: string | null
+  /** `shop` is always refunded in full; `customer` pays the notice bands;
+   *  `expired` is a hold that timed out, where no money ever moved. */
+  cancelled_by: 'customer' | 'shop' | 'expired' | null
+  cancellation_reason: string | null
+  /** What actually went back on a cancellation. Stored rather than derived: the
+   *  bands depend on `today`, so recomputing it later would report a shrinking
+   *  refund as the hire date passed. */
+  rent_refunded: number
 
   /** Already inside rent_amount as priced; recorded so the breakdown adds up. */
   long_rental_discount: number

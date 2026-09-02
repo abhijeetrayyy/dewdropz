@@ -29,7 +29,7 @@ const DEAL: { t: string; d: string }[] = [
     d: 'Nobody is watching a screen while you are out. In an emergency, call 112.',
   },
   {
-    t: 'I will tell someone not on the walk where I am going',
+    t: 'I will tell someone not on the trip where I am going',
     d: 'The place, the start time and when you expect to be back. It costs one message.',
   },
   {
